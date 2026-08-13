@@ -1,0 +1,96 @@
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.secret
+*.secrets
+*credentials*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+
+# Unreviewed inbox content; retain the directory marker only
+inbox/**
+!inbox/.gitkeep
+
+# Dependency directories
+node_modules/
+bower_components/
+vendor/
+
+# Python virtual environments and caches
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+
+# Logs, runtime files, and local caches
+*.log
+logs/
+*.pid
+*.pid.lock
+*.tmp
+*.temp
+*.swp
+*.swo
+.cache/
+.npm/
+.yarn/cache/
+.pnpm-store/
+
+# Build and test outputs
+dist/
+build/
+coverage/
+.coverage
+htmlcov/
+.next/
+.nuxt/
+.turbo/
+out/
+target/
+bin/
+obj/
+
+# IDE and editor personal settings
+.idea/
+.vscode/
+*.code-workspace
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Local databases and backups
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+*.backup
+
+# Package-manager debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
