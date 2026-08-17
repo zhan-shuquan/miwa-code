@@ -1,0 +1,20 @@
+/*
+ * 标准名称：美和数字颜色标准
+ * 版本：V1.0
+ * 状态：正式锁定
+ * 标准归属：美和【标准】之家
+ * 适用范围：美和集团共享数字产品
+ * 规则：业务系统不得自行重新定义集团级正式颜色
+ */
+
+:root {
+  --miwa-color-primary: #176B4D;
+  --miwa-color-danger: #C83A32;
+
+  --miwa-color-green-deep: #0D4937;
+  --miwa-color-green-medium: #5E9B82;
+  --miwa-color-green-light: #E8F2ED;
+
+  --miwa-color-bg-warm: #F7F7F3;
+  --miwa-color-white: #FFFFFF;
+}
