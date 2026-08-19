@@ -518,3 +518,5 @@
 - 新增window.AIONEPreviewActivity，预留任务、工作量、结果、AI使用与考核数据接入。
 - 修复preview-auth.css加载顺序。
 - 修复选品工作台可选筛选控件缺失时的appendChild空节点错误。
+
+- 2026-08-19：AIONE V1.18.2 已迁入 miwa-code，并重新连接 Vercel 内测部署。
