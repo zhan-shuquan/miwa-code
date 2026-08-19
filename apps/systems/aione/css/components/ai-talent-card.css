@@ -1,0 +1,129 @@
+/* ========================================
+   MIWA AI Talent Card｜美和AI人材カード
+   3区構成：身分 / 業務フロー能力 / 実戦パフォーマンス。
+======================================== */
+
+.miwa-ai-talent-dialog{
+  width:min(760px,calc(100vw - 34px));
+  max-height:min(88vh,860px);
+  padding:0;
+  border:1px solid #D7E1DC;
+  border-radius:22px;
+  background:#FFFFFF;
+  color:#17382D;
+  box-shadow:0 28px 88px rgba(13,73,55,.22);
+  overflow:auto;
+}
+.miwa-ai-talent-dialog::backdrop{background:rgba(16,42,31,.30);backdrop-filter:blur(2px)}
+
+.miwa-ai-talent-card{background:#FFFFFF}
+.miwa-ai-talent-card svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.miwa-ai-talent-card__head{
+  display:grid;
+  grid-template-columns:78px minmax(0,1fr);
+  gap:15px;
+  align-items:center;
+  padding:18px 22px;
+  background:linear-gradient(180deg,#FFFFFF 0%,#FBFDFC 100%);
+}
+.miwa-ai-talent-card__avatar{
+  width:78px;
+  height:78px;
+  display:grid;
+  place-items:center;
+  border:1px solid #CFE0D7;
+  border-radius:20px;
+  background:linear-gradient(145deg,#E8F2ED 0%,#F8FBF9 100%);
+  color:#176B4D;
+}
+.miwa-ai-talent-card__avatar svg{width:42px;height:42px;stroke-width:1.65}
+.miwa-ai-talent-card__identity{min-width:0}
+.miwa-ai-talent-card__title-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.miwa-ai-talent-card__name-tags{min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px}
+.miwa-ai-talent-card__title{margin:0;color:#0D4937;font-size:24px;line-height:1.15;font-weight:900;letter-spacing:-.02em}
+.miwa-ai-talent-card__close{
+  width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;
+  border:1px solid #D7E1DC;border-radius:50%;background:#FFFFFF;color:#66776F;
+  font-size:18px;cursor:pointer
+}
+.miwa-ai-talent-card__close:hover{background:#F7F7F3;color:#0D4937}
+.miwa-ai-talent-card__tags{display:flex;flex-wrap:wrap;gap:6px;margin:0}
+.miwa-ai-talent-tag{
+  min-height:29px;display:inline-flex;align-items:center;gap:6px;padding:4px 9px;
+  border:1px solid #C8DAD1;border-radius:999px;background:#F7F7F3;
+  color:#0D4937;font-size:10px;font-weight:850;white-space:nowrap
+}
+.miwa-ai-talent-tag--primary{background:#E8F2ED;border-color:#C5DDD1}
+.miwa-ai-talent-tag svg{width:15px;height:15px;color:#176B4D}
+.miwa-ai-talent-card__desc{margin:7px 0 0;max-width:610px;color:#697B72;font-size:10.5px;line-height:1.55}
+
+.miwa-ai-talent-card__section{padding:18px 24px;border-top:1px solid #DCE5E0}
+.miwa-ai-talent-card__section-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.miwa-ai-talent-card__section-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:9px;background:#E8F2ED;color:#176B4D}
+.miwa-ai-talent-card__section-icon svg{width:17px;height:17px}
+.miwa-ai-talent-card__section-head h3{margin:0;color:#0D4937;font-size:15px;font-weight:900}
+.miwa-ai-talent-card__section-head p{margin:3px 0 0;color:#7A8881;font-size:9.5px;line-height:1.4}
+
+.miwa-ai-talent-flow{display:grid;gap:7px}
+.miwa-ai-talent-flow__row{
+  display:grid;grid-template-columns:32px minmax(130px,1fr) minmax(120px,.9fr) auto;
+  gap:10px;align-items:center;min-height:48px;padding:8px 10px;
+  border:1px solid #DCE5E0;border-radius:11px;background:#FCFDFC;cursor:pointer;
+  transition:border-color .16s ease,background .16s ease,transform .16s ease
+}
+.miwa-ai-talent-flow__row:hover{transform:translateY(-1px);border-color:#B7D0C3;background:#F8FCFA}
+.miwa-ai-talent-flow__index{color:#789087;font-size:9px;font-weight:900}
+.miwa-ai-talent-flow__name{color:#17382D;font-size:11px;font-weight:900}
+.miwa-ai-talent-flow__experience{color:#72837A;font-size:9.5px}
+.miwa-ai-talent-flow__status{min-width:60px;display:inline-flex;justify-content:center;padding:4px 7px;border-radius:999px;background:#F1F4F2;color:#718078;font-size:9px;font-weight:850;white-space:nowrap}
+.miwa-ai-talent-flow__detail{grid-column:2/-1;display:none;padding:8px 10px;border-radius:9px;background:#F7F7F3;color:#6D7D75;font-size:9px;line-height:1.55}
+.miwa-ai-talent-flow__row.is-open .miwa-ai-talent-flow__detail{display:block}
+
+.miwa-ai-talent-card__performance{background:linear-gradient(180deg,#FBFCFB 0%,#F8FAF9 100%)}
+.miwa-ai-talent-performance-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.miwa-ai-talent-performance__item{min-height:68px;padding:10px;border:1px solid #DCE5E0;border-radius:11px;background:#FFFFFF}
+.miwa-ai-talent-performance__label{display:flex;align-items:center;gap:6px;color:#6D7D75;font-size:9px;font-weight:800}
+.miwa-ai-talent-performance__label svg{width:13px;height:13px;color:#5E9B82}
+.miwa-ai-talent-performance__value{margin-top:8px;color:#0D4937;font-size:13px;font-weight:900}
+.miwa-ai-talent-card__footline{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:12px;padding-top:11px;border-top:1px dashed #C9D8D0;color:#7D8A84;font-size:8.8px;line-height:1.5}
+.miwa-ai-talent-card__footline button{border:0;border-radius:8px;background:transparent;color:#176B4D;padding:6px 8px;font-size:9.5px;font-weight:900;white-space:nowrap;cursor:pointer}
+.miwa-ai-talent-card__footline button:hover{background:#E8F2ED}
+
+.miwa-ai-talent-history{
+  width:min(560px,calc(100vw - 36px));padding:0;border:1px solid #D7E1DC;border-radius:18px;background:#FFFFFF;color:#17382D;box-shadow:0 24px 72px rgba(13,73,55,.20)
+}
+.miwa-ai-talent-history::backdrop{background:rgba(16,42,31,.28);backdrop-filter:blur(2px)}
+.miwa-ai-talent-history__head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid #DCE5E0}
+.miwa-ai-talent-history__head h3{margin:0;color:#0D4937;font-size:16px;font-weight:900}
+.miwa-ai-talent-history__head button{width:32px;height:32px;border:1px solid #DCE5E0;border-radius:50%;background:#FFFFFF;color:#66776F;cursor:pointer}
+.miwa-ai-talent-history__body{padding:16px 18px;color:#6E7E76;font-size:10px;line-height:1.65}
+.miwa-ai-talent-history__grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.miwa-ai-talent-history__item{padding:10px;border:1px solid #DCE5E0;border-radius:10px;background:#F8FBF9}
+.miwa-ai-talent-history__item b{display:block;margin-bottom:3px;color:#17382D;font-size:10px}
+
+@media(max-width:640px){
+  .miwa-ai-talent-card__head{grid-template-columns:64px minmax(0,1fr);gap:12px;padding:16px}
+  .miwa-ai-talent-card__avatar{width:64px;height:64px;border-radius:17px}
+  .miwa-ai-talent-card__avatar svg{width:35px;height:35px}
+  .miwa-ai-talent-card__title{font-size:20px}
+  .miwa-ai-talent-card__name-tags{gap:6px}
+  .miwa-ai-talent-tag{min-height:27px;padding:4px 8px;font-size:9.4px}
+  .miwa-ai-talent-card__section{padding:16px 18px}
+  .miwa-ai-talent-flow__row{grid-template-columns:28px 1fr auto}
+  .miwa-ai-talent-flow__experience{grid-column:2}
+  .miwa-ai-talent-flow__status{grid-column:3;grid-row:1/span 2}
+  .miwa-ai-talent-flow__detail{grid-column:1/-1}
+  .miwa-ai-talent-performance-grid{grid-template-columns:1fr 1fr}
+  .miwa-ai-talent-card__footline{align-items:flex-start;flex-direction:column}
+  .miwa-ai-talent-history__grid{grid-template-columns:1fr}
+}
+
+/* AI人材ライブラリから画像アバターを受け取れるようにする。 */
+.miwa-ai-talent-card__avatar img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  border-radius:inherit;
+}

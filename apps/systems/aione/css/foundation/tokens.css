@@ -1,0 +1,43 @@
+:root{
+  --miwa-green:#176B4D;
+  --miwa-green-deep:#0D4937;
+  --miwa-green-mid:#5E9B82;
+  --miwa-green-light:#E8F2ED;
+  --miwa-red:#C83A32;
+
+  --white:#FFFFFF;
+  --warm-white:#F7F7F3;
+  --surface:#FFFFFF;
+  --surface-soft:#F7FAF8;
+  --surface-muted:#F0F4F1;
+
+  --text:#24332D;
+  --text-secondary:#56635D;
+  --text-muted:#89938E;
+
+  --border:#E1E8E4;
+  --border-soft:#EDF1EF;
+
+  --shadow-sm:0 2px 8px rgba(13,73,55,.05);
+  --shadow-md:0 10px 30px rgba(13,73,55,.08);
+
+  --radius-sm:8px;
+  --radius-md:12px;
+  --radius-lg:16px;
+
+  --touch-min:44px;
+  --mobile-top:54px;
+  --mobile-bottom:66px;
+
+  --desktop-header-main:72px;
+  --desktop-header-spirit:64px;
+  --desktop-header-daily:38px;
+  /* 既存Sidebar／Asideの高さ計算互換用：第2行＋第3行の合計 */
+  --desktop-header-info:102px;
+  --desktop-sidebar:232px;
+  --desktop-aside:280px;
+
+  --content-max:1500px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}

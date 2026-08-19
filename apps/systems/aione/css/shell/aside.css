@@ -1,0 +1,19 @@
+/* ========================================
+   MIWA Aside｜美和補助可変エリア
+======================================== */
+
+.desktop-aside{
+  position:sticky;
+  top:calc(var(--desktop-header-main) + var(--desktop-header-info));
+  padding:16px;
+}
+
+.desktop-aside h3{margin:0 0 10px;color:var(--miwa-green-deep);font-size:13px}
+.desktop-aside p{margin:0;color:#75807B;font-size:11px;line-height:1.7}
+
+.aside-context-card{
+  padding:12px;
+  border:1px solid var(--border-soft);
+  border-radius:11px;
+  background:#FBFCFB;
+}

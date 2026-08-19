@@ -1,0 +1,150 @@
+/* ========================================
+   MIWA Primary Navigation｜美和主要ナビゲーション
+   担当範囲：デスクトップSidebar／モバイル主ナビ／ドロワー
+======================================== */
+
+.mobile-bottom-nav{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:1000;
+  height:calc(var(--mobile-bottom) + var(--safe-bottom));
+  padding:5px 8px var(--safe-bottom);
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  background:#FFFFFF;
+  border-top:1px solid var(--border);
+  box-shadow:0 -4px 16px rgba(13,73,55,.06);
+}
+
+.mobile-nav-item{
+  min-width:0;
+  min-height:54px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:#75817B;
+  font-size:9.5px;
+  font-weight:700;
+}
+
+.mobile-nav-item .icon{font-size:19px;line-height:1}
+.mobile-nav-item.active{color:var(--miwa-green);background:#F2F7F4}
+.mobile-nav-item.ai{color:var(--miwa-green);font-weight:850}
+.mobile-nav-item.ai .icon{
+  width:30px;
+  height:30px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:var(--miwa-green);
+  color:#FFFFFF;
+  box-shadow:0 4px 12px rgba(23,107,77,.20);
+}
+
+.drawer-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:1090;
+  display:none;
+  background:rgba(15,30,24,.32);
+}
+
+.drawer-backdrop.open{display:block}
+
+.mobile-drawer{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:1100;
+  max-height:82dvh;
+  display:none;
+  overflow:auto;
+  padding:10px 14px calc(18px + var(--safe-bottom));
+  border-radius:18px 18px 0 0;
+  background:#FFFFFF;
+  box-shadow:0 -12px 32px rgba(13,73,55,.15);
+}
+
+.mobile-drawer.open{display:block}
+.drawer-handle{width:42px;height:4px;margin:0 auto 12px;border-radius:999px;background:#DCE4DF}
+.drawer-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.drawer-title{margin:0;color:var(--miwa-green-deep);font-size:17px}
+.drawer-close{width:40px;height:40px;border:0;border-radius:10px;background:#F2F5F3;color:#53615A}
+.drawer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.drawer-link{
+  min-height:58px;
+  display:flex;
+  align-items:center;
+  padding:10px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:#FFFFFF;
+  color:#48564F;
+  font-size:11.5px;
+  font-weight:750;
+}
+
+.desktop-sidebar{
+  position:sticky;
+  top:calc(var(--desktop-header-main) + var(--desktop-header-info));
+  min-height:calc(100vh - var(--desktop-header-main) - var(--desktop-header-info));
+  padding:14px 12px 20px;
+}
+
+.sidebar-section + .sidebar-section{margin-top:17px}
+.sidebar-title{margin:0 8px 7px;color:#98A19C;font-size:10px;font-weight:800}
+.sidebar-link{
+  min-height:38px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:8px 10px;
+  border-radius:9px;
+  color:#2F433A;
+  font-size:12px;
+  font-weight:650;
+}
+
+.sidebar-link:hover{color:var(--miwa-green)}
+.sidebar-link.active,
+.sidebar-link[aria-current="page"]{background:var(--miwa-green);color:#FFFFFF}
+
+.sidebar-icon{
+  width:20px;
+  height:20px;
+  flex:0 0 20px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:#6F877D;
+}
+
+.sidebar-icon svg{
+  width:20px;
+  height:20px;
+  display:block;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.sidebar-link:hover .sidebar-icon{color:var(--miwa-green)}
+.sidebar-link.active .sidebar-icon,
+.sidebar-link[aria-current="page"] .sidebar-icon{color:#FFFFFF}
+
+.quick-links-empty{margin:4px 8px 0;color:#9AA49F;font-size:10px;line-height:1.6}
+
+@media(min-width:768px) and (max-width:1099px){
+  .drawer-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}

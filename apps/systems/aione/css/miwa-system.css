@@ -1,0 +1,57 @@
+/* ========================================
+   MIWA System CSS Entry｜美和システムCSS総入口
+   公共フレームワークの読込順序はこのファイルだけで管理する。
+======================================== */
+
+@import url("./foundation/tokens.css");
+@import url("./components/preview-auth.css");
+@import url("./foundation/base.css");
+@import url("./shell/layout.css");
+@import url("./shell/header.css");
+@import url("./shell/primary-navigation.css");
+@import url("./shell/aside.css");
+@import url("./shell/footer.css");
+
+/* ========================================
+   Global Settings｜全局设置・系统参数
+   全平台公共配置。业务工作台只读取当前生效版本。
+======================================== */
+.miwa-settings-overlay{position:fixed;inset:0;z-index:2200;background:rgba(11,36,28,.34);backdrop-filter:blur(4px);padding:28px;overflow:auto}
+.miwa-settings-overlay[hidden]{display:none!important}
+.miwa-settings-dialog{width:min(1180px,100%);margin:0 auto;background:#fff;border:1px solid #c9dcd3;border-radius:18px;box-shadow:0 24px 70px rgba(13,73,55,.20);overflow:hidden}
+.miwa-settings-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:22px 24px;border-bottom:1px solid #e2ebe7;background:#fff}
+.miwa-settings-eyebrow{display:block;margin-bottom:5px;color:#176B4D;font-size:12px;font-weight:800}
+.miwa-settings-header h2{margin:0;color:#0D4937;font-size:24px;line-height:1.25}
+.miwa-settings-header p{margin:7px 0 0;color:#66786f;font-size:13px;line-height:1.7}
+.miwa-settings-close{width:40px;height:40px;border:1px solid #d5e0db;border-radius:999px;background:#fff;color:#5e7268;font-size:24px;line-height:1;cursor:pointer}
+.miwa-settings-close:hover{background:#f4f8f6;color:#0D4937}
+.miwa-settings-meta{display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding:12px 24px;border-bottom:1px solid #e5ece8;background:#F7F7F3}
+.miwa-settings-meta>div{display:grid;gap:2px}.miwa-settings-meta span{font-size:11px;color:#7a8a82}.miwa-settings-meta strong{font-size:13px;color:#17382D}
+.miwa-settings-active{margin-left:auto;padding:5px 9px;border-radius:999px;background:#E8F2ED;color:#0D4937!important;font-weight:800}
+.miwa-settings-notice{margin:14px 24px 0;padding:10px 12px;border:1px solid #c8ddd3;border-radius:8px;background:#f1f8f5;color:#0D4937;font-size:12px;line-height:1.6}
+.miwa-settings-notice.is-error{border-color:#ecc6c2;background:#fff6f5;color:#C83A32}
+.miwa-settings-body{display:grid;grid-template-columns:190px minmax(0,1fr);margin-top:14px;border-top:1px solid #e2ebe7;min-height:560px}
+.miwa-settings-scope{padding:18px 14px;border-right:1px solid #e2ebe7;background:#fafcfb}
+.miwa-settings-scope-title{padding:0 10px 10px;color:#819087;font-size:11px;font-weight:700}
+.miwa-settings-scope button{width:100%;min-height:42px;padding:0 12px;border:0;border-radius:8px;background:#E8F2ED;color:#0D4937;text-align:left;font-weight:800;box-shadow:inset 3px 0 #176B4D}
+.miwa-settings-scope p{margin:14px 10px 0;color:#819087;font-size:11px;line-height:1.65}
+.miwa-settings-content{display:grid;grid-template-columns:180px minmax(0,1fr);min-width:0}
+.miwa-settings-tabs{display:grid;align-content:start;border-right:1px solid #e2ebe7;background:#fff}
+.miwa-settings-tabs button{min-height:48px;padding:0 16px;border:0;border-bottom:1px solid #eef3f0;background:#fff;color:#65766e;text-align:left;font-weight:700;cursor:pointer}
+.miwa-settings-tabs button.is-active{background:#E8F2ED;color:#0D4937;box-shadow:inset 3px 0 #176B4D}
+.miwa-settings-editor{min-width:0;padding:22px;background:#fff}
+.miwa-settings-section[hidden]{display:none!important}
+.miwa-settings-section-copy{margin-bottom:17px}.miwa-settings-section-copy h3{margin:0 0 5px;color:#0D4937;font-size:18px}.miwa-settings-section-copy p{margin:0;color:#66786f;font-size:12px;line-height:1.65}
+.miwa-settings-delivery-copy{margin-top:22px}
+.miwa-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+.miwa-settings-field{display:grid;gap:6px;min-width:0}.miwa-settings-field>span{font-size:12px;font-weight:700;color:#17382D}.miwa-settings-field>small{color:#7d8c84;font-size:11px;line-height:1.5}
+.miwa-settings-field>div{display:flex;min-width:0}.miwa-settings-field input,.miwa-settings-field select{width:100%;min-width:0;min-height:40px;padding:8px 10px;border:1px solid #d5e0db;border-radius:8px 0 0 8px;background:#fff;color:#17382D;outline:none}.miwa-settings-field input:focus,.miwa-settings-field select:focus{border-color:#176B4D;box-shadow:0 0 0 3px rgba(23,107,77,.08)}
+.miwa-settings-field b{display:grid;place-items:center;min-width:82px;padding:0 9px;border:1px solid #d5e0db;border-left:0;border-radius:0 8px 8px 0;background:#f7f9f8;color:#65766e;font-size:11px;font-weight:600;white-space:nowrap}
+.miwa-settings-basis{margin-top:14px;padding:10px 12px;border-radius:8px;background:#f7f9f8;color:#65766e;font-size:11px;line-height:1.65}
+.miwa-settings-delivery-row{display:grid;grid-template-columns:minmax(180px,1fr) 88px 180px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #eef3f0}.miwa-settings-delivery-row>div:first-child{display:grid;gap:2px}.miwa-settings-delivery-row strong{color:#17382D;font-size:12px}.miwa-settings-delivery-row small{color:#8a9891;font-size:10px}.miwa-settings-delivery-row label{font-size:12px;color:#65766e}.miwa-settings-delivery-row .miwa-settings-inline-number{display:flex}.miwa-settings-delivery-row input[type=number]{width:100%;min-height:38px;padding:8px;border:1px solid #d5e0db;border-radius:8px 0 0 8px}.miwa-settings-delivery-row b{display:grid;place-items:center;min-width:62px;border:1px solid #d5e0db;border-left:0;border-radius:0 8px 8px 0;background:#f7f9f8;font-size:11px;color:#65766e}
+.miwa-settings-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:22px;padding-top:18px;border-top:1px solid #e2ebe7}.miwa-settings-actions button,.miwa-settings-history-toggle{min-height:40px;padding:0 14px;border-radius:8px;font-weight:800;cursor:pointer}.miwa-settings-actions .ghost,.miwa-settings-history-toggle{border:1px solid #d5e0db;background:#fff;color:#65766e}.miwa-settings-actions .secondary{border:1px solid #176B4D;background:#fff;color:#176B4D}.miwa-settings-actions .primary{border:1px solid #176B4D;background:#176B4D;color:#fff}
+.miwa-settings-history-toggle{margin-top:14px}.miwa-settings-history{margin-top:12px;padding:0 14px 10px;border:1px solid #dce6e1;border-radius:10px}.miwa-settings-history h3{margin:14px 0 8px;color:#0D4937;font-size:15px}.miwa-settings-history details{border-top:1px solid #eef3f0}.miwa-settings-history summary{display:flex;gap:12px;flex-wrap:wrap;padding:11px 0;cursor:pointer;font-size:12px}.miwa-settings-history summary strong{color:#0D4937}.miwa-settings-history ul,.miwa-settings-history p{margin:0 0 10px;padding-left:18px;color:#66786f;font-size:11px;line-height:1.65}.miwa-settings-history .active-tag{padding:2px 6px;border-radius:999px;background:#E8F2ED;color:#0D4937;font-weight:800}
+body.miwa-settings-open{overflow:hidden}
+@media(max-width:980px){.miwa-settings-overlay{padding:14px}.miwa-settings-body{grid-template-columns:1fr}.miwa-settings-scope{display:none}.miwa-settings-content{grid-template-columns:1fr}.miwa-settings-tabs{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid #e2ebe7}.miwa-settings-tabs button{white-space:nowrap;min-height:44px}.miwa-settings-grid{grid-template-columns:1fr}.miwa-settings-delivery-row{grid-template-columns:1fr}.miwa-settings-active{margin-left:0}}
+@media(max-width:640px){.miwa-settings-overlay{padding:0}.miwa-settings-dialog{min-height:100vh;border-radius:0}.miwa-settings-header{padding:18px 16px}.miwa-settings-header h2{font-size:21px}.miwa-settings-meta{padding:10px 16px;gap:12px}.miwa-settings-notice{margin:12px 16px 0}.miwa-settings-editor{padding:16px}.miwa-settings-field b{min-width:70px}.miwa-settings-actions{justify-content:stretch}.miwa-settings-actions button{flex:1 1 100%}}
+

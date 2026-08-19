@@ -1,0 +1,53 @@
+<section class="selection-record-preview" aria-labelledby="selection-record-preview-title">
+  <section class="selection-record-preview__head">
+    <div class="selection-record-preview__head-main">
+      <button class="selection-record-preview__back" type="button" data-selection-record-back aria-label="返回选品工作台">‹</button>
+      <div>
+        <h1 id="selection-record-preview-title">选品录入</h1>
+        <p>系统已创建商品机会并自动带入选品类型；当前进入数据录入，员工只补充业务闭环真正需要的信息。</p>
+      </div>
+    </div>
+    <span class="selection-record-preview__type" id="selection-record-type">常规选品</span>
+  </section>
+
+  <div class="selection-record-preview__flow" aria-label="选品业务流程">
+    <div class="selection-record-preview__step completed"><b>01</b><span>商品机会</span></div>
+    <div class="selection-record-preview__step active"><b>02</b><span>数据录入</span></div>
+    <div class="selection-record-preview__step"><b>03</b><span>成本试算</span></div>
+    <div class="selection-record-preview__step"><b>04</b><span>智能定价</span></div>
+    <div class="selection-record-preview__step"><b>05</b><span>上架判断</span></div>
+  </div>
+
+  <section class="selection-record-preview__panel">
+    <header class="selection-record-preview__panel-head">
+      <div><h2>商品基本资料</h2><p>能自动生成、解析或继承的信息由系统处理，员工只补充当前业务闭环真正需要的数据。</p></div>
+      <span class="selection-record-preview__badge">数据录入</span>
+    </header>
+
+    <div class="selection-record-preview__auto">
+      <div><span>商品机会编号</span><strong id="selection-record-id">创建后自动生成</strong></div>
+      <div><span>当前状态</span><strong>草稿 · 数据录入</strong></div>
+      <div><span>创建人</span><strong>占树全</strong></div>
+      <div><span>选品类型</span><strong id="selection-record-type-auto">常规选品</strong></div>
+    </div>
+
+    <div class="selection-record-preview__grid">
+      <div class="selection-record-preview__field full"><label>采购来源链接 <small>线上来源优先填写，系统尝试识别平台和来源信息</small></label><input type="url" placeholder="https://detail.1688.com/..."></div>
+      <div class="selection-record-preview__field"><label>选品代表图 <small>真实、完整、能代表商品本貌</small></label><div class="selection-record-preview__image-box">系统提取或人工确认代表图</div></div>
+      <div class="selection-record-preview__field"><label>商品机会标题 <small>系统优先自动生成，人工确认</small></label><input id="selection-record-title" type="text" placeholder="例如：男士吸汗速干短袜"></div>
+      <div class="selection-record-preview__field"><label>来源类型</label><select><option>线上采购平台</option><option>供应商推荐</option><option>展会或市场发现</option><option>竞品或店铺发现</option><option>客户需求</option><option>内部现有商品</option><option>其他</option></select></div>
+      <div class="selection-record-preview__field"><label>来源平台 <small>链接可识别时自动带入</small></label><select id="selection-record-source-platform"><option>1688</option><option>Alibaba</option><option>淘宝</option><option>义乌购</option><option>供应商直供</option><option>其他</option></select></div>
+      <div class="selection-record-preview__field"><label>供应商</label><input type="text" placeholder="选择已有供应商或暂存名称"></div>
+      <div class="selection-record-preview__field"><label>系统推荐商品分类 <small>只读</small></label><input type="text" value="待系统识别" readonly></div>
+      <div class="selection-record-preview__field"><label>确认商品分类</label><select><option>待确认</option><option>服饰配件</option><option>生活杂货</option><option>手机配件</option><option>其他</option></select></div>
+      <div class="selection-record-preview__field"><label>选品负责人</label><select id="selection-record-owner"><option>占树全</option><option>张美和</option><option>选品人员A</option><option>林选品</option></select></div>
+      <div class="selection-record-preview__field full"><label>选品理由／核心卖点 <small>最多3条简短要点，仅说明为什么值得继续研究</small></label><textarea placeholder="1.&#10;2.&#10;3."></textarea></div>
+    </div>
+
+    <div class="selection-record-preview__actions">
+      <button class="selection-record-preview__secondary" type="button" data-selection-record-back>返回工作台</button>
+      <button class="selection-record-preview__primary" type="button" data-selection-record-save>保存草稿</button>
+    </div>
+    <div class="selection-record-preview__note">系统自动生成、解析或继承的数据不要求员工重复填写；当前页面作为01选品工作台V1候选的一部分统一验收。</div>
+  </section>
+</section>

@@ -1,0 +1,119 @@
+<div class="miwa-settings-overlay" id="miwa-global-settings" hidden>
+  <section class="miwa-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="miwa-settings-title">
+    <header class="miwa-settings-header">
+      <div>
+        <span class="miwa-settings-eyebrow">美和AIONE一体化工作平台｜全局设置</span>
+        <h2 id="miwa-settings-title">系统参数</h2>
+        <p>集中维护全平台共用的成本、交易、运营投入、利润目标、物流配送与价格治理参数。各业务工作台只读取当前生效版本。</p>
+      </div>
+      <button type="button" class="miwa-settings-close" data-settings-close aria-label="关闭系统参数">×</button>
+    </header>
+
+    <div class="miwa-settings-meta">
+      <div><span>当前生效版本</span><strong id="global-settings-current-version">待读取</strong></div>
+      <div><span>最后修改人</span><strong id="global-settings-updated-by">待读取</strong></div>
+      <div><span>最后更新时间</span><strong id="global-settings-updated-at">待读取</strong></div>
+      <span class="miwa-settings-active">当前生效</span>
+    </div>
+
+    <div class="miwa-settings-notice" id="global-settings-notice">当前草稿与生效参数一致。</div>
+
+    <div class="miwa-settings-body">
+      <aside class="miwa-settings-scope" aria-label="设置范围">
+        <div class="miwa-settings-scope-title">设置</div>
+        <button type="button" class="is-active">系统参数</button>
+        <p>系统参数属于AIONE全局公共配置，不归任何单一工作台维护。</p>
+      </aside>
+
+      <div class="miwa-settings-content">
+        <nav class="miwa-settings-tabs" aria-label="参数分类">
+          <button type="button" class="is-active" data-global-settings-tab="cost">01 成本基础</button>
+          <button type="button" data-global-settings-tab="transaction">02 基础交易</button>
+          <button type="button" data-global-settings-tab="operating">03 运营投入</button>
+          <button type="button" data-global-settings-tab="profit">04 利润目标</button>
+          <button type="button" data-global-settings-tab="logistics">05 物流配送</button>
+          <button type="button" data-global-settings-tab="governance">06 价格治理</button>
+        </nav>
+
+        <div class="miwa-settings-editor">
+          <section class="miwa-settings-section" data-global-settings-section="cost">
+            <div class="miwa-settings-section-copy"><h3>成本基础参数</h3><p>决定商品进入销售前的基础成本，直接参与成本试算。</p></div>
+            <div class="miwa-settings-grid">
+              <label class="miwa-settings-field"><span>CNY兑JPY汇率</span><div><input type="number" step="0.01" min="0" data-global-param="common.cnyToJpyRate"><b>JPY/CNY</b></div><small>采购与跨境费用换算。</small></label>
+              <label class="miwa-settings-field"><span>国际运费单价</span><div><input type="number" step="0.01" min="0" data-global-param="common.internationalFreightRate"><b>CNY/kg</b></div><small>常规选品跨境入仓成本。</small></label>
+              <label class="miwa-settings-field"><span>进口杂费率</span><div><input type="number" step="0.1" min="0" max="100" data-global-param="common.importMiscRate"><b>%</b></div><small>关税、进口杂费等当前试算口径。</small></label>
+              <label class="miwa-settings-field"><span>成本安全缓冲率</span><div><input type="number" step="0.1" min="0" max="100" data-global-param="common.costSafetyBufferRate"><b>%</b></div><small>用于尚未完全确定的成本波动。</small></label>
+              <label class="miwa-settings-field"><span>套装包装成本</span><div><input type="number" step="1" min="0" data-global-param="common.packageCostPerSaleSetJPY"><b>JPY/套</b></div><small>每个销售套装的包装成本。</small></label>
+              <label class="miwa-settings-field"><span>消费税率</span><div><input type="number" step="0.1" min="0" max="100" data-global-param="common.consumptionTaxRate"><b>%</b></div><small>当前日本销售税率参数。</small></label>
+            </div>
+          </section>
+
+          <section class="miwa-settings-section" data-global-settings-section="transaction" hidden>
+            <div class="miwa-settings-section-copy"><h3>基础交易成本参数</h3><p>订单成交通常伴随发生的成本，与运营投入分开管理。</p></div>
+            <div class="miwa-settings-grid">
+              <label class="miwa-settings-field"><span>平台费率</span><div><input type="number" step="0.1" min="0" max="100" data-global-param="shop.platformFeeRate"><b>%</b></div><small>平台销售手续费等基础费率。</small></label>
+              <label class="miwa-settings-field"><span>结算手续费率</span><div><input type="number" step="0.1" min="0" max="100" data-global-param="common.settlementFeeRate"><b>%</b></div><small>收款、结算等交易费用。</small></label>
+              <label class="miwa-settings-field"><span>预计退货损失率</span><div><input type="number" step="0.1" min="0" max="100" data-global-param="common.returnLossRate"><b>%</b></div><small>用于选品与定价阶段的预计损失口径。</small></label>
+            </div>
+          </section>
+
+          <section class="miwa-settings-section" data-global-settings-section="operating" hidden>
+            <div class="miwa-settings-section-copy"><h3>运营投入参数</h3><p>观察期不写入当前真实成本；用于运营中正式成本及运营情景模拟。</p></div>
+            <div class="miwa-settings-grid">
+              <label class="miwa-settings-field"><span>广告费率</span><div><input type="number" step="0.1" min="0" max="100" data-global-param="shop.advertisingRate"><b>%</b></div><small>运营中或情景模拟的广告投入。</small></label>
+              <label class="miwa-settings-field"><span>优惠券率</span><div><input type="number" step="0.1" min="0" max="100" data-global-param="shop.couponRate"><b>%</b></div><small>公司承担的优惠券成本口径。</small></label>
+              <label class="miwa-settings-field"><span>积分成本率</span><div><input type="number" step="0.1" min="0" max="100" data-global-param="shop.pointRate"><b>%</b></div><small>楽天基础1倍按1%计入；运营中可按实际策略调整为2%、5%等。</small></label>
+              <label class="miwa-settings-field"><span>其他运营成本</span><div><input type="number" step="1" min="0" data-global-param="shop.otherOperatingCostJPY"><b>JPY/件</b></div><small>广告、优惠券、积分以外可直接归属于单件商品的运营投入。</small></label>
+            </div>
+          </section>
+
+          <section class="miwa-settings-section" data-global-settings-section="profit" hidden>
+            <div class="miwa-settings-section-copy"><h3>利润目标｜智能定价核心</h3><p>选品阶段不预先计入广告、优惠券、积分等运营投入；系统同时执行利润额与利润率双重门槛，并采用更严格的一项反推经营目标价。</p></div>
+            <div class="miwa-settings-grid">
+              <label class="miwa-settings-field"><span>最低单件贡献利润</span><div><input type="number" step="10" min="0" data-global-param="pricing.targetContributionProfitJPY"><b>JPY</b></div><small>当前验证值：500 JPY。防止低价商品虽然利润率高，但实际每单贡献过低。</small></label>
+              <label class="miwa-settings-field"><span>最低运营前贡献利润率</span><div><input type="number" step="0.1" min="0" max="100" data-global-param="pricing.targetContributionMarginRate"><b>%</b></div><small>当前验证值：30%。防止高单价商品只达到固定利润额就被误判为达标。</small></label>
+              <label class="miwa-settings-field"><span>最低毛利率</span><div><input type="number" step="0.1" min="0" max="100" data-global-param="pricing.minimumGrossMarginRate"><b>%</b></div><small>保留为完整利润结构的辅助预警线，不作为本轮智能定价主门槛。</small></label>
+            </div>
+            <div class="miwa-settings-basis"><strong>当前定价主逻辑：</strong>单件销售成本 → 500 JPY最低利润额 + 30%最低运营前利润率双重判断 → 采用更严格价格 → 推荐经营目标价 → 业务负责人确认最终上架价。</div>
+          </section>
+
+          <section class="miwa-settings-section" data-global-settings-section="logistics" hidden>
+            <div class="miwa-settings-section-copy"><h3>物流配送参数</h3><p>集中维护跨境直发首重/续重与日本仓配送档位。</p></div>
+            <div class="miwa-settings-grid">
+              <label class="miwa-settings-field"><span>直发首重重量</span><div><input type="number" step="1" min="1" data-global-param="common.directShippingFirstWeightGram"><b>g</b></div></label>
+              <label class="miwa-settings-field"><span>直发首重费用</span><div><input type="number" step="0.1" min="0" data-global-param="common.directShippingFirstWeightFeeCNY"><b>CNY</b></div></label>
+              <label class="miwa-settings-field"><span>直发续重单位</span><div><input type="number" step="1" min="1" data-global-param="common.directShippingAdditionalWeightUnitGram"><b>g</b></div></label>
+              <label class="miwa-settings-field"><span>直发续重费用</span><div><input type="number" step="0.1" min="0" data-global-param="common.directShippingAdditionalWeightFeeCNY"><b>CNY</b></div></label>
+            </div>
+            <div class="miwa-settings-section-copy miwa-settings-delivery-copy"><h3>日本配送费标准</h3><p>当前档位可启停并调整金额。</p></div>
+            <div id="global-settings-delivery-list"></div>
+          </section>
+
+          <section class="miwa-settings-section" data-global-settings-section="governance" hidden>
+            <div class="miwa-settings-section-copy"><h3>价格治理参数</h3><p>用于活动、官方建议零售价与特殊库存处理边界，不自动决定日常最终上架价。</p></div>
+            <div class="miwa-settings-grid">
+              <label class="miwa-settings-field"><span>活动最低贡献利润率</span><div><input type="number" step="0.1" min="0" max="100" data-global-param="pricing.minimumCampaignContributionMarginRate"><b>%</b></div></label>
+              <label class="miwa-settings-field"><span>官方建议零售价上浮率</span><div><input type="number" step="1" min="0" data-global-param="pricing.officialRetailMarkupRate"><b>%</b></div></label>
+              <label class="miwa-settings-field"><span>官方建议零售价高上浮档</span><div><input type="number" step="1" min="0" data-global-param="pricing.officialRetailHighMarkupRate"><b>%</b></div></label>
+              <label class="miwa-settings-field"><span>正常处理允许亏损率</span><div><input type="number" step="1" min="0" max="100" data-global-param="pricing.normalDisposalLossRate"><b>%</b></div></label>
+              <label class="miwa-settings-field"><span>最大处理亏损率</span><div><input type="number" step="1" min="0" max="100" data-global-param="pricing.maximumDisposalLossRate"><b>%</b></div></label>
+              <label class="miwa-settings-field"><span>售价尾数规则</span><div><input type="number" step="10" min="0" max="99" data-global-param="pricing.priceEndingRule"><b>JPY尾数</b></div><small>当前原型按××80取整。</small></label>
+            </div>
+          </section>
+
+          <div class="miwa-settings-actions">
+            <button type="button" class="ghost" id="global-settings-reset">恢复首版建议值</button>
+            <button type="button" class="secondary" id="global-settings-save">保存为新版本</button>
+            <button type="button" class="primary" id="global-settings-activate">保存并设为当前生效</button>
+          </div>
+
+          <button type="button" class="miwa-settings-history-toggle" id="global-settings-history-toggle">查看参数版本记录</button>
+          <section class="miwa-settings-history" id="global-settings-history" hidden>
+            <h3>参数版本记录</h3>
+            <div id="global-settings-history-list"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

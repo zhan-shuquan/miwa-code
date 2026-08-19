@@ -1,0 +1,47 @@
+/* ========================================
+   Selection Record Preview｜选品录入页面接入口预览
+   仅用于验证“选品类型 -> 选品录入页面”的路由与类型自动带入。
+======================================== */
+.selection-record-preview{width:100%;max-width:1180px;margin:0 auto;color:#17382D}
+.selection-record-preview button,.selection-record-preview input,.selection-record-preview select,.selection-record-preview textarea{font:inherit}
+.selection-record-preview__head,.selection-record-preview__panel{border:1px solid #DCE5E0;border-radius:18px;background:#FFFFFF;box-shadow:0 8px 28px rgba(13,73,55,.05)}
+.selection-record-preview__head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;margin-bottom:14px}
+.selection-record-preview__head-main{min-width:0;display:flex;align-items:center;gap:13px}
+.selection-record-preview__back{width:38px;height:38px;display:grid;place-items:center;border:1px solid #C9D9D1;border-radius:11px;background:#F8FBF9;color:#176B4D;font-size:20px;font-weight:700;cursor:pointer}
+.selection-record-preview__head h1{margin:0;color:#0D4937;font-size:24px;font-weight:900}
+.selection-record-preview__head p{margin:5px 0 0;color:#73827B;font-size:11px}
+.selection-record-preview__type{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border-radius:999px;background:#E8F2ED;color:#176B4D;font-size:11px;font-weight:900;white-space:nowrap}
+.selection-record-preview__flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:14px}
+.selection-record-preview__step{min-height:46px;display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #DCE5E0;border-radius:10px;background:#F8FBF9;color:#63766C;font-size:10px;font-weight:800}
+.selection-record-preview__step.active{border-color:#A9C9B9;background:#E8F2ED;color:#0D4937}
+.selection-record-preview__step b{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:#FFFFFF;color:#176B4D;font-size:9px}
+.selection-record-preview__panel{padding:17px 18px}
+.selection-record-preview__panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
+.selection-record-preview__panel-head h2{margin:0;color:#0D4937;font-size:18px;font-weight:900}
+.selection-record-preview__panel-head p{margin:5px 0 0;color:#7A8881;font-size:10.5px}
+.selection-record-preview__badge{padding:5px 8px;border-radius:999px;background:#F1F4F2;color:#75837C;font-size:9px;font-weight:800}
+.selection-record-preview__auto{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.selection-record-preview__auto>div{padding:10px;border:1px solid #E0E8E4;border-radius:10px;background:#FBFDFC}
+.selection-record-preview__auto span{display:block;color:#86938D;font-size:8.5px;font-weight:800;margin-bottom:4px}
+.selection-record-preview__auto strong{color:#17382D;font-size:10px;font-weight:900}
+.selection-record-preview__grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.selection-record-preview__field{display:grid;gap:5px}
+.selection-record-preview__field.full{grid-column:1/-1}
+.selection-record-preview__field label{color:#335146;font-size:9.5px;font-weight:850}
+.selection-record-preview__field label small{color:#8B9891;font-weight:650}
+.selection-record-preview__field input,.selection-record-preview__field select,.selection-record-preview__field textarea{width:100%;border:1px solid #D1DDD7;border-radius:9px;background:#FFFFFF;color:#29483B;outline:0;padding:0 10px;font-size:10px}
+.selection-record-preview__field input,.selection-record-preview__field select{height:38px}
+.selection-record-preview__field textarea{min-height:78px;padding-top:9px;resize:vertical}
+.selection-record-preview__field input:focus,.selection-record-preview__field select:focus,.selection-record-preview__field textarea:focus{border-color:#7EAD97;box-shadow:0 0 0 3px rgba(23,107,77,.08)}
+.selection-record-preview__image-box{min-height:110px;display:flex;align-items:center;justify-content:center;border:1px dashed #BFD3C9;border-radius:10px;background:#F8FBF9;color:#7E9187;font-size:10px}
+.selection-record-preview__actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px;padding-top:14px;border-top:1px solid #E3EAE6}
+.selection-record-preview__actions button{min-height:36px;padding:0 13px;border-radius:9px;font-size:10.5px;font-weight:850;cursor:pointer}
+.selection-record-preview__secondary{border:1px solid #B9CEC3;background:#FFFFFF;color:#176B4D}
+.selection-record-preview__primary{border:1px solid #176B4D;background:#176B4D;color:#FFFFFF}
+.selection-record-preview__note{margin-top:10px;color:#8A9690;font-size:9px;line-height:1.55}
+@media(max-width:900px){.selection-record-preview__flow{grid-template-columns:repeat(3,1fr)}.selection-record-preview__auto{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.selection-record-preview__head{align-items:flex-start;flex-direction:column}.selection-record-preview__grid{grid-template-columns:1fr}.selection-record-preview__field.full{grid-column:auto}.selection-record-preview__flow{grid-template-columns:1fr 1fr}.selection-record-preview__auto{grid-template-columns:1fr 1fr}}
+
+/* V1候補：商品機会作成済み → データ入力中を明確化する。 */
+.selection-record-preview__step.completed{border-color:#C9DDD3;background:#F2F8F5;color:#176B4D}
+.selection-record-preview__step.completed b{background:#176B4D;color:#FFFFFF}

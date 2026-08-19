@@ -1,0 +1,27 @@
+/* ========================================
+   AIONE Preview Auth｜プレビュー認証画面
+======================================== */
+.aione-preview-auth{position:fixed;inset:0;z-index:5000;display:grid;place-items:center;padding:28px;background:#F7F7F3;color:#17382D}
+.aione-preview-auth[hidden]{display:none!important}
+.aione-preview-auth__card{width:min(720px,100%);max-height:calc(100vh - 56px);overflow:auto;padding:34px;border:1px solid #d7e3dd;border-radius:20px;background:#fff;box-shadow:0 24px 70px rgba(13,73,55,.14)}
+.aione-preview-auth__brand{display:flex;align-items:center;gap:10px;color:#66786f;font-size:13px;font-weight:700}
+.aione-preview-auth__mark{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;background:#176B4D;color:#fff;letter-spacing:.08em;font-weight:900}
+.aione-preview-auth h1{margin:22px 0 4px;color:#0D4937;font-size:30px;line-height:1.2}
+.aione-preview-auth__lead{margin:0 0 20px;color:#66786f;font-size:14px}
+.aione-preview-auth__notice{display:grid;gap:5px;padding:13px 14px;border:1px solid #e5d8a4;border-radius:10px;background:#fffdf4;color:#6f5a17;font-size:12px;line-height:1.65}
+.aione-preview-auth__google{width:100%;min-height:46px;margin-top:16px;border:1px solid #d7e3dd;border-radius:10px;background:#f7f9f8;color:#8a9891;font-weight:800;cursor:not-allowed}
+.aione-preview-auth__google span{margin-left:8px;font-size:11px;font-weight:600}
+.aione-preview-auth__divider{display:flex;align-items:center;gap:12px;margin:22px 0 14px;color:#8a9891;font-size:11px}
+.aione-preview-auth__divider::before,.aione-preview-auth__divider::after{content:"";height:1px;flex:1;background:#e6ece9}
+.aione-preview-auth__accounts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.aione-preview-auth__account{display:grid;gap:3px;min-height:74px;padding:12px 14px;border:1px solid #d7e3dd;border-radius:12px;background:#fff;text-align:left;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+.aione-preview-auth__account:hover{border-color:#176B4D;box-shadow:0 8px 20px rgba(23,107,77,.08);transform:translateY(-1px)}
+.aione-preview-auth__account strong{color:#0D4937;font-size:14px}
+.aione-preview-auth__account span{color:#66786f;font-size:11px;line-height:1.5}
+.aione-preview-auth__account small{color:#8a9891;font-size:10px;overflow-wrap:anywhere}
+.aione-preview-auth__account.is-admin{border-style:dashed;background:#fbfcfb}
+.aione-preview-auth__footnote{margin:18px 0 0;color:#8a9891;font-size:10px;line-height:1.6;text-align:center}
+.aione-preview-session{position:fixed;right:18px;bottom:18px;z-index:2600;display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #d7e3dd;border-radius:999px;background:rgba(255,255,255,.96);box-shadow:0 8px 20px rgba(13,73,55,.10);font-size:11px;color:#66786f}
+.aione-preview-session strong{color:#0D4937}
+.aione-preview-session button{border:0;background:transparent;color:#176B4D;font-weight:800;cursor:pointer}
+@media(max-width:720px){.aione-preview-auth{padding:14px}.aione-preview-auth__card{max-height:calc(100vh - 28px);padding:24px 18px;border-radius:16px}.aione-preview-auth__accounts{grid-template-columns:1fr}.aione-preview-auth h1{font-size:25px}.aione-preview-session{right:10px;bottom:74px}}

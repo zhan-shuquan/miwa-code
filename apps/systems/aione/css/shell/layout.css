@@ -1,0 +1,192 @@
+/* =========================================================
+   AIONE グローバルレイアウト
+   Mobile First / Tablet / Desktop
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   共通レイアウト
+   --------------------------------------------------------- */
+
+.app-shell{
+  min-height:100vh;
+  min-height:100dvh;
+  display:flex;
+  flex-direction:column;
+}
+
+.app-body{
+  flex:1;
+  min-width:0;
+}
+
+/* モバイルではデスクトップ専用領域を非表示 */
+#desktop-header-host,
+.desktop-sidebar-host,
+.desktop-aside-host{
+  display:none;
+}
+
+/* フッター */
+#desktop-footer-host{
+  display:block;
+  padding-bottom:calc(
+    var(--mobile-bottom) +
+    var(--safe-bottom)
+  );
+}
+
+/* メインコンテンツ */
+.app-main{
+  min-width:0;
+  padding:
+    14px
+    14px
+    calc(
+      var(--mobile-bottom) +
+      var(--safe-bottom) +
+      18px
+    );
+}
+
+.page-host{
+  width:100%;
+  max-width:var(--content-max);
+  margin:0 auto;
+}
+
+
+/* =========================================================
+   Tablet
+   768px ～ 1099px
+   ========================================================= */
+
+@media(min-width:768px){
+
+  .app-main{
+    padding:
+      20px
+      22px
+      calc(
+        var(--mobile-bottom) +
+        var(--safe-bottom) +
+        24px
+      );
+  }
+
+}
+
+
+/* =========================================================
+   Desktop
+   1100px 以上
+
+   固定3カラム：
+   Sidebar + Main + Aside
+
+   Aside の表示可否をJavaScriptやページ状態に依存させない。
+   ========================================================= */
+
+@media(min-width:1100px){
+
+  /* モバイル専用UIを非表示 */
+  #mobile-topbar-host,
+  #mobile-info-host,
+  #mobile-bottom-host,
+  #mobile-drawer-host{
+    display:none;
+  }
+
+  /* デスクトップ共通UI */
+  #desktop-header-host,
+  #desktop-footer-host{
+    display:block;
+    width:100%;
+  }
+
+  #desktop-footer-host{
+    padding-bottom:0;
+  }
+
+
+  /* -------------------------------------------------------
+     デスクトップ固定3カラム
+     ------------------------------------------------------- */
+
+  .app-body,
+  .app-body.has-aside{
+    display:grid;
+
+    grid-template-columns:
+      var(--desktop-sidebar)
+      minmax(0,1fr)
+      var(--desktop-aside);
+
+    align-items:stretch;
+    min-width:0;
+  }
+
+
+  /* -------------------------------------------------------
+     左：Sidebar
+     ------------------------------------------------------- */
+
+  .desktop-sidebar-host{
+    display:block;
+    min-width:0;
+
+    min-height:calc(
+      100vh -
+      var(--desktop-header-main) -
+      var(--desktop-header-info)
+    );
+
+    background:#FFFFFF;
+    border-right:1px solid var(--border);
+  }
+
+
+  /* -------------------------------------------------------
+     中：Main
+     ------------------------------------------------------- */
+
+  .app-main{
+    min-width:0;
+    padding:22px;
+  }
+
+
+  /* -------------------------------------------------------
+     右：Aside
+     常時表示
+     ------------------------------------------------------- */
+
+  .desktop-aside-host,
+  .app-body.has-aside .desktop-aside-host{
+    display:block;
+    min-width:0;
+
+    min-height:calc(
+      100vh -
+      var(--desktop-header-main) -
+      var(--desktop-header-info)
+    );
+
+    background:#FFFFFF;
+    border-left:1px solid var(--border);
+  }
+
+}
+
+
+/* =========================================================
+   Large Desktop
+   1600px 以上
+   ========================================================= */
+
+@media(min-width:1600px){
+
+  .app-main{
+    padding:24px 28px;
+  }
+
+}

@@ -1,0 +1,67 @@
+/* ========================================
+   Selection Guidance Pages｜選品概覧・選品タスク
+   思考の統一と実行ルールを業務ワークベンチから分離して表示する。
+======================================== */
+.selection-guide-page{width:100%;max-width:1180px;margin:0 auto;color:#17382D}
+.selection-guide-page *{box-sizing:border-box}
+.selection-guide-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;padding:8px 10px;border:1px solid #DCE5E0;border-radius:12px;background:#FFFFFF;box-shadow:0 5px 18px rgba(13,73,55,.035)}
+.selection-guide-nav a{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 10px;border-radius:8px;color:#176B4D;text-decoration:none;font-size:10.5px;font-weight:850}
+.selection-guide-nav>div{display:flex;gap:4px}
+.selection-guide-nav a:hover,.selection-guide-nav a.active{background:#E8F2ED;color:#0D4937}
+.selection-guide-hero{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:14px;padding:21px 22px;border:1px solid #DCE5E0;border-radius:18px;background:#FFFFFF;box-shadow:0 8px 28px rgba(13,73,55,.05)}
+.selection-guide-hero__icon{width:46px;height:46px;display:grid;place-items:center;border-radius:13px;background:#E8F2ED;color:#176B4D;font-size:21px;font-weight:900}
+.selection-guide-hero small{display:block;margin-bottom:4px;color:#176B4D;font-size:9.5px;font-weight:900}
+.selection-guide-hero h1{margin:0;color:#0D4937;font-size:25px;line-height:1.15;font-weight:900}
+.selection-guide-hero p{margin:7px 0 0;max-width:840px;color:#66776F;font-size:11px;line-height:1.65}
+.selection-guide-status{padding:5px 9px;border-radius:999px;background:#F1F4F2;color:#6E7D76;font-size:9px;font-weight:850;white-space:nowrap}
+.selection-guide-panel{margin-top:14px;padding:17px 18px;border:1px solid #DCE5E0;border-radius:15px;background:#FFFFFF;box-shadow:0 6px 22px rgba(13,73,55,.04)}
+.selection-guide-panel--core{background:linear-gradient(180deg,#F7FBF9 0%,#FFFFFF 100%)}
+.selection-guide-panel__head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px}
+.selection-guide-panel__head h2{margin:0;color:#0D4937;font-size:15px;font-weight:900}
+.selection-guide-panel__head p{margin:4px 0 0;color:#7A8881;font-size:10.3px;line-height:1.55}
+.selection-guide-core-sentence{padding:15px 16px;border:1px solid #CDE0D6;border-radius:12px;background:#FFFFFF;color:#0D4937;font-size:17px;font-weight:900;line-height:1.6}
+.selection-guide-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:12px}
+.selection-guide-flow span{padding:6px 8px;border-radius:8px;background:#E8F2ED;color:#0D4937;font-size:9.5px;font-weight:850}
+.selection-guide-flow span.is-terminal{background:#176B4D;color:#FFFFFF}
+.selection-guide-flow b{color:#8FA198;font-size:10px}
+.selection-guide-three,.selection-guide-methods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.selection-guide-three article,.selection-guide-methods article{padding:13px;border:1px solid #DDE7E2;border-radius:11px;background:#FCFDFC}
+.selection-guide-three strong,.selection-guide-methods strong{color:#0D4937;font-size:11.5px;font-weight:900}
+.selection-guide-three p,.selection-guide-methods p{margin:6px 0 0;color:#64756D;font-size:9.8px;line-height:1.6}
+.selection-guide-three span{display:inline-block;margin-top:9px;padding:4px 7px;border-radius:999px;background:#E8F2ED;color:#176B4D;font-size:8.5px;font-weight:850}
+.selection-guide-responsibility,.selection-guide-example,.selection-task-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.selection-guide-responsibility>div,.selection-guide-example>div,.selection-task-fields>div{padding:11px 12px;border:1px solid #DDE7E2;border-radius:10px;background:#FCFDFC}
+.selection-guide-responsibility span,.selection-guide-example span,.selection-task-fields span{display:block;margin-bottom:4px;color:#87938D;font-size:8.8px;font-weight:750}
+.selection-guide-responsibility strong,.selection-guide-example strong,.selection-task-fields strong{color:#17382D;font-size:10.5px;font-weight:850;line-height:1.5}
+.selection-guide-boundary{display:grid;grid-template-columns:1fr 1.15fr;gap:10px;align-items:stretch}
+.selection-guide-boundary__pre{display:grid;place-items:center;min-height:104px;padding:14px;border:1px dashed #B9CEC4;border-radius:12px;background:#FBFDFC;color:#60746A;font-size:11px;font-weight:850;text-align:center}
+.selection-guide-boundary__object{padding:14px 16px;border:2px solid #176B4D;border-radius:12px;background:#FFFFFF;text-align:center}
+.selection-guide-boundary__object small{display:inline-block;padding:4px 7px;border-radius:999px;background:#176B4D;color:#FFFFFF;font-size:8px;font-weight:850}
+.selection-guide-boundary__object strong{display:block;margin-top:7px;color:#0D4937;font-size:17px;font-weight:900}
+.selection-guide-boundary__object p{margin:5px 0 0;color:#6B7B74;font-size:9.5px;line-height:1.55}
+.selection-guide-official-flow{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:11px;color:#50665C;font-size:9.5px;font-weight:850}
+.selection-guide-official-flow span{padding:5px 7px;border:1px solid #DCE5E0;border-radius:7px;background:#FFFFFF}
+.selection-guide-official-flow b{color:#95A59D}
+.selection-task-formula{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;padding:15px;border:1px solid #CDE0D6;border-radius:12px;background:#FFFFFF}
+.selection-task-formula span,.selection-task-formula strong{padding:7px 10px;border-radius:8px;background:#E8F2ED;color:#0D4937;font-size:11px;font-weight:900}
+.selection-task-formula strong{background:#176B4D;color:#FFFFFF}
+.selection-task-formula b{color:#7D9288}
+.selection-guide-flow--tasks{justify-content:center;padding:5px 0 2px}
+.selection-task-rules{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.selection-task-rules p{margin:0;padding:11px 12px;border:1px solid #DDE7E2;border-radius:10px;background:#FBFDFC;color:#63756C;font-size:9.7px;line-height:1.6}
+.selection-task-rules strong{color:#0D4937}
+.selection-task-empty{padding:22px;border:1px dashed #B8CEC3;border-radius:12px;background:#FBFDFC;text-align:center}
+.selection-task-empty strong{color:#0D4937;font-size:12px;font-weight:900}
+.selection-task-empty p{max-width:760px;margin:7px auto 0;color:#6C7D75;font-size:9.8px;line-height:1.65}
+.selection-task-empty span{display:inline-block;margin-top:10px;padding:4px 7px;border-radius:999px;background:#F0F3F1;color:#7C8A84;font-size:8.5px;font-weight:850}
+@media(max-width:860px){.selection-guide-three,.selection-guide-methods,.selection-guide-responsibility,.selection-guide-example,.selection-task-fields{grid-template-columns:1fr 1fr}.selection-guide-boundary{grid-template-columns:1fr}.selection-guide-hero{grid-template-columns:46px 1fr}.selection-guide-status{grid-column:2;justify-self:start}.selection-task-rules{grid-template-columns:1fr}}
+@media(max-width:620px){.selection-guide-nav{align-items:flex-start;flex-direction:column}.selection-guide-nav>div{width:100%}.selection-guide-nav>div a{flex:1}.selection-guide-hero{grid-template-columns:1fr}.selection-guide-hero__icon{width:42px;height:42px}.selection-guide-status{grid-column:auto}.selection-guide-three,.selection-guide-methods,.selection-guide-responsibility,.selection-guide-example,.selection-task-fields{grid-template-columns:1fr}.selection-guide-core-sentence{font-size:14px}}
+
+
+/* 測样は固定主フローではなく、必要時に呼び出す補助検証として説明する。 */
+.selection-guide-official-note{
+  margin:10px 0 0;
+  color:#6F8078;
+  font-size:11px;
+  line-height:1.65;
+}

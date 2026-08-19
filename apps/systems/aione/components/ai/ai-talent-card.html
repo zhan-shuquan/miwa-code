@@ -1,0 +1,59 @@
+<article class="miwa-ai-talent-card" data-ai-talent-card aria-label="AI人才卡片">
+  <header class="miwa-ai-talent-card__head">
+    <div class="miwa-ai-talent-card__avatar" data-ai-avatar aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M9 3h6M12 3v3M6 8h12a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3Z"></path><circle cx="9" cy="13" r="1"></circle><circle cx="15" cy="13" r="1"></circle><path d="M8 17h8"></path></svg>
+    </div>
+
+    <div class="miwa-ai-talent-card__identity">
+      <div class="miwa-ai-talent-card__title-row">
+        <div class="miwa-ai-talent-card__name-tags">
+          <h2 class="miwa-ai-talent-card__title" data-ai-name>AI人才</h2>
+          <div class="miwa-ai-talent-card__tags" aria-label="AI人才标签">
+            <span class="miwa-ai-talent-tag miwa-ai-talent-tag--primary">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M12 3v3M6 8h12a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3Z"></path><path d="M8 14h.01M16 14h.01M8 18h8"></path></svg>
+              <span data-ai-type>专业AI人才</span>
+            </span>
+            <span class="miwa-ai-talent-tag">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"></path><path d="m16 15 3 3 3-3"></path></svg>
+              <span data-ai-coverage>流程覆盖级·待验证</span>
+            </span>
+          </div>
+        </div>
+        <button class="miwa-ai-talent-card__close" type="button" data-ai-talent-close aria-label="关闭">×</button>
+      </div>
+      <p class="miwa-ai-talent-card__desc" data-ai-description></p>
+    </div>
+  </header>
+
+  <section class="miwa-ai-talent-card__section" aria-labelledby="ai-talent-flow-title">
+    <div class="miwa-ai-talent-card__section-head">
+      <span class="miwa-ai-talent-card__section-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M5 5h6v6H5zM13 13h6v6h-6zM13 5h6M5 15h6"></path></svg>
+      </span>
+      <div>
+        <h3 id="ai-talent-flow-title">业务流程能力</h3>
+        <p>看每个流程节点的真实执行经验与当前能力状态。</p>
+      </div>
+    </div>
+    <div class="miwa-ai-talent-flow" data-ai-flow-list></div>
+  </section>
+
+  <footer class="miwa-ai-talent-card__section miwa-ai-talent-card__performance" aria-labelledby="ai-talent-performance-title">
+    <div class="miwa-ai-talent-card__section-head">
+      <span class="miwa-ai-talent-card__section-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-8M22 19H2"></path></svg>
+      </span>
+      <div>
+        <h3 id="ai-talent-performance-title">实战表现</h3>
+        <p>看这个AI人才整体参与真实业务后的表现与验证证据。</p>
+      </div>
+    </div>
+
+    <div class="miwa-ai-talent-performance-grid" data-ai-performance></div>
+
+    <div class="miwa-ai-talent-card__footline">
+      <span>所有能力与效率数据只使用真实运行记录；无真实证据时统一标记“待验证”。</span>
+      <button type="button" data-ai-history>查看完整履历 <b aria-hidden="true">›</b></button>
+    </div>
+  </footer>
+</article>
