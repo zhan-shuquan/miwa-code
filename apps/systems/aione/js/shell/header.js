@@ -227,6 +227,8 @@ export function initHeader(initialConfig = {}) {
     setText("desktop-user-name", displayName);
     setText("desktop-user-work-identity", workIdentity);
     setText("desktop-position-grade", grade);
+    setText("desktop-user-menu-name", displayName);
+    setText("desktop-user-menu-role", workIdentity);
     setText("miwaDailyLocation", user.locationName || "东京");
 
     const gradeElement = document.getElementById("desktop-position-grade");
@@ -471,9 +473,18 @@ export function initHeader(initialConfig = {}) {
 
   function bindEmployeeEntry() {
     const employeeEntry = document.getElementById("desktop-employee-entry");
+    const userMenu = document.getElementById("desktop-user-menu");
+    const profileButton = document.getElementById("desktop-user-profile");
+    const logoutButton = document.getElementById("desktop-user-logout");
     if (!employeeEntry) return;
 
-    employeeEntry.addEventListener("click", () => {
+    const closeUserMenu = () => {
+      if (!userMenu) return;
+      userMenu.hidden = true;
+      employeeEntry.setAttribute("aria-expanded", "false");
+    };
+
+    const openProfile = () => {
       const user = config.user || {};
       const safeSummary = {
         employeeId: user.employeeId || null,
@@ -492,6 +503,38 @@ export function initHeader(initialConfig = {}) {
       if (shouldContinue) {
         window.location.hash = `#/${user.profileRoute || "employee-profile"}`;
       }
+    };
+
+    employeeEntry.setAttribute("aria-expanded", "false");
+    employeeEntry.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!userMenu) {
+        openProfile();
+        return;
+      }
+      const willOpen = userMenu.hidden;
+      userMenu.hidden = !willOpen;
+      employeeEntry.setAttribute("aria-expanded", String(willOpen));
+    });
+
+    profileButton?.addEventListener("click", () => {
+      closeUserMenu();
+      openProfile();
+    });
+
+    logoutButton?.addEventListener("click", () => {
+      closeUserMenu();
+      dispatchWindowEvent("aione:preview-logout-request", { source: "header-user-menu" });
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!userMenu || userMenu.hidden) return;
+      if (employeeEntry.contains(event.target) || userMenu.contains(event.target)) return;
+      closeUserMenu();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeUserMenu();
     });
   }
 

@@ -126,22 +126,46 @@ function toHeaderConfig(identity) {
   };
 }
 
+export function logoutPreviewIdentity(reason = "user") {
+  const identity = window.AIONEPreviewIdentity || null;
+  const session = window.AIONEPreviewAuthSession || {};
+  const isGoogle = session.authSource === "google";
+
+  if (identity) {
+    recordPreviewActivity(identity, isGoogle ? "session.logout.google" : "session.switch", {
+      authenticatedEmail: session.authenticatedEmail || identity.email,
+      reason
+    });
+  }
+
+  clearSession();
+  delete window.AIONEPreviewIdentity;
+  delete window.AIONEPreviewAuthSession;
+  delete window.AIONEPreviewPermissionContext;
+  delete window.AIONEPreviewActivity;
+
+  try {
+    if (window.google?.accounts?.id) window.google.accounts.id.disableAutoSelect();
+  } catch (error) {
+    console.warn("AIONE Google logout cleanup skipped", error);
+  }
+
+  // Remove the hash so logout always returns to the Preview login entry.
+  const cleanUrl = `${window.location.pathname}${window.location.search}`;
+  window.location.replace(cleanUrl);
+}
+
 function renderSessionBadge(identity, session = {}) {
   document.querySelector(".aione-preview-session")?.remove();
   const isGoogle = session.authSource === "google";
   const badge = document.createElement("div");
   badge.className = "aione-preview-session";
   badge.innerHTML = `<span>内测｜<strong>${escapeHtml(identity.displayName)}</strong> · 全平台开放</span><button type="button">${isGoogle ? "退出登录" : "切换身份"}</button>`;
-  badge.querySelector("button")?.addEventListener("click", () => {
-    recordPreviewActivity(identity, isGoogle ? "session.logout.google" : "session.switch", {
-      authenticatedEmail: session.authenticatedEmail || identity.email
-    });
-    clearSession();
-    if (window.google?.accounts?.id) window.google.accounts.id.disableAutoSelect();
-    window.location.reload();
-  });
+  badge.querySelector("button")?.addEventListener("click", () => logoutPreviewIdentity("preview-badge"));
   document.body.appendChild(badge);
 }
+
+window.addEventListener("aione:preview-logout-request", () => logoutPreviewIdentity("header-user-menu"));
 
 function setGoogleStatus(host, message, tone = "neutral") {
   const status = host.querySelector("#aioneGoogleAuthStatus");

@@ -39,6 +39,18 @@
             <path d="m8 10 4 4 4-4"></path>
           </svg>
         </button>
+        <div class="miwa-user-menu" id="desktop-user-menu" hidden>
+          <div class="miwa-user-menu__summary">
+            <strong id="desktop-user-menu-name">当前用户</strong>
+            <span id="desktop-user-menu-role">当前工作身份</span>
+          </div>
+          <button class="miwa-user-menu__item" id="desktop-user-profile" type="button">
+            <span>个人工作身份</span><span aria-hidden="true">›</span>
+          </button>
+          <button class="miwa-user-menu__item is-danger" id="desktop-user-logout" type="button">
+            <span>退出登录</span><span aria-hidden="true">↪</span>
+          </button>
+        </div>
       </section>
 
       <nav class="miwa-primary-nav" aria-label="AIONE全局入口">

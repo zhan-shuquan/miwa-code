@@ -1,3 +1,7 @@
+# V1.18.5补充｜退出登录闭环（2026-08-19）
+
+Header用户身份卡点击后显示用户菜单，包含“个人工作身份”和“退出登录”。退出动作必须清除AIONE Preview sessionStorage、当前身份/权限上下文，并调用Google Identity Services的disableAutoSelect，随后返回AIONE内测登录入口。退出不撤销Google账户授权，仅结束AIONE当前会话，便于同一设备切换其他内测成员账号。
+
 # AIONE Preview Auth V0.3｜Google登录接入
 
 状态：验证中  

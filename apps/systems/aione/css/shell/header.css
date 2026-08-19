@@ -259,7 +259,7 @@
   white-space:nowrap;
 }
 
-.miwa-user-identity{min-width:176px}
+.miwa-user-identity{position:relative;min-width:176px}
 
 .miwa-user-identity__button{
   width:100%;
@@ -282,6 +282,55 @@
   border-color:#CFE0D7;
   background:var(--miwa-green-light);
 }
+
+.miwa-user-menu{
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  z-index:3200;
+  width:236px;
+  overflow:hidden;
+  border:1px solid #D7E3DD;
+  border-radius:12px;
+  background:#FFFFFF;
+  box-shadow:0 16px 36px rgba(13,73,55,.14);
+}
+
+.miwa-user-menu[hidden]{display:none!important}
+
+.miwa-user-menu__summary{
+  display:grid;
+  gap:3px;
+  padding:12px 14px;
+  border-bottom:1px solid #E7EDEA;
+  background:#FBFCFB;
+}
+
+.miwa-user-menu__summary strong{color:#162C24;font-size:12px}
+.miwa-user-menu__summary span{color:var(--text-secondary);font-size:10px;line-height:1.5}
+
+.miwa-user-menu__item{
+  width:100%;
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:0 14px;
+  border:0;
+  border-bottom:1px solid #EEF2F0;
+  background:#FFFFFF;
+  color:#17382D;
+  font-size:11px;
+  font-weight:700;
+  text-align:left;
+  cursor:pointer;
+}
+
+.miwa-user-menu__item:last-child{border-bottom:0}
+.miwa-user-menu__item:hover{background:#F5F9F7}
+.miwa-user-menu__item.is-danger{color:var(--miwa-red)}
+.miwa-user-menu__item.is-danger:hover{background:#FFF7F6}
 
 .miwa-user-avatar{
   width:34px;
