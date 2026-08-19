@@ -49,7 +49,7 @@ function person({
 export const PREVIEW_IDENTITIES = Object.freeze([
   person({
     subjectId: "86000",
-    email: "mcpu2024@gmail.com",
+    email: "mcpu2014@gmail.com",
     displayName: "占树全",
     initial: "占",
     primaryWorkIdentity: "系统开发者 / 经营者 / 管理者",
