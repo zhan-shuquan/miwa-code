@@ -182,3 +182,9 @@ export const PREVIEW_IDENTITIES = Object.freeze([
 export function findPreviewIdentity(subjectId) {
   return PREVIEW_IDENTITIES.find((item) => item.subjectId === subjectId) || null;
 }
+
+export function findPreviewIdentityByEmail(email) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  if (!normalizedEmail) return null;
+  return PREVIEW_IDENTITIES.find((item) => item.email.toLowerCase() === normalizedEmail) || null;
+}

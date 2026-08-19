@@ -519,4 +519,12 @@
 - 修复preview-auth.css加载顺序。
 - 修复选品工作台可选筛选控件缺失时的appendChild空节点错误。
 
+## V1.18.3 CANDIDATE｜2026-08-19｜Google真实登录接入
+
+- 接入 Google Identity Services，启用 AIONE Web Login。
+- Google登录邮箱自动匹配AIONE 7名成员与公司管理账户。
+- 公网内测域名不再显示手动身份卡；localhost保留开发备用身份。
+- 登录来源、认证邮箱继续写入Preview权限上下文与活动记录。
+- 当前仍为Preview前端验证，正式生产阶段补服务端ID token验证与持久化会话。
+
 - 2026-08-19：AIONE V1.18.2 已迁入 miwa-code，并重新连接 Vercel 内测部署。
