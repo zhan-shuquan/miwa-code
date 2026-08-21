@@ -1,6 +1,9 @@
+import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260821-v1.0.11-global-info-restored";
+import { getRouteDefinition } from "../config/route-registry.js";
+
 /* ========================================
    MIWA System Header｜美和システム全局Header
-   表示・権限補助・433説明・今日日常・標準イベントをこのモジュールで管理する。
+   表示・権限補助・全局入口・标准事件をこのモジュールで管理する。
    注記：画面上の権限制御はサーバー側権限検証の代替ではない。
 ======================================== */
 
@@ -194,7 +197,14 @@ export function initHeader(initialConfig = {}) {
     const fallback = document.getElementById("miwaLogoFallback");
 
     setText("miwaSystemShortName", brand.systemShortName || "AIONE");
-    setText("miwaSystemFormalName", brand.systemFormalName || "一体化工作平台");
+    setText("miwaSystemFormalName", brand.systemFormalName || "美和一体化工作平台");
+
+    document.querySelectorAll(".mobile-brand-name").forEach((element) => {
+      element.textContent = brand.systemShortName || "AIONE";
+    });
+    document.querySelectorAll(".mobile-logo").forEach((element) => {
+      if (brand.logoSrc) element.src = brand.logoSrc;
+    });
 
     if (!logo || !fallback) return;
 
@@ -215,84 +225,86 @@ export function initHeader(initialConfig = {}) {
   /* Headerには安全な本人要約だけを表示する。 */
   function renderUser() {
     const user = config.user || {};
-    const avatar = document.getElementById("desktop-user-avatar");
-    const employeeEntry = document.getElementById("desktop-employee-entry");
-
     const displayName = user.displayName || user.name || "当前用户";
     const workIdentity =
       user.primaryWorkIdentity || user.workIdentity || user.role || "当前工作身份";
     const grade = user.positionGrade || user.grade || "";
     const initial = user.initial || user.avatarText || displayName.trim().charAt(0) || "M";
+    const details = {
+      position: workIdentity,
+      responsibility: user.primaryResponsibility || "",
+      project: user.primaryProject || "",
+      entity: user.legalEntity || user.businessUnit || "",
+      email: user.email || ""
+    };
 
-    setText("desktop-user-name", displayName);
-    setText("desktop-user-work-identity", workIdentity);
-    setText("desktop-position-grade", grade);
-    setText("desktop-user-menu-name", displayName);
-    setText("desktop-user-menu-role", workIdentity);
+    ["desktop", "mobile"].forEach((scope) => {
+      setText(`${scope}-user-name`, displayName);
+      setText(`${scope}-position-grade`, grade);
+      setText(`${scope}-user-menu-name`, displayName);
+      setText(`${scope}-user-menu-grade`, grade);
+
+      const gradeElement = document.getElementById(`${scope}-position-grade`);
+      const menuGradeElement = document.getElementById(`${scope}-user-menu-grade`);
+      if (gradeElement) gradeElement.hidden = !grade;
+      if (menuGradeElement) menuGradeElement.hidden = !grade;
+
+      [
+        document.getElementById(`${scope}-user-avatar`),
+        document.getElementById(`${scope}-user-menu-avatar`)
+      ].forEach((avatar) => {
+        if (!avatar) return;
+        avatar.textContent = user.avatarUrl ? "" : initial;
+        avatar.style.backgroundImage = user.avatarUrl ? `url("${user.avatarUrl}")` : "";
+        avatar.classList.toggle("has-image", Boolean(user.avatarUrl));
+      });
+
+      Object.entries(details).forEach(([key, value]) => {
+        setText(`${scope}-user-menu-${key}`, value);
+        const rowSelector = scope === "desktop"
+          ? `[data-user-detail="${key}"]`
+          : `[data-mobile-user-detail="${key}"]`;
+        const row = document.querySelector(rowSelector);
+        if (row) row.hidden = !value;
+      });
+
+      const employeeEntry = document.getElementById(`${scope}-employee-entry`);
+      if (employeeEntry) {
+        const gradeText = grade ? `，职级${grade}` : "";
+        employeeEntry.setAttribute("aria-label", `${displayName}${gradeText}，打开个人资料卡`);
+      }
+    });
+
     setText("miwaDailyLocation", user.locationName || "东京");
-
-    const gradeElement = document.getElementById("desktop-position-grade");
-    if (gradeElement) gradeElement.hidden = !grade;
-
-    if (avatar) {
-      avatar.textContent = user.avatarUrl ? "" : initial;
-      avatar.style.backgroundImage = user.avatarUrl ? `url("${user.avatarUrl}")` : "";
-      avatar.classList.toggle("has-image", Boolean(user.avatarUrl));
-    }
-
-    if (employeeEntry) {
-      const gradeText = grade ? `，职位等级${grade}` : "";
-      employeeEntry.setAttribute(
-        "aria-label",
-        `${displayName}，${workIdentity}${gradeText}，打开员工个人工作身份入口`
-      );
-    }
+    setText("mobileDailyLocation", user.locationName || "东京");
   }
 
   /* 入口表示制御だけを担当し、正式権限検証はバックエンドで実施する。 */
   function applyPermissions() {
+    const restricted = config.permissionMode === "restricted";
     const permissions = Array.isArray(config.permissions)
       ? new Set(config.permissions)
       : null;
 
     header.querySelectorAll("[data-permission]").forEach((item) => {
-      item.hidden = permissions ? !permissions.has(item.dataset.permission) : false;
+      item.hidden = restricted && permissions
+        ? !permissions.has(item.dataset.permission)
+        : false;
     });
   }
 
   function updateActiveRoute() {
     const currentRoute = getCurrentRoute();
+    const definition = getRouteDefinition();
+    const activeRoute = definition.parent || currentRoute;
 
-    header.querySelectorAll("[data-header-route]").forEach((item) => {
-      const isActive = item.dataset.headerRoute === currentRoute;
+    document.querySelectorAll("[data-header-route]").forEach((item) => {
+      const isActive = item.dataset.headerRoute === activeRoute;
       item.classList.toggle("is-active", isActive);
 
       if (isActive) item.setAttribute("aria-current", "page");
       else item.removeAttribute("aria-current");
     });
-  }
-
-  function updateMobileEnterpriseMessage() {
-    const enterprise = config.enterprise || {};
-    const mobileTag = document.getElementById("mobile-company-tag");
-    const mobileText = document.getElementById("mobile-company-text");
-
-    const dateText = new Intl.DateTimeFormat("zh-CN", {
-      timeZone: enterprise.timeZone || config.user?.timeZone || "Asia/Tokyo",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "short"
-    }).format(new Date());
-
-    if (mobileTag) {
-      if (enterprise.tag) mobileTag.textContent = enterprise.tag;
-      if (enterprise.type) mobileTag.className = `mobile-company-tag ${enterprise.type}`;
-    }
-
-    if (mobileText) {
-      mobileText.textContent = enterprise.text || `${dateText}｜天气待接入`;
-    }
   }
 
   function renderDaily() {
@@ -316,24 +328,42 @@ export function initHeader(initialConfig = {}) {
     setText("miwaLunarDate", getLunarText(localDate));
     setText("miwaSolarTerm", getSolarTermText(localDate));
     setText("miwaZodiac", getZodiac(Number(parts.month), Number(parts.day)));
+    setText("mobileSolarDate", `${parts.year}/${parts.month}/${parts.day}`);
+    setText("mobileWeekday", new Intl.DateTimeFormat("zh-CN", {
+      timeZone,
+      weekday: "short"
+    }).format(new Date()));
+    setText("mobileLocalTime", `${parts.hour}:${parts.minute}`);
+    setText("mobileLunarDate", getLunarText(localDate));
+    setText("mobileSolarTerm", getSolarTermText(localDate));
+    setText("mobileZodiac", getZodiac(Number(parts.month), Number(parts.day)));
   }
 
   async function loadWeather() {
-    const weatherElement = document.getElementById("miwaWeather");
-    if (!weatherElement) return;
+    const weatherElements = [
+      document.getElementById("miwaWeather"),
+      document.getElementById("mobileWeather")
+    ].filter(Boolean);
+    if (!weatherElements.length) return;
+
+    const setWeatherText = (value) => {
+      weatherElements.forEach((element) => {
+        element.textContent = value;
+      });
+    };
 
     const weather = config.weather || {};
     const user = config.user || {};
 
     if (!weather.enabled) {
-      weatherElement.textContent = "天气未启用";
+      setWeatherText("天气未启用");
       return;
     }
 
     try {
       if (typeof weather.provider === "function") {
         const result = await weather.provider(user);
-        weatherElement.textContent = result?.displayText || "天气暂不可用";
+        setWeatherText(result?.displayText || "天气暂不可用");
         return;
       }
 
@@ -355,42 +385,152 @@ export function initHeader(initialConfig = {}) {
       const temperature = Math.round(Number(current.temperature_2m));
       const apparent = Math.round(Number(current.apparent_temperature));
 
-      weatherElement.textContent = `${icon} ${label} ${temperature}°C · 体感${apparent}°C`;
+      setWeatherText(`${icon} ${label} ${temperature}°C · 体感${apparent}°C`);
     } catch {
-      weatherElement.textContent = "天气暂不可用";
+      setWeatherText("天气暂不可用");
     }
   }
 
   function renderNotice() {
     const notice = config.enterprise?.notice || null;
-    const root = document.getElementById("miwaDynamicNotice");
-    const type = document.getElementById("miwaNoticeType");
-    const text = document.getElementById("miwaNoticeText");
+    const renderTarget = ({ rootId, typeId, textId, actionId }) => {
+      const root = document.getElementById(rootId);
+      const type = document.getElementById(typeId);
+      const text = document.getElementById(textId);
+      const action = document.getElementById(actionId);
+      if (!root || !type || !text) return;
 
-    if (!root || !type || !text) return;
+      if (!notice) {
+        const showEmptyState = config.enterprise?.showNoticeSlotWhenEmpty === true;
+        root.hidden = !showEmptyState;
+        root.classList.remove("is-urgent");
+        root.dataset.noticeId = "";
+        type.textContent = config.enterprise?.emptyNoticeLabel || "重要通知";
+        text.textContent = config.enterprise?.emptyNoticeText || "暂无重要通知";
+        if (action) action.hidden = true;
+        return;
+      }
 
-    const action = document.getElementById("miwaNoticeAction");
+      type.textContent = notice.label || "重要通知";
+      text.textContent = notice.text || "";
+      root.hidden = false;
+      root.classList.toggle("is-urgent", notice.level === "urgent");
+      root.dataset.noticeId = notice.id || "";
+      if (action) {
+        action.hidden = false;
+        action.textContent = notice.actionLabel || "查看 ›";
+      }
+    };
 
-    if (!notice) {
-      const showEmptyState = config.enterprise?.showNoticeSlotWhenEmpty === true;
-      root.hidden = !showEmptyState;
-      root.classList.remove("is-urgent");
-      root.dataset.noticeId = "";
-      type.textContent = config.enterprise?.emptyNoticeLabel || "重要通知";
-      text.textContent = config.enterprise?.emptyNoticeText || "暂无重要通知";
-      if (action) action.hidden = true;
-      return;
+    renderTarget({ rootId: "miwaDynamicNotice", typeId: "miwaNoticeType", textId: "miwaNoticeText", actionId: "miwaNoticeAction" });
+    renderTarget({ rootId: "mobileDynamicNotice", typeId: "mobileNoticeType", textId: "mobileNoticeText", actionId: "mobileNoticeAction" });
+  }
+
+  function createCommonEntry(entry) {
+    const hasUrl = typeof entry.url === "string" && entry.url.trim().length > 0;
+    const element = document.createElement(hasUrl ? "a" : "button");
+    element.className = "miwa-common-entry";
+    element.dataset.commonEntry = entry.id || "";
+    element.classList.toggle("is-planned", entry.status === "planned");
+    element.classList.toggle("is-link-pending", !hasUrl);
+
+    if (hasUrl) {
+      element.href = entry.url;
+      element.target = "_blank";
+      element.rel = "noopener noreferrer";
+    } else {
+      element.type = "button";
+      element.setAttribute("aria-disabled", "true");
+      element.title = entry.status === "planned" ? "入口筹备中" : "链接将在系统启用前确认";
     }
 
-    type.textContent = notice.label || "重要通知";
-    text.textContent = notice.text || "";
-    root.hidden = false;
-    root.classList.toggle("is-urgent", notice.level === "urgent");
-    root.dataset.noticeId = notice.id || "";
-    if (action) {
-      action.hidden = false;
-      action.textContent = notice.actionLabel || "查看 ›";
+    const mark = document.createElement("span");
+    mark.className = "miwa-common-entry__mark";
+    mark.textContent = entry.mark || entry.name?.slice(0, 1) || "·";
+    mark.style.setProperty("--entry-color", entry.color || "#176B4D");
+
+    const copy = document.createElement("span");
+    copy.className = "miwa-common-entry__copy";
+    const name = document.createElement("strong");
+    name.textContent = entry.name || "未命名入口";
+    const subtitle = document.createElement("small");
+    subtitle.textContent = entry.subtitle || "";
+    copy.append(name, subtitle);
+
+    element.append(mark, copy);
+    if (hasUrl) {
+      const external = document.createElement("span");
+      external.className = "miwa-common-entry__external";
+      external.textContent = "↗";
+      external.setAttribute("aria-hidden", "true");
+      element.append(external);
     }
+    return element;
+  }
+
+  function renderCommonEntries() {
+    const commonEntries = config.commonEntries || {};
+    [
+      ["desktop-store-entries", "stores"],
+      ["desktop-logistics-entries", "logistics"],
+      ["desktop-office-entries", "office"],
+      ["desktop-shopping-entries", "shopping"],
+      ["desktop-mail-entries", "mail"],
+      ["mobile-store-entries", "stores"],
+      ["mobile-tool-entries", "tools"]
+    ].forEach(([hostId, groupId]) => {
+      const host = document.getElementById(hostId);
+      if (!host) return;
+      const entries = Array.isArray(commonEntries[groupId]?.items)
+        ? commonEntries[groupId].items
+        : [];
+      host.replaceChildren(...entries.map(createCommonEntry));
+    });
+  }
+
+
+  function closeMorePanel() {
+    const panel = document.getElementById("miwaMorePanel");
+    if (panel) panel.hidden = true;
+  }
+
+  function openMorePanel(groupId) {
+    const panel = document.getElementById("miwaMorePanel");
+    const body = document.getElementById("miwaMorePanelBody");
+    const title = document.getElementById("miwaMorePanelTitle");
+    const groupConfig = config.commonEntries?.[groupId] || {};
+    const sections = Array.isArray(groupConfig.moreSections) ? groupConfig.moreSections : [];
+    if (!panel || !body || !sections.length) return false;
+
+    title.textContent = groupId === "stores" ? "更多店铺" : "更多工具";
+    const nodes = sections.map((section) => {
+      const box = document.createElement("section");
+      box.className = "miwa-more-section";
+      const head = document.createElement("div");
+      head.className = "miwa-more-section__title";
+      const label = document.createElement("span");
+      label.textContent = section.label || "未分类";
+      const hint = document.createElement("span");
+      hint.className = "miwa-more-section__hint";
+      hint.textContent = section.hint || "";
+      head.append(label, hint);
+      const items = document.createElement("div");
+      items.className = "miwa-more-section__items";
+      const entries = Array.isArray(section.items) ? section.items : [];
+      if (entries.length) {
+        entries.forEach((entry) => items.append(createCommonEntry(entry)));
+      } else {
+        const empty = document.createElement("span");
+        empty.className = "miwa-more-empty";
+        empty.textContent = "暂无店铺 · 按实际业务增加";
+        items.append(empty);
+      }
+      box.append(head, items);
+      return box;
+    });
+    body.replaceChildren(...nodes);
+    panel.hidden = false;
+    return true;
   }
 
   function getSpiritContent(spiritId) {
@@ -453,37 +593,26 @@ export function initHeader(initialConfig = {}) {
   function render() {
     renderBrand();
     renderUser();
+    renderCommonEntries();
+    renderSemanticIcons(document);
     updateCount("desktop-work-count", config.workCount);
+    updateCount("mobile-work-count", config.workCount);
     updateCount("desktop-notification-count", config.notificationCount);
     updateCount("mobile-notification-count", config.notificationCount);
-    applyPermissions();
-    updateMobileEnterpriseMessage();
     renderDaily();
     renderNotice();
+    if (config.weather?.enabled) loadWeather();
+    applyPermissions();
     updateActiveRoute();
   }
 
   function configure(nextConfig = {}) {
     config = mergeConfig(config, nextConfig);
     render();
-    loadWeather();
-    restartTimers();
     dispatchWindowEvent("miwa:header:configured", { config });
   }
 
   function bindEmployeeEntry() {
-    const employeeEntry = document.getElementById("desktop-employee-entry");
-    const userMenu = document.getElementById("desktop-user-menu");
-    const profileButton = document.getElementById("desktop-user-profile");
-    const logoutButton = document.getElementById("desktop-user-logout");
-    if (!employeeEntry) return;
-
-    const closeUserMenu = () => {
-      if (!userMenu) return;
-      userMenu.hidden = true;
-      employeeEntry.setAttribute("aria-expanded", "false");
-    };
-
     const openProfile = () => {
       const user = config.user || {};
       const safeSummary = {
@@ -491,7 +620,11 @@ export function initHeader(initialConfig = {}) {
         displayName: user.displayName || user.name || null,
         primaryWorkIdentity:
           user.primaryWorkIdentity || user.workIdentity || user.role || null,
-        positionGrade: user.positionGrade || user.grade || null
+        positionGrade: user.positionGrade || user.grade || null,
+        primaryResponsibility: user.primaryResponsibility || null,
+        primaryProject: user.primaryProject || null,
+        legalEntity: user.legalEntity || user.businessUnit || null,
+        email: user.email || null
       };
 
       const shouldContinue = dispatchWindowEvent(
@@ -505,71 +638,107 @@ export function initHeader(initialConfig = {}) {
       }
     };
 
-    employeeEntry.setAttribute("aria-expanded", "false");
-    employeeEntry.addEventListener("click", (event) => {
-      event.stopPropagation();
-      if (!userMenu) {
+    const bindings = [
+      { scope: "desktop", entryId: "desktop-employee-entry", menuId: "desktop-user-menu", profileId: "desktop-user-profile", logoutId: "desktop-user-logout" },
+      { scope: "mobile", entryId: "mobile-employee-entry", menuId: "mobile-user-menu", profileId: "mobile-user-profile", logoutId: "mobile-user-logout" }
+    ];
+
+    const closeAllMenus = () => {
+      bindings.forEach(({ entryId, menuId }) => {
+        const entry = document.getElementById(entryId);
+        const menu = document.getElementById(menuId);
+        if (menu) menu.hidden = true;
+        if (entry) entry.setAttribute("aria-expanded", "false");
+      });
+    };
+
+    bindings.forEach(({ scope, entryId, menuId, profileId, logoutId }) => {
+      const employeeEntry = document.getElementById(entryId);
+      const userMenu = document.getElementById(menuId);
+      if (!employeeEntry) return;
+
+      employeeEntry.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (!userMenu) {
+          openProfile();
+          return;
+        }
+        const willOpen = userMenu.hidden;
+        closeAllMenus();
+        userMenu.hidden = !willOpen;
+        employeeEntry.setAttribute("aria-expanded", String(willOpen));
+      });
+
+      document.getElementById(profileId)?.addEventListener("click", () => {
+        closeAllMenus();
         openProfile();
-        return;
-      }
-      const willOpen = userMenu.hidden;
-      userMenu.hidden = !willOpen;
-      employeeEntry.setAttribute("aria-expanded", String(willOpen));
-    });
+      });
 
-    profileButton?.addEventListener("click", () => {
-      closeUserMenu();
-      openProfile();
-    });
-
-    logoutButton?.addEventListener("click", () => {
-      closeUserMenu();
-      dispatchWindowEvent("aione:preview-logout-request", { source: "header-user-menu" });
+      document.getElementById(logoutId)?.addEventListener("click", () => {
+        closeAllMenus();
+        dispatchWindowEvent("aione:preview-logout-request", { source: `${scope}-header-user-menu` });
+      });
     });
 
     document.addEventListener("click", (event) => {
-      if (!userMenu || userMenu.hidden) return;
-      if (employeeEntry.contains(event.target) || userMenu.contains(event.target)) return;
-      closeUserMenu();
+      const clickedInside = bindings.some(({ entryId, menuId }) => {
+        const entry = document.getElementById(entryId);
+        const menu = document.getElementById(menuId);
+        return entry?.contains(event.target) || menu?.contains(event.target);
+      });
+      if (!clickedInside) closeAllMenus();
     });
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closeUserMenu();
+      if (event.key === "Escape") closeAllMenus();
     });
   }
 
   function bindGlobalSearch() {
-    const input = document.getElementById("desktop-search-input");
-    if (!input) return;
+    ["desktop-search-input", "mobile-search-input"].forEach((inputId) => {
+      const input = document.getElementById(inputId);
+      if (!input) return;
 
-    input.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter") return;
+      input.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        const query = input.value.trim();
+        if (!query) return;
 
-      const query = input.value.trim();
-      if (!query) return;
+        dispatchWindowEvent("aione:global-search", { query });
+        dispatchWindowEvent("miwa:header:search", { query });
+        if (config.searchRoute) {
+          window.location.hash = `#/${config.searchRoute}?q=${encodeURIComponent(query)}`;
+        }
+      });
+    });
 
-      dispatchWindowEvent("aione:global-search", { query });
-      dispatchWindowEvent("miwa:header:search", { query });
-
-      if (config.searchRoute) {
-        window.location.hash = `#/${config.searchRoute}?q=${encodeURIComponent(query)}`;
-      }
+    const mobileButton = document.getElementById("mobile-search-button");
+    const mobilePanel = document.getElementById("mobile-search-panel");
+    mobileButton?.addEventListener("click", () => {
+      if (!mobilePanel) return;
+      mobilePanel.hidden = !mobilePanel.hidden;
+      if (!mobilePanel.hidden) document.getElementById("mobile-search-input")?.focus();
     });
   }
 
   function bindSpiritEvents() {
-    componentHost.querySelectorAll("[data-spirit]").forEach((button) => {
+    document.querySelectorAll("[data-spirit]").forEach((button) => {
       button.addEventListener("click", () => openHeaderInfo(button.dataset.spirit));
     });
   }
 
   function bindHeaderActions() {
-    componentHost.querySelectorAll("[data-action]").forEach((button) => {
+    document.querySelectorAll("[data-action]").forEach((button) => {
       button.addEventListener("click", () => {
         const action = button.dataset.action;
 
         if (action === "header-info-close") {
           closeHeaderInfo();
+          return;
+        }
+
+        if (action === "common-more-close") {
+          closeMorePanel();
           return;
         }
 
@@ -580,7 +749,10 @@ export function initHeader(initialConfig = {}) {
         }
 
         if (action === "notice-detail") {
-          const noticeId = document.getElementById("miwaDynamicNotice")?.dataset.noticeId || "";
+          const noticeId =
+            document.getElementById("miwaDynamicNotice")?.dataset.noticeId ||
+            document.getElementById("mobileDynamicNotice")?.dataset.noticeId ||
+            "";
           dispatchWindowEvent("miwa:header:notice-detail", { noticeId });
           return;
         }
@@ -602,6 +774,29 @@ export function initHeader(initialConfig = {}) {
     });
   }
 
+  function bindCommonEntries() {
+    document.querySelectorAll("[data-common-entry-group]").forEach((group) => {
+      group.addEventListener("click", (event) => {
+        const entry = event.target.closest("[data-common-entry]");
+        if (!entry || entry.tagName === "A") return;
+        const groupId = group.dataset.commonEntryGroup;
+        const entryId = entry.dataset.commonEntry;
+        dispatchWindowEvent("aione:common-entry-request", { groupId, entryId, status: "link-pending" });
+      });
+    });
+
+    document.querySelectorAll("[data-common-more]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const groupId = button.dataset.commonMore;
+        const groupConfig = config.commonEntries?.[groupId] || {};
+        dispatchWindowEvent("aione:common-entry-more", { groupId });
+        if (groupConfig.moreMode === "panel" && openMorePanel(groupId)) return;
+        if (groupConfig.moreRoute) window.location.hash = `#/${groupConfig.moreRoute}`;
+      });
+    });
+  }
+
   /* バックエンド接続後もDOMを作り直さず、設定差分だけで更新できる。 */
   function bindRuntimeUpdates() {
     window.addEventListener("aione:header-update", (event) => {
@@ -613,8 +808,16 @@ export function initHeader(initialConfig = {}) {
   bindGlobalSearch();
   bindSpiritEvents();
   bindHeaderActions();
+  bindCommonEntries();
   bindRuntimeUpdates();
+  document.addEventListener("click", (event) => {
+    const panel = document.getElementById("miwaMorePanel");
+    if (!panel || panel.hidden) return;
+    if (panel.contains(event.target) || event.target.closest("[data-common-more]")) return;
+    closeMorePanel();
+  });
   configure(config);
+  restartTimers();
 
   window.addEventListener("hashchange", updateActiveRoute);
 

@@ -52,12 +52,13 @@ export const PREVIEW_IDENTITIES = Object.freeze([
     email: "mcpu2014@gmail.com",
     displayName: "占树全",
     initial: "占",
-    primaryWorkIdentity: "系统开发者 / 经营者 / 管理者",
+    primaryWorkIdentity: "会长",
     positionGrade: "P9",
     locationName: "东京",
     timeZone: "Asia/Tokyo",
     workAssignment: {
       primaryResponsibility: "AIONE平台建设 / 集团经营与管理",
+      primaryProject: "美和AIONE一体化工作平台",
       businessUnit: "集团经营",
       store: "全部",
       evaluationFocus: "平台建设、经营决策、管理结果"

@@ -1,11 +1,23 @@
 <div class="mobile-info-band">
-  <div class="mobile-principles">
-    <a class="mobile-principle-button" href="#/principles">核心准则 ›</a>
-    <div class="mobile-principle-terms">一体化 → 标准化 → 流程化 → 自动化</div>
-  </div>
-  <div class="mobile-company-line">
-    <span id="mobile-company-tag" class="mobile-company-tag weather">日本团队</span>
-    <span id="mobile-company-text" class="mobile-company-text">日期与天气</span>
-    <a class="mobile-company-all" href="#/company-info">全部 →</a>
-  </div>
+  <!-- 高频工作入口 -->
+  <nav class="mobile-global-nav mobile-global-nav--work" aria-label="高频工作入口">
+    <a href="#/work" data-header-route="work"><span class="miwa-semantic-icon" data-icon="work"></span><span>今日工作</span><span class="mobile-work-badge" id="mobile-work-count" hidden>0</span></a>
+    <a href="#/calendar" data-header-route="calendar"><span class="miwa-semantic-icon" data-icon="calendar"></span><span>美和日历</span></a>
+  </nav>
+
+  <!-- 平台级高频能力 -->
+  <nav class="mobile-global-nav mobile-global-nav--platform" aria-label="平台级高频能力">
+    <a href="#/category-home" data-header-route="category-home"><span class="miwa-semantic-icon" data-icon="category"></span><span>分类之家</span></a>
+    <a href="#/product-home" data-header-route="product-home"><span class="miwa-semantic-icon" data-icon="product"></span><span>商品之家</span></a>
+    <a href="#/ai-home" data-header-route="ai-home"><span class="miwa-semantic-icon" data-icon="ai"></span><span>AI之家</span></a>
+    <a href="#/analysis" data-header-route="analysis"><span class="miwa-semantic-icon" data-icon="analysis"></span><span>分析中心</span></a>
+    <a href="#/shared-home" data-header-route="shared-home"><span class="miwa-semantic-icon" data-icon="shared"></span><span>共享之家</span></a>
+  </nav>
+
+  <section class="mobile-entry-group" data-common-entry-group="stores" aria-label="店铺常用入口">
+    <span class="mobile-entry-group__label">店铺</span><div class="mobile-entry-list" id="mobile-store-entries"></div><button class="mobile-entry-more" type="button" data-common-more="stores">更多 ›</button>
+  </section>
+  <section class="mobile-entry-group" data-common-entry-group="tools" aria-label="工具常用入口">
+    <span class="mobile-entry-group__label">工具</span><div class="mobile-entry-list" id="mobile-tool-entries"></div><button class="mobile-entry-more" type="button" data-common-more="tools">更多 ›</button>
+  </section>
 </div>

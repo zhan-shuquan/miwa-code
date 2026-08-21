@@ -416,7 +416,18 @@ function initBatchImport(root, showToast, onCreated){
   function open(type){
     if(!TYPE_ORDER.includes(type)) return;
     resetAll(type);
-    dialog.showModal();
+    try{
+      if(typeof dialog.showModal === 'function'){
+        if(!dialog.open) dialog.showModal();
+      }else{
+        dialog.setAttribute('open','');
+        dialog.classList.add('is-fallback-open');
+      }
+    }catch(error){
+      console.error('[AIONE][selection] 批量导入弹窗打开失败，启用备用模式', error);
+      dialog.setAttribute('open','');
+      dialog.classList.add('is-fallback-open');
+    }
   }
 
   dialog.querySelectorAll('[data-selection-batch-close]').forEach(button=>button.addEventListener('click',()=>dialog.close()));
@@ -427,7 +438,7 @@ function initBatchImport(root, showToast, onCreated){
     if(!inside) dialog.close();
   });
 
-  downloadButton.addEventListener('click',()=>{
+  downloadButton?.addEventListener('click',()=>{
     const config = selectedTemplate();
     if(!config) return;
     const anchor = document.createElement('a');
@@ -457,7 +468,7 @@ function initBatchImport(root, showToast, onCreated){
     if(file) acceptFile(file);
   });
 
-  actionButton.addEventListener('click',async()=>{
+  actionButton?.addEventListener('click',async()=>{
     if(state.created){
       dialog.close();
       return;
@@ -543,7 +554,7 @@ export function initSelectionWorkbench(){
   }
 
   function renderOverview(){
-    typeGrid.innerHTML = TYPE_ORDER.map(type=>{
+    if(typeGrid) typeGrid.innerHTML = TYPE_ORDER.map(type=>{
       const count = SELECTION_ITEMS.filter(x=>x.type===type).length;
       return `<article class="selection-type-card">
         <button class="selection-type-card__summary${state.type===type?' active':''}" type="button" data-type-filter="${type}" aria-label="查看${type}商品机会">
@@ -556,7 +567,7 @@ export function initSelectionWorkbench(){
       </article>`;
     }).join('');
 
-    flowTrack.innerHTML = STAGES.map(([key,label],index)=>{
+    if(flowTrack) flowTrack.innerHTML = STAGES.map(([key,label],index)=>{
       const count = SELECTION_ITEMS.filter(x=>x.stage===key).length;
       return `<button class="selection-flow-step${state.stage===key?' active':''}" type="button" data-stage-filter="${key}" data-stage-name="${label}"><small>0${index+1}</small><span>${label}</span><b>${count}</b></button>`;
     }).join('');
@@ -568,10 +579,11 @@ export function initSelectionWorkbench(){
     const decided = listed + rejected;
     const rate = decided ? Math.round(listed/decided*100) : 0;
     const cost = SELECTION_ITEMS.reduce((sum,x)=>sum+x.cost,0);
-    metrics.innerHTML = [
+    if(metrics) metrics.innerHTML = [
       ['商品机会总数',total],['上架',listed],['不上架',rejected],['上架率',`${rate}%`],['进行中',ongoing],['投入总成本',money(cost)]
     ].map(([label,value])=>`<div class="selection-metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
-    root.querySelector('#selection-flow-total').textContent = String(total);
+    const flowTotal = root.querySelector('#selection-flow-total');
+    if(flowTotal) flowTotal.textContent = String(total);
   }
 
   function filtered(){
@@ -593,27 +605,45 @@ export function initSelectionWorkbench(){
     if(state.page < 1) state.page = 1;
     const startIndex = (state.page - 1) * PAGE_SIZE;
     const pageRows = rows.slice(startIndex, startIndex + PAGE_SIZE);
-    cardGrid.innerHTML = pageRows.map(renderCard).join('');
-    tableBody.innerHTML = pageRows.map(renderTableRow).join('');
+    if(cardGrid) cardGrid.innerHTML = pageRows.map(renderCard).join('');
+    if(tableBody) tableBody.innerHTML = pageRows.map(renderTableRow).join('');
     const currentCost = rows.reduce((sum,item)=>sum+Number(item.cost||0),0);
     const startLabel = rows.length ? startIndex + 1 : 0;
     const endLabel = rows.length ? startIndex + pageRows.length : 0;
-    visibleCount.textContent = `当前显示 ${startLabel}–${endLabel} / ${rows.length} 项 · 当前投入成本 ${money(currentCost)}`;
+    if(visibleCount) visibleCount.textContent = `当前显示 ${startLabel}–${endLabel} / ${rows.length} 项 · 当前投入成本 ${money(currentCost)}`;
     const pageLabel = root.querySelector('#selection-page-label');
     const prevButton = root.querySelector('#selection-page-prev');
     const nextButton = root.querySelector('#selection-page-next');
     if(pageLabel) pageLabel.textContent = `${state.page} / ${pageCount}`;
     if(prevButton) prevButton.disabled = state.page <= 1;
     if(nextButton) nextButton.disabled = state.page >= pageCount;
-    cardGrid.hidden = state.view!=='card';
-    listView.hidden = state.view!=='list';
+    if(cardGrid) cardGrid.hidden = state.view!=='card';
+    if(listView) listView.hidden = state.view!=='list';
     root.querySelectorAll('[data-selection-view]').forEach(btn=>btn.classList.toggle('active',btn.dataset.selectionView===state.view));
     root.querySelectorAll('[data-type-filter]').forEach(btn=>btn.classList.toggle('active',btn.dataset.typeFilter===state.type));
     root.querySelectorAll('[data-stage-filter]').forEach(btn=>btn.classList.toggle('active',btn.dataset.stageFilter===state.stage));
-    flowLabel.textContent = state.stage ? STAGES.find(x=>x[0]===state.stage)?.[1] || '全部' : '全部';
+    if(flowLabel) flowLabel.textContent = state.stage ? STAGES.find(x=>x[0]===state.stage)?.[1] || '全部' : '全部';
   }
 
-  const batchImport = initBatchImport(root, showToast, ()=>{renderOverview();renderResults();});
+  // 先完成商品机会总览与列表渲染，再初始化批量导入。
+  // 批量导入属于辅助能力，任何局部异常都不能阻断商品机会主列表。
+  renderOverview();
+  try{
+    renderResults();
+  }catch(error){
+    console.error('[AIONE][selection] 商品机会一览渲染失败', error);
+    if(cardGrid){
+      cardGrid.hidden = false;
+      cardGrid.innerHTML = '<div class=\"selection-render-warning\">商品机会列表加载异常，请刷新后重试。</div>';
+    }
+  }
+
+  let batchImport = null;
+  try{
+    batchImport = initBatchImport(root, showToast, ()=>{renderOverview();renderResults();});
+  }catch(error){
+    console.error('[AIONE][selection] 批量导入初始化失败', error);
+  }
 
   if(ownerSelect){
     [...new Set(SELECTION_ITEMS.map(x=>x.owner))].forEach(owner=>{
@@ -636,7 +666,7 @@ export function initSelectionWorkbench(){
     const batchButton=event.target.closest('[data-batch-import-type]');
     if(batchButton){batchImport?.open(batchButton.dataset.batchImportType || '');return;}
     const typeButton=event.target.closest('[data-type-filter]');
-    if(typeButton){state.type=typeButton.dataset.typeFilter||'';state.page=1;typeSelect.value=state.type;renderOverview();renderResults();return;}
+    if(typeButton){state.type=typeButton.dataset.typeFilter||'';state.page=1;if(typeSelect) typeSelect.value=state.type;renderOverview();renderResults();return;}
     const stageButton=event.target.closest('[data-stage-filter]');
     if(stageButton){state.stage=stageButton.dataset.stageFilter||'';state.page=1;renderOverview();renderResults();return;}
     const viewButton=event.target.closest('[data-selection-view]');
@@ -662,10 +692,10 @@ export function initSelectionWorkbench(){
   statusSelect?.addEventListener('change',()=>{state.status=statusSelect.value;state.page=1;renderResults()});
   ownerSelect?.addEventListener('change',()=>{state.owner=ownerSelect.value;state.page=1;renderResults()});
   searchInput?.addEventListener('input',()=>{state.query=searchInput.value;state.page=1;renderResults()});
-  root.querySelector('#selection-time-select').addEventListener('change',()=>showToast('预览数据集中显示全部时间；正式版接入真实时间筛选。'));
-  root.querySelector('#selection-reset').addEventListener('click',()=>{
+  root.querySelector('#selection-time-select')?.addEventListener('change',()=>showToast('预览数据集中显示全部时间；正式版接入真实时间筛选。'));
+  root.querySelector('#selection-reset')?.addEventListener('click',()=>{
     state.type='';state.stage='';state.status='';state.owner='';state.query='';state.page=1;
-    typeSelect.value='';statusSelect.value='';ownerSelect.value='';searchInput.value='';
+    if(typeSelect) typeSelect.value='';if(statusSelect) statusSelect.value='';if(ownerSelect) ownerSelect.value='';if(searchInput) searchInput.value='';
     renderOverview();renderResults();
   });
 
@@ -676,7 +706,8 @@ export function initSelectionWorkbench(){
   document.getElementById('selection-elements-close')?.addEventListener('click',()=>{overlay?.classList.remove('open');overlay?.setAttribute('aria-hidden','true')});
   overlay?.addEventListener('click',event=>{if(event.target===overlay){overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true')}});
 
+  // 最终再同步一次总览，确保负责人筛选等初始化完成后页面状态一致。
   renderOverview();
-  renderResults();
+  try{ renderResults(); }catch(error){ console.error('[AIONE][selection] 商品机会一览二次渲染失败', error); }
   focusRequestedWorkbenchArea();
 }

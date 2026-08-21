@@ -6163,9 +6163,65 @@ body.miwa-settings-open{overflow:hidden}
   border-radius:inherit;
 }
 
+
+
+/* =========================================================
+   AIONE Embedded Business Page Adapter｜内嵌业务页适配
+   外层AIONE Shell存在时，仅展示业务Main；保留旧Shell DOM给旧JS兼容使用。
+   ========================================================= */
+html.aione-embedded body{
+  background:transparent!important;
+  min-height:0!important;
+}
+html.aione-embedded #desktop-header-host,
+html.aione-embedded #sidebar-host,
+html.aione-embedded #aside-host,
+html.aione-embedded #desktop-footer-host,
+html.aione-embedded #mobile-topbar-host,
+html.aione-embedded #mobile-info-host,
+html.aione-embedded #mobile-bottom-nav-host{
+  display:none!important;
+}
+html.aione-embedded .app-shell{
+  min-height:0!important;
+  height:auto!important;
+  display:block!important;
+  background:transparent!important;
+}
+html.aione-embedded .app-body,
+html.aione-embedded .app-body.has-aside{
+  display:block!important;
+  min-height:0!important;
+  grid-template-columns:none!important;
+  padding:0!important;
+  margin:0!important;
+}
+html.aione-embedded .app-main{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+}
+html.aione-embedded .page-host{
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:0!important;
+}
 </style>
 </head>
 <body>
+<script>
+  /* 外层AIONE通过 ?embed=1 加载时，只展示业务内容，不重复显示全局Shell。 */
+  (function(){
+    try{
+      const params=new URLSearchParams(window.location.search);
+      if(params.get('embed')==='1') document.documentElement.classList.add('aione-embedded');
+    }catch(_){ /* 旧预览环境保持原页面。 */ }
+  })();
+</script>
 <div id="app" class="app-shell">
   <div id="desktop-header-host"><header class="desktop-header" data-component="miwa-system-header">
   <!-- 第1行：ブランド／本人識別／全局入口／共通ツール -->

@@ -1,12 +1,38 @@
-<header class="mobile-topbar">
-  <a class="mobile-brand" href="#/work" aria-label="AIONE工作台首页">
-    <img class="mobile-logo" src="./assets/brand/miwa-commerce-logo.png" alt="美和跨境">
-    <div class="mobile-brand-name">AIONE</div>
+<header class="mobile-topbar" data-component="miwa-mobile-header">
+  <a class="mobile-brand" href="#/company" data-header-route="company" aria-label="打开美和集团经营与发展首页">
+    <img class="mobile-logo" src="./assets/brand/miwa-commerce-logo.png" alt="美和正式Logo" />
+    <span class="mobile-brand-name">AIONE</span>
   </a>
+
+  <section class="mobile-user-identity" aria-label="用户登录区">
+    <button class="mobile-user-identity__button" id="mobile-employee-entry" type="button" aria-haspopup="dialog" aria-expanded="false">
+      <span class="mobile-user-avatar miwa-user-avatar" id="mobile-user-avatar">占</span>
+      <span class="mobile-user-line"><strong id="mobile-user-name">占树全</strong><span class="miwa-grade-badge" id="mobile-position-grade">P9</span></span>
+    </button>
+
+    <div class="miwa-user-menu mobile-user-menu" id="mobile-user-menu" hidden>
+      <div class="miwa-user-menu__head">
+        <span class="miwa-user-menu__avatar miwa-user-avatar" id="mobile-user-menu-avatar">占</span>
+        <span class="miwa-user-menu__identity"><span class="miwa-user-menu__name-line"><strong id="mobile-user-menu-name">当前用户</strong><span class="miwa-grade-badge" id="mobile-user-menu-grade">P9</span></span><span class="miwa-user-online">当前在线</span></span>
+      </div>
+      <dl class="miwa-user-details">
+        <div class="miwa-user-detail-row" data-mobile-user-detail="position"><dt>主要岗位</dt><dd id="mobile-user-menu-position"></dd></div>
+        <div class="miwa-user-detail-row" data-mobile-user-detail="responsibility"><dt>主要职责</dt><dd id="mobile-user-menu-responsibility"></dd></div>
+        <div class="miwa-user-detail-row" data-mobile-user-detail="project"><dt>主要项目</dt><dd id="mobile-user-menu-project"></dd></div>
+        <div class="miwa-user-detail-row" data-mobile-user-detail="entity"><dt>所属主体</dt><dd id="mobile-user-menu-entity"></dd></div>
+        <div class="miwa-user-detail-row" data-mobile-user-detail="email"><dt>登录账号</dt><dd id="mobile-user-menu-email"></dd></div>
+      </dl>
+      <div class="miwa-user-menu__actions"><button class="miwa-user-menu__item" id="mobile-user-profile" type="button">个人资料</button><button class="miwa-user-menu__item is-danger" id="mobile-user-logout" type="button">退出登录</button></div>
+    </div>
+  </section>
+
   <div class="mobile-top-spacer"></div>
-  <button class="mobile-icon-button" id="mobile-search-button" aria-label="搜索">⌕</button>
-  <a class="mobile-icon-button" href="#/notifications" aria-label="通知">
-    ♢<span class="mobile-badge" id="mobile-notification-count">3</span>
-  </a>
-  <a class="mobile-icon-button" href="#/settings" aria-label="设置">⚙</a>
+  <button class="mobile-icon-button" id="mobile-search-button" type="button" aria-label="全局搜索"><span class="miwa-semantic-icon" data-icon="search"></span></button>
+  <a class="mobile-icon-button" href="#/notifications" data-header-route="notifications" aria-label="通知"><span class="miwa-semantic-icon" data-icon="notification"></span><span class="mobile-badge" id="mobile-notification-count">3</span></a>
+  <a class="mobile-icon-button mobile-help-button" href="#/help-home" data-header-route="help-home" aria-label="帮助之家"><span class="miwa-semantic-icon" data-icon="help"></span></a>
+  <a class="mobile-icon-button" href="#/settings" data-header-route="settings" aria-label="设置"><span class="miwa-semantic-icon" data-icon="settings"></span></a>
 </header>
+
+<div class="mobile-search-panel" id="mobile-search-panel" hidden>
+  <label for="mobile-search-input"><span class="miwa-semantic-icon" data-icon="search"></span><input id="mobile-search-input" type="search" placeholder="搜索商品、SKU、订单、任务、文件…" autocomplete="off" /></label>
+</div>

@@ -1,28 +1,16 @@
 /* ========================================
    AIONE Preview Auth｜内測認証
-   現在：Google Identity Services + AIONE内測メンバー照合。
-   localhostのみ手動ID切替を開発フォールバックとして残す。
+   Google Identity Services + AIONE内測メンバー照合のみを使用する。
+   ローカル手動ID切替は設けず、開発時も実際のGoogle認証経路を確認する。
 ======================================== */
 
-import { authConfig } from "../config/auth-config.js";
-import { PREVIEW_IDENTITIES, findPreviewIdentity, findPreviewIdentityByEmail } from "../config/preview-identities.js";
-import { recordPreviewActivity } from "./preview-activity.js";
+import { authConfig } from "../config/auth-config.js?v=20260821-v1.0.9-header-sidebar";
+import { findPreviewIdentity, findPreviewIdentityByEmail } from "../config/preview-identities.js?v=20260821-v1.0.9-header-sidebar";
+import { recordPreviewActivity } from "./preview-activity.js?v=20260821-v1.0.9-header-sidebar";
 
 const SESSION_KEY = "aione.preview.session.v3";
 const LEGACY_SESSION_KEY = "aione.preview.subject";
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function isLocalFallbackAllowed() {
-  return authConfig.localFallbackHosts.includes(window.location.hostname);
-}
+const resolveAppAsset = (path) => new URL(`../../${path}`, import.meta.url).href;
 
 function decodeJwtPayload(token) {
   const parts = String(token || "").split(".");
@@ -43,7 +31,7 @@ function validateGooglePayload(payload) {
 }
 
 async function loadAuthView() {
-  const response = await fetch("./components/auth/preview-login.html", { cache: "no-store" });
+  const response = await fetch(resolveAppAsset("components/auth/preview-login.html"), { cache: "no-store" });
   if (!response.ok) throw new Error("preview-auth-view-load-failed");
   const host = document.createElement("div");
   host.id = "aione-preview-auth-host";
@@ -52,35 +40,13 @@ async function loadAuthView() {
   return host;
 }
 
-function renderAccounts(host, onSelect) {
-  const fallback = host.querySelector("#aioneLocalIdentityFallback");
-  const container = host.querySelector("#aionePreviewAccounts");
-  if (!fallback || !container || !isLocalFallbackAllowed()) return;
-
-  fallback.hidden = false;
-  container.innerHTML = PREVIEW_IDENTITIES.map((identity) => `
-    <button
-      class="aione-preview-auth__account${identity.subjectType === "admin" ? " is-admin" : ""}"
-      type="button"
-      data-preview-subject="${escapeHtml(identity.subjectId)}"
-    >
-      <strong>${escapeHtml(identity.displayName)}</strong>
-      <span>${escapeHtml(identity.primaryWorkIdentity)}</span>
-      <small>${escapeHtml(identity.email)}</small>
-    </button>
-  `).join("");
-
-  container.querySelectorAll("[data-preview-subject]").forEach((button) => {
-    button.addEventListener("click", () => onSelect(button.dataset.previewSubject));
-  });
-}
-
 function writeSession(identity, authSource, profile = {}) {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({
     subjectId: identity.subjectId,
     authSource,
     authenticatedEmail: profile.email || identity.email,
     googleSub: profile.sub || null,
+    googlePicture: profile.picture || null,
     loginAt: new Date().toISOString()
   }));
   sessionStorage.removeItem(LEGACY_SESSION_KEY);
@@ -96,6 +62,10 @@ function readSession() {
   if (raw) {
     try {
       const session = JSON.parse(raw);
+      if (session.authSource !== "google") {
+        clearSession();
+        return null;
+      }
       const identity = findPreviewIdentity(session.subjectId);
       return identity ? { identity, session } : null;
     } catch {
@@ -103,12 +73,13 @@ function readSession() {
     }
   }
 
-  const legacySubjectId = sessionStorage.getItem(LEGACY_SESSION_KEY);
-  const legacyIdentity = legacySubjectId ? findPreviewIdentity(legacySubjectId) : null;
-  return legacyIdentity ? { identity: legacyIdentity, session: { authSource: "local", authenticatedEmail: legacyIdentity.email } } : null;
+  sessionStorage.removeItem(LEGACY_SESSION_KEY);
+  return null;
 }
 
 function toHeaderConfig(identity) {
+  const assignment = identity.workAssignment || {};
+  const authSession = window.AIONEPreviewAuthSession || {};
   return {
     user: {
       employeeId: identity.subjectType === "person" ? identity.subjectId : null,
@@ -116,23 +87,29 @@ function toHeaderConfig(identity) {
       subjectType: identity.subjectType,
       displayName: identity.displayName,
       initial: identity.initial,
+      avatarUrl: authSession.googlePicture || null,
+      email: authSession.authenticatedEmail || identity.email,
       primaryWorkIdentity: identity.primaryWorkIdentity,
       positionGrade: identity.positionGrade || null,
+      primaryResponsibility: assignment.primaryResponsibility || null,
+      primaryProject:
+        assignment.primaryProject ||
+        (assignment.store && assignment.store !== "全部" ? assignment.store : null),
+      legalEntity: assignment.businessUnit || null,
       locationName: identity.locationName,
       timeZone: identity.timeZone,
       profileRoute: identity.subjectType === "person" ? "employee-profile" : "platform-admin"
     },
-    permissions: [...identity.permissions]
+    permissionMode: "open"
   };
 }
 
 export function logoutPreviewIdentity(reason = "user") {
   const identity = window.AIONEPreviewIdentity || null;
   const session = window.AIONEPreviewAuthSession || {};
-  const isGoogle = session.authSource === "google";
 
   if (identity) {
-    recordPreviewActivity(identity, isGoogle ? "session.logout.google" : "session.switch", {
+    recordPreviewActivity(identity, "session.logout.google", {
       authenticatedEmail: session.authenticatedEmail || identity.email,
       reason
     });
@@ -153,16 +130,6 @@ export function logoutPreviewIdentity(reason = "user") {
   // Remove the hash so logout always returns to the Preview login entry.
   const cleanUrl = `${window.location.pathname}${window.location.search}`;
   window.location.replace(cleanUrl);
-}
-
-function renderSessionBadge(identity, session = {}) {
-  document.querySelector(".aione-preview-session")?.remove();
-  const isGoogle = session.authSource === "google";
-  const badge = document.createElement("div");
-  badge.className = "aione-preview-session";
-  badge.innerHTML = `<span>内测｜<strong>${escapeHtml(identity.displayName)}</strong> · 全平台开放</span><button type="button">${isGoogle ? "退出登录" : "切换身份"}</button>`;
-  badge.querySelector("button")?.addEventListener("click", () => logoutPreviewIdentity("preview-badge"));
-  document.body.appendChild(badge);
 }
 
 window.addEventListener("aione:preview-logout-request", () => logoutPreviewIdentity("header-user-menu"));
@@ -242,9 +209,8 @@ export async function resolvePreviewIdentity() {
   if (existing) {
     window.AIONEPreviewIdentity = existing.identity;
     window.AIONEPreviewAuthSession = existing.session;
-    renderSessionBadge(existing.identity, existing.session);
     recordPreviewActivity(existing.identity, "session.resume", {
-      authSource: existing.session.authSource || "local",
+      authSource: "google",
       authenticatedEmail: existing.session.authenticatedEmail || existing.identity.email
     });
     return existing.identity;
@@ -258,10 +224,11 @@ export async function resolvePreviewIdentity() {
       window.AIONEPreviewAuthSession = {
         authSource: "google",
         authenticatedEmail: payload.email,
-        googleSub: payload.sub || null
+        googleSub: payload.sub || null,
+        googlePicture: payload.picture || null,
+        loginAt: new Date().toISOString()
       };
       host.remove();
-      renderSessionBadge(identity, window.AIONEPreviewAuthSession);
       recordPreviewActivity(identity, "session.login.google", {
         authenticatedEmail: payload.email,
         googleSub: payload.sub || null
@@ -269,17 +236,6 @@ export async function resolvePreviewIdentity() {
       resolve(identity);
     });
 
-    renderAccounts(host, (subjectId) => {
-      const identity = findPreviewIdentity(subjectId);
-      if (!identity) return;
-      writeSession(identity, "local", { email: identity.email });
-      window.AIONEPreviewIdentity = identity;
-      window.AIONEPreviewAuthSession = { authSource: "local", authenticatedEmail: identity.email };
-      host.remove();
-      renderSessionBadge(identity, window.AIONEPreviewAuthSession);
-      recordPreviewActivity(identity, "session.login.local", { authenticatedEmail: identity.email });
-      resolve(identity);
-    });
   });
 }
 

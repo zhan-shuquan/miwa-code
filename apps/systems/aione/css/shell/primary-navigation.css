@@ -96,13 +96,23 @@
 .desktop-sidebar{
   position:sticky;
   top:calc(var(--desktop-header-main) + var(--desktop-header-info));
+  height:calc(100vh - var(--desktop-header-main) - var(--desktop-header-info));
   min-height:calc(100vh - var(--desktop-header-main) - var(--desktop-header-info));
+  overflow-y:auto;
+  overscroll-behavior:contain;
   padding:14px 12px 20px;
+  display:grid;
+  grid-auto-rows:max-content;
+  align-content:start;
 }
 
+.sidebar-section{display:grid;grid-auto-rows:max-content;align-content:start}
+.sidebar-nav-list{display:grid;grid-auto-rows:max-content;align-content:start}
 .sidebar-section + .sidebar-section{margin-top:17px}
 .sidebar-title{margin:0 8px 7px;color:#98A19C;font-size:10px;font-weight:800}
 .sidebar-link{
+  width:100%;
+  flex:0 0 auto;
   min-height:38px;
   display:flex;
   align-items:center;
@@ -144,7 +154,43 @@
 .sidebar-link[aria-current="page"] .sidebar-icon{color:#FFFFFF}
 
 .quick-links-empty{margin:4px 8px 0;color:#9AA49F;font-size:10px;line-height:1.6}
+.sidebar-context-link{min-height:31px;display:flex;align-items:center;margin:0 5px;padding:0 8px;border-left:2px solid transparent;border-radius:5px;color:#62746B;font-size:10px;font-weight:700}
+.sidebar-context-link:hover{color:var(--miwa-green);background:#F5F9F7}
+.sidebar-context-link[aria-current="page"]{border-left-color:var(--miwa-green);color:var(--miwa-green-deep);background:#EEF5F1}
+.drawer-link__icon{width:18px;height:18px;margin-right:8px;color:var(--miwa-green)}
 
 @media(min-width:768px) and (max-width:1099px){
   .drawer-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+
+/* Business space switch｜事业切换 */
+.sidebar-business-section{padding-bottom:2px}
+.sidebar-business-switch,
+.drawer-business-switch{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+}
+.sidebar-business-switch{margin:0 4px}
+.sidebar-business-button,
+.drawer-business-button{
+  min-height:32px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#FFFFFF;
+  color:#62746B;
+  font:inherit;
+  font-size:10.5px;
+  font-weight:800;
+  cursor:pointer;
+}
+.sidebar-business-button:hover,
+.drawer-business-button:hover{border-color:#AFC9BD;color:var(--miwa-green)}
+.sidebar-business-button.active,
+.drawer-business-button.active{
+  border-color:#BFD5CB;
+  background:#EAF3EE;
+  color:var(--miwa-green-deep);
+}
+.drawer-business-switch{margin:0 0 12px}
+.drawer-business-button{min-height:38px;font-size:11px}

@@ -29,11 +29,17 @@
   --mobile-top:54px;
   --mobile-bottom:66px;
 
-  --desktop-header-main:72px;
-  --desktop-header-spirit:64px;
-  --desktop-header-daily:38px;
-  /* 既存Sidebar／Asideの高さ計算互換用：第2行＋第3行の合計 */
-  --desktop-header-info:102px;
+  --desktop-header-main:68px;
+  --desktop-header-platform:46px;
+  --desktop-header-entry:54px;
+  --desktop-header-spirit:44px;
+  --desktop-header-daily:32px;
+  /* Sidebar／Asideの高さ計算用：常用入口＋美和精神＋今日信息 */
+  --desktop-header-info:calc(
+    var(--desktop-header-entry) +
+    var(--desktop-header-spirit) +
+    var(--desktop-header-daily)
+  );
   --desktop-sidebar:232px;
   --desktop-aside:280px;
 

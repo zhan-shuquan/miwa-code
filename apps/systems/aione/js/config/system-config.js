@@ -3,25 +3,29 @@
    実データ接続後は値だけを差し替え、各コンポーネントを直接変更しない。
 ======================================== */
 
+export const SYSTEM_ASSET_VERSION = "20260821-v1.0.14-nine-workbench-internal-test";
+const versionedComponent = (path) => `${path}?v=${SYSTEM_ASSET_VERSION}`;
+
 export const systemConfig = Object.freeze({
   components: [
-    ["mobile-topbar-host", "./components/shell/header/mobile-topbar.html"],
-    ["mobile-info-host", "./components/shell/header/mobile-info.html"],
-    ["desktop-header-host", "./components/shell/header/desktop-header.html"],
-    ["sidebar-host", "./components/shell/primary-navigation/sidebar.html"],
-    ["selection-main-host", "./pages/selection-workbench/home.html"],
-    ["aside-host", "./components/shell/aside/aside.html"],
-    ["desktop-footer-host", "./components/shell/footer/footer.html"],
-    ["mobile-bottom-host", "./components/shell/primary-navigation/mobile-bottom.html"],
-    ["mobile-drawer-host", "./components/shell/primary-navigation/mobile-drawer.html"],
-    ["global-settings-host", "./components/shell/settings/global-settings.html"]
+    ["mobile-topbar-host", versionedComponent("./components/shell/header/mobile-topbar.html")],
+    ["mobile-info-host", versionedComponent("./components/shell/header/mobile-info.html")],
+    ["desktop-header-host", versionedComponent("./components/shell/header/desktop-header.html")],
+    ["sidebar-host", versionedComponent("./components/shell/primary-navigation/sidebar.html")],
+    ["selection-main-host", versionedComponent("./pages/selection-workbench/home.html")],
+    ["aside-host", versionedComponent("./components/shell/aside/aside.html")],
+    ["desktop-footer-host", versionedComponent("./components/shell/footer/footer.html")],
+    ["mobile-bottom-host", versionedComponent("./components/shell/primary-navigation/mobile-bottom.html")],
+    ["mobile-drawer-host", versionedComponent("./components/shell/primary-navigation/mobile-drawer.html")],
+    ["global-settings-host", versionedComponent("./components/shell/settings/global-settings.html")]
   ],
 
   header: {
     brand: {
-      logoSrc: "./assets/brand/miwa-commerce-logo.png",
+      logoSrc: new URL("../../assets/brand/miwa-commerce-logo.png", import.meta.url).href,
       systemShortName: "AIONE",
-      systemFormalName: "一体化工作平台"
+      systemFormalName: "美和一体化工作平台",
+      companyRoute: "company"
     },
 
     user: {
@@ -35,25 +39,163 @@ export const systemConfig = Object.freeze({
       capabilityLevel: null,
       avatarUrl: null,
       profileRoute: "employee-profile",
+      primaryResponsibility: "集团经营与AIONE平台建设",
+      primaryProject: "美和AIONE一体化工作平台",
+      legalEntity: "美和商会株式会社",
       locationName: "东京",
       latitude: 35.6762,
       longitude: 139.6503,
       timeZone: "Asia/Tokyo"
     },
 
-    permissions: [
-      "analysis.view",
-      "product-center.view",
-      "ai-center.view"
-    ],
+    /*
+       共通入口は原則公開する。将来制限が必要な場合だけ権限設定から追加する。
+       URL未確定項目はnullのまま保持し、偽リンクを作成しない。
+    */
+    commonEntries: {
+      stores: {
+        label: "跨境店铺",
+        moreMode: "route",
+        moreRoute: "store-home",
+        items: [
+          { id: "rakuten-1", name: "幸せ屋", subtitle: "", mark: "幸", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" },
+          { id: "rakuten-2", name: "PrimeLife", subtitle: "", mark: "P", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" },
+          { id: "rakuten-3", name: "永井GD", subtitle: "", mark: "GD", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" }
+        ],
+        developmentNote: "店铺入口按真实业务持续增加；预设平台不代表已经开店。",
+        recentChanges: [
+          { date: "2026-08-21", title: "集团店铺总览入口升级", detail: "更多店铺由轻量弹层升级为正式总览页，便于员工集中进入并持续了解集团渠道发展。" }
+        ],
+        moreSections: [
+          {
+            id: "rakuten",
+            label: "楽天市場",
+            hint: "现有店铺",
+            items: [
+              { id: "rakuten-1-more", name: "幸せ屋", subtitle: "1号店", mark: "幸", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" },
+              { id: "rakuten-2-more", name: "PrimeLife", subtitle: "2号店", mark: "P", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" },
+              { id: "rakuten-3-more", name: "永井GD", subtitle: "3号店", mark: "GD", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" }
+            ]
+          },
+          { id: "amazon-store", label: "Amazon", hint: "按业务增加", items: [] },
+          { id: "temu-store", label: "TEMU", hint: "按业务增加", items: [] },
+          { id: "qoo10-store", label: "Qoo10", hint: "按业务增加", items: [] },
+          { id: "tiktok-store", label: "TikTok Shop", hint: "按业务增加", items: [] }
+        ]
+      },
+      logistics: {
+        label: "订单与面单",
+        items: [
+          { id: "robot-in", name: "Robot-in", subtitle: "订单", mark: "R", color: "#176B4D", url: "https://sso.cloud-robot.co/login/", status: "active" },
+          { id: "sagawa", name: "佐川", subtitle: "面单", mark: "佐", color: "#176B4D", url: "https://www.e-service.sagawa-exp.co.jp/portal/do/login/show?fr=bs", status: "active" },
+          { id: "yamato", name: "黑猫", subtitle: "面单", mark: "黒", color: "#176B4D", url: "https://newb2web.kuronekoyamato.co.jp/", status: "active" },
+          { id: "fukuyama", name: "福山", subtitle: "面单·日暮里", mark: "福", color: "#176B4D", url: "https://wwwisx.fukutsu.co.jp/iSTARX/?timeout=true", status: "active" }
+        ]
+      },
+      office: {
+        label: "办公",
+        items: [
+          { id: "gpt", name: "GPT", subtitle: "办公", mark: "AI", color: "#176B4D", url: "https://chatgpt.com/", status: "active" },
+          { id: "wps", name: "WPS", subtitle: "办公", mark: "W", color: "#176B4D", url: "https://www.kdocs.cn/latest", status: "active" },
+          { id: "feishu", name: "飞书", subtitle: "办公", mark: "飞", color: "#176B4D", url: null, status: "active" }
+        ]
+      },
+      shopping: {
+        label: "购物",
+        items: [
+          { id: "amazon", name: "亚马逊", subtitle: "购物", mark: "A", color: "#176B4D", url: "https://www.amazon.co.jp/", status: "active" },
+          { id: "rakuten-shopping", name: "乐天", subtitle: "购物", mark: "楽", color: "#176B4D", url: "https://www.rakuten.co.jp/", status: "active" },
+          { id: "hako-one", name: "箱ワン", subtitle: "购物", mark: "箱", color: "#176B4D", url: "https://www.notosiki.co.jp/mypage/login", status: "active" }
+        ]
+      },
+      mail: {
+        label: "邮箱",
+        items: [
+          { id: "gmail", name: "Gmail", subtitle: "邮箱", mark: "G", color: "#176B4D", url: "https://mail.google.com/mail/u/0/#inbox", status: "active" }
+        ]
+      },
+      tools: {
+        label: "更多工具",
+        moreMode: "panel",
+        moreSections: [
+          {
+            id: "tool-logistics",
+            label: "订单・物流",
+            hint: "高频业务工具",
+            items: [
+              { id: "tool-robot", name: "Robot-in", subtitle: "订单", mark: "R", color: "#176B4D", url: "https://sso.cloud-robot.co/login/", status: "active" },
+              { id: "tool-sagawa", name: "佐川", subtitle: "面单", mark: "佐", color: "#176B4D", url: "https://www.e-service.sagawa-exp.co.jp/portal/do/login/show?fr=bs", status: "active" },
+              { id: "tool-yamato", name: "黑猫", subtitle: "面单", mark: "黒", color: "#176B4D", url: "https://newb2web.kuronekoyamato.co.jp/", status: "active" },
+              { id: "tool-fukuyama", name: "福山", subtitle: "日暮里", mark: "福", color: "#176B4D", url: "https://wwwisx.fukutsu.co.jp/iSTARX/?timeout=true", status: "active" },
+              { id: "tool-japanpost", name: "日本邮政", subtitle: "物流", mark: "郵", color: "#176B4D", url: "https://btoolbox.post.japanpost.jp/portal/PT/PTPT/PTPT0001.do?op=init", status: "active" }
+            ]
+          },
+          {
+            id: "tool-office",
+            label: "办公・AI",
+            hint: "集团共用",
+            items: [
+              { id: "tool-gpt", name: "GPT", subtitle: "办公", mark: "AI", color: "#176B4D", url: "https://chatgpt.com/", status: "active" },
+              { id: "tool-wps", name: "WPS", subtitle: "办公", mark: "W", color: "#176B4D", url: "https://www.kdocs.cn/latest", status: "active" },
+              { id: "tool-feishu", name: "飞书", subtitle: "办公", mark: "飞", color: "#176B4D", url: null, status: "active" },
+              { id: "tool-sique", name: "思雀AI", subtitle: "生图", mark: "思", color: "#176B4D", url: "https://ai.sique.com/", status: "active" },
+              { id: "tool-biiino", name: "biiino", subtitle: "上架", mark: "b", color: "#176B4D", url: "https://home.biiino.com/login", status: "active" },
+              { id: "tool-stepcoupon", name: "Step Coupon", subtitle: "运营", mark: "S", color: "#176B4D", url: "https://step-coupon.com/login.html", status: "active" }
+            ]
+          },
+          {
+            id: "tool-shopping",
+            label: "购物・采购",
+            hint: "公司采购",
+            items: [
+              { id: "tool-amazon", name: "亚马逊", subtitle: "购物", mark: "A", color: "#176B4D", url: "https://www.amazon.co.jp/", status: "active" },
+              { id: "tool-rakuten", name: "乐天", subtitle: "购物", mark: "楽", color: "#176B4D", url: "https://www.rakuten.co.jp/", status: "active" },
+              { id: "tool-hako", name: "箱ワン", subtitle: "包装采购", mark: "箱", color: "#176B4D", url: "https://www.notosiki.co.jp/mypage/login", status: "active" }
+            ]
+          },
+          {
+            id: "tool-mail",
+            label: "邮箱・Google",
+            hint: "集团账号",
+            items: [
+              { id: "tool-gmail-info", name: "Gmail", subtitle: "info", mark: "G", color: "#176B4D", url: "https://mail.google.com/mail/u/0/#inbox", status: "active" },
+              { id: "tool-gmail-support", name: "Gmail", subtitle: "support", mark: "G", color: "#176B4D", url: "https://mail.google.com/mail/u/0/#inbox", status: "active" }
+            ]
+          },
+          {
+            id: "tool-business",
+            label: "公共・财务",
+            hint: "按需使用",
+            items: [
+              { id: "tool-gs1", name: "GS1", subtitle: "合规", mark: "G", color: "#176B4D", url: "https://mygs1.gs1jp.org", status: "active" },
+              { id: "tool-iwill", name: "i-WiLL", subtitle: "关税", mark: "i", color: "#176B4D", url: "https://webcsw.ocs.co.jp/csw/login/JPOCS", status: "active" },
+              { id: "tool-moneytree", name: "Moneytree", subtitle: "财务", mark: "M", color: "#176B4D", url: "https://business.getmoneytree.com/", status: "active" },
+              { id: "tool-billpay", name: "楽天BillPay", subtitle: "结算", mark: "楽", color: "#176B4D", url: "https://billpay.rakuten.co.jp/login", status: "active" }
+            ]
+          }
+        ],
+        items: [
+          { id: "robot-in", name: "Robot-in", subtitle: "订单", mark: "R", color: "#176B4D", url: "https://sso.cloud-robot.co/login/", status: "active" },
+          { id: "sagawa", name: "佐川", subtitle: "面单", mark: "佐", color: "#176B4D", url: "https://www.e-service.sagawa-exp.co.jp/portal/do/login/show?fr=bs", status: "active" },
+          { id: "yamato", name: "黑猫", subtitle: "面单", mark: "黒", color: "#176B4D", url: "https://newb2web.kuronekoyamato.co.jp/", status: "active" },
+          { id: "gpt", name: "GPT", subtitle: "办公", mark: "AI", color: "#176B4D", url: "https://chatgpt.com/", status: "active" },
+          { id: "wps", name: "WPS", subtitle: "办公", mark: "W", color: "#176B4D", url: "https://www.kdocs.cn/latest", status: "active" }
+        ]
+      }
+    },
+
+    /* 現段階は全員に全ワークベンチを公開。将来必要時のみ restricted に切替える。 */
+    permissionMode: "open",
+    permissions: [],
 
     workCount: 0,
     notificationCount: 3,
     searchRoute: "search",
     spiritReferenceRoute: "principles",
 
+    /* 今日信息恢复为轻量全局信息带；天气暂不启用，避免无必要外部请求。 */
     weather: {
-      enabled: true,
+      enabled: false,
       provider: "open-meteo",
       refreshMinutes: 15
     },
@@ -176,8 +318,8 @@ export const systemConfig = Object.freeze({
   },
 
   footer: {
-    status: "结构验证",
-    environment: "CANDIDATE",
-    version: "v0.1"
+    status: "9工作台保全 + 店铺总览页 + 内测候选",
+    environment: "INTERNAL TEST CANDIDATE",
+    version: "v1.0.14-nine-workbench-internal-test-candidate"
   }
 });

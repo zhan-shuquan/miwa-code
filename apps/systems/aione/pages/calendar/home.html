@@ -1,0 +1,42 @@
+<section class="core-work-page calendar-page" aria-labelledby="miwa-calendar-title">
+  <header class="core-page-head">
+    <div>
+      <span class="core-page-eyebrow">集团统一时间入口</span>
+      <h1 id="miwa-calendar-title">美和日历</h1>
+      <p>先统一查看任务到期日和公司日程；Google Calendar 双向同步接口保留，待正式账号与规则确认后接入。</p>
+    </div>
+    <div class="core-page-actions"><button class="core-button primary" id="open-event-dialog" type="button">＋ 新增日程</button></div>
+  </header>
+
+  <div class="calendar-toolbar">
+    <div class="calendar-nav"><button id="calendar-prev" type="button" aria-label="上个月">‹</button><button id="calendar-today" type="button">今天</button><button id="calendar-next" type="button" aria-label="下个月">›</button></div>
+    <h2 id="calendar-month-label"></h2>
+    <span class="calendar-sync-status">Google同步 · 接口已预留</span>
+  </div>
+
+  <div class="calendar-layout">
+    <section class="calendar-board" aria-label="月历">
+      <div class="calendar-weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+      <div class="calendar-grid" id="calendar-grid"></div>
+    </section>
+    <aside class="calendar-agenda">
+      <div><span class="core-page-eyebrow">当日安排</span><h2 id="calendar-selected-label">今天</h2></div>
+      <div id="calendar-agenda-list"></div>
+    </aside>
+  </div>
+
+  <dialog class="core-dialog" id="event-dialog">
+    <form id="event-form">
+      <div class="core-dialog-head"><div><span>美和日历</span><h2>新增日程</h2></div><button type="button" data-close-dialog="event-dialog" aria-label="关闭">×</button></div>
+      <label><span>日程名称 *</span><input name="title" required maxlength="80" placeholder="要安排什么" /></label>
+      <div class="core-form-grid">
+        <label><span>日期 *</span><input name="date" id="event-date" type="date" required /></label>
+        <label><span>时间</span><input name="time" type="time" /></label>
+      </div>
+      <label><span>类型</span><select name="type"><option value="work">工作安排</option><option value="meeting">会议</option><option value="company">公司日程</option><option value="personal">个人日程</option></select></label>
+      <label><span>说明</span><textarea name="description" rows="4" maxlength="500" placeholder="补充地点、参与人或准备事项"></textarea></label>
+      <div class="core-dialog-actions"><button class="core-button secondary" type="button" data-close-dialog="event-dialog">取消</button><button class="core-button primary" type="submit">保存日程</button></div>
+    </form>
+  </dialog>
+</section>
+

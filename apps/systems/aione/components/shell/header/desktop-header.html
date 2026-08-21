@@ -1,185 +1,96 @@
 <header class="desktop-header" data-component="miwa-system-header">
-  <!-- 第1行：ブランド／本人識別／全局入口／共通ツール -->
+  <!-- 第1层：平台身份＋当前用户＋全局工作入口＋集团级能力＋全局工具 -->
   <div class="miwa-header-main">
     <div class="miwa-header-main__inner">
-      <section class="miwa-brand-system" aria-label="美和与当前系统">
-        <a class="miwa-logo-button" href="#/work" aria-label="返回AIONE首页">
-          <img
-            id="miwaCompanyLogo"
-            class="miwa-company-logo"
-            src="./assets/brand/miwa-commerce-logo.png"
-            alt="美和正式Logo"
-          />
-          <span class="miwa-logo-fallback" id="miwaLogoFallback" hidden>MIWA</span>
+      <section class="miwa-brand-system" aria-label="平台身份区">
+        <a class="miwa-brand-link" href="#/company" data-header-route="company" aria-label="打开美和集团经营与发展首页">
+          <span class="miwa-logo-button">
+            <img id="miwaCompanyLogo" class="miwa-company-logo" src="./assets/brand/miwa-commerce-logo.png" alt="美和正式Logo" />
+            <span class="miwa-logo-fallback" id="miwaLogoFallback" hidden>MIWA</span>
+          </span>
+          <span class="miwa-system-brand">
+            <span class="miwa-system-brand__name" id="miwaSystemShortName">AIONE</span>
+            <span class="miwa-system-brand__formal" id="miwaSystemFormalName">美和一体化工作平台</span>
+          </span>
         </a>
-
-        <div class="miwa-system-brand">
-          <div class="miwa-system-brand__name" id="miwaSystemShortName">AIONE</div>
-          <div class="miwa-system-brand__formal" id="miwaSystemFormalName">一体化工作平台</div>
-        </div>
       </section>
 
-      <section class="miwa-user-identity" aria-label="当前用户身份">
-        <button
-          class="miwa-user-identity__button"
-          id="desktop-employee-entry"
-          type="button"
-          aria-label="打开员工个人工作身份入口"
-          aria-haspopup="dialog"
-        >
+      <section class="miwa-user-identity" aria-label="当前用户">
+        <button class="miwa-user-identity__button" id="desktop-employee-entry" type="button" aria-haspopup="dialog" aria-expanded="false">
           <span class="miwa-user-avatar" id="desktop-user-avatar">占</span>
-          <span class="miwa-user-copy">
-            <span class="miwa-user-line">
-              <strong id="desktop-user-name">占树全</strong>
-              <span class="miwa-grade-badge" id="desktop-position-grade">P9</span>
-            </span>
-            <span class="miwa-user-position" id="desktop-user-work-identity">经营管理</span>
-          </span>
-          <svg class="miwa-chevron" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m8 10 4 4 4-4"></path>
-          </svg>
+          <span class="miwa-user-line"><strong id="desktop-user-name">占树全</strong><span class="miwa-grade-badge" id="desktop-position-grade">P9</span></span>
+          <span class="miwa-semantic-icon miwa-chevron" data-icon="chevronDown"></span>
         </button>
         <div class="miwa-user-menu" id="desktop-user-menu" hidden>
-          <div class="miwa-user-menu__summary">
-            <strong id="desktop-user-menu-name">当前用户</strong>
-            <span id="desktop-user-menu-role">当前工作身份</span>
+          <div class="miwa-user-menu__head">
+            <span class="miwa-user-menu__avatar miwa-user-avatar" id="desktop-user-menu-avatar">占</span>
+            <span class="miwa-user-menu__identity"><span class="miwa-user-menu__name-line"><strong id="desktop-user-menu-name">当前用户</strong><span class="miwa-grade-badge" id="desktop-user-menu-grade">P9</span></span><span class="miwa-user-online">当前在线</span></span>
           </div>
-          <button class="miwa-user-menu__item" id="desktop-user-profile" type="button">
-            <span>个人工作身份</span><span aria-hidden="true">›</span>
-          </button>
-          <button class="miwa-user-menu__item is-danger" id="desktop-user-logout" type="button">
-            <span>退出登录</span><span aria-hidden="true">↪</span>
-          </button>
+          <dl class="miwa-user-details">
+            <div class="miwa-user-detail-row" data-user-detail="position"><dt>主要岗位</dt><dd id="desktop-user-menu-position"></dd></div>
+            <div class="miwa-user-detail-row" data-user-detail="responsibility"><dt>主要职责</dt><dd id="desktop-user-menu-responsibility"></dd></div>
+            <div class="miwa-user-detail-row" data-user-detail="project"><dt>主要项目</dt><dd id="desktop-user-menu-project"></dd></div>
+            <div class="miwa-user-detail-row" data-user-detail="entity"><dt>所属主体</dt><dd id="desktop-user-menu-entity"></dd></div>
+            <div class="miwa-user-detail-row" data-user-detail="email"><dt>登录账号</dt><dd id="desktop-user-menu-email"></dd></div>
+          </dl>
+          <div class="miwa-user-menu__actions"><button class="miwa-user-menu__item" id="desktop-user-profile" type="button">个人资料</button><button class="miwa-user-menu__item is-danger" id="desktop-user-logout" type="button">退出登录</button></div>
         </div>
       </section>
 
-      <nav class="miwa-primary-nav" aria-label="AIONE全局入口">
-        <a class="miwa-nav-item is-active" href="#/work" data-header-route="work">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="5" y="4" width="14" height="16" rx="2"></rect>
-            <path d="M8 9h8M8 13h5"></path>
-          </svg>
-          <span>今日工作</span>
-          <span class="miwa-nav-badge" id="desktop-work-count" hidden>0</span>
-        </a>
-
-        <a
-          class="miwa-nav-item"
-          href="#/analysis"
-          data-header-route="analysis"
-          data-permission="analysis.view"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
-            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
-          </svg>
-          <span>分析中心</span>
-        </a>
-
-        <a
-          class="miwa-nav-item"
-          href="#/products"
-          data-header-route="products"
-          data-permission="product-center.view"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m4 7 8-4 8 4-8 4-8-4Z"></path>
-            <path d="m4 7v10l8 4 8-4V7"></path>
-          </svg>
-          <span>商品中心</span>
-        </a>
-
-        <a
-          class="miwa-nav-item"
-          href="#/ai"
-          data-header-route="ai"
-          data-permission="ai-center.view"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m12 3 1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3Z"></path>
-            <path d="m18 15 .9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9L18 15Z"></path>
-          </svg>
-          <span>AI中心</span>
-        </a>
+      <nav class="miwa-primary-nav miwa-primary-nav--global" aria-label="AIONE全局入口">
+        <a class="miwa-nav-item" href="#/work" data-header-route="work"><span class="miwa-semantic-icon" data-icon="work"></span><span>今日工作</span><span class="miwa-nav-badge" id="desktop-work-count" hidden>0</span></a>
+        <a class="miwa-nav-item" href="#/calendar" data-header-route="calendar"><span class="miwa-semantic-icon" data-icon="calendar"></span><span>美和日历</span></a>
+        <span class="miwa-nav-divider" aria-hidden="true"></span>
+        <a class="miwa-nav-item" href="#/analysis" data-header-route="analysis"><span class="miwa-semantic-icon" data-icon="analysis"></span><span>分析中心</span></a>
+        <a class="miwa-nav-item" href="#/category-home" data-header-route="category-home"><span class="miwa-semantic-icon" data-icon="category"></span><span>分类之家</span></a>
+        <a class="miwa-nav-item" href="#/product-home" data-header-route="product-home"><span class="miwa-semantic-icon" data-icon="product"></span><span>商品之家</span></a>
+        <a class="miwa-nav-item" href="#/ai-home" data-header-route="ai-home"><span class="miwa-semantic-icon" data-icon="ai"></span><span>AI之家</span></a>
+        <a class="miwa-nav-item" href="#/shared-home" data-header-route="shared-home"><span class="miwa-semantic-icon" data-icon="shared"></span><span>共享之家</span></a>
       </nav>
 
       <section class="miwa-global-tools" aria-label="全局通用工具区">
-        <button
-          class="miwa-tool-button miwa-system-switcher-button"
-          type="button"
-          data-action="system-switcher"
-          title="平台中心"
-          aria-label="平台中心"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="3" width="4" height="4" rx="1"></rect>
-            <rect x="10" y="3" width="4" height="4" rx="1"></rect>
-            <rect x="17" y="3" width="4" height="4" rx="1"></rect>
-            <rect x="3" y="10" width="4" height="4" rx="1"></rect>
-            <rect x="10" y="10" width="4" height="4" rx="1"></rect>
-            <rect x="17" y="10" width="4" height="4" rx="1"></rect>
-            <rect x="3" y="17" width="4" height="4" rx="1"></rect>
-            <rect x="10" y="17" width="4" height="4" rx="1"></rect>
-            <rect x="17" y="17" width="4" height="4" rx="1"></rect>
-          </svg>
-        </button>
-
-        <label class="miwa-global-search" for="desktop-search-input">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="11" cy="11" r="6"></circle>
-            <path d="m16 16 4 4"></path>
-          </svg>
-          <input
-            id="desktop-search-input"
-            type="search"
-            placeholder="搜索商品、SKU、订单、任务、文件…"
-            autocomplete="off"
-            aria-label="全局搜索"
-          />
-        </label>
-
-        <a class="miwa-tool-button" href="#/help" data-header-route="help" title="帮助中心" aria-label="帮助中心">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="9"></circle>
-            <path d="M9.5 9.3a2.7 2.7 0 1 1 3.7 2.5c-.9.4-1.3 1-1.3 1.9"></path>
-            <path d="M12 17h.01"></path>
-          </svg>
-        </a>
-
-        <a
-          class="miwa-tool-button"
-          href="#/notifications"
-          data-header-route="notifications"
-          title="通知"
-          aria-label="通知"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M18 8a6 6 0 0 0-12 0c0 6-2.5 6.5-3 8h18c-.5-1.5-3-2-3-8"></path>
-            <path d="M10 20h4"></path>
-          </svg>
-          <span class="miwa-notification-badge" id="desktop-notification-count">3</span>
-        </a>
-
-        <a class="miwa-tool-button" href="#/settings" data-header-route="settings" title="设置" aria-label="设置">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19 13.5v-3l-2-.6a6 6 0 0 0-.7-1.7l1-1.8-2.1-2.1-1.8 1a6 6 0 0 0-1.7-.7L11 2.5H8l-.6 2a6 6 0 0 0-1.7.7l-1.8-1-2.1 2.1 1 1.8a6 6 0 0 0-.7 1.7l-2 .6v3l2 .6a6 6 0 0 0 .7 1.7l-1 1.8 2.1 2.1 1.8-1a6 6 0 0 0 1.7.7l.6 2h3l.6-2a6 6 0 0 0 1.7-.7l1.8 1 2.1-2.1-1-1.8a6 6 0 0 0 .7-1.7l2-.6Z"></path>
-          </svg>
-        </a>
+        <label class="miwa-global-search" for="desktop-search-input"><span class="miwa-semantic-icon" data-icon="search"></span><input id="desktop-search-input" type="search" placeholder="全局搜索" autocomplete="off" aria-label="全局搜索" /></label>
+        <a class="miwa-tool-button" href="#/notifications" data-header-route="notifications" title="通知" aria-label="通知"><span class="miwa-semantic-icon" data-icon="notification"></span><span class="miwa-notification-badge" id="desktop-notification-count">3</span></a>
+        <a class="miwa-tool-button" href="#/help-home" data-header-route="help-home" title="帮助" aria-label="帮助"><span class="miwa-semantic-icon" data-icon="help"></span></a>
+        <a class="miwa-tool-button" href="#/settings" data-header-route="settings" title="设置" aria-label="设置"><span class="miwa-semantic-icon" data-icon="settings"></span></a>
       </section>
     </div>
   </div>
 
-  <!-- 第2行：美和精神433。構造は固定、説明内容は設定から供給する。 -->
-  <div class="miwa-spirit-row">
+  <!-- 第2层：跨境店铺＋高频外部工具，按用途分组。 -->
+  <div class="miwa-common-entry-row" aria-label="常用店铺与工具">
+    <div class="miwa-common-entry-row__inner">
+      <section class="miwa-entry-group" data-common-entry-group="stores" aria-label="跨境店铺">
+        <span class="miwa-entry-group__label">跨境店铺</span>
+        <div class="miwa-entry-list" id="desktop-store-entries"></div>
+        <button class="miwa-entry-more" type="button" data-common-more="stores"><span>更多店铺</span><span aria-hidden="true">›</span></button>
+      </section>
+      <span class="miwa-common-entry-divider" aria-hidden="true"></span>
+      <section class="miwa-entry-group" data-common-entry-group="logistics" aria-label="订单与面单工具">
+        <div class="miwa-entry-list" id="desktop-logistics-entries"></div>
+      </section>
+      <span class="miwa-common-entry-divider" aria-hidden="true"></span>
+      <section class="miwa-entry-group" data-common-entry-group="office" aria-label="办公工具">
+        <div class="miwa-entry-list" id="desktop-office-entries"></div>
+      </section>
+      <span class="miwa-common-entry-divider" aria-hidden="true"></span>
+      <section class="miwa-entry-group" data-common-entry-group="shopping" aria-label="购物工具">
+        <div class="miwa-entry-list" id="desktop-shopping-entries"></div>
+      </section>
+      <span class="miwa-common-entry-divider" aria-hidden="true"></span>
+      <section class="miwa-entry-group" data-common-entry-group="mail" aria-label="邮箱工具">
+        <div class="miwa-entry-list" id="desktop-mail-entries"></div>
+        <button class="miwa-entry-more" type="button" data-common-more="tools"><span>更多</span><span aria-hidden="true">›</span></button>
+      </section>
+    </div>
+  </div>
+
+  <!-- 第3层：美和精神。保留在全局层，不再新建独立下级页面。 -->
+  <div class="miwa-spirit-row" aria-label="美和精神">
     <div class="miwa-spirit-row__inner">
       <button class="miwa-spirit-master" type="button" data-spirit="miwa-spirit">
-        <span class="miwa-spirit-master__mark" aria-hidden="true"></span>
-        <span>美和精神</span>
+        <span class="miwa-spirit-master__mark" aria-hidden="true"></span><span>美和精神</span>
       </button>
-
       <section class="miwa-spirit-group" aria-label="核心准则">
         <button class="miwa-spirit-group__label" type="button" data-spirit="core-principles">核心准则</button>
         <div class="miwa-spirit-group__items">
@@ -189,7 +100,6 @@
           <button type="button" data-spirit="automation">自动化</button>
         </div>
       </section>
-
       <section class="miwa-spirit-group" aria-label="三大基石">
         <button class="miwa-spirit-group__label" type="button" data-spirit="foundations">三大基石</button>
         <div class="miwa-spirit-group__items">
@@ -198,7 +108,6 @@
           <button type="button" data-spirit="miwa-heritage">美和传承</button>
         </div>
       </section>
-
       <section class="miwa-spirit-group" aria-label="三大属性">
         <button class="miwa-spirit-group__label" type="button" data-spirit="attributes">三大属性</button>
         <div class="miwa-spirit-group__items">
@@ -210,11 +119,11 @@
     </div>
   </div>
 
-  <!-- 第3行：今日日常を固定表示し、企業通知は実データまたは空状態を表示する。 -->
+  <!-- 第4层：今日信息＋重要通知。只承载轻量即时信息。 -->
   <div class="miwa-daily-row">
     <div class="miwa-daily-row__inner">
-      <div class="miwa-daily-fixed" aria-label="今日日常">
-        <span class="miwa-daily-label">今日日常</span>
+      <div class="miwa-daily-fixed" aria-label="今日信息">
+        <span class="miwa-daily-label">今日信息</span>
         <span class="miwa-daily-location" id="miwaDailyLocation">东京</span>
         <span class="miwa-daily-separator" aria-hidden="true"></span>
         <span><strong id="miwaSolarDate">--</strong> <span id="miwaWeekday">--</span> <span id="miwaLocalTime">--:--</span></span>
@@ -224,42 +133,33 @@
         <span>节气 <strong id="miwaSolarTerm">--</strong></span>
         <span class="miwa-daily-separator" aria-hidden="true"></span>
         <span>星座 <strong id="miwaZodiac">--</strong></span>
-        <span class="miwa-daily-separator" aria-hidden="true"></span>
-        <span class="miwa-weather" id="miwaWeather">天气接入中…</span>
       </div>
-
-      <div class="miwa-dynamic-notice" id="miwaDynamicNotice" hidden>
+      <div class="miwa-dynamic-notice" id="miwaDynamicNotice">
         <span class="miwa-dynamic-notice__type" id="miwaNoticeType">重要通知</span>
-        <span class="miwa-dynamic-notice__text" id="miwaNoticeText"></span>
-        <button type="button" id="miwaNoticeAction" data-action="notice-detail">查看 ›</button>
+        <span class="miwa-dynamic-notice__text" id="miwaNoticeText">暂无重要通知</span>
+        <button type="button" id="miwaNoticeAction" data-action="notice-detail" hidden>查看 ›</button>
       </div>
     </div>
   </div>
+
+  <!-- “更多店铺 / 更多工具”使用Header内轻量面板，不跳转到独立下级页面。 -->
+  <div class="miwa-more-panel" id="miwaMorePanel" hidden>
+    <div class="miwa-more-panel__head">
+      <strong id="miwaMorePanelTitle">更多入口</strong>
+      <button type="button" data-action="common-more-close" aria-label="关闭更多入口">×</button>
+    </div>
+    <div class="miwa-more-panel__body" id="miwaMorePanelBody"></div>
+  </div>
 </header>
 
-<!-- 433即时说明。平台级Asideとは独立したHeader専用Drawerとして管理する。 -->
 <div class="miwa-header-info-overlay" id="miwaHeaderInfoOverlay" hidden></div>
-<section
-  class="miwa-header-info-drawer"
-  id="miwaHeaderInfoDrawer"
-  role="dialog"
-  aria-modal="true"
-  aria-hidden="true"
-  aria-labelledby="miwaHeaderInfoTitle"
->
+<section class="miwa-header-info-drawer" id="miwaHeaderInfoDrawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="miwaHeaderInfoTitle">
   <div class="miwa-header-info-drawer__head">
-    <div>
-      <span id="miwaHeaderInfoKicker">美和精神</span>
-      <h2 id="miwaHeaderInfoTitle">美和精神</h2>
-    </div>
+    <div><span id="miwaHeaderInfoKicker">美和精神</span><h2 id="miwaHeaderInfoTitle">美和精神</h2></div>
     <button type="button" data-action="header-info-close" aria-label="关闭">×</button>
   </div>
   <div class="miwa-header-info-drawer__body">
     <p id="miwaHeaderInfoDescription"></p>
-    <section>
-      <h3>在当前系统中的体现</h3>
-      <p id="miwaHeaderInfoPractice"></p>
-    </section>
-    <button class="miwa-header-info-more" type="button" data-action="open-full-reference">查看完整说明 ›</button>
+    <section><h3>在当前系统中的体现</h3><p id="miwaHeaderInfoPractice"></p></section>
   </div>
 </section>

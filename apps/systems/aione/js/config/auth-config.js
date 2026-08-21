@@ -15,6 +15,5 @@ export const authConfig = Object.freeze({
     shape: "rectangular",
     logo_alignment: "left",
     locale: "zh_CN"
-  }),
-  localFallbackHosts: Object.freeze(["127.0.0.1", "localhost"])
+  })
 });
