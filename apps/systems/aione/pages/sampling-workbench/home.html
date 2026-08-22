@@ -11,6 +11,7 @@
     </div>
     <div class="selection-page-head__actions" aria-label="测样工作台认知与任务入口">
       <a class="selection-page-head__nav-button" href="#/sampling-overview">测样概览</a>
+      <a class="selection-page-head__nav-button" href="#/sampling-queue">＋ 新建测样任务</a>
       <a class="selection-page-head__nav-button" href="#/sampling-tasks">测样任务</a>
     </div>
   </section>
@@ -39,7 +40,7 @@
               <span class="selection-block-mini-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"></circle><circle cx="19" cy="6" r="2"></circle><circle cx="19" cy="18" r="2"></circle><path d="M7 6h5a5 5 0 0 1 5 5v5"></path><path d="M5 8v7a3 3 0 0 0 3 3h12"></path></svg>
               </span>
-              <h3 id="sampling-flow-title">测样流程</h3>
+              <h3 id="sampling-flow-title">测样业务流程</h3>
             </div>
             <p>看清每个商品当前处于哪个验证环节；完成后先回写选品工作台，再进入最终经营判断。</p>
           </div>
@@ -53,7 +54,7 @@
           <span class="selection-block-mini-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M5 19V11"></path><path d="M12 19V5"></path><path d="M19 19V8"></path><path d="M3 19h18"></path></svg>
           </span>
-          <h3 id="sampling-metrics-title">业务指标</h3>
+          <h3 id="sampling-metrics-title">核心指标</h3>
         </div>
         <p>只使用当前浏览器中已经产生的真实预演数据；暂无可靠数据的指标明确标记为待验证。</p>
         <div class="selection-metrics sampling-metrics" id="sampling-metrics"></div>
@@ -74,7 +75,9 @@
             <p>集中查看需要测样、正在测样、存在异常以及已经完成回写的商品。</p>
           </div>
         </div>
-        <div class="selection-view-switch" aria-label="视图切换">
+        <div class="selection-view-switch" aria-label="测样对象操作">
+          <button type="button" data-sampling-import disabled title="测样对象由选品流程承接，不直接导入">导入</button>
+          <button type="button" data-sampling-export>导出</button>
           <button type="button" data-sampling-view="list">列表</button>
           <button class="active" type="button" data-sampling-view="card">卡片</button>
         </div>
@@ -113,4 +116,6 @@
       </footer>
     </section>
   </section>
+
+  <section data-miwa-nine-elements></section>
 </section>

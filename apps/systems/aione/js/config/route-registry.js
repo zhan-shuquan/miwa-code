@@ -14,48 +14,32 @@ const route = (id, label, kind, options = {}) => Object.freeze({
 });
 
 export const ROUTE_REGISTRY = Object.freeze({
-  company: route("company", "公司识别区", "platform"),
-  work: route("work", "今日工作", "platform", {
-    status: "active",
-    page: "./pages/today-work/home.html"
-  }),
+  company: route("company", "美和之家", "platform", { status: "active", page: "./pages/content-home/template.html" }),
+  work: route("work", "工作之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
   calendar: route("calendar", "美和日历", "platform", {
     status: "active",
     page: "./pages/calendar/home.html"
   }),
-  "category-home": route("category-home", "分类之家", "platform", {
-    status: "active",
-    page: "./pages/category-home/home.html"
-  }),
-  "product-home": route("product-home", "商品之家", "platform", {
-    status: "active",
-    page: "./pages/product-home/home.html"
-  }),
-  "ai-home": route("ai-home", "AI之家", "platform", {
-    status: "active",
-    page: "./pages/ai-home/home.html"
-  }),
-  analysis: route("analysis", "分析中心", "platform", {
-    status: "active",
-    page: "./pages/analysis-center/home.html"
-  }),
-  "shared-home": route("shared-home", "共享之家", "platform", {
-    status: "active",
-    page: "./pages/shared-home/home.html"
-  }),
-  "store-home": route("store-home", "全部店铺", "platform", {
-    status: "active",
-    page: "./pages/store-home/home.html"
-  }),
+  "category-home": route("category-home", "分类之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
+  "product-home": route("product-home", "商品之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
+  "customer-home": route("customer-home", "客户之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
+  "talent-home": route("talent-home", "人才之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
+  "income-home": route("income-home", "收入之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
+  "expense-home": route("expense-home", "支出之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
+  "cash-expense": route("cash-expense", "现金支出", "platform", { status: "active", page: "./pages/business-home/template.html", parent: "expense-home" }),
+  "application-home": route("application-home", "应用之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
+  "ai-home": route("ai-home", "AI之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
+  analysis: route("analysis", "分析之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
+  "shared-home": route("shared-home", "共享之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
+  "store-home": route("store-home", "店铺之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
   search: route("search", "全局搜索", "platform"),
-  notifications: route("notifications", "通知", "platform"),
-  "help-home": route("help-home", "帮助之家", "platform"),
+  notifications: route("notifications", "通知中心", "platform", { status: "active", page: "./pages/notifications/home.html" }),
+  "notification-detail": route("notification-detail", "通知详情", "platform", { status: "active", page: "./pages/notifications/detail.html", parent: "notifications" }),
+  "help-home": route("help-home", "帮助", "platform"),
   settings: route("settings", "设置", "platform"),
-  principles: route("principles", "美和方法论", "platform"),
+  principles: route("principles", "美和方法论", "platform", { parent: "knowledge-home" }),
   "employee-profile": route("employee-profile", "个人资料", "platform"),
   "platform-admin": route("platform-admin", "平台管理账户", "platform"),
-  "store-entries": route("store-entries", "全部店铺入口", "platform"),
-  "tool-entries": route("tool-entries", "全部工具入口", "platform"),
 
   /* 分類之家：定義、責任、機会と経営結果を一つの分類軸で接続する。 */
   "category-directory": route("category-directory", "分类目录", "platform", { parent: "category-home" }),
@@ -93,16 +77,16 @@ export const ROUTE_REGISTRY = Object.freeze({
   /* 共有之家：能力入口と資産目録を同じ家で発見できるようにする。 */
   "shared-capabilities": route("shared-capabilities", "共享能力", "platform", { parent: "shared-home" }),
   "shared-resources": route("shared-resources", "共享资源", "platform", { parent: "shared-home" }),
-  "standard-home": route("standard-home", "标准之家", "platform", { parent: "shared-home" }),
-  "brand-home": route("brand-home", "品牌之家", "platform", { parent: "shared-home" }),
-  "data-home": route("data-home", "数据之家", "platform", { parent: "shared-home" }),
-  "knowledge-home": route("knowledge-home", "知识之家", "platform", { parent: "shared-home" }),
-  "code-assets": route("code-assets", "代码资产之家", "platform", { parent: "shared-home" }),
-  "document-assets": route("document-assets", "资料资产之家", "platform", { parent: "shared-home" }),
-  "software-home": route("software-home", "软件与账号", "platform", { parent: "shared-home" }),
+  "standard-home": route("standard-home", "标准", "platform", { parent: "knowledge-home" }),
+  "brand-home": route("brand-home", "品牌资产", "platform", { parent: "shared-home" }),
+  "data-home": route("data-home", "数据资产", "platform", { parent: "shared-home" }),
+  "knowledge-home": route("knowledge-home", "知识之家", "platform", { status: "active", page: "./pages/content-home/template.html" }),
+  "code-assets": route("code-assets", "代码资产", "platform", { parent: "shared-home" }),
+  "document-assets": route("document-assets", "文件与资料资产", "platform", { parent: "shared-home" }),
+  "software-home": route("software-home", "软件与账号", "platform", { parent: "application-home" }),
   "erp-home": route("erp-home", "ERP", "platform", { parent: "shared-home" }),
   "finance-home": route("finance-home", "财务", "platform", { parent: "shared-home" }),
-  "people-home": route("people-home", "人事", "platform", { parent: "shared-home" }),
+  "people-home": route("people-home", "人事资料", "platform", { parent: "talent-home" }),
   "identity-home": route("identity-home", "身份与权限", "platform", { parent: "shared-home" }),
   "contract-home": route("contract-home", "合同与法务", "platform", { parent: "shared-home" }),
 

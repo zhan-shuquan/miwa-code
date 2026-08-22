@@ -1,0 +1,63 @@
+<section class="miwa-level2-page notification-center" id="notification-center" aria-labelledby="notification-center-title">
+  <section class="miwa-level2-head">
+    <div class="miwa-level2-head__identity">
+      <span class="miwa-level2-head__icon" aria-hidden="true">通</span>
+      <div><h1 id="notification-center-title">通知中心</h1><p>集团级重要信息、会议通知与标准业务事件统一进入这里；重要通知由AI办公室 / AI秘书协助整理、发布、追踪阅读与确认。</p></div>
+    </div>
+    <div class="miwa-level2-head__actions"><button type="button" class="miwa-level2-head__button" data-notice-overview>通知概览</button><button type="button" class="miwa-level2-head__button is-primary" id="notice-create">＋ 新建通知</button></div>
+  </section>
+
+  <section class="miwa-level2-block" aria-labelledby="notice-type-title">
+    <div class="miwa-level2-block__head"><div><h2 id="notice-type-title">通知类型</h2><p>前三个重点类型优先显示；更多类型横向滑动。</p></div><div class="miwa-rail-actions"><button type="button" data-rail-scroll="prev" data-rail-target="notice-type-rail">‹</button><button type="button" data-rail-scroll="next" data-rail-target="notice-type-rail">›</button></div></div>
+    <div class="miwa-horizontal-rail" id="notice-type-rail" data-visible="3"></div>
+  </section>
+
+  <section class="miwa-level2-block" aria-labelledby="notice-flow-title">
+    <div class="miwa-level2-block__head"><div><h2 id="notice-flow-title">通知管理流程</h2><p>通知是信息管理流程，不是普通消息堆积；AI秘书负责整理和追踪，人对关键发布承担最终责任。</p></div><span class="miwa-level2-status">验证中</span></div>
+    <div class="miwa-business-flow" id="notice-flow"></div>
+  </section>
+
+  <section class="miwa-level2-block" aria-labelledby="notice-metrics-title">
+    <div class="miwa-level2-block__head"><div><h2 id="notice-metrics-title">核心指标</h2><p>只展示日常最重要的通知状态；一屏最多6项。</p></div><div class="miwa-rail-actions"><button type="button" data-rail-scroll="prev" data-rail-target="notification-summary">‹</button><button type="button" data-rail-scroll="next" data-rail-target="notification-summary">›</button></div></div>
+    <div class="miwa-horizontal-rail" id="notification-summary" data-visible="5"></div>
+  </section>
+
+  <section class="miwa-level2-block" aria-labelledby="notification-records-title">
+    <div class="miwa-level2-block__head"><div><h2 id="notification-records-title">通知记录</h2><p>搜索、筛选、导入、导出、卡片与列表共用同一份通知数据。</p></div><span class="miwa-level2-count" id="notification-count">0</span></div>
+    <div class="miwa-object-toolbar">
+      <label class="miwa-object-search"><span>⌕</span><input id="notification-search" type="search" placeholder="搜索标题、内容、来源或对象"></label>
+      <select id="notification-filter" aria-label="筛选"><option value="">全部类型</option></select>
+      <button type="button" id="notification-import">导入</button><input id="notification-import-file" type="file" accept=".csv,.xlsx" hidden>
+      <button type="button" id="notification-export">导出</button>
+      <div class="miwa-object-view-switch"><button type="button" class="is-active" data-notification-view="card">卡片</button><button type="button" data-notification-view="list">列表</button></div>
+    </div>
+    <div class="notification-center__list" id="notification-list"></div>
+    <div class="miwa-object-list-wrap" id="notification-list-wrap" hidden><table class="miwa-object-table"><thead id="notification-table-head"></thead><tbody id="notification-table-body"></tbody></table></div>
+    <div class="miwa-object-empty" id="notification-empty" hidden></div>
+  </section>
+
+  <section class="miwa-level2-block" aria-labelledby="notice-aux-title">
+    <div class="miwa-level2-block__head"><div><h2 id="notice-aux-title">辅助机动区</h2><p>保持单行，按需显示未确认、会议准备、发布异常和AI秘书建议。</p></div><div class="miwa-rail-actions"><button type="button" data-rail-scroll="prev" data-rail-target="notice-aux-rail">‹</button><button type="button" data-rail-scroll="next" data-rail-target="notice-aux-rail">›</button></div></div>
+    <div class="miwa-horizontal-rail" id="notice-aux-rail" data-visible="4"></div>
+  </section>
+
+  <section data-miwa-nine-elements></section>
+</section>
+
+<dialog class="miwa-content-dialog" id="notification-create-dialog">
+  <form method="dialog" id="notification-create-form">
+    <header><div><small>AI办公室 · 通知统一入口</small><h2>新建通知</h2><p>人工新建长期保留；未来可由AI秘书根据GPT中的自然语言布置直接生成同一通知对象。</p></div><button type="button" data-notice-dialog-close>×</button></header>
+    <div class="miwa-content-form-grid">
+      <label><span>标题 *</span><input name="title" required></label>
+      <label><span>通知类型 *</span><select name="label" id="notification-type-select" required></select></label>
+      <label><span>发布对象 *</span><input name="scope" value="相关人员" required></label>
+      <label><span>来源 / 发布主体</span><input name="source" value="美和集团 AI办公室"></label>
+      <label><span>重要程度</span><select name="level"><option value="important">重要</option><option value="normal">普通</option></select></label>
+      <label><span>是否要求确认</span><select name="requiresAck"><option value="true">需要确认</option><option value="false">只需阅读</option></select></label>
+      <label><span>截止 / 会议时间</span><input name="dueAt" type="datetime-local"></label>
+    </div>
+    <label class="miwa-content-textarea"><span>通知内容 *</span><textarea name="summary" rows="6" required></textarea></label>
+    <footer><button type="button" class="ghost" data-notice-dialog-close>取消</button><button type="submit" class="primary">发布通知</button></footer>
+  </form>
+</dialog>
+<div class="miwa-business-toast" id="notification-toast" aria-live="polite"></div>

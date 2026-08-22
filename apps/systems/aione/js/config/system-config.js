@@ -3,7 +3,7 @@
    実データ接続後は値だけを差し替え、各コンポーネントを直接変更しない。
 ======================================== */
 
-export const SYSTEM_ASSET_VERSION = "20260822-v1.0.28-global-shell-single-source";
+export const SYSTEM_ASSET_VERSION = "20260822-v1.3.0-level2-empty-base-candidate";
 const versionedComponent = (path) => `${path}?v=${SYSTEM_ASSET_VERSION}`;
 
 export const systemConfig = Object.freeze({
@@ -54,9 +54,7 @@ export const systemConfig = Object.freeze({
     */
     commonEntries: {
       stores: {
-        label: "跨境店铺",
-        moreMode: "route",
-        moreRoute: "store-home",
+        label: "店铺之家",
         items: [
           { id: "rakuten-1", name: "幸せ屋", subtitle: "", mark: "幸", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" },
           { id: "rakuten-2", name: "PrimeLife", subtitle: "", mark: "P", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" },
@@ -64,9 +62,9 @@ export const systemConfig = Object.freeze({
         ],
         developmentNote: "店铺入口按真实业务持续增加；预设平台不代表已经开店。",
         recentChanges: [
-          { date: "2026-08-21", title: "集团店铺总览入口升级", detail: "更多店铺由轻量弹层升级为正式总览页，便于员工集中进入并持续了解集团渠道发展。" }
+          { date: "2026-08-21", title: "集团店铺总览入口升级", detail: "店铺之家统一承担店铺管理与全部店铺入口；Header只保留高频店铺快捷打开。" }
         ],
-        moreSections: [
+        catalogSections: [
           {
             id: "rakuten",
             label: "楽天市場",
@@ -97,7 +95,8 @@ export const systemConfig = Object.freeze({
         items: [
           { id: "gpt", name: "GPT", subtitle: "办公", mark: "AI", color: "#176B4D", url: "https://chatgpt.com/", status: "active" },
           { id: "wps", name: "WPS", subtitle: "办公", mark: "W", color: "#176B4D", url: "https://www.kdocs.cn/latest", status: "active" },
-          { id: "feishu", name: "飞书", subtitle: "办公", mark: "飞", color: "#176B4D", url: null, status: "active" }
+          { id: "feishu", name: "飞书", subtitle: "办公", mark: "飞", color: "#176B4D", url: null, status: "active" },
+          { id: "google-drive", name: "Google Drive", subtitle: "云盘", mark: "D", color: "#176B4D", url: "https://drive.google.com/", status: "active" }
         ]
       },
       shopping: {
@@ -115,9 +114,8 @@ export const systemConfig = Object.freeze({
         ]
       },
       tools: {
-        label: "更多工具",
-        moreMode: "panel",
-        moreSections: [
+        label: "应用之家",
+        catalogSections: [
           {
             id: "tool-logistics",
             label: "订单・物流",
@@ -138,6 +136,7 @@ export const systemConfig = Object.freeze({
               { id: "tool-gpt", name: "GPT", subtitle: "办公", mark: "AI", color: "#176B4D", url: "https://chatgpt.com/", status: "active" },
               { id: "tool-wps", name: "WPS", subtitle: "办公", mark: "W", color: "#176B4D", url: "https://www.kdocs.cn/latest", status: "active" },
               { id: "tool-feishu", name: "飞书", subtitle: "办公", mark: "飞", color: "#176B4D", url: null, status: "active" },
+              { id: "tool-drive", name: "Google Drive", subtitle: "云盘", mark: "D", color: "#176B4D", url: "https://drive.google.com/", status: "active" },
               { id: "tool-sique", name: "思雀AI", subtitle: "生图", mark: "思", color: "#176B4D", url: "https://ai.sique.com/", status: "active" },
               { id: "tool-biiino", name: "biiino", subtitle: "上架", mark: "b", color: "#176B4D", url: "https://home.biiino.com/login", status: "active" },
               { id: "tool-stepcoupon", name: "Step Coupon", subtitle: "运营", mark: "S", color: "#176B4D", url: "https://step-coupon.com/login.html", status: "active" }
@@ -179,7 +178,8 @@ export const systemConfig = Object.freeze({
           { id: "sagawa", name: "佐川", subtitle: "面单", mark: "佐", color: "#176B4D", url: "https://www.e-service.sagawa-exp.co.jp/portal/do/login/show?fr=bs", status: "active" },
           { id: "yamato", name: "黑猫", subtitle: "面单", mark: "黒", color: "#176B4D", url: "https://newb2web.kuronekoyamato.co.jp/", status: "active" },
           { id: "gpt", name: "GPT", subtitle: "办公", mark: "AI", color: "#176B4D", url: "https://chatgpt.com/", status: "active" },
-          { id: "wps", name: "WPS", subtitle: "办公", mark: "W", color: "#176B4D", url: "https://www.kdocs.cn/latest", status: "active" }
+          { id: "wps", name: "WPS", subtitle: "办公", mark: "W", color: "#176B4D", url: "https://www.kdocs.cn/latest", status: "active" },
+          { id: "google-drive", name: "Google Drive", subtitle: "云盘", mark: "D", color: "#176B4D", url: "https://drive.google.com/", status: "active" }
         ]
       }
     },
@@ -189,7 +189,7 @@ export const systemConfig = Object.freeze({
     permissions: [],
 
     workCount: 0,
-    notificationCount: 3,
+    notificationCount: 0,
     searchRoute: "search",
     spiritReferenceRoute: "principles",
 
@@ -206,9 +206,12 @@ export const systemConfig = Object.freeze({
       type: "weather",
       text: null,
       timeZone: "Asia/Tokyo",
-      /* 正式通知がない場合も能力確認のため空状態を表示する。 */
+      /* 顶部信息带固定为：今日印象｜日程｜通知。日程是否重要由用户明确选择。 */
+      showScheduleSlotWhenEmpty: true,
+      emptyScheduleText: "暂无重要日程",
+      importantSchedule: null,
       showNoticeSlotWhenEmpty: true,
-      emptyNoticeLabel: "重要通知",
+      emptyNoticeLabel: "通知",
       emptyNoticeText: "暂无重要通知",
       notice: null
     },
@@ -313,13 +316,13 @@ export const systemConfig = Object.freeze({
   },
 
   aside: {
-    title: "上下文辅助",
-    content: "当前只验证 Aside 的区域职责与独立代码边界，具体业务内容将在页面接入后按上下文生成。"
+    title: "AI秘书｜上下文辅助",
+    content: "根据当前页面自动提供摘要、提醒和高价值AI辅助；没有有效内容时保持轻量。"
   },
 
   footer: {
-    status: "Global Shell唯一源码 + 选品/测样闭环保全",
+    status: "Global Shell唯一源码 + Level-2 Empty Base + 标准组件 + 母版Recipe",
     environment: "INTERNAL TEST REBUILD",
-    version: "v1.0.28-global-shell-single-source"
+    version: "v1.3.0-level2-empty-base-candidate"
   }
 });

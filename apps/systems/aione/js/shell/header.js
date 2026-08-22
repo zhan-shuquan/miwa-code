@@ -1,4 +1,4 @@
-import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260821-v1.0.11-global-info-restored";
+import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260822-v1.3.0-level2-empty-base-candidate";
 import { getRouteDefinition } from "../config/route-registry.js";
 
 /* ========================================
@@ -391,13 +391,23 @@ export function initHeader(initialConfig = {}) {
     }
   }
 
+  function renderSchedule() {
+    const schedule = config.enterprise?.importantSchedule || null;
+    const root = document.getElementById("miwaDynamicSchedule");
+    const text = document.getElementById("miwaScheduleText");
+    if (!root || !text) return;
+    const showEmptyState = config.enterprise?.showScheduleSlotWhenEmpty !== false;
+    root.hidden = !schedule && !showEmptyState;
+    root.dataset.scheduleId = schedule?.id || "";
+    text.textContent = schedule?.text || config.enterprise?.emptyScheduleText || "暂无重要日程";
+  }
+
   function renderNotice() {
     const notice = config.enterprise?.notice || null;
-    const renderTarget = ({ rootId, typeId, textId, actionId }) => {
+    const renderTarget = ({ rootId, typeId, textId }) => {
       const root = document.getElementById(rootId);
       const type = document.getElementById(typeId);
       const text = document.getElementById(textId);
-      const action = document.getElementById(actionId);
       if (!root || !type || !text) return;
 
       if (!notice) {
@@ -405,25 +415,20 @@ export function initHeader(initialConfig = {}) {
         root.hidden = !showEmptyState;
         root.classList.remove("is-urgent");
         root.dataset.noticeId = "";
-        type.textContent = config.enterprise?.emptyNoticeLabel || "重要通知";
+        type.textContent = "通知";
         text.textContent = config.enterprise?.emptyNoticeText || "暂无重要通知";
-        if (action) action.hidden = true;
         return;
       }
 
-      type.textContent = notice.label || "重要通知";
-      text.textContent = notice.text || "";
+      type.textContent = "通知";
+      text.textContent = notice.text || notice.title || "";
       root.hidden = false;
       root.classList.toggle("is-urgent", notice.level === "urgent");
       root.dataset.noticeId = notice.id || "";
-      if (action) {
-        action.hidden = false;
-        action.textContent = notice.actionLabel || "查看 ›";
-      }
     };
 
-    renderTarget({ rootId: "miwaDynamicNotice", typeId: "miwaNoticeType", textId: "miwaNoticeText", actionId: "miwaNoticeAction" });
-    renderTarget({ rootId: "mobileDynamicNotice", typeId: "mobileNoticeType", textId: "mobileNoticeText", actionId: "mobileNoticeAction" });
+    renderTarget({ rootId: "miwaDynamicNotice", typeId: "miwaNoticeType", textId: "miwaNoticeText" });
+    renderTarget({ rootId: "mobileDynamicNotice", typeId: "mobileNoticeType", textId: "mobileNoticeText" });
   }
 
   function createCommonEntry(entry) {
@@ -486,51 +491,6 @@ export function initHeader(initialConfig = {}) {
         : [];
       host.replaceChildren(...entries.map(createCommonEntry));
     });
-  }
-
-
-  function closeMorePanel() {
-    const panel = document.getElementById("miwaMorePanel");
-    if (panel) panel.hidden = true;
-  }
-
-  function openMorePanel(groupId) {
-    const panel = document.getElementById("miwaMorePanel");
-    const body = document.getElementById("miwaMorePanelBody");
-    const title = document.getElementById("miwaMorePanelTitle");
-    const groupConfig = config.commonEntries?.[groupId] || {};
-    const sections = Array.isArray(groupConfig.moreSections) ? groupConfig.moreSections : [];
-    if (!panel || !body || !sections.length) return false;
-
-    title.textContent = groupId === "stores" ? "更多店铺" : "更多工具";
-    const nodes = sections.map((section) => {
-      const box = document.createElement("section");
-      box.className = "miwa-more-section";
-      const head = document.createElement("div");
-      head.className = "miwa-more-section__title";
-      const label = document.createElement("span");
-      label.textContent = section.label || "未分类";
-      const hint = document.createElement("span");
-      hint.className = "miwa-more-section__hint";
-      hint.textContent = section.hint || "";
-      head.append(label, hint);
-      const items = document.createElement("div");
-      items.className = "miwa-more-section__items";
-      const entries = Array.isArray(section.items) ? section.items : [];
-      if (entries.length) {
-        entries.forEach((entry) => items.append(createCommonEntry(entry)));
-      } else {
-        const empty = document.createElement("span");
-        empty.className = "miwa-more-empty";
-        empty.textContent = "暂无店铺 · 按实际业务增加";
-        items.append(empty);
-      }
-      box.append(head, items);
-      return box;
-    });
-    body.replaceChildren(...nodes);
-    panel.hidden = false;
-    return true;
   }
 
   function getSpiritContent(spiritId) {
@@ -600,6 +560,7 @@ export function initHeader(initialConfig = {}) {
     updateCount("desktop-notification-count", config.notificationCount);
     updateCount("mobile-notification-count", config.notificationCount);
     renderDaily();
+    renderSchedule();
     renderNotice();
     if (config.weather?.enabled) loadWeather();
     applyPermissions();
@@ -737,14 +698,16 @@ export function initHeader(initialConfig = {}) {
           return;
         }
 
-        if (action === "common-more-close") {
-          closeMorePanel();
-          return;
-        }
-
         if (action === "system-switcher") {
           dispatchWindowEvent("miwa:header:system-switcher", { source: "header" });
           dispatchWindowEvent("aione:system-switcher-open", { source: "header" });
+          return;
+        }
+
+        if (action === "important-schedule") {
+          const scheduleId = document.getElementById("miwaDynamicSchedule")?.dataset.scheduleId || "";
+          dispatchWindowEvent("miwa:header:important-schedule", { scheduleId });
+          window.location.hash = "#/calendar?filter=important";
           return;
         }
 
@@ -754,6 +717,7 @@ export function initHeader(initialConfig = {}) {
             document.getElementById("mobileDynamicNotice")?.dataset.noticeId ||
             "";
           dispatchWindowEvent("miwa:header:notice-detail", { noticeId });
+          window.location.hash = noticeId ? `#/notification-detail?id=${encodeURIComponent(String(noticeId))}` : "#/notifications";
           return;
         }
 
@@ -784,17 +748,6 @@ export function initHeader(initialConfig = {}) {
         dispatchWindowEvent("aione:common-entry-request", { groupId, entryId, status: "link-pending" });
       });
     });
-
-    document.querySelectorAll("[data-common-more]").forEach((button) => {
-      button.addEventListener("click", (event) => {
-        event.stopPropagation();
-        const groupId = button.dataset.commonMore;
-        const groupConfig = config.commonEntries?.[groupId] || {};
-        dispatchWindowEvent("aione:common-entry-more", { groupId });
-        if (groupConfig.moreMode === "panel" && openMorePanel(groupId)) return;
-        if (groupConfig.moreRoute) window.location.hash = `#/${groupConfig.moreRoute}`;
-      });
-    });
   }
 
   /* バックエンド接続後もDOMを作り直さず、設定差分だけで更新できる。 */
@@ -810,12 +763,6 @@ export function initHeader(initialConfig = {}) {
   bindHeaderActions();
   bindCommonEntries();
   bindRuntimeUpdates();
-  document.addEventListener("click", (event) => {
-    const panel = document.getElementById("miwaMorePanel");
-    if (!panel || panel.hidden) return;
-    if (panel.contains(event.target) || event.target.closest("[data-common-more]")) return;
-    closeMorePanel();
-  });
   configure(config);
   restartTimers();
 
@@ -828,6 +775,12 @@ export function initHeader(initialConfig = {}) {
     },
     clearNotification() {
       configure({ enterprise: { notice: null } });
+    },
+    setImportantSchedule(schedule) {
+      configure({ enterprise: { importantSchedule: schedule || null } });
+    },
+    clearImportantSchedule() {
+      configure({ enterprise: { importantSchedule: null } });
     },
     openSpiritInfo: openHeaderInfo,
     closeSpiritInfo: closeHeaderInfo,

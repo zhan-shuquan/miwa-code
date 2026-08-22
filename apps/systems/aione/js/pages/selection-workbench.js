@@ -1,3 +1,6 @@
+import { renderMiwaNineElements } from "../components/miwa-nine-elements.js";
+import { getActiveSystemParameters } from "../shell/system-settings.js";
+import { createObjectViewController } from "../components/object-view-controller.js";
 /* ========================================
    Selection Workbench｜選品ワークベンチ
    第1階層ページの表示・絞り込み・カード／一覧切替を管理する。
@@ -531,11 +534,22 @@ export function initSelectionWorkbench(){
   if(!root) return;
 
   const state = workbenchState;
+  renderMiwaNineElements(root.querySelector('[data-miwa-nine-elements]'), { context: '选品业务' });
+  window.dispatchEvent(new CustomEvent('aione:page-ai-context', { detail: { title: 'AI秘书｜选品辅助', text: '可协助整理商品机会、读取资料、检查缺失字段、分析异常并提示下一步；正式判断仍由业务负责人负责。' } }));
   const typeGrid = root.querySelector('#selection-type-grid');
   const flowTrack = root.querySelector('#selection-flow-track');
   const metrics = root.querySelector('#selection-metrics');
   const cardGrid = root.querySelector('#selection-card-grid');
   const listView = root.querySelector('#selection-list-view');
+  const objectView = createObjectViewController({
+    root,
+    cardHost: cardGrid,
+    listHost: listView,
+    buttonSelector: '[data-selection-view]',
+    activeClasses: ['active'],
+    datasetKeys: ['selectionView'],
+    initialView: state.view
+  });
   const tableBody = root.querySelector('#selection-table-body');
   const visibleCount = root.querySelector('#selection-visible-count');
   const typeSelect = root.querySelector('#selection-type-select');
@@ -547,6 +561,24 @@ export function initSelectionWorkbench(){
   const toast = document.getElementById('selection-toast');
   let toastTimer;
 
+  const getObjectPolicies=()=>{
+    const params=getActiveSystemParameters?.()||{};
+    return {
+      createAllowed: params.permissions?.allowCreate!==false,
+      importAllowed: params.permissions?.allowImport!==false && (params.io?.allowCsv!==false || params.io?.allowExcel!==false),
+      exportAllowed: params.permissions?.allowExport!==false
+    };
+  };
+  const syncObjectPolicyButtons=()=>{
+    const policy=getObjectPolicies();
+    const importButton=root.querySelector('[data-selection-import]');
+    const exportButton=root.querySelector('[data-selection-export]');
+    const createButton=root.querySelector('.selection-page-head__actions [data-create-opportunity]');
+    if(createButton){createButton.disabled=!policy.createAllowed;createButton.title=policy.createAllowed?'':'新建已由系统参数权限关闭';}
+    if(importButton){importButton.disabled=!policy.importAllowed;importButton.title=policy.importAllowed?'':'导入已由系统参数关闭';}
+    if(exportButton){exportButton.disabled=!policy.exportAllowed;exportButton.title=policy.exportAllowed?'':'导出已由系统参数关闭';}
+  };
+
   function showToast(text){
     if(!toast) return;
     toast.textContent = text;
@@ -556,6 +588,7 @@ export function initSelectionWorkbench(){
   }
 
   function renderOverview(){
+    const objectPolicy=getObjectPolicies();
     if(typeGrid) typeGrid.innerHTML = TYPE_ORDER.map(type=>{
       const count = SELECTION_ITEMS.filter(x=>x.type===type).length;
       return `<article class="selection-type-card">
@@ -563,8 +596,8 @@ export function initSelectionWorkbench(){
           <span>${type}</span><b>${count}</b>
         </button>
         <div class="selection-type-card__actions">
-          <button class="selection-type-card__action" type="button" data-create-opportunity="${type}"><span aria-hidden="true">＋</span>新建商品机会</button>
-          <button class="selection-type-card__action" type="button" data-batch-import-type="${type}"><span aria-hidden="true">⇧</span>批量导入</button>
+          <button class="selection-type-card__action" type="button" data-create-opportunity="${type}" ${objectPolicy.createAllowed?'':'disabled title="新建已由系统参数权限关闭"'}><span aria-hidden="true">＋</span>新建商品机会</button>
+          <button class="selection-type-card__action" type="button" data-batch-import-type="${type}" ${objectPolicy.importAllowed?'':'disabled title="导入已由系统参数关闭"'}><span aria-hidden="true">⇧</span>批量导入</button>
         </div>
       </article>`;
     }).join('');
@@ -600,6 +633,23 @@ export function initSelectionWorkbench(){
     });
   }
 
+  function exportFilteredOpportunities(){
+    const quote=(value)=>`"${String(value ?? '').replaceAll('\"','\"\"')}"`;
+    const rows=filtered();
+    const fields=[
+      ['商品名称','name'],['商品机会ID','id'],['选品类型','type'],['负责人','owner'],['当前事项','stageLabel'],
+      ['平台','platform'],['时间','time'],['投入成本','cost'],['信息','info'],['结果','result']
+    ];
+    const lines=[fields.map(([label])=>quote(label)).join(',')];
+    rows.forEach((item)=>{
+      const enriched={...item,stageLabel:item.stageName||STAGES.find(([key])=>key===item.stage)?.[1]||item.stage||'',platform:Array.isArray(item.platforms)?item.platforms.join(' / '):(item.platform||''),info:item.info||item.information||''};
+      lines.push(fields.map(([,key])=>quote(enriched[key])).join(','));
+    });
+    const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const anchor=document.createElement('a');anchor.href=url;anchor.download=`选品商品机会_${new Date().toISOString().slice(0,10)}.csv`;document.body.appendChild(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url);
+  }
+
   function renderResults(){
     const rows = filtered();
     const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -619,9 +669,7 @@ export function initSelectionWorkbench(){
     if(pageLabel) pageLabel.textContent = `${state.page} / ${pageCount}`;
     if(prevButton) prevButton.disabled = state.page <= 1;
     if(nextButton) nextButton.disabled = state.page >= pageCount;
-    if(cardGrid) cardGrid.hidden = state.view!=='card';
-    if(listView) listView.hidden = state.view!=='list';
-    root.querySelectorAll('[data-selection-view]').forEach(btn=>btn.classList.toggle('active',btn.dataset.selectionView===state.view));
+    objectView.setView(state.view);
     root.querySelectorAll('[data-type-filter]').forEach(btn=>btn.classList.toggle('active',btn.dataset.typeFilter===state.type));
     root.querySelectorAll('[data-stage-filter]').forEach(btn=>btn.classList.toggle('active',btn.dataset.stageFilter===state.stage));
     if(flowLabel) flowLabel.textContent = state.stage ? STAGES.find(x=>x[0]===state.stage)?.[1] || '全部' : '全部';
@@ -660,13 +708,25 @@ export function initSelectionWorkbench(){
   root.addEventListener('click',event=>{
     const createButton=event.target.closest('[data-create-opportunity]');
     if(createButton){
-      const type=createButton.dataset.createOpportunity || '';
+      if(!getObjectPolicies().createAllowed){showToast('新建已由系统参数权限关闭');return;}
+      const type=createButton.dataset.createOpportunity || state.type || '';
+      if(!type){
+        typeGrid?.scrollIntoView({behavior:'smooth',block:'center'});
+        showToast('请先选择直发选品、常规选品或产品开发，再新建商品机会。');
+        return;
+      }
       const opportunityId=createPreviewOpportunityId();
       openSelectionRecordDetail({id:opportunityId,type,mode:'create'});
       return;
     }
     const batchButton=event.target.closest('[data-batch-import-type]');
     if(batchButton){batchImport?.open(batchButton.dataset.batchImportType || '');return;}
+    if(event.target.closest('[data-selection-import]')){
+      if(!getObjectPolicies().importAllowed){ showToast('导入已由系统参数关闭'); return; }
+      if(!state.type){ typeGrid?.scrollIntoView({behavior:'smooth',block:'center'}); showToast('请先选择业务类型，再导入商品机会。'); return; }
+      batchImport?.open(state.type); return;
+    }
+    if(event.target.closest('[data-selection-export]')){ if(!getObjectPolicies().exportAllowed){showToast('导出已由系统参数关闭');return;} exportFilteredOpportunities(); showToast('已按当前筛选结果导出CSV'); return; }
     const typeButton=event.target.closest('[data-type-filter]');
     if(typeButton){state.type=typeButton.dataset.typeFilter||'';state.page=1;if(typeSelect) typeSelect.value=state.type;renderOverview();renderResults();return;}
     const stageButton=event.target.closest('[data-stage-filter]');
@@ -687,7 +747,7 @@ export function initSelectionWorkbench(){
     const help=event.target.closest('[data-selection-help]');
     if(help){showToast('预览：正式版由帮助中心调用对应模块说明。');return;}
     const element=event.target.closest('[data-element]');
-    if(element){showToast(`业务关键要素｜${element.dataset.element}`);return;}
+    if(element){showToast(`美和9要素｜${element.dataset.element}`);return;}
   });
 
   typeSelect?.addEventListener('change',()=>{state.type=typeSelect.value;state.page=1;renderOverview();renderResults()});
@@ -707,6 +767,9 @@ export function initSelectionWorkbench(){
 
   document.getElementById('selection-elements-close')?.addEventListener('click',()=>{overlay?.classList.remove('open');overlay?.setAttribute('aria-hidden','true')});
   overlay?.addEventListener('click',event=>{if(event.target===overlay){overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true')}});
+
+  syncObjectPolicyButtons();
+  window.addEventListener('aione:global-settings-updated',()=>{syncObjectPolicyButtons();renderOverview();});
 
   // 最终再同步一次总览，确保负责人筛选等初始化完成后页面状态一致。
   renderOverview();

@@ -1,3 +1,74 @@
+# V1.4.0 CANDIDATE｜二级页面前三阶段收口
+
+- 唯一Level-2 Empty Base继续作为二级页面唯一底座。
+- 美和之家验证Content Recipe；工作之家迁入Standard Business Template。
+- 分析中心更名分析之家，并进入标准业务母版路由。
+- AI私人秘书更名AI秘书；Aside升级三态常驻交互窗口。
+- 新增Business Data Adapter和Component Registry。
+- 清理活动运行时中的旧今日工作/分析中心独立页面实现，移入recovery。
+
+## V1.3.0 CANDIDATE｜唯一二级空母版与组件基础架构｜2026-08-22
+- 新增唯一 `Level-2 Empty Base`；空母版只提供挂载位和平台上下文，不包含具体业务。
+- 建立Template Registry；当前核心Recipe收敛为 `standard-business` 与 `content`。
+- business/content静态页面变为薄入口，组件结构由运行时共享组件挂载，不再复制组件HTML。
+- Universal Workspace补齐搜索、筛选、**排序**、导入、导出、视图、重置以及3/4/6列卡片密度。
+- 新增loading / empty / no-results / error / forbidden标准状态，减少各页面重复设计IT基础状态。
+- 新增View Registry：card/list/table/kanban/calendar/gantt/gallery/form/chart；本轮完整通用渲染仍以card/list(table)为主。
+- 新增共享PageHeader、Level2 Block、CoreMetrics、FlowComponent、ObjectPresenter等基础组件。
+- 美和9要素固定顺序不变，并为“美和方法论”和9个要素加入知识之家内部精准路由。
+- 美和之家改为首个Content Recipe + Empty Base真实验证实例。
+- Header通知中心统一为单一图标入口并置于今日工作左侧；顶部信息带收敛为“今日印象｜日程｜通知”，删除“节气/星座”文字标签。
+- 重要日程由用户明确选择的展示属性控制；当前Header已提供运行时接口，完整字段/日历/提醒数据库逻辑后续验证。
+- 空母版增加 `aione:level2-mounted` 与 `workEvidenceScope`，为后续统一Work Evidence与时间统计预留稳定接口。
+- V1.1/V1.2静态模板测试移入 `tests/legacy/`，新增V1.3空母版、路由、Global Shell单源专项测试。
+- 当前仍为候选基线；正式锁定需先完成美和之家浏览器人工验收。
+
+
+## V1.2.2｜对象卡片/列表统一组件热修复｜2026-08-22
+- 新增唯一 `Object View Controller`，页面工程不再各自实现卡片/列表互斥逻辑。
+- 业务母版与选品工作台同时调用该组件。
+- 修复通用业务页面卡片与列表可能同时显示的问题。
+- 为选品商品机会对象区增加组件级显示防御，避免旧CSS/缓存导致卡片/列表不显示。
+- 页面仍保留各自业务数据与渲染器；组件只负责视图行为，严格区分“组件工程”和“页面工程”。
+# V1.2.0｜统一二级页面与内容体系基础架构｜2026-08-22
+
+- 以V1.1.0为唯一升级母体，继续保持Global Shell单一来源。
+- Header增加人才之家、知识之家；公司识别区进入美和之家；收入/支出保持经营资金事实组；店铺之家/应用之家继续承担管理入口。
+- Google Drive纳入应用之家和Header高频应用入口。
+- 建立美和统一二级页面语言与共享组件：Level-2 Header、Horizontal Rail、Core Metrics、Object Toolbar、Object Card/List、Disclosure、AI Aside。
+- 业务/内容类型统一采用“重点3项 + 横向滑动”；不再用数量变化拉高页面。
+- 核心指标只展示常用重点指标，一屏最多6项，更多横向滑动。
+- 辅助机动区改为单行自适应横滑，不锁死三列布局。
+- 卡片/列表标准字段常显；“字段隐藏”纠正为次级信息区块的Disclosure/Accordion。
+- 业务页面前台语义改为对象语言：客户类型、商品类型、应用类型等；流程语义区分客户管理流程/商品管理流程/选品业务流程等。
+- “业务关键要素”正式统一为“美和9要素”：目标、人、物、事、平台、时间、钱、信息、结果。
+- 新增美和内容母版与统一内容对象数据层；美和之家、知识之家共用同一内容母版。
+- 知识之家统一管理方法论、标准、制度、SOP、业务知识、培训、案例研究及系统/AI知识；不新增标准之家/制度之家/SOP之家。
+- 共享之家边界明确为能力与客观共享资源，并加入美和图标/Logo、图片、视频、文件、账号、模板、GitHub/代码资产入口。
+- 新增人才之家，明确内部人才管理；客户之家/人才之家与PPC“人”的上层关系进入知识之家说明，外部People关系系统继续独立。
+- 通知中心升级为共享内测P0页面：统一二级结构、通知类型横滑、通知管理流程、核心指标、卡片/列表、导入导出、AI秘书辅助、美和9要素。
+- 新增通知详情路由，支持正文、发布对象/主体、时间、自动已读及“我已知悉”确认。
+- 今日工作与分析中心核心指标开始复用统一Core Metrics；今日工作/日历/分析保持特殊主视图，不机械套业务母版。
+- 系统参数继续集中分类、权限、导入导出、通知、AI、收入支出与审计；重点类型“3项可见”为UI标准，不再开放为普通业务参数。
+- 新增V1.2.0专项结构/语法/通知/内容母版验证与基线文档。
+
+# V1.1.0｜2026-08-22
+
+- Global Header增加客户之家、收入之家、支出之家，并将收入/支出作为独立经营组。
+- Header第二层将“跨境店铺 + 更多店铺”合并为“店铺之家”，将工具总入口统一为“应用之家”。
+- 新增唯一二级业务页面母版：业务头部 → 业务类型 → 业务流程 → 业务指标 → 对象管理 → 辅助机动区 → 美和9要素。
+- 对象管理工具栏固定：搜索 / 筛选 / 导入 / 导出 / 卡片 / 列表。
+- 业务类型采用“前三重点 + 横向滑动”。
+- 新增客户之家、店铺之家、应用之家、收入之家、支出之家、现金支出页面，全部共用同一母版。
+- “业务关键9要素”统一为“美和9要素”，并抽为共享组件。
+- Aside升级为页面级AI秘书上下文辅助。
+- 新增“新建业务对象 → 标准事件 → 通知”预演机制与重要通知中心。
+- 系统参数从价格参数升级为全局参数中心，新增权限、字典、业务规则、收入支出、导入导出、通知、AI、审计等分类；保留原成本与定价参数兼容。
+- 组织权限增加“允许新建 / 允许导入 / 允许导出”动作控制，并已接入统一业务母版、选品与测样的当前内测前台动作。
+- 选品/测样对象区补齐导入、导出、列表、卡片统一入口；测样导入保留固定入口但禁用，避免绕开“选品 → 测样”真实承接流程。
+- 旧独立Store Home实现退出当前工程，店铺之家改为直接引用统一Business Page Template。
+- 新增V1.1.0专项自动验证与基线/验证文档，明确真实已实现能力与后续数据源/API接入边界。
+
 # V1.0.28｜Global Shell Single Source｜2026-08-22
 
 - 以当前AIONE最新全局架构为唯一Shell：Header / Sidebar / Aside / Footer只保留公共组件源码。
@@ -646,3 +717,8 @@
 - 回到 V1.0.17 已成功嫁接的业务版本作为救援源。
 - 新增 record-detail `embed=1` 适配：隐藏内层 Header/Sidebar/Aside/Footer，保留其 DOM 供旧JS兼容。
 - 不修改外层全局架构、9个工作台、选品业务内容与测样业务内容。
+
+## V1.2.1 - MIWA 9 Elements component style hotfix
+- Fixed missing shared CSS for the single-source `miwa-nine-elements` component.
+- Restored the standard Level-2 card, header, 9/9 status pill and nine-column element layout.
+- Added regression validation so component logic cannot ship without its shared styles again.

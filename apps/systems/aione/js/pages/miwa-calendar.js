@@ -136,6 +136,8 @@ export function initMiwaCalendar() {
     selectedDate = dateKey(now);
     render();
   });
+  root.querySelector("#calendar-overview")?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+
   root.querySelector("#open-event-dialog")?.addEventListener("click", () => {
     if (eventDate) eventDate.value = selectedDate;
     eventDialog?.showModal();

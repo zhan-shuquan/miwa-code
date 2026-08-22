@@ -61,3 +61,10 @@
 @media(max-width:1180px){.work-layout{grid-template-columns:1fr}.calendar-layout{grid-template-columns:1fr}.calendar-agenda{position:static}.calendar-day{min-height:86px}}
 @media(max-width:767px){.core-work-page{gap:11px}.core-page-head{align-items:flex-start;flex-direction:column;padding:18px}.core-page-head h1{font-size:23px}.core-page-actions{width:100%}.core-page-actions .core-button{flex:1}.core-data-note{align-items:flex-start;flex-direction:column}.work-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.work-layout{display:grid}.core-panel{padding:13px}.core-panel-head{align-items:stretch;flex-direction:column}.work-filter{overflow-x:auto}.work-filter button{flex:1;white-space:nowrap}.work-task{align-items:flex-start;flex-direction:column}.work-task>button{width:100%}.core-form-grid{grid-template-columns:1fr}.calendar-toolbar{grid-template-columns:1fr auto}.calendar-toolbar h2{grid-row:1;grid-column:2}.calendar-sync-status{grid-column:1 / -1;justify-self:start}.calendar-board{overflow-x:auto}.calendar-weekdays,.calendar-grid{min-width:700px}.core-dialog form{padding:16px}}
 
+
+/* V1.2｜特殊功能页也继承统一二级页面头部，不改变其中部真实业务布局。 */
+.core-page-head.miwa-level2-head{gap:20px;padding:20px 22px;border-radius:15px;box-shadow:0 4px 14px rgba(13,73,55,.025)}
+.core-page-head.miwa-level2-head h1{font-size:23px}
+.core-page-head.miwa-level2-head p{margin-top:5px;font-size:11px;line-height:1.6}
+.core-page-head.miwa-level2-head .core-page-actions{gap:9px}
+@media(max-width:767px){.core-page-head.miwa-level2-head{padding:16px}.core-page-head.miwa-level2-head h1{font-size:22px}.core-page-head.miwa-level2-head .core-page-actions{width:100%;overflow-x:auto}.core-page-head.miwa-level2-head .miwa-level2-head__button{flex:0 0 auto}}

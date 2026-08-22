@@ -31,6 +31,8 @@ const ICON_PATHS = Object.freeze({
   efficiency: '<circle cx="12" cy="12" r="8"></circle><path d="m12 12 4-4M12 5v2M5 12h2M17 12h2M12 17v2"></path>',
   erp: '<rect x="3" y="4" width="7" height="7" rx="1"></rect><rect x="14" y="4" width="7" height="7" rx="1"></rect><rect x="3" y="15" width="7" height="6" rx="1"></rect><path d="M17.5 15v6M14.5 18h6"></path>',
   finance: '<circle cx="12" cy="12" r="9"></circle><path d="M8 8h8M8 12h8M12 8v9M9 17h6"></path>',
+  income: '<path d="M4 19h16M7 15l4-4 3 2 4-6"></path><path d="M15 7h3v3"></path>',
+  expense: '<path d="M4 5h16M7 9l4 4 3-2 4 6"></path><path d="M15 17h3v-3"></path>',
   contract: '<path d="M6 3h9l3 3v15H6z"></path><path d="M15 3v4h3M9 11h6M9 15h3M14 17l1.5 1.5L19 15"></path>',
   brand: '<path d="m12 3 3 6 6 .8-4.5 4.5 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.8 9 9l3-6Z"></path>',
   knowledge: '<path d="M4 5c3-1 5-.5 8 1v15c-3-1.5-5-2-8-1V5ZM20 5c-3-1-5-.5-8 1v15c3-1.5 5-2 8-1V5Z"></path>',

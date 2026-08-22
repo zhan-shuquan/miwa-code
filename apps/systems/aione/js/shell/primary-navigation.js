@@ -4,7 +4,7 @@
 
 import { ROUTE_REGISTRY } from "../config/route-registry.js";
 import { BUSINESS_SPACES, getBusinessSpaceForRoute, getWorkbenchForRoute } from "../config/business-navigation.js";
-import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260821-v1.0.9-header-sidebar";
+import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260822-v1.3.0-level2-empty-base-candidate";
 
 const STORAGE_KEY = "aione.currentBusinessSpace";
 

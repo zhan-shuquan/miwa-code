@@ -597,9 +597,9 @@
   min-height:var(--desktop-header-daily);
   width:min(100%,1700px);
   display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(0,auto);
+  grid-template-columns:minmax(0,1.55fr) minmax(190px,.75fr) minmax(190px,.75fr);
   align-items:center;
-  gap:12px;
+  gap:0;
   margin:0 auto;
   padding:4px 18px;
 }
@@ -656,19 +656,24 @@
   font-weight:680;
 }
 
-.miwa-dynamic-notice{
+.miwa-dynamic-signal{
   min-width:0;
-  max-width:430px;
+  height:30px;
   display:flex;
   align-items:center;
   gap:7px;
-  padding-left:12px;
+  padding:0 10px 0 12px;
+  border:0;
   border-left:1px solid var(--border);
+  color:inherit;
+  background:transparent;
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
 }
-
-.miwa-dynamic-notice[hidden]{display:none}
-
-.miwa-dynamic-notice__type{
+.miwa-dynamic-signal:hover{background:#F5F9F7}
+.miwa-dynamic-signal[hidden]{display:none!important}
+.miwa-dynamic-signal__type{
   flex:0 0 auto;
   height:23px;
   display:inline-flex;
@@ -680,13 +685,8 @@
   font-size:9px;
   font-weight:820;
 }
-
-.miwa-dynamic-notice.is-urgent .miwa-dynamic-notice__type{
-  color:var(--miwa-red);
-  background:#FAEFED;
-}
-
-.miwa-dynamic-notice__text{
+.miwa-dynamic-notice.is-urgent .miwa-dynamic-signal__type{color:var(--miwa-red);background:#FAEFED}
+.miwa-dynamic-signal__text{
   min-width:0;
   overflow:hidden;
   color:var(--text);
@@ -695,17 +695,8 @@
   text-overflow:ellipsis;
   white-space:nowrap;
 }
-
-.miwa-dynamic-notice button{
-  flex:0 0 auto;
-  border:0;
-  color:var(--miwa-green);
-  background:transparent;
-  font-size:10px;
-  font-weight:760;
-  cursor:pointer;
-}
-
+.miwa-nav-item--notification{width:36px;justify-content:center;padding:0!important}
+.miwa-nav-item--notification .miwa-notification-badge{top:2px;right:1px}
 /* Header専用即时説明Drawer。プラットフォームAsideとは別コンポーネント。 */
 .miwa-header-info-overlay{
   position:fixed;
@@ -1071,23 +1062,6 @@ button.miwa-common-entry{font:inherit;text-align:left}
 .miwa-common-entry__copy small{overflow:hidden;max-width:90px;color:#8A9690;font-size:8px;text-overflow:ellipsis;white-space:nowrap}
 .miwa-common-entry__external{position:absolute;top:3px;right:4px;color:#7E8B84;font-size:9px}
 
-.miwa-entry-more{
-  height:34px;
-  display:inline-flex;
-  align-items:center;
-  gap:3px;
-  padding:0 9px;
-  border:0;
-  border-radius:7px;
-  color:var(--miwa-green);
-  background:transparent;
-  font-size:10px;
-  font-weight:820;
-  white-space:nowrap;
-  cursor:pointer;
-}
-
-.miwa-entry-more:hover{background:var(--miwa-green-light)}
 .miwa-common-entry-divider{height:30px;margin-inline:2px}
 
 /* モバイル全局Header */
@@ -1125,7 +1099,6 @@ button.miwa-common-entry{font:inherit;text-align:left}
 .mobile-entry-list .miwa-common-entry{min-width:88px;height:38px;flex:0 0 auto;padding-inline:6px}
 .mobile-entry-list .miwa-common-entry__copy strong{max-width:72px;font-size:9px}
 .mobile-entry-list .miwa-common-entry__copy small{max-width:72px;font-size:7.5px}
-.mobile-entry-more{height:32px;flex:0 0 auto;padding:0 6px;border:0;color:var(--miwa-green);background:transparent;font-size:9px;font-weight:820;white-space:nowrap}
 
 .mobile-spirit-strip{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:7px 9px;border-bottom:1px solid var(--border);background:#FFFFFF;scrollbar-width:none}
 .mobile-spirit-strip::-webkit-scrollbar{display:none}
@@ -1232,9 +1205,9 @@ button.miwa-common-entry{font:inherit;text-align:left}
 
 
 /* =========================================================
-   Header V1.0.10｜两层全局Header收口
-   第一层：平台＋用户＋今日工作/日历＋五大全局能力＋搜索/通知/帮助/设置
-   第二层：跨境店铺＋订单/面单＋办公＋购物＋邮箱
+   Header V1.1.0｜两层全局Header收口
+   第一层：平台＋用户＋集团级全局能力＋收入/支出经营组＋全局工具
+   第二层：店铺之家＋高频店铺｜应用之家＋高频应用
    ========================================================= */
 @media(min-width:1100px){
   .miwa-header-main__inner{
@@ -1274,7 +1247,6 @@ button.miwa-common-entry{font:inherit;text-align:left}
   .miwa-common-entry__mark{width:23px;height:23px;flex-basis:23px;border-radius:6px;font-size:8px}
   .miwa-common-entry__copy strong{max-width:82px;font-size:9.5px}
   .miwa-common-entry__copy small{max-width:82px;font-size:7.5px}
-  .miwa-entry-more{height:32px;padding-inline:7px;font-size:9.5px}
 }
 
 @media(min-width:1100px) and (max-width:1399px){
@@ -1287,8 +1259,8 @@ button.miwa-common-entry{font:inherit;text-align:left}
 
 
 /* =========================================================
-   Header V1.0.11｜全局信息补全
-   保留两层主导航，补回美和精神、今日印象、重要通知；更多入口使用轻量面板。
+   Header V1.1.0｜全局信息带
+   保留两层主导航，并保留美和精神、今日印象、重要通知轻量信息带。
    ========================================================= */
 @media(min-width:1100px){
   .miwa-spirit-row{min-height:var(--desktop-header-spirit)}
@@ -1299,36 +1271,18 @@ button.miwa-common-entry{font:inherit;text-align:left}
   .miwa-spirit-group__items{padding-inline:4px}
   .miwa-spirit-group__items button{height:27px;padding-inline:6px;font-size:10px}
   .miwa-daily-row,.miwa-daily-row__inner{min-height:var(--desktop-header-daily)}
-  .miwa-daily-row__inner{padding:2px 14px;grid-template-columns:minmax(0,1fr) auto}
+  .miwa-daily-row__inner{padding:2px 14px;grid-template-columns:minmax(0,1.55fr) minmax(170px,.72fr) minmax(170px,.72fr)}
   .miwa-daily-fixed{justify-content:flex-start;font-size:9px}
   .miwa-daily-fixed strong,.miwa-daily-location{font-size:10px}
   .miwa-daily-label{height:22px;font-size:9px}
-  .miwa-dynamic-notice{max-width:520px;font-size:10px}
+  .miwa-dynamic-signal{max-width:520px;font-size:10px}
 }
 
-.miwa-more-panel{
-  position:absolute;
-  top:calc(var(--desktop-header-main) + var(--desktop-header-entry));
-  left:50%;
-  z-index:1080;
-  width:min(980px,calc(100% - 36px));
-  transform:translateX(-50%);
-  border:1px solid #CFE0D7;
-  border-radius:12px;
-  background:#FFFFFF;
-  box-shadow:0 14px 36px rgba(13,73,55,.14);
-}
-.miwa-more-panel[hidden]{display:none!important}
-.miwa-more-panel__head{
-  height:42px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 14px;border-bottom:1px solid var(--border);color:var(--miwa-green-deep)
-}
-.miwa-more-panel__head button{width:32px;height:32px;border:0;background:transparent;color:var(--text-secondary);font-size:20px;cursor:pointer}
-.miwa-more-panel__body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px}
-.miwa-more-section{min-width:0;border:1px solid var(--border);border-radius:10px;background:#FBFCFA;padding:10px}
-.miwa-more-section__title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;color:var(--miwa-green-deep);font-size:12px;font-weight:800}
-.miwa-more-section__hint{color:var(--text-secondary);font-size:9px;font-weight:500}
-.miwa-more-section__items{display:flex;flex-wrap:wrap;gap:6px}
-.miwa-more-section .miwa-common-entry{height:38px;min-width:138px;max-width:210px}
-.miwa-more-empty{display:inline-flex;align-items:center;height:34px;padding:0 10px;border:1px dashed #CBD8D1;border-radius:8px;color:var(--text-secondary);font-size:10px;background:#FFFFFF}
-@media(max-width:1099px){.miwa-more-panel{display:none!important}}
+
+/* V1.1.0 店铺之家 / 应用之家二层入口合并 */
+.miwa-entry-home{height:36px;display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;padding:0 9px;border:1px solid #CFE0D7;border-radius:8px;background:var(--miwa-green-light);color:var(--miwa-green-deep)!important;font-size:9.5px;font-weight:850;text-decoration:none;white-space:nowrap}
+.miwa-entry-home:hover{border-color:var(--miwa-green-mid);background:#fff}
+.miwa-nav-divider{width:1px;height:22px;flex:0 0 1px;margin:0 3px;background:#D7E1DC}
+.mobile-entry-group__label[href]{color:var(--miwa-green-deep);text-decoration:none;font-weight:850}
+
+.miwa-settings-change-reason{display:grid;gap:6px;margin:14px 0 8px;padding:12px;border:1px solid var(--border);border-radius:10px;background:#FBFCFA}.miwa-settings-change-reason>span{color:var(--miwa-green-deep);font-size:11px;font-weight:800}.miwa-settings-change-reason textarea{width:100%;resize:vertical;border:1px solid #CFE0D7;border-radius:8px;padding:9px 10px;background:#fff;color:var(--text);font:inherit;font-size:10px;line-height:1.5}.miwa-settings-change-reason small{color:var(--text-secondary);font-size:9px;line-height:1.5}

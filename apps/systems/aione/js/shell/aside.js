@@ -1,13 +1,5 @@
-/* ========================================
-   MIWA Aside｜補助可変情報の初期化
-======================================== */
-
-export function initAside(config = {}) {
-  const card = document.getElementById("aside-context-card");
-  const title = document.getElementById("aside-title");
-  const content = document.getElementById("aside-content");
-
-  if (card) card.hidden = false;
-  if (title && config.title) title.textContent = config.title;
-  if (content && config.content) content.textContent = config.content;
-}
+/* MIWA Aside｜AI秘书常驻交互区 */
+const PREF_KEY="miwa-aione:ai-secretary-aside:v1";const STATES=new Set(["collapsed","standard","expanded"]);
+function readState(){try{const v=localStorage.getItem(PREF_KEY);return STATES.has(v)?v:"standard"}catch(_){return"standard"}}
+function saveState(v){try{localStorage.setItem(PREF_KEY,v)}catch(_){}}
+export function initAside(config={}){const card=document.getElementById("aside-context-card"),title=document.getElementById("aside-title"),content=document.getElementById("aside-content"),appBody=document.querySelector(".app-body");const apply=(next={})=>{if(card)card.hidden=false;if(title)title.textContent=next.title||config.title||"AI秘书｜上下文辅助";if(content)content.textContent=next.text||next.content||config.content||"根据当前页面自动提供高价值辅助。"};const setState=(next)=>{const state=STATES.has(next)?next:"standard";if(appBody)appBody.dataset.aiAsideState=state;document.querySelectorAll("[data-ai-aside-state]").forEach((button)=>button.classList.toggle("is-active",button.dataset.aiAsideState===state));saveState(state)};apply(config);setState(readState());document.querySelector("[data-ai-secretary-aside]")?.addEventListener("click",(event)=>{const button=event.target.closest("[data-ai-aside-state]");if(button)setState(button.dataset.aiAsideState)});window.addEventListener("aione:page-ai-context",(event)=>apply(event.detail||{}));window.AIONEAISecretaryAside=Object.freeze({setState,getState:()=>appBody?.dataset.aiAsideState||"standard",setContext:apply})}

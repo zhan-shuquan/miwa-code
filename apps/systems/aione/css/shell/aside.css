@@ -1,19 +1,3 @@
-/* ========================================
-   MIWA Aside｜美和補助可変エリア
-======================================== */
-
-.desktop-aside{
-  position:sticky;
-  top:calc(var(--desktop-header-main) + var(--desktop-header-info));
-  padding:16px;
-}
-
-.desktop-aside h3{margin:0 0 10px;color:var(--miwa-green-deep);font-size:13px}
-.desktop-aside p{margin:0;color:#75807B;font-size:11px;line-height:1.7}
-
-.aside-context-card{
-  padding:12px;
-  border:1px solid var(--border-soft);
-  border-radius:11px;
-  background:#FBFCFB;
-}
+/* MIWA Aside｜AI秘书常驻交互区：collapsed / standard / expanded */
+.desktop-aside{position:sticky;top:calc(var(--desktop-header-main) + var(--desktop-header-info));height:calc(100vh - var(--desktop-header-main) - var(--desktop-header-info));padding:10px;background:#fff}.ai-secretary-shell{height:100%;display:flex;flex-direction:column;border:1px solid var(--border-soft);border-radius:12px;background:#FBFCFB;overflow:hidden}.ai-secretary-shell__head{min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 9px;border-bottom:1px solid var(--border-soft);background:#fff}.ai-secretary-shell__identity{min-width:0;display:flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--miwa-green-deep);cursor:pointer}.ai-secretary-shell__identity strong{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.aside-ai-label{display:inline-flex;padding:3px 7px;border-radius:999px;background:var(--miwa-green-light);color:var(--miwa-green);font-size:8px;font-weight:850;letter-spacing:.03em;white-space:nowrap}.ai-secretary-shell__controls{display:flex;gap:4px}.ai-secretary-shell__controls button{width:26px;height:26px;border:1px solid var(--border-soft);border-radius:7px;background:#fff;color:var(--miwa-green-deep);cursor:pointer;font-size:12px}.ai-secretary-shell__controls button.is-active{background:var(--miwa-green-light);border-color:#C8DDD3}.ai-secretary-shell__body{min-height:0;overflow:auto;padding:10px;display:grid;gap:10px}.aside-context-card,.ai-secretary-command,.ai-secretary-status{padding:12px;border:1px solid var(--border-soft);border-radius:10px;background:#fff}.aside-context-card__kicker{margin-bottom:6px;color:var(--miwa-green);font-size:8px;font-weight:800}.desktop-aside h3{margin:0 0 8px;color:var(--miwa-green-deep);font-size:13px}.desktop-aside p{margin:0;color:#75807B;font-size:10px;line-height:1.7}.ai-secretary-command label,.ai-secretary-status strong{display:block;margin-bottom:7px;color:var(--miwa-green-deep);font-size:10px;font-weight:850}.ai-secretary-command textarea{width:100%;resize:vertical;box-sizing:border-box;border:1px solid var(--border-soft);border-radius:8px;padding:9px;background:#fff;color:var(--text);font:inherit;font-size:10px;line-height:1.55}.ai-secretary-command button{width:100%;margin-top:7px;border:1px solid var(--border-soft);border-radius:8px;padding:8px;background:#F2F5F3;color:#75807B;font-size:9px}
+@media(min-width:1100px){.app-body{--desktop-aside:360px}.app-body[data-ai-aside-state="collapsed"]{--desktop-aside:58px}.app-body[data-ai-aside-state="collapsed"] .desktop-aside{padding:8px 6px}.app-body[data-ai-aside-state="collapsed"] .ai-secretary-shell__body,.app-body[data-ai-aside-state="collapsed"] .ai-secretary-shell__identity strong,.app-body[data-ai-aside-state="collapsed"] .ai-secretary-shell__controls button:not([data-ai-aside-state="standard"]){display:none}.app-body[data-ai-aside-state="collapsed"] .ai-secretary-shell__head{padding:7px 5px;justify-content:center;flex-direction:column}.app-body[data-ai-aside-state="collapsed"] .ai-secretary-shell__identity{justify-content:center}.app-body[data-ai-aside-state="collapsed"] .aside-ai-label{padding:4px;font-size:0}.app-body[data-ai-aside-state="collapsed"] .aside-ai-label::after{content:"AI";font-size:8px}.app-body[data-ai-aside-state="expanded"]{--desktop-aside:58px}.app-body[data-ai-aside-state="expanded"] .desktop-aside-host{position:fixed;right:0;top:calc(var(--desktop-header-main) + var(--desktop-header-info));bottom:0;width:min(560px,44vw);z-index:220;background:#fff;border-left:1px solid var(--border);box-shadow:-16px 0 34px rgba(13,73,55,.12)}.app-body[data-ai-aside-state="expanded"] .desktop-aside{position:static;top:auto;height:100%;padding:12px}}

@@ -1,8 +1,14 @@
-<div class="desktop-aside">
-  <div id="prototype-control-host" class="aside-prototype-control-host"></div>
-
-  <section id="aside-context-card" class="aside-context-card" hidden>
-    <h3 id="aside-title">机动辅助</h3>
-    <p id="aside-content"></p>
-  </section>
+<div class="desktop-aside" data-ai-secretary-aside>
+  <div class="ai-secretary-shell">
+    <header class="ai-secretary-shell__head">
+      <button class="ai-secretary-shell__identity" type="button" data-ai-aside-state="standard" title="打开AI秘书"><span class="aside-ai-label">AI秘书</span><strong>岗位AI办公室</strong></button>
+      <div class="ai-secretary-shell__controls" aria-label="AI秘书侧栏显示方式"><button type="button" data-ai-aside-state="collapsed" title="收起">‹</button><button type="button" data-ai-aside-state="standard" title="标准宽度">□</button><button type="button" data-ai-aside-state="expanded" title="展开">↗</button></div>
+    </header>
+    <div class="ai-secretary-shell__body">
+      <div id="prototype-control-host" class="aside-prototype-control-host"></div>
+      <section id="aside-context-card" class="aside-context-card"><div class="aside-context-card__kicker">当前上下文</div><h3 id="aside-title">AI秘书｜上下文辅助</h3><p id="aside-content">根据当前页面自动提供摘要、提醒和高价值辅助。</p></section>
+      <section class="ai-secretary-command" aria-label="AI秘书命令入口"><label for="ai-secretary-command-input">交代工作</label><textarea id="ai-secretary-command-input" rows="4" placeholder="后续接入AIONE Tool Layer后，可直接在这里让AI秘书读取、分析并操作当前业务对象。"></textarea><button type="button" disabled title="后端与Tool Layer稳定后接入">AI执行接口待接入</button></section>
+      <section class="ai-secretary-status"><strong>当前阶段</strong><p>先锁定母版、字段、API与数据库；AI秘书执行接口随后接入，同一侧栏不再另造页面AI入口。</p></section>
+    </div>
+  </div>
 </div>

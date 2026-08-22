@@ -1,3 +1,5 @@
+import { renderMiwaNineElements } from "../components/miwa-nine-elements.js";
+import { getActiveSystemParameters } from "../shell/system-settings.js";
 import { getPreviewOpportunities } from "../data/preview-opportunities.js";
 import {
   ensureTask,
@@ -246,6 +248,7 @@ function renderSamplingDashboard(root) {
     }
     return true;
   });
+  root._samplingVisibleRows = visible;
 
   const flowLabel = root.querySelector("#sampling-flow-label");
   const flowTotal = root.querySelector("#sampling-flow-total");
@@ -317,12 +320,31 @@ function renderSamplingDashboard(root) {
   root.querySelectorAll("[data-sampling-view]").forEach((button) => button.classList.toggle("active", button.dataset.samplingView === (cardMode ? "card" : "list")));
 }
 
+function exportSamplingRows(rows = []) {
+  const quote=(value)=>`"${String(value ?? '').replaceAll('"','""')}"`;
+  const headers=['商品名称','商品机会ID','测样状态','负责人','当前环节','任务状态','测样结论'];
+  const lines=[headers.map(quote).join(',')];
+  rows.forEach((row)=>lines.push([row.item?.name,row.item?.id,row.status?.label,row.item?.owner,row.flowLabel||row.flowStage,row.task?.status||'未建任务',row.sample?.conclusion||'待形成'].map(quote).join(',')));
+  const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const anchor=document.createElement('a');
+  anchor.href=url;anchor.download=`测样商品_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url);
+}
+
 export function initSamplingWorkbench() {
   const root = document.querySelector(".sampling-dashboard-page");
+  renderMiwaNineElements(root?.querySelector('[data-miwa-nine-elements]'), { context: '测样业务' });
+  window.dispatchEvent(new CustomEvent('aione:page-ai-context', { detail: { title: 'AI秘书｜测样辅助', text: '可协助整理测样证据、识别异常、形成摘要并提示待复测事项；最终质量结论由负责人确认。' } }));
   if (!root || root.dataset.initialized === "true") return;
   root.dataset.initialized = "true";
   root._samplingFilterState = { search: "", status: "", owner: "", flow: "", view: "card" };
 
+  const syncPolicy=()=>{
+    const params=getActiveSystemParameters?.()||{};
+    const exportButton=root.querySelector('[data-sampling-export]');
+    if(exportButton){const allowed=params.permissions?.allowExport!==false;exportButton.disabled=!allowed;exportButton.title=allowed?'':'导出已由系统参数关闭';}
+  };
   const rerender = () => renderSamplingDashboard(root);
   root.querySelector("#sampling-search")?.addEventListener("input", rerender);
   root.querySelector("#sampling-status-select")?.addEventListener("change", rerender);
@@ -352,6 +374,7 @@ export function initSamplingWorkbench() {
       rerender();
       return;
     }
+    if (event.target.closest("[data-sampling-export]")) { if(getActiveSystemParameters?.().permissions?.allowExport===false)return; exportSamplingRows(root._samplingVisibleRows || []); return; }
     const viewButton = event.target.closest("[data-sampling-view]");
     if (viewButton) {
       root._samplingFilterState.view = viewButton.dataset.samplingView === "list" ? "list" : "card";
@@ -359,6 +382,8 @@ export function initSamplingWorkbench() {
     }
   });
 
+  syncPolicy();
+  window.addEventListener('aione:global-settings-updated',syncPolicy);
   stopSamplingDashboardListening?.();
   stopSamplingDashboardListening = onCollaborationChange(rerender);
   rerender();

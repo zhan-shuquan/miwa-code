@@ -964,7 +964,7 @@
    選品認知／選品タスク入口と3業務タイプ直接作業入口。
 ======================================== */
 
-/* 頭部は「選品概覧」「選品タスク」の2入口だけを保持する。 */
+/* 頭部は统一动作槽：概览 + 新建为通用动作，任务按真实业务保留。 */
 .selection-page-head__nav-button{
   min-height:38px;
   display:inline-flex;
@@ -980,6 +980,7 @@
   font-weight:900;
   white-space:nowrap;
 }
+.selection-page-head__nav-button{font-family:inherit;cursor:pointer}
 .selection-page-head__nav-button:hover{background:#E8F2ED;color:#0D4937}
 
 /* 業務タイプは3列。上段＝名称＋件数、下段＝新建＋批量導入。 */
@@ -1098,3 +1099,14 @@
   text-align:center;
   font-size:11px;
 }
+.selection-view-switch button:disabled{opacity:.42;cursor:not-allowed}
+.selection-type-card__action:disabled{opacity:.42;cursor:not-allowed}
+
+/* V1.2.2｜商品机会对象区必须作为真实主工作区存在；视图互斥交给统一 Object View Controller。 */
+.selection-core-area{display:block;min-height:120px}
+.selection-core-area>.selection-module-head,
+.selection-core-area>.selection-filter-toolbar,
+.selection-core-area>.selection-module-foot{display:flex}
+.selection-core-area>.selection-filter-toolbar{display:grid}
+.selection-card-grid:not([hidden]){display:grid!important}
+.selection-list-view:not([hidden]){display:block!important}

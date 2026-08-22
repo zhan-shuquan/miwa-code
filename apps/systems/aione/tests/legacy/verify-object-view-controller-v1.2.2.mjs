@@ -1,0 +1,21 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const root=path.resolve(process.argv[2]||'.');
+const read=(p)=>fs.readFileSync(path.join(root,p),'utf8');
+const must=(cond,msg)=>{if(!cond) throw new Error(msg);};
+const component=read('js/components/object-view-controller.js');
+const business=read('js/pages/business-page-template.js');
+const selection=read('js/pages/selection-workbench.js');
+const level2=read('css/components/level2-components.css');
+const selCss=read('css/pages/selection-workbench.css');
+const selHtml=read('pages/selection-workbench/home.html');
+
+must(component.includes('createObjectViewController'),'missing shared object view controller');
+must(business.includes('../components/object-view-controller.js'),'business pages do not call shared object view controller');
+must(selection.includes('../components/object-view-controller.js'),'selection page does not call shared object view controller');
+must(business.includes('objectView.setView(state.view)'),'business page view state not delegated to controller');
+must(selection.includes('objectView.setView(state.view)'),'selection view state not delegated to controller');
+must(level2.includes('.miwa-object-card-grid[hidden]') && level2.includes('.miwa-object-list-wrap[hidden]'),'generic card/list hidden guard missing');
+must(selCss.includes('.selection-card-grid:not([hidden])') && selCss.includes('.selection-list-view:not([hidden])'),'selection visible-view guard missing');
+must(selHtml.includes('id="selection-card-grid"') && selHtml.includes('id="selection-list-view"'),'selection object view hosts missing');
+console.log('PASS verify-object-view-controller-v1.2.2');

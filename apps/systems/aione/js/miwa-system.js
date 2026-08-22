@@ -13,11 +13,13 @@ import { initFooter } from "./shell/footer.js";
 import { initSystemSettings } from "./shell/system-settings.js";
 import { initSelectionWorkbench } from "./pages/selection-workbench.js";
 import { initSamplingQueue, initSamplingTasks, initSamplingWorkbench } from "./pages/sampling-workbench.js";
-import { initTodayWork } from "./pages/today-work.js";
 import { completeTaskForBusinessObject } from "./data/collaboration-store.js";
 import { initMiwaCalendar } from "./pages/miwa-calendar.js";
-import { initStrategicHome } from "./pages/strategic-homes.js";
-import { initStoreHome } from "./pages/store-home.js";
+import { initBusinessPage } from "./pages/business-page-template.js";
+import { initContentPage } from "./pages/content-page-template.js";
+import { initNotificationsPage } from "./pages/notifications.js";
+import { initNotificationDetailPage } from "./pages/notification-detail.js";
+import { syncNotificationHeader } from "./data/notification-store.js";
 import { resolvePreviewIdentity, getPreviewHeaderConfig, getPreviewPermissionContext } from "./auth/preview-auth.js";
 import { recordPreviewActivity, getPreviewActivityRecords, getPreviewActivitySummary } from "./auth/preview-activity.js";
 
@@ -26,13 +28,11 @@ const SELECTION_SUBVIEWS = Object.freeze({
   tasks: "./pages/selection-workbench/tasks.html"
 });
 
-const STRATEGIC_HOME_ROUTES = new Set([
-  "category-home",
-  "product-home",
-  "ai-home",
-  "analysis",
-  "shared-home"
+const BUSINESS_TEMPLATE_ROUTES = new Set([
+  "category-home", "product-home", "customer-home", "talent-home", "ai-home", "shared-home",
+  "store-home", "application-home", "income-home", "expense-home", "cash-expense", "work", "analysis"
 ]);
+const CONTENT_TEMPLATE_ROUTES = new Set(["company", "knowledge-home"]);
 
 function getSelectionPage(hash = window.location.hash) {
   if (hash.startsWith("#/selection/overview")) return SELECTION_SUBVIEWS.overview;
@@ -95,6 +95,7 @@ function renderReservedRoute(route) {
 }
 
 async function renderCurrentRoute() {
+  window.dispatchEvent(new CustomEvent("aione:page-ai-context", { detail: { title: "AI秘书｜上下文辅助", text: "根据当前页面自动生成摘要、提醒与高价值辅助；没有有效内容时保持轻量。" } }));
   const route = getRouteDefinition();
   const routeId = getRouteId();
 
@@ -137,21 +138,32 @@ async function renderCurrentRoute() {
     return;
   }
 
-  if (routeId === "work") {
-    await loadComponents([["selection-main-host", ROUTE_REGISTRY.work.page]]);
-    initTodayWork();
-    return;
-  }
-
   if (routeId === "calendar") {
     await loadComponents([["selection-main-host", ROUTE_REGISTRY.calendar.page]]);
     initMiwaCalendar();
     return;
   }
 
-  if (STRATEGIC_HOME_ROUTES.has(routeId)) {
+  if (CONTENT_TEMPLATE_ROUTES.has(routeId)) {
     await loadComponents([["selection-main-host", route.page]]);
-    initStrategicHome();
+    await initContentPage();
+    return;
+  }
+  if (BUSINESS_TEMPLATE_ROUTES.has(routeId)) {
+    await loadComponents([["selection-main-host", route.page]]);
+    await initBusinessPage();
+    return;
+  }
+
+  if (routeId === "notifications") {
+    await loadComponents([["selection-main-host", route.page]]);
+    initNotificationsPage();
+    return;
+  }
+
+  if (routeId === "notification-detail") {
+    await loadComponents([["selection-main-host", route.page]]);
+    initNotificationDetailPage();
     return;
   }
 
@@ -203,6 +215,7 @@ async function startMiwaSystem() {
     initAside(systemConfig.aside);
     initFooter(systemConfig.footer);
     initSystemSettings();
+    syncNotificationHeader();
 
     // 路由监听必须独立于任何单个工作台初始化。即使某个页面局部报错，
     // 也不能阻断其他工作台、平台入口和后续 hash 路由切换。
@@ -210,6 +223,13 @@ async function startMiwaSystem() {
       const payload = event?.data;
       if (!payload || payload.type !== "aione:sampling-completed" || !payload.opportunityId) return;
       completeTaskForBusinessObject("sampling", String(payload.opportunityId));
+    });
+
+    window.addEventListener("miwa:header:notice-detail", (event) => {
+      const noticeId = event?.detail?.noticeId;
+      window.location.hash = noticeId
+        ? `#/notification-detail?id=${encodeURIComponent(String(noticeId))}`
+        : "#/notifications";
     });
 
     window.addEventListener("hashchange", async () => {
