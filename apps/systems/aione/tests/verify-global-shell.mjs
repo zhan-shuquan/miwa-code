@@ -30,6 +30,53 @@ const linkedRoutes = [...navigationMarkup.matchAll(/href="#\/([^"/?]+)/g)].map((
 const unknownRoutes = linkedRoutes.filter((route) => !ROUTE_REGISTRY[route]);
 if (unknownRoutes.length) throw new Error(`未登记内部路由：${[...new Set(unknownRoutes)].join(", ")}`);
 
+
+// Global Shell single-source guard: business pages may not ship their own Header/Sidebar/Footer.
+const pageRoot = path.join(root, "pages");
+const pageFiles = [];
+const walkPages = (dir) => {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkPages(full);
+    else if (entry.isFile() && entry.name.endsWith(".html")) pageFiles.push(full);
+  }
+};
+walkPages(pageRoot);
+for (const file of pageFiles) {
+  const markup = fs.readFileSync(file, "utf8");
+  const relative = path.relative(root, file);
+  for (const forbidden of [
+    '<header class="desktop-header"',
+    '<nav class="desktop-sidebar"',
+    'id="desktop-header-host"',
+    'id="sidebar-host"',
+    'id="desktop-footer-host"'
+  ]) {
+    if (markup.includes(forbidden)) throw new Error(`业务页面重复实现Global Shell：${relative} -> ${forbidden}`);
+  }
+}
+
+const recordDetail = read("pages/selection-workbench/record-detail/index.html");
+if (!recordDetail.includes("Global Shell is owned exclusively by apps/systems/aione/index.html")) throw new Error("商品机会详情尚未声明为纯业务内容页");
+if (!recordDetail.includes("window.location.replace(target.href)")) throw new Error("旧详情直链未强制回到唯一AIONE Shell");
+if (recordDetail.includes("aione-shared-css-fallback")) throw new Error("商品机会详情仍携带重复的全局CSS快照");
+const selectionWorkbenchEntry = read("js/pages/selection-workbench.js");
+if (selectionWorkbenchEntry.includes("new URL('./pages/selection-workbench/record-detail/index.html'")) throw new Error("选品工作台仍绕过根Shell直开详情页");
+if (!selectionWorkbenchEntry.includes("target.hash = `/selection/opportunity/")) throw new Error("选品工作台尚未统一到商品机会根路由");
+if (!recordDetail.includes("navigateOuterWorkbench('sampling')")) throw new Error("测样执行尚未切换到根Shell的sampling上下文");
+
+const liveSources = [
+  ...navigationFiles,
+  "js/config/system-config.js",
+  "js/config/business-navigation.js",
+  "js/config/route-registry.js",
+  "js/pages/selection-workbench.js",
+  "pages/selection-workbench/record-detail/index.html"
+].map(read).join("\n");
+for (const forbiddenTerm of ["今日信息", "今日日常", "商品中心", "AI中心", "AI创新中心", "管理驾驶舱", "视觉设计工作台", "上架发布工作台", "运营推广工作台", "订单与库存工作台", "客服与售后工作台"]) {
+  if (liveSources.includes(forbiddenTerm)) throw new Error(`发现已废止名称：${forbiddenTerm}`);
+}
+
 const sidebar = read("components/shell/primary-navigation/sidebar.html");
 if (!sidebar.includes("当前事业")) throw new Error("左侧导航缺少当前事业区域");
 for (const spaceId of ["crossborder", "wholesale"]) {
@@ -64,7 +111,7 @@ for (const label of ["今日工作", "美和日历", "分类之家", "商品之�
   if (!header.includes(`>${label}<`)) throw new Error(`Header缺少最新基线入口：${label}`);
 }
 if (!header.includes("miwa-spirit-row")) throw new Error("Header缺少已恢复的美和精神信息带");
-if (!header.includes("miwa-daily-row")) throw new Error("Header缺少已恢复的今日信息/重要通知带");
+if (!header.includes("miwa-daily-row")) throw new Error("Header缺少已恢复的今日印象/重要通知带");
 for (const group of ["stores", "logistics", "office", "shopping", "mail"]) {
   if (!header.includes(`data-common-entry-group="${group}"`)) throw new Error(`Header第二层缺少分组：${group}`);
 }

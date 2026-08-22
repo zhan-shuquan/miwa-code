@@ -118,8 +118,21 @@ export const ROUTE_REGISTRY = Object.freeze({
     status: "active",
     page: "./pages/sampling-workbench/home.html"
   }),
-  "sampling-overview": route("sampling-overview", "测样概览", "workbench", { parent: "sampling" }),
-  "sampling-tasks": route("sampling-tasks", "测样任务", "workbench", { parent: "sampling" }),
+  "sampling-overview": route("sampling-overview", "测样概览", "workbench", {
+    status: "active",
+    page: "./pages/sampling-workbench/overview.html",
+    parent: "sampling"
+  }),
+  "sampling-tasks": route("sampling-tasks", "测样任务", "workbench", {
+    status: "active",
+    page: "./pages/sampling-workbench/tasks.html",
+    parent: "sampling"
+  }),
+  "sampling-queue": route("sampling-queue", "待测样商品", "workbench", {
+    status: "active",
+    page: "./pages/sampling-workbench/queue.html",
+    parent: "sampling"
+  }),
   "sampling-samples": route("sampling-samples", "样品管理", "workbench", { parent: "sampling" }),
   "sampling-reports": route("sampling-reports", "测样报告", "workbench", { parent: "sampling" }),
   "sampling-records": route("sampling-records", "测样记录", "workbench", { parent: "sampling" }),

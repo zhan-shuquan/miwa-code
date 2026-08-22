@@ -34,7 +34,7 @@
   --desktop-header-entry:54px;
   --desktop-header-spirit:44px;
   --desktop-header-daily:32px;
-  /* Sidebar／Asideの高さ計算用：常用入口＋美和精神＋今日信息 */
+  /* Sidebar／Asideの高さ計算用：常用入口＋美和精神＋今日印象 */
   --desktop-header-info:calc(
     var(--desktop-header-entry) +
     var(--desktop-header-spirit) +

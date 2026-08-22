@@ -94,7 +94,9 @@ export function initTodayWork() {
         top.append(title, priority);
         const meta = document.createElement("p");
         const due = task.dueDate ? ` · 截止 ${task.dueDate}` : "";
-        meta.textContent = `${task.creatorName} → ${task.assigneeName}${due}`;
+        const workbench = task.workbench ? ` · ${task.workbench === "sampling" ? "测样工作台" : task.workbench}` : "";
+        const businessObject = task.businessObjectId ? ` · ${task.businessObjectId}` : "";
+        meta.textContent = `${task.creatorName} → ${task.assigneeName}${workbench}${businessObject}${due}`;
         main.append(top, meta);
         if (task.description) {
           const description = document.createElement("p");
@@ -102,11 +104,23 @@ export function initTodayWork() {
           description.textContent = task.description;
           main.append(description);
         }
+        const actions = document.createElement("div");
+        actions.className = "sampling-task-actions";
+        if (task.route) {
+          const open = document.createElement("button");
+          open.type = "button";
+          open.textContent = "打开任务";
+          open.addEventListener("click", () => {
+            window.location.hash = task.route;
+          });
+          actions.append(open);
+        }
         const action = document.createElement("button");
         action.type = "button";
         action.textContent = task.status === "done" ? "恢复待办" : "标记完成";
         action.addEventListener("click", () => toggleTask(task.id));
-        card.append(main, action);
+        actions.append(action);
+        card.append(main, actions);
         taskList.append(card);
       });
     }

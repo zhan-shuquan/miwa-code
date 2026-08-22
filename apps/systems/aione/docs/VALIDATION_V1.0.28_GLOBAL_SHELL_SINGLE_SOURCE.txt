@@ -1,0 +1,15 @@
+AIONE V1.0.28 Global Shell Single Source validation
+Date: 2026-08-22
+
+AIONE全局外壳验证通过：141个内部入口；跨境9个工作台；批发6个业务闭环。
+Sampling dashboard validation passed.
+record-detail-content-only: PASS
+JavaScript syntax: PASS
+Forbidden legacy terminology scan: PASS
+Duplicate HTML IDs in record detail: 0
+
+Record detail cleanup:
+- before: 9491 lines / 961140 bytes
+- after: 4718 lines / 342031 bytes
+- standalone desktop Header in business pages: 0
+- standalone desktop Sidebar in business pages: 0

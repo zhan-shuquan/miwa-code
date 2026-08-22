@@ -3,7 +3,7 @@
    実データ接続後は値だけを差し替え、各コンポーネントを直接変更しない。
 ======================================== */
 
-export const SYSTEM_ASSET_VERSION = "20260821-v1.0.14-nine-workbench-internal-test";
+export const SYSTEM_ASSET_VERSION = "20260822-v1.0.28-global-shell-single-source";
 const versionedComponent = (path) => `${path}?v=${SYSTEM_ASSET_VERSION}`;
 
 export const systemConfig = Object.freeze({
@@ -193,7 +193,7 @@ export const systemConfig = Object.freeze({
     searchRoute: "search",
     spiritReferenceRoute: "principles",
 
-    /* 今日信息恢复为轻量全局信息带；天气暂不启用，避免无必要外部请求。 */
+    /* 今日印象恢复为轻量全局信息带；天气暂不启用，避免无必要外部请求。 */
     weather: {
       enabled: false,
       provider: "open-meteo",
@@ -318,8 +318,8 @@ export const systemConfig = Object.freeze({
   },
 
   footer: {
-    status: "9工作台保全 + 店铺总览页 + 内测候选",
-    environment: "INTERNAL TEST CANDIDATE",
-    version: "v1.0.14-nine-workbench-internal-test-candidate"
+    status: "Global Shell唯一源码 + 选品/测样闭环保全",
+    environment: "INTERNAL TEST REBUILD",
+    version: "v1.0.28-global-shell-single-source"
   }
 });

@@ -1,0 +1,46 @@
+<section class="sampling-task-page" aria-labelledby="sampling-task-title">
+  <nav class="sampling-guide-nav" aria-label="测样工作台内部导航">
+    <a href="#/sampling">← 返回测样工作台</a>
+    <div>
+      <a href="#/sampling-overview">测样概览</a>
+      <a class="active" href="#/sampling-tasks">测样任务</a>
+    </div>
+  </nav>
+
+  <header class="sampling-guide-hero">
+    <div>
+      <small>02 测样工作台｜统一任务视图</small>
+      <h1 id="sampling-task-title">测样任务</h1>
+      <p>这里按“测样业务”查看任务；今日工作按“当前人员”查看任务。两边读取同一条任务，不复制、不重复完成。</p>
+    </div>
+    <span class="sampling-guide-status">V1｜共享内测优先</span>
+  </header>
+
+  <div class="core-data-note"><strong>当前阶段</strong><span>任务关系已按“一条任务、一份数据、多个入口”实现于现有预演任务层；真正跨账号实时共享仍需下一阶段接入 Cloud SQL / Tasks API。</span></div>
+
+  <section class="work-summary" aria-label="测样任务摘要">
+    <article><span>待处理</span><strong id="sampling-count-pending">0</strong></article>
+    <article><span>处理中</span><strong id="sampling-count-active">0</strong></article>
+    <article><span>已完成</span><strong id="sampling-count-done">0</strong></article>
+    <article><span>待建立任务商品</span><strong id="sampling-count-candidates">0</strong></article>
+  </section>
+
+  <div class="sampling-task-layout">
+    <section class="core-panel">
+      <div class="core-panel-head">
+        <div><h2>测样执行任务</h2><p>从这里或“今日工作”打开，最终进入同一个商品机会的测样执行页面。</p></div>
+        <div class="work-filter" role="group" aria-label="测样任务筛选">
+          <button class="is-active" type="button" data-sampling-task-filter="open">未完成</button>
+          <button type="button" data-sampling-task-filter="mine">与我有关</button>
+          <button type="button" data-sampling-task-filter="all">全部</button>
+        </div>
+      </div>
+      <div class="work-list" id="sampling-task-list"></div>
+    </section>
+
+    <section class="core-panel">
+      <div class="core-panel-head"><div><h2>待建立测样任务</h2><p>从现有商品机会中选择需要真实验证的商品。建立任务后，今日工作会读取同一任务。</p></div></div>
+      <div class="sampling-candidate-list" id="sampling-candidate-list"></div>
+    </section>
+  </div>
+</section>

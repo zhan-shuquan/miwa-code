@@ -12,8 +12,9 @@ import { initAside } from "./shell/aside.js";
 import { initFooter } from "./shell/footer.js";
 import { initSystemSettings } from "./shell/system-settings.js";
 import { initSelectionWorkbench } from "./pages/selection-workbench.js";
-import { initSamplingWorkbench } from "./pages/sampling-workbench.js";
+import { initSamplingQueue, initSamplingTasks, initSamplingWorkbench } from "./pages/sampling-workbench.js";
 import { initTodayWork } from "./pages/today-work.js";
+import { completeTaskForBusinessObject } from "./data/collaboration-store.js";
 import { initMiwaCalendar } from "./pages/miwa-calendar.js";
 import { initStrategicHome } from "./pages/strategic-homes.js";
 import { initStoreHome } from "./pages/store-home.js";
@@ -119,6 +120,23 @@ async function renderCurrentRoute() {
     return;
   }
 
+  if (routeId === "sampling-overview") {
+    await loadComponents([["selection-main-host", ROUTE_REGISTRY["sampling-overview"].page]]);
+    return;
+  }
+
+  if (routeId === "sampling-tasks") {
+    await loadComponents([["selection-main-host", ROUTE_REGISTRY["sampling-tasks"].page]]);
+    initSamplingTasks();
+    return;
+  }
+
+  if (routeId === "sampling-queue") {
+    await loadComponents([["selection-main-host", ROUTE_REGISTRY["sampling-queue"].page]]);
+    initSamplingQueue();
+    return;
+  }
+
   if (routeId === "work") {
     await loadComponents([["selection-main-host", ROUTE_REGISTRY.work.page]]);
     initTodayWork();
@@ -188,6 +206,12 @@ async function startMiwaSystem() {
 
     // 路由监听必须独立于任何单个工作台初始化。即使某个页面局部报错，
     // 也不能阻断其他工作台、平台入口和后续 hash 路由切换。
+    window.addEventListener("message", (event) => {
+      const payload = event?.data;
+      if (!payload || payload.type !== "aione:sampling-completed" || !payload.opportunityId) return;
+      completeTaskForBusinessObject("sampling", String(payload.opportunityId));
+    });
+
     window.addEventListener("hashchange", async () => {
       await safeRenderCurrentRoute();
       recordPreviewActivity(previewIdentity, "route.view", { route: window.location.hash || "#/selection" });

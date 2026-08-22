@@ -59,12 +59,55 @@ export function addTask(input) {
     creatorName: creator.name,
     dueDate: String(input.dueDate || ""),
     priority: String(input.priority || "normal"),
-    status: "pending",
+    status: String(input.status || "pending"),
+    workbench: String(input.workbench || ""),
+    taskType: String(input.taskType || ""),
+    businessObjectType: String(input.businessObjectType || ""),
+    businessObjectId: String(input.businessObjectId || ""),
+    route: String(input.route || ""),
+    dedupeKey: String(input.dedupeKey || ""),
+    source: String(input.source || "manual"),
     createdAt: new Date().toISOString(),
     completedAt: null
   };
   state.tasks.unshift(task);
   writeState(state, "task.created");
+  return task;
+}
+
+export function ensureTask(input) {
+  const dedupeKey = String(input.dedupeKey || "").trim();
+  if (dedupeKey) {
+    const state = readState();
+    const existing = state.tasks.find((item) => item.dedupeKey === dedupeKey);
+    if (existing) return existing;
+  }
+  return addTask(input);
+}
+
+export function setTaskStatus(taskId, status) {
+  const allowed = new Set(["pending", "active", "done"]);
+  const nextStatus = allowed.has(status) ? status : "pending";
+  const state = readState();
+  const task = state.tasks.find((item) => item.id === taskId);
+  if (!task) return null;
+  task.status = nextStatus;
+  task.completedAt = nextStatus === "done" ? new Date().toISOString() : null;
+  writeState(state, "task.updated");
+  return task;
+}
+
+export function completeTaskForBusinessObject(workbench, businessObjectId) {
+  const state = readState();
+  const task = state.tasks.find((item) =>
+    item.workbench === workbench &&
+    item.businessObjectId === businessObjectId &&
+    item.status !== "done"
+  );
+  if (!task) return null;
+  task.status = "done";
+  task.completedAt = new Date().toISOString();
+  writeState(state, "task.updated");
   return task;
 }
 

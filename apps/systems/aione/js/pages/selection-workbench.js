@@ -190,17 +190,19 @@ function openSelectionRecordDetail({id, type='', mode='edit'} = {}){
     }catch(_){ /* 预演环境无法访问localStorage时继续进入空白创建页。 */ }
   }
 
-  const target = new URL('./pages/selection-workbench/record-detail/index.html', window.location.href);
-  target.searchParams.set('opportunity_id', recordId);
-  target.searchParams.set('mode', mode);
-
-  if(type) target.searchParams.set('selection_type', type);
+  // 商品机会详情不再拥有独立Shell；所有入口统一进入AIONE根路由。
+  const routeParams = new URLSearchParams();
+  routeParams.set('mode', mode);
+  if(type) routeParams.set('selection_type', type);
   if(mode === 'create'){
-    target.searchParams.set('owner', '张美和');
-    target.searchParams.set('created_at', formatLocalDateTime());
+    routeParams.set('owner', '张美和');
+    routeParams.set('created_at', formatLocalDateTime());
   }
 
-  target.hash = `/selection/opportunity/${encodeURIComponent(recordId)}`;
+  const target = new URL('./index.html', window.location.href);
+  target.search = '';
+  const query = routeParams.toString();
+  target.hash = `/selection/opportunity/${encodeURIComponent(recordId)}${query ? `?${query}` : ''}`;
   window.location.href = target.href;
 }
 

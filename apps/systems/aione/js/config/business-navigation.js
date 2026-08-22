@@ -30,6 +30,7 @@ export const BUSINESS_SPACES = Object.freeze({
       item("sampling", "测样工作台", "sampling", { icon: "sampling", children: [
         child("sampling-overview", "测样概览", "sampling-overview"),
         child("sampling-tasks", "测样任务", "sampling-tasks"),
+        child("sampling-queue", "待测样商品", "sampling-queue"),
         child("sampling-samples", "样品管理", "sampling-samples"),
         child("sampling-reports", "测样报告", "sampling-reports"),
         child("sampling-records", "测样记录", "sampling-records")

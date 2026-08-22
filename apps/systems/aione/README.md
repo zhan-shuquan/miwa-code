@@ -1,3 +1,24 @@
+# AIONE V1.0.28｜Global Shell 唯一源码基线
+
+当前工程已把最新确认的AIONE全局架构落实为唯一代码源：Header / Sidebar / Aside / Footer 只由根 `index.html` 装载公共组件。商品机会详情与测样执行不再拥有独立Shell，旧直链会自动回到根AIONE路由。
+
+当前核心路由：
+
+- `#/selection`：选品工作台
+- `#/selection/opportunity/:id`：商品机会详情
+- `#/sampling`：测样工作台
+- `#/sampling/opportunity/:id`：测样执行
+
+当前全局固定名称包括：美和精神、今日印象、分类之家、商品之家、AI之家、分析中心、共享之家。详细说明见 `docs/BASELINE_V1.0.28_GLOBAL_SHELL_SINGLE_SOURCE.md`。
+
+---
+
+# AIONE V1.0.27｜测样工作台执行驾驶舱统一
+
+当前开发候选已纠正 02 测样工作台的页面层级：点击“测样工作台”先进入与 01 选品工作台同构的执行驾驶舱，“测样概览 / 测样任务”作为独立子页。“待测样商品”作为业务对象队列继续保留。详细说明见 `docs/BASELINE_V1.0.27_SAMPLING_DASHBOARD_UNIFIED.md`。
+
+---
+
 # AIONE V1.0.7 HOMES CANDIDATE｜全局之家预演候选
 
 本候选在 V1.18.5 业务工程之上完成全局 Header、Google 用户闭环、跨境日本业务固定导航、今日工作与美和日历第一阶段可用功能，并预设分类之家、商品之家、AI之家、分析中心与共享之家的稳定能力入口。外部链接保持预留，不填入未确认地址。详细说明见 `docs/GLOBAL_HOMES_V1.0.7_PREVIEW.md`。

@@ -1,21 +1,116 @@
-<section class="sampling-workbench-home" aria-labelledby="sampling-workbench-title">
-  <header class="sampling-workbench-home__head">
-    <div>
-      <span class="sampling-workbench-home__eyebrow">按需验证工作台</span>
-      <h1 id="sampling-workbench-title">测样工作台</h1>
-      <p>从商品机会进入已完成的测样业务界面；测样结果继续回写同一商品机会，不另建孤立记录。</p>
-    </div>
-    <a class="sampling-workbench-home__back" href="#/selection">返回选品工作台</a>
-  </header>
-
-  <section class="sampling-workbench-home__panel" aria-labelledby="sampling-opportunity-title">
-    <div class="sampling-workbench-home__panel-head">
+<section class="selection-page sampling-dashboard-page" aria-labelledby="sampling-workbench-title">
+  <section class="selection-page-head">
+    <div class="selection-page-head__identity">
+      <span class="selection-page-head__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M9 3h6"></path><path d="M10 3v5.2L5.4 16a3.2 3.2 0 0 0 2.8 4.8h7.6a3.2 3.2 0 0 0 2.8-4.8L14 8.2V3"></path><path d="M8.4 14h7.2"></path></svg>
+      </span>
       <div>
-        <h2 id="sampling-opportunity-title">选择需要测样的商品机会</h2>
-        <p>入口已接入原有测样功能，不复制、不重写已有业务代码。</p>
+        <h1 id="sampling-workbench-title">测样工作台</h1>
+        <p>对进入测样阶段的商品进行样品准备、实物检查、实测记录、异常处理、结论形成与证据沉淀，并将有效结果回写选品工作台。</p>
       </div>
-      <span id="sampling-opportunity-count">0 件</span>
     </div>
-    <div class="sampling-opportunity-list" id="sampling-opportunity-list" aria-live="polite"></div>
+    <div class="selection-page-head__actions" aria-label="测样工作台认知与任务入口">
+      <a class="selection-page-head__nav-button" href="#/sampling-overview">测样概览</a>
+      <a class="selection-page-head__nav-button" href="#/sampling-tasks">测样任务</a>
+    </div>
+  </section>
+
+  <section class="selection-opportunity-panel" aria-label="测样业务执行驾驶舱">
+    <div class="selection-overview-area" aria-label="测样业务概览">
+      <section class="selection-overview-block" aria-labelledby="sampling-status-title">
+        <div class="selection-block-head">
+          <div>
+            <div class="selection-block-title-line">
+              <span class="selection-block-mini-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="2"></circle><circle cx="12" cy="7" r="2"></circle><circle cx="18" cy="12" r="2"></circle><circle cx="12" cy="17" r="2"></circle><path d="M7.7 10.9 10.3 8.2M13.7 8.2l2.6 2.7M16.3 13.1l-2.6 2.7M10.3 15.8l-2.6-2.7"></path></svg>
+              </span>
+              <h3 id="sampling-status-title">测样状态</h3>
+            </div>
+            <p>先看当前测样工作的数量与风险分布，再决定优先处理哪一批商品。</p>
+          </div>
+        </div>
+        <div class="sampling-status-grid" id="sampling-status-grid"></div>
+      </section>
+
+      <section class="selection-overview-block" aria-labelledby="sampling-flow-title">
+        <div class="selection-block-head selection-block-head--flow">
+          <div>
+            <div class="selection-block-title-line">
+              <span class="selection-block-mini-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"></circle><circle cx="19" cy="6" r="2"></circle><circle cx="19" cy="18" r="2"></circle><path d="M7 6h5a5 5 0 0 1 5 5v5"></path><path d="M5 8v7a3 3 0 0 0 3 3h12"></path></svg>
+              </span>
+              <h3 id="sampling-flow-title">测样流程</h3>
+            </div>
+            <p>看清每个商品当前处于哪个验证环节；完成后先回写选品工作台，再进入最终经营判断。</p>
+          </div>
+          <div class="selection-flow-current">当前筛选：<strong id="sampling-flow-label">全部</strong><button class="selection-all-pill active" type="button" data-sampling-flow-filter="">全部 <span id="sampling-flow-total">0</span></button></div>
+        </div>
+        <div class="selection-flow-track sampling-flow-track" id="sampling-flow-track"></div>
+      </section>
+
+      <section class="selection-overview-block selection-metrics-block" aria-labelledby="sampling-metrics-title">
+        <div class="selection-block-title-line">
+          <span class="selection-block-mini-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 19V11"></path><path d="M12 19V5"></path><path d="M19 19V8"></path><path d="M3 19h18"></path></svg>
+          </span>
+          <h3 id="sampling-metrics-title">业务指标</h3>
+        </div>
+        <p>只使用当前浏览器中已经产生的真实预演数据；暂无可靠数据的指标明确标记为待验证。</p>
+        <div class="selection-metrics sampling-metrics" id="sampling-metrics"></div>
+      </section>
+    </div>
+
+    <section class="selection-core-area" aria-labelledby="sampling-current-title">
+      <header class="selection-module-head selection-module-head--core">
+        <div class="selection-module-head__title">
+          <span class="selection-module-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="4" y="5" width="3" height="3" rx=".6"></rect><rect x="4" y="10.5" width="3" height="3" rx=".6"></rect><rect x="4" y="16" width="3" height="3" rx=".6"></rect><path d="M10 6.5h10"></path><path d="M10 12h10"></path><path d="M10 17.5h10"></path></svg>
+          </span>
+          <div>
+            <div class="selection-title-line">
+              <h2 id="sampling-current-title">当前测样商品</h2>
+              <span class="selection-prototype-badge">共享内测数据</span>
+            </div>
+            <p>集中查看需要测样、正在测样、存在异常以及已经完成回写的商品。</p>
+          </div>
+        </div>
+        <div class="selection-view-switch" aria-label="视图切换">
+          <button type="button" data-sampling-view="list">列表</button>
+          <button class="active" type="button" data-sampling-view="card">卡片</button>
+        </div>
+      </header>
+
+      <div class="selection-filter-toolbar sampling-filter-toolbar" aria-label="测样商品筛选">
+        <label class="selection-filter-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>
+          <input id="sampling-search" type="search" placeholder="搜索商品 / 机会ID / 负责人">
+        </label>
+        <select id="sampling-status-select" aria-label="测样状态">
+          <option value="">全部测样状态</option>
+          <option value="pending">待测样</option>
+          <option value="active">测样中</option>
+          <option value="abnormal">待复测 / 异常</option>
+          <option value="completed">已完成</option>
+        </select>
+        <select id="sampling-owner-select" aria-label="负责人"><option value="">全部负责人</option></select>
+        <button class="selection-reset" id="sampling-reset" type="button">重置</button>
+      </div>
+
+      <div class="sampling-dashboard-card-grid" id="sampling-dashboard-card-grid" aria-live="polite"></div>
+
+      <div class="sampling-dashboard-list-view" id="sampling-dashboard-list-view" hidden>
+        <div class="selection-table-wrap">
+          <table class="selection-table sampling-dashboard-table">
+            <thead><tr><th>商品信息</th><th>测样状态</th><th>负责人</th><th>当前环节</th><th>任务状态</th><th>测样结论</th><th>操作</th></tr></thead>
+            <tbody id="sampling-dashboard-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <footer class="selection-module-foot">
+        <span id="sampling-visible-count">当前显示 0 项</span>
+        <a class="sampling-queue-link" href="#/sampling-queue">打开完整待测样商品队列</a>
+      </footer>
+    </section>
   </section>
 </section>

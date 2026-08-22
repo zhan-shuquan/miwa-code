@@ -586,7 +586,7 @@
   user-select:none;
 }
 
-/* 第3行：今日日常＋企業通知 */
+/* 第3行：今日印象＋企業通知 */
 .miwa-daily-row{
   min-height:var(--desktop-header-daily);
   border-bottom:1px solid var(--border);
@@ -1176,7 +1176,7 @@ button.miwa-common-entry{font:inherit;text-align:left}
 
 /* =========================================================
    Header V1.0.9｜Header + Sidebar 统一基线
-   2026-08-21：移除常驻433/今日信息带，收敛为三层工作型Header。
+   2026-08-21：移除常驻433/今日印象带，收敛为三层工作型Header。
    ========================================================= */
 @media(min-width:1100px){
   .miwa-header-main__inner{
@@ -1288,7 +1288,7 @@ button.miwa-common-entry{font:inherit;text-align:left}
 
 /* =========================================================
    Header V1.0.11｜全局信息补全
-   保留两层主导航，补回美和精神、今日信息、重要通知；更多入口使用轻量面板。
+   保留两层主导航，补回美和精神、今日印象、重要通知；更多入口使用轻量面板。
    ========================================================= */
 @media(min-width:1100px){
   .miwa-spirit-row{min-height:var(--desktop-header-spirit)}
