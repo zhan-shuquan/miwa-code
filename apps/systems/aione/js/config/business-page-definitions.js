@@ -1,67 +1,37 @@
 import { EXTRA_BUSINESS_PAGE_DEFINITIONS } from "./business-page-definitions-extra.js";
 import { systemConfig } from "./system-config.js";
+import { MIWA_NINE_ELEMENTS } from "./miwa-nine-elements.js";
+import { getFieldSchema, getSystemFieldSchema } from "./field-registry.js";
 
 /* ========================================
    AIONE Business Page Definitions｜美和二级业务页面配置
    结构由统一母版负责；此文件只描述真实业务差异。
 ======================================== */
 
-export const MIWA_NINE_ELEMENTS = Object.freeze([
-  { key: "goal", label: "目标", question: "为什么做、要达到什么？" },
-  { key: "people", label: "人", question: "谁负责、谁执行、涉及谁？" },
-  { key: "object", label: "物", question: "管理什么业务对象或资源？" },
-  { key: "matter", label: "事", question: "具体做什么、经过什么流程？" },
-  { key: "platform", label: "平台", question: "在哪里完成、依赖什么系统或渠道？" },
-  { key: "time", label: "时间", question: "什么时候开始、截止、周期和时效？" },
-  { key: "money", label: "钱", question: "是否涉及金额；有、待确认或不涉及？" },
-  { key: "information", label: "信息", question: "依据什么数据、资料和证据？" },
-  { key: "result", label: "结果", question: "最终产生什么结果和状态迁移？" }
-]);
+
 
 
 function makeStoreSeedObjects() {
-  const group = systemConfig.header?.commonEntries?.stores || {};
-  const items = [
-    ...(group.items || []),
-    ...(group.catalogSections || []).flatMap((section) => section.items || [])
-  ];
-  return [...new Map(items.map((item) => [item.name, item])).values()].map((item) => ({
-    id: `STORE-${item.id}`, name: item.name, type: "跨境电商店铺", platform: item.id?.startsWith("rakuten") ? "楽天" : "待确认",
-    owner: "待确认", state: item.status === "active" ? "正常运营" : "待确认", accountStatus: "待确认",
+  const items = Array.isArray(systemConfig.header?.sharedResources?.items)
+    ? systemConfig.header.sharedResources.items.filter((item) => item.quickGroup === "stores")
+    : [];
+  return items.map((item) => ({
+    id: `STORE-${item.id}`, name: item.name, type: "跨境电商店铺", platform: "楽天",
+    owner: item.owner || "待确认", state: item.status === "active" ? "正常运营" : "待确认", accountStatus: "待确认",
     connectionStatus: "待确认", url: item.url || "", lastChange: "待确认"
   }));
 }
 
 function makeApplicationSeedObjects() {
-  const groups = systemConfig.header?.commonEntries || {};
-  const known = [];
-  const pushGroup = (items, type, relatedBusiness, groupLabel = "") => {
-    (items || []).forEach((item) => known.push({ item, type, relatedBusiness, groupLabel }));
-  };
-  pushGroup(groups.logistics?.items, "物流应用", "订单 / 出货", groups.logistics?.label);
-  pushGroup(groups.office?.items, "办公协作", "集团共用", groups.office?.label);
-  pushGroup(groups.shopping?.items, "采购/购物平台", "采购", groups.shopping?.label);
-  pushGroup(groups.mail?.items, "邮箱/通讯", "集团共用", groups.mail?.label);
-  (groups.tools?.catalogSections || []).forEach((section) => {
-    const label = section.label || "";
-    let type = "其他应用";
-    let relatedBusiness = "集团共用";
-    if (/订单|物流/.test(label)) { type = "物流应用"; relatedBusiness = "订单 / 出货"; }
-    else if (/办公|AI/.test(label)) type = "办公协作";
-    else if (/购物|采购/.test(label)) { type = "采购/购物平台"; relatedBusiness = "采购"; }
-    else if (/邮箱|Google/.test(label)) type = "邮箱/通讯";
-    pushGroup(section.items, type, relatedBusiness, label);
-  });
-  const byIdentity = new Map();
-  known.forEach(({ item, type, relatedBusiness, groupLabel }) => {
-    const key = `${item.name}|${item.url || ""}`;
-    if (!byIdentity.has(key)) byIdentity.set(key, {
-      id: `APP-${item.id}`, name: item.name, type: item.id?.includes("robot") ? "业务系统" : item.id?.includes("drive") ? "云盘/文件" : type,
-      purpose: item.subtitle || groupLabel || "待确认", owner: "待确认", state: item.status === "active" ? "在用" : "待确认",
-      accountStatus: "待确认", connectionStatus: "待确认", relatedBusiness, cost: 0, url: item.url || ""
-    });
-  });
-  return [...byIdentity.values()];
+  const items = Array.isArray(systemConfig.header?.sharedResources?.items)
+    ? systemConfig.header.sharedResources.items.filter((item) => ["应用", "工具", "服务"].includes(item.productForm))
+    : [];
+  return items.map((item) => ({
+    id: `APP-${item.id}`, name: item.name, type: item.productForm === "工具" ? "其他应用" : item.productForm === "服务" ? "采购/购物平台" : "业务系统",
+    purpose: item.subtitle || "快捷入口", owner: item.owner || "待确认", state: item.status === "active" ? "在用" : "待确认",
+    accountStatus: "待确认", connectionStatus: item.origin === "外部" ? "外部" : "内部", relatedBusiness: item.quickGroup || "集团共用", cost: 0,
+    url: item.url || (item.route ? `#/${item.route}` : "")
+  }));
 }
 
 const commonObjectToolbar = Object.freeze({
@@ -106,21 +76,7 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
       { key: "amount", label: "累计交易", sum: "amount", format: "money" }
     ],
     toolbar: commonObjectToolbar,
-    fields: [
-      { key: "name", label: "客户名称", required: true, primary: true },
-      { key: "type", label: "客户类型", required: true, dictionary: true },
-      { key: "region", label: "国家/地区" },
-      { key: "owner", label: "负责人" },
-      { key: "state", label: "当前状态" },
-      { key: "lastContact", label: "最近联系" },
-      { key: "amount", label: "累计交易", type: "number", format: "money" },
-      { key: "opportunity", label: "当前商机" },
-      { key: "nextAction", label: "下一步" },
-      { key: "recipient", label: "收件人" },
-      { key: "postalCode", label: "邮编" },
-      { key: "address", label: "地址/面单资料" },
-      { key: "phone", label: "联系电话" }
-    ],
+    fieldSchemaId: "customer-home",
     cardFields: ["region", "owner", "lastContact", "amount", "opportunity", "nextAction"],
     listFields: ["name", "type", "region", "owner", "state", "lastContact", "amount", "nextAction"],
     specialActions: [
@@ -168,17 +124,7 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
       { key: "changes", label: "本月变更", value: "待真实数据" }
     ],
     toolbar: commonObjectToolbar,
-    fields: [
-      { key: "name", label: "店铺名称", required: true, primary: true },
-      { key: "type", label: "店铺类型", required: true, dictionary: true },
-      { key: "platform", label: "平台" },
-      { key: "owner", label: "负责人" },
-      { key: "state", label: "经营状态" },
-      { key: "accountStatus", label: "账号状态" },
-      { key: "connectionStatus", label: "连接状态" },
-      { key: "url", label: "店铺入口", type: "url" },
-      { key: "lastChange", label: "最近变更" }
-    ],
+    fieldSchemaId: "store-home",
     cardFields: ["platform", "owner", "accountStatus", "connectionStatus", "lastChange"],
     listFields: ["name", "type", "platform", "owner", "state", "accountStatus", "connectionStatus", "lastChange"],
     auxiliary: [
@@ -195,7 +141,7 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
 
   "application-home": {
     routeId: "application-home",
-    title: "应用之家",
+    title: "应用资源",
     icon: "应",
     description: "统一管理美和使用的软件、系统、平台、数字工具及其账号、权限、连接、费用和业务关联。",
     overviewLabel: "应用概览",
@@ -226,18 +172,7 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
       { key: "cost", label: "费用待确认", state: "费用待确认" }
     ],
     toolbar: commonObjectToolbar,
-    fields: [
-      { key: "name", label: "应用名称", required: true, primary: true },
-      { key: "type", label: "应用类型", required: true, dictionary: true },
-      { key: "purpose", label: "主要用途" },
-      { key: "owner", label: "负责人" },
-      { key: "state", label: "当前状态" },
-      { key: "accountStatus", label: "账号状态" },
-      { key: "connectionStatus", label: "连接/API" },
-      { key: "relatedBusiness", label: "关联业务" },
-      { key: "cost", label: "费用", type: "number", format: "money" },
-      { key: "url", label: "应用入口", type: "url" }
-    ],
+    fieldSchemaId: "application-home",
     cardFields: ["purpose", "owner", "accountStatus", "connectionStatus", "cost", "relatedBusiness"],
     listFields: ["name", "type", "purpose", "owner", "state", "accountStatus", "connectionStatus", "cost"],
     auxiliary: [
@@ -286,18 +221,7 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
       { key: "abnormal", label: "异常支出", state: "异常" }
     ],
     toolbar: commonObjectToolbar,
-    fields: [
-      { key: "name", label: "支出事项", required: true, primary: true },
-      { key: "type", label: "支出类型", required: true, dictionary: true },
-      { key: "amount", label: "金额", required: true, type: "number", format: "money" },
-      { key: "date", label: "发生时间", type: "date" },
-      { key: "business", label: "事业/项目" },
-      { key: "counterparty", label: "支付对象" },
-      { key: "owner", label: "负责人" },
-      { key: "source", label: "数据来源" },
-      { key: "state", label: "确认状态" },
-      { key: "evidence", label: "凭证/证据" }
-    ],
+    fieldSchemaId: "expense-home",
     cardFields: ["amount", "date", "business", "counterparty", "owner", "source"],
     listFields: ["name", "type", "amount", "date", "business", "counterparty", "owner", "state"],
     auxiliary: [
@@ -342,17 +266,7 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
       { key: "unmatched", label: "待核对收款", state: "待核对" }
     ],
     toolbar: commonObjectToolbar,
-    fields: [
-      { key: "name", label: "收入事项", required: true, primary: true },
-      { key: "type", label: "收入类型", required: true, dictionary: true },
-      { key: "amount", label: "金额", required: true, type: "number", format: "money" },
-      { key: "date", label: "发生时间", type: "date" },
-      { key: "business", label: "事业/项目" },
-      { key: "customer", label: "客户/平台" },
-      { key: "owner", label: "负责人" },
-      { key: "source", label: "数据来源" },
-      { key: "state", label: "确认状态" }
-    ],
+    fieldSchemaId: "income-home",
     cardFields: ["amount", "date", "business", "customer", "owner", "source"],
     listFields: ["name", "type", "amount", "date", "business", "customer", "owner", "state"],
     auxiliary: [
@@ -396,17 +310,7 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
       { key: "abnormal", label: "异常", state: "异常" }
     ],
     toolbar: commonObjectToolbar,
-    fields: [
-      { key: "name", label: "支出事项", required: true, primary: true },
-      { key: "type", label: "数据来源", required: true, dictionary: true },
-      { key: "amount", label: "金额", required: true, type: "number", format: "money" },
-      { key: "date", label: "发生时间", type: "date" },
-      { key: "business", label: "事业/项目" },
-      { key: "payer", label: "支付人" },
-      { key: "counterparty", label: "支付对象" },
-      { key: "state", label: "确认状态" },
-      { key: "evidence", label: "凭证" }
-    ],
+    fieldSchemaId: "cash-expense",
     cardFields: ["amount", "date", "business", "payer", "counterparty", "evidence"],
     listFields: ["name", "type", "amount", "date", "business", "payer", "counterparty", "state"],
     auxiliary: [
@@ -423,5 +327,13 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
 });
 
 export function getBusinessPageDefinition(routeId) {
-  return BUSINESS_PAGE_DEFINITIONS[routeId] || EXTRA_BUSINESS_PAGE_DEFINITIONS[routeId] || null;
+  const raw = BUSINESS_PAGE_DEFINITIONS[routeId] || EXTRA_BUSINESS_PAGE_DEFINITIONS[routeId] || null;
+  if (!raw) return null;
+  const fieldSchemaId = raw.fieldSchemaId || routeId;
+  return {
+    ...raw,
+    fieldSchemaId,
+    fields: getFieldSchema(fieldSchemaId),
+    systemFields: getSystemFieldSchema(fieldSchemaId)
+  };
 }

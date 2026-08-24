@@ -1,0 +1,32 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, "..");
+const read = (rel) => fs.readFileSync(path.join(root, rel), "utf8");
+const must = (condition, message) => { if (!condition) throw new Error(message); };
+
+const index = read("index.html");
+const system = read("js/miwa-system.js");
+const layerJs = read("js/shell/miwa-ai-layer.js");
+const desktop = read("components/shell/header/desktop-header.html");
+const mobile = read("components/shell/header/mobile-topbar.html");
+const config = read("js/config/system-config.js");
+const cssEntry = read("css/miwa-system.css");
+const client = read("js/ai/ai-secretary-client.js");
+const baseline = read("docs/BASELINE_V1.9.9_MIWA_AI_HARD_ENTRY_HOTFIX_CANDIDATE.md");
+
+must(index.includes("installMiwaAIHardEntryBridge") && index.includes("AIONEMiwaAIHardBridge"), "index缺少独立Hard Entry Bridge");
+must(index.includes("root.hidden = false") && index.includes("document.body.classList.add('miwa-ai-open')"), "Hard Bridge未直接解除AI Layer隐藏状态");
+must(desktop.includes('data-miwa-ai-entry="desktop"') && mobile.includes('data-miwa-ai-entry="mobile"'), "Desktop/Mobile入口缺少Hard Bridge显式标记");
+must(desktop.includes('AIONEMiwaAIHardBridge?.open') && mobile.includes('AIONEMiwaAIHardBridge?.open'), "Header入口缺少inline强制打开兜底");
+must(((system.includes('miwa-ai-layer.js?v=20260824-v1.9.9-miwa-ai-hard-entry-hotfix') || system.includes('miwa-ai-layer.js?v=20260824-v1.9.10-miwa-ai-self-healing-layer-hotfix') || system.includes('miwa-ai-layer.js?v=20260824-v1.9.11-miwa-ai-runtime-chain-verification')) || (system.includes("20260824-v1.9.16-ai-proposal-bridge") || system.includes("20260824-v1.9.17-ai-context-router"))), "美和AI嵌套ES Module未独立缓存破坏");
+must(((layerJs.includes('ai-secretary-client.js?v=20260824-v1.9.9-miwa-ai-hard-entry-hotfix') || layerJs.includes('ai-secretary-client.js?v=20260824-v1.9.10-miwa-ai-self-healing-layer-hotfix') || layerJs.includes('ai-secretary-client.js?v=20260824-v1.9.11-miwa-ai-runtime-chain-verification')) || (layerJs.includes("20260824-v1.9.16-ai-proposal-bridge") || layerJs.includes("20260824-v1.9.17-ai-context-router"))), "AI Client嵌套模块未独立缓存破坏");
+must(((cssEntry.includes('miwa-ai-layer.css?v=20260824-v1.9.9-miwa-ai-hard-entry-hotfix') || cssEntry.includes('miwa-ai-layer.css?v=20260824-v1.9.10-miwa-ai-self-healing-layer-hotfix') || cssEntry.includes('miwa-ai-layer.css?v=20260824-v1.9.11-miwa-ai-runtime-chain-verification')) || (cssEntry.includes("20260824-v1.9.16-ai-proposal-bridge") || cssEntry.includes("20260824-v1.9.17-ai-context-router"))), "AI CSS @import未独立缓存破坏");
+must(((index.includes('css/shell/miwa-ai-layer.css?v=20260824-v1.9.9-miwa-ai-hard-entry-hotfix') || index.includes('css/shell/miwa-ai-layer.css?v=20260824-v1.9.10-miwa-ai-self-healing-layer-hotfix') || index.includes('css/shell/miwa-ai-layer.css?v=20260824-v1.9.11-miwa-ai-runtime-chain-verification')) || (index.includes("20260824-v1.9.16-ai-proposal-bridge") || index.includes("20260824-v1.9.17-ai-context-router"))), "index未显式加载最新AI CSS");
+must(layerJs.includes('打开动作绝不能被Context、推荐能力或AI Client初始化失败阻断'), "openLayer仍可能被增强初始化阻断");
+must(layerJs.includes('root.hidden = false') && layerJs.includes('root.dataset.ready = enhanced ? "true" : "fallback"'), "模块级openLayer未采用先打开后增强策略");
+must(((config.includes('20260824-v1.9.9-miwa-ai-hard-entry-hotfix') || config.includes('20260824-v1.9.10-miwa-ai-self-healing-layer-hotfix') || config.includes('20260824-v1.9.11-miwa-ai-runtime-chain-verification')) || (config.includes("20260824-v1.9.16-ai-proposal-bridge") || (config.includes("20260824-v1.9.17-ai-context-router") || (config.includes("20260824-v1.9.18-1688-source-api-bridge") || (config.includes("20260824-v1.9.19-1688-oauth-bridge") || config.includes("20260824-v1.9.20-1688-permanent-token-direct")))))), "System Config未升级V1.9.9资产版本");
+must(client.includes('/api/v1/ai-secretary/status') && client.includes('/api/v1/ai-secretary/execute') && client.includes('/api/v1/ai-secretary/confirm'), "原AI Backend执行链被破坏");
+must(baseline.includes('Hard Entry Bridge') && baseline.includes('先打开，后增强'), "V1.9.9基线说明不完整");
+console.log("V1.9.9_MIWA_AI_HARD_ENTRY_VALIDATION_OK");

@@ -3967,6 +3967,7 @@ body{overflow-x:hidden}
 
 <script type="module">
 import { getPreviewOpportunity, upsertPreviewOpportunity, removePreviewOpportunity, voidPreviewOpportunity } from '../../../js/data/preview-opportunities.js';
+import { aioneApi, getAioneApiBaseUrl } from '../../../js/services/aione-api-client.js';
 
 (async () => {
   'use strict';
@@ -4083,7 +4084,9 @@ import { getPreviewOpportunity, upsertPreviewOpportunity, removePreviewOpportuni
       idle:    {label:'读取并自动填充', busy:false, disabled:false},
       loading: {label:'正在读取…', busy:true, disabled:true},
       success: {label:'来源已识别', busy:false, disabled:false},
-      error:   {label:'读取失败｜请重试', busy:false, disabled:false}
+      error:   {label:'读取失败｜请重试', busy:false, disabled:false},
+      authorize:{label:'授权1688', busy:false, disabled:false},
+      authorized:{label:'1688已授权｜点击读取', busy:false, disabled:false}
     };
     const config = states[state] || states.idle;
     autoFillLabel.textContent = config.label;
@@ -4095,6 +4098,29 @@ import { getPreviewOpportunity, upsertPreviewOpportunity, removePreviewOpportuni
   function resetAutoFillButton(delay=1200){
     autoFillResetTimer = window.setTimeout(() => setAutoFillButtonState('idle'), delay);
   }
+
+  function begin1688Authorization(){
+    const base=getAioneApiBaseUrl() || 'http://127.0.0.1:8080';
+    const authUrl=`${base}/api/v1/integrations/1688/oauth/start`;
+    const popup=window.open(authUrl,'aione-1688-oauth','width=980,height=760,resizable=yes,scrollbars=yes');
+    if(!popup){
+      window.location.href=authUrl;
+      return;
+    }
+    try{ popup.focus(); }catch(_){}
+  }
+
+  window.addEventListener('message',(event)=>{
+    if(event?.data?.type !== 'aione:1688-oauth') return;
+    const toast=$('selection-record-toast');
+    if(event.data.ok){
+      setAutoFillButtonState('authorized');
+      if(toast){ toast.textContent='1688账号授权成功。现在点击“1688已授权｜点击读取”即可自动填充。'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},4200); }
+    }else{
+      setAutoFillButtonState('authorize');
+      if(toast){ toast.textContent='1688授权未完成，请重新点击“授权1688”。'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},3600); }
+    }
+  });
 
   function setAutoValue(el, value, waiting=false){
     if(!el) return;
@@ -4357,45 +4383,203 @@ import { getPreviewOpportunity, upsertPreviewOpportunity, removePreviewOpportuni
   imageZoomOut?.addEventListener('click', () => setImageZoom(imageZoom-.25));
   imageFit?.addEventListener('click', () => setImageZoom(1));
   document.addEventListener('keydown', event => { if(event.key==='Escape' && imageLightbox && !imageLightbox.hidden) closeImageLightbox(); });
-  document.querySelector('[data-record-action="extract-image"]')?.addEventListener('click', () => {
+  const SOURCE_DATA_STORAGE_KEY = `aione:selection:source-data:${opportunityId}`;
+
+  function readSourceApiData(){
+    try{return JSON.parse(window.localStorage.getItem(SOURCE_DATA_STORAGE_KEY) || 'null');}catch(_){return null;}
+  }
+
+  function storeSourceApiData(product){
+    try{
+      window.localStorage.setItem(SOURCE_DATA_STORAGE_KEY,JSON.stringify({
+        version:'1.0',opportunityId,sourceUrl:sourceInput?.value.trim() || '',product,fetchedAt:new Date().toISOString()
+      }));
+    }catch(_){ /* AI context can still use visible fields when storage is unavailable. */ }
+  }
+
+  function setInputFromApi(id,value){
+    const el=$(id);
+    if(!el || value === null || value === undefined || value === '') return false;
+    if(String(el.value || '').trim()) return false;
+    el.value=String(value);
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+    return true;
+  }
+
+  function apply1688ProductFacts(product){
+    if(!product || typeof product !== 'object') return {filled:0};
+    let filled=0;
+    storeSourceApiData(product);
+
+    const sourceTitle=String(product.title || '').trim();
+    if(sourceTitle && nameInput && !nameInput.value.trim()){
+      if(sourceTitle.length <= Number(nameInput.maxLength || 24)){
+        nameInput.value=sourceTitle;
+        nameInput.dispatchEvent(new Event('input',{bubbles:true}));
+        setAutomationNote(nameAutomationNote,'done','\uff5c1688\u539f\u59cb\u5546\u54c1\u6807\u9898\u5df2\u8bfb\u53d6');
+        filled+=1;
+      }else{
+        setAutomationNote(nameAutomationNote,'confirm','\uff5c1688\u539f\u59cb\u6807\u9898\u5df2\u8bfb\u53d6\uff0c\u5f85AI\u751f\u6210\u7b80\u6d01\u6807\u51c6\u540d\u79f0');
+      }
+    }
+
+    if(setInputFromApi('pricing-purchase-unit',product.purchasePrice)) filled+=1;
+    const currency=$('pricing-currency');
+    if(currency && product.currency === 'CNY' && currency.value !== 'CNY'){
+      currency.value='CNY';
+      currency.dispatchEvent(new Event('change',{bubbles:true}));
+      filled+=1;
+    }
+    if(setInputFromApi('pricing-unit-weight',product.weight?.valueGrams)) filled+=1;
+
+    const quantityUnit=$('pricing-quantity-unit');
+    const sourceUnit=String(product.unit || '').trim();
+    if(quantityUnit && sourceUnit){
+      const exact=[...quantityUnit.options].find(option=>option.textContent.trim()===sourceUnit || option.value===sourceUnit);
+      if(exact && quantityUnit.value !== exact.value){
+        quantityUnit.value=exact.value;
+        quantityUnit.dispatchEvent(new Event('change',{bubbles:true}));
+        filled+=1;
+      }
+    }
+
+    const categoryEl=$('selection-auto-category');
+    if(categoryEl && product.category?.name){
+      setAutoValue(categoryEl,String(product.category.name),false);
+      filled+=1;
+    }
+
+    if(product.mainImage && representativeImageDraft.type === 'none'){
+      const apiImage=String(product.mainImage).trim();
+      if(apiImage){
+        if(imageLinkInput) imageLinkInput.value=apiImage;
+        previewRepresentativeImage(apiImage,{
+          validateUrl:true,
+          onLoad:()=>{
+            representativeImageDraft={type:'url',url:apiImage};
+            pendingLocalImageBlob=null;
+            setImageSourceState('url');
+            if(imageAiStatus) imageAiStatus.textContent='1688 API\u5df2\u63d0\u53d6';
+            markDraftDirty();
+          }
+        });
+        filled+=1;
+      }
+    }
+
+    const available=product.factsAvailable || {};
+    const factCount=Object.values(available).filter(Boolean).length;
+    if(sourceStatusEl) sourceStatusEl.textContent='1688 API\u5df2\u8bfb\u53d6';
+    if(autoState) autoState.textContent='1688\u771f\u5b9e\u8d44\u6599\u5df2\u8bfb\u53d6';
+    if(autoSummary){
+      const supplier=product.supplier?.name ? `\uff5c\u4f9b\u5e94\u5546 ${product.supplier.name}` : '';
+      const sku=product.skuCount ? `\uff5cSKU ${product.skuCount}` : '';
+      autoSummary.textContent=`1688 Open Platform\u5df2\u8fd4\u56de ${factCount} \u7c7b\u53ef\u7528\u4e8b\u5b9e${supplier}${sku}`;
+    }
+    window.dispatchEvent(new CustomEvent('aione:source-api-data-updated',{detail:{opportunityId,product}}));
+    return {filled,factCount};
+  }
+
+  async function read1688Source(){
+    const sourceUrl=sourceInput?.value.trim() || '';
+    if(!sourceUrl) throw Object.assign(new Error('source_url_required'),{code:'source_url_required'});
+    const inferred=inferSource(sourceUrl);
+    if(inferred.platform !== '1688') throw Object.assign(new Error('unsupported_source'),{code:'unsupported_source'});
+    return aioneApi('/api/v1/integrations/1688/product-by-url',{
+      method:'POST',
+      body:JSON.stringify({url:sourceUrl,opportunityId})
+    });
+  }
+
+  function sourceApiErrorMessage(error){
+    const code=error?.payload?.error || error?.code || '';
+    if(code === 'alibaba_1688_not_configured') return '1688 API\u540e\u7aef\u5c1a\u672a\u5b8c\u6210 AppKey / AppSecret / Access Token \u914d\u7f6e\u3002';
+    if(code === 'alibaba_1688_access_token_required') return '1688 Backend \u5c1a\u672a\u8f7d\u5165\u6c38\u4e45 Access Token\uff0c\u8bf7\u91cd\u65b0\u542f\u52a8 Backend \u5e76\u8f93\u5165\u6388\u6743\u914d\u7f6e\u4e2d\u7684\u5df2\u6388\u6743Token\u3002';
+    if(code === 'alibaba_1688_token_failed') return '1688\u6388\u6743\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u5e94\u7528\u6388\u6743\u65b9\u5f0f\u3002';
+    if(code === 'alibaba_1688_refresh_failed') return '1688 Refresh Token\u5237\u65b0\u5931\u8d25\uff0c\u9700\u8981\u91cd\u65b0\u6388\u6743\u3002';
+    if(code === 'alibaba_1688_authorization_required') return '1688 AppKey / AppSecret\u5df2\u8fde\u63a5\uff0c\u4f46\u5f53\u524d\u5e94\u7528\u9700\u89811688\u8d26\u53f7OAuth\u6388\u6743\u540e\u624d\u80fd\u8bfb\u53d6\u5546\u54c1\u3002';
+    if(code === 'alibaba_1688_api_error') return `1688 API\u8fd4\u56de\u4e1a\u52a1\u9519\u8bef${error?.payload?.remoteCode ? `\uff1a${error.payload.remoteCode}` : ''}\u3002`;
+    if(code === 'invalid_1688_product_url') return '\u672a\u4ece\u94fe\u63a5\u4e2d\u8bc6\u522b\u52301688\u5546\u54c1ID\u3002';
+    return '1688\u5546\u54c1\u8d44\u6599\u8bfb\u53d6\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u540e\u7aef\u914d\u7f6e\u548cAPI\u6743\u9650\u3002';
+  }
+
+  document.querySelector('[data-record-action="extract-image"]')?.addEventListener('click', async () => {
     const toast=$('selection-record-toast');
-    if(!sourceInput?.value.trim()){
-      if(toast){ toast.textContent='请先填写采购来源链接。'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},1800); }
+    const cached=readSourceApiData()?.product;
+    if(cached?.mainImage){
+      apply1688ProductFacts(cached);
+      if(toast){ toast.textContent='\u5df2\u4ece1688\u771f\u5b9e\u5546\u54c1\u8d44\u6599\u63d0\u53d6\u4ee3\u8868\u56fe\u3002'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},1800); }
       return;
     }
-    if(imageAiStatus) imageAiStatus.textContent='待接入AI';
-    if(toast){ toast.textContent='从采购来源提取代表图属于AI能力；当前静态验证版不制造提取结果。'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},2400); }
+    if(!sourceInput?.value.trim()){
+      if(toast){ toast.textContent='\u8bf7\u5148\u586b\u5199\u91c7\u8d2d\u6765\u6e90\u94fe\u63a5\u3002'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},1800); }
+      return;
+    }
+    try{
+      if(imageAiStatus) imageAiStatus.textContent='\u6b63\u5728\u8bfb\u53d6';
+      const result=await read1688Source();
+      apply1688ProductFacts(result.product);
+      if(!result.product?.mainImage) throw Object.assign(new Error('image_not_returned'),{code:'image_not_returned'});
+      if(toast){ toast.textContent='1688\u4ee3\u8868\u56fe\u5df2\u63d0\u53d6\u3002'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},1800); }
+    }catch(error){
+      if(imageAiStatus) imageAiStatus.textContent='\u8bfb\u53d6\u5931\u8d25';
+      if(toast){ toast.textContent=sourceApiErrorMessage(error); toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},2800); }
+    }
   });
 
-  // 链接读取：当前先完成确定性来源识别；正式 API / AI 接入后沿用同一按钮状态组件。
-  autoFillButton?.addEventListener('click', () => {
+  autoFillButton?.addEventListener('click', async () => {
     const toast=$('selection-record-toast');
+    if(autoFillButton?.dataset.state === 'authorize'){
+      begin1688Authorization();
+      setAutoFillButtonState('idle');
+      if(toast){ toast.textContent='请在新窗口登录并授权1688账号；完成后返回AIONE。'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},4200); }
+      return;
+    }
     if(!sourceInput?.value.trim()){
       sourceInput?.focus();
       setAutoFillButtonState('error');
       resetAutoFillButton(1400);
-      if(toast){ toast.textContent='请先粘贴采购来源链接。'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},1800); }
+      if(toast){ toast.textContent='\u8bf7\u5148\u7c98\u8d34\u91c7\u8d2d\u6765\u6e90\u94fe\u63a5\u3002'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},1800); }
+      return;
+    }
+
+    refreshSourceRecognition();
+    const inferred=inferSource(sourceInput.value);
+    if(inferred.platform === '\u5f85\u8bc6\u522b'){
+      setAutoFillButtonState('error');
+      resetAutoFillButton(1600);
+      if(toast){ toast.textContent='\u94fe\u63a5\u5df2\u5f55\u5165\uff0c\u4f46\u5f53\u524d\u6765\u6e90\u6682\u65e0\u6cd5\u81ea\u52a8\u8bc6\u522b\u3002'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},2200); }
+      return;
+    }
+    if(inferred.platform !== '1688'){
+      setAutoFillButtonState('success');
+      resetAutoFillButton();
+      if(toast){ toast.textContent='\u6765\u6e90\u5df2\u8bc6\u522b\uff1b\u5f53\u524d\u7b2c\u4e00\u4e2a\u771f\u5b9eAPI\u8fde\u63a5\u4e3a1688\u3002'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},2200); }
       return;
     }
 
     setAutoFillButtonState('loading');
-    window.setTimeout(() => {
-      refreshSourceRecognition();
-      const inferred = inferSource(sourceInput.value);
-      if(inferred.platform === '待识别'){
-        setAutoFillButtonState('error');
-        resetAutoFillButton(1600);
-        if(toast){ toast.textContent='链接已录入，但当前来源暂无法自动识别。'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},2200); }
-        return;
-      }
-
+    try{
+      const result=await read1688Source();
+      const summary=apply1688ProductFacts(result.product);
+      await saveDraft();
       setAutoFillButtonState('success');
-      resetAutoFillButton();
-      if(toast){ toast.textContent='来源已识别；商品资料自动读取与AI生成能力待正式接入。'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},2400); }
-    }, 280);
+      resetAutoFillButton(1800);
+      if(toast){
+        toast.textContent=`1688\u771f\u5b9e\u5546\u54c1\u8d44\u6599\u5df2\u8bfb\u53d6\uff0c\u5df2\u81ea\u52a8\u56de\u586b ${summary.filled} \u9879\u53ef\u786e\u5b9a\u5b57\u6bb5\u3002`;
+        toast.hidden=false;
+        window.setTimeout(()=>{toast.hidden=true;},2600);
+      }
+    }catch(error){
+      const code=error?.payload?.error || error?.code || '';
+      setAutoFillButtonState('error');
+      resetAutoFillButton(2200);
+      if(toast){ toast.textContent=sourceApiErrorMessage(error); toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},3600); }
+    }
   });
 
-  // 标准名称按钮：当前不伪造 AI 生成结果；正式接入后按“AI可生成 → AI生成中 → AI已生成”更新状态。
+  // Standard-name AI remains separate from source facts: API returns facts, AI standardizes language.
   document.querySelector('[data-record-action="name"]')?.addEventListener('click', () => {
     const toast=$('selection-record-toast');
     if(!sourceInput?.value.trim()){

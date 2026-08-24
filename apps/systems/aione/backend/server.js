@@ -1,50 +1,72 @@
-import express from 'express';
-import pool from './db.js';
+import express from "express";
+import pool from "./db.js";
+import coreRouter from "./src/routes/core.js";
+import legacyProductOpportunitiesRouter from "./src/routes/legacy-product-opportunities.js";
+import aiSecretaryRouter from "./src/routes/ai-secretary.js";
+import integrations1688Router from "./src/routes/integrations-1688.js";
 
 const app = express();
 
-app.use(express.json());
+app.disable("x-powered-by");
+app.use(express.json({ limit: "2mb" }));
 
-app.get('/health', async (req, res) => {
+// Local Preview may run the static frontend on :5500 and Backend on :8080.
+const corsOrigins = new Set(String(process.env.AIONE_CORS_ORIGINS || "http://127.0.0.1:5500,http://localhost:5500").split(",").map((item) => item.trim()).filter(Boolean));
+app.use((req, res, next) => {
+  const origin = req.header("origin");
+  if (origin && corsOrigins.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-aione-person-id, x-aione-assignment-id, x-aione-source-system, x-correlation-id");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,OPTIONS");
+  }
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
+app.get("/health", async (req, res) => {
   try {
-    const result = await pool.query('SELECT NOW() AS database_time');
-
+    const [dbResult, migrationResult] = await Promise.all([
+      pool.query("SELECT NOW() AS database_time"),
+      pool.query("SELECT version, applied_at FROM public.schema_migrations ORDER BY applied_at DESC LIMIT 1").catch(() => ({ rows: [] }))
+    ]);
     res.json({
       ok: true,
-      service: 'aione-backend',
-      database: 'connected',
-      databaseTime: result.rows[0].database_time
+      service: "aione-backend",
+      apiVersion: "v1",
+      database: "connected",
+      databaseTime: dbResult.rows[0].database_time,
+      latestMigration: migrationResult.rows[0] || null
     });
   } catch (error) {
     console.error(error);
-
-    res.status(500).json({
-      ok: false,
-      database: 'disconnected'
-    });
+    res.status(500).json({ ok: false, database: "disconnected" });
   }
 });
 
-app.get('/api/product-opportunities', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT *
-      FROM public.product_opportunities
-      ORDER BY created_at DESC
-    `);
+app.use("/api/v1/ai-secretary", aiSecretaryRouter);
+app.use("/api/v1/integrations/1688", integrations1688Router);
+app.use("/api/v1", coreRouter);
+app.use("/api/product-opportunities", legacyProductOpportunitiesRouter);
 
-    res.json(result.rows);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: 'Failed to load product opportunities'
-    });
-  }
+app.use((req, res) => {
+  res.status(404).json({ error: "not_found", path: req.path });
 });
 
-const port = process.env.PORT || 8080;
+app.use((error, req, res, next) => {
+  console.error(error);
+  if (res.headersSent) return next(error);
+  const status = error.statusCode || (error.code === "23505" ? 409 : error.code === "23503" ? 409 : 500);
+  res.status(status).json({
+    error: error.code || (status === 500 ? "internal_error" : status === 401 ? "authenticated_actor_required" : status === 400 ? "bad_request" : "data_conflict"),
+    message: status === 500 ? "AIONE backend request failed." : (error.message || "AIONE request failed."),
+    missing: error.missing || undefined,
+    remoteCode: error.remoteCode || undefined,
+    detail: process.env.NODE_ENV === "production" ? undefined : error.message
+  });
+});
 
+const port = Number(process.env.PORT || 8080);
 app.listen(port, () => {
   console.log(`AIONE Backend API listening on port ${port}`);
 });

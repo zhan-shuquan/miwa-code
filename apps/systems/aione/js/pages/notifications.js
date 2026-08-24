@@ -300,8 +300,8 @@ export function initNotificationsPage() {
 
   syncNotificationHeader();
   window.addEventListener("aione:notifications-updated", onNotificationsUpdated);
-  window.dispatchEvent(new CustomEvent("aione:page-ai-context", {
-    detail: { title: "AI秘书｜通知辅助", text: "可整理通知、建议发布范围与确认方式、追踪未读和待确认；关键发布由负责人确认。" }
+  window.dispatchEvent(new CustomEvent("aione:page-aside-context", {
+    detail: { title: "通知中心｜当前辅助", text: "可整理通知、建议发布范围与确认方式、追踪未读和待确认；关键发布由负责人确认。" }
   }));
   render();
 }

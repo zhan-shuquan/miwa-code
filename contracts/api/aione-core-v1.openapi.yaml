@@ -1,0 +1,98 @@
+openapi: 3.1.0
+info:
+  title: AIONE Core Data API
+  version: 1.1.0-candidate
+  description: >-
+    第7阶段核心数据、岗位AI办公室与AI秘书候选契约。页面不是数据库边界；工作、人才、ERP、分析和AI秘书读取同一份业务事实。
+servers:
+  - url: /api/v1
+paths:
+  /meta/object-model:
+    get:
+      summary: 获取核心对象模型元数据
+      responses:
+        '200': { description: OK }
+  /organizations:
+    get: { summary: 查询组织, responses: { '200': { description: OK } } }
+    post: { summary: 新建组织, responses: { '201': { description: Created } } }
+  /businesses:
+    get: { summary: 查询事业, responses: { '200': { description: OK } } }
+    post: { summary: 新建事业, responses: { '201': { description: Created } } }
+  /positions:
+    get: { summary: 查询岗位与编制状态, responses: { '200': { description: OK } } }
+    post: { summary: 新建岗位, responses: { '201': { description: Created } } }
+  /assignments:
+    get: { summary: 查询任职关系, responses: { '200': { description: OK } } }
+    post: { summary: 新建任职关系, responses: { '201': { description: Created } } }
+  /ai-talents:
+    get: { summary: 查询AI人才资产, responses: { '200': { description: OK } } }
+    post: { summary: 新建AI人才资产, responses: { '201': { description: Created } } }
+  /ai-offices:
+    get: { summary: 查询岗位AI办公室, responses: { '200': { description: OK } } }
+    post: { summary: 新建岗位AI办公室, responses: { '201': { description: Created } } }
+  /ai-assignments:
+    get: { summary: 查询AI人才任职关系, responses: { '200': { description: OK } } }
+    post: { summary: 新建AI任职关系, responses: { '201': { description: Created } } }
+  /object-registry:
+    get: { summary: 查询跨域对象索引, responses: { '200': { description: OK } } }
+    post: { summary: 注册正式业务对象索引, responses: { '201': { description: Created } } }
+  /object-relations:
+    get: { summary: 查询跨对象关系, responses: { '200': { description: OK } } }
+    post: { summary: 建立跨对象关系, responses: { '201': { description: Created } } }
+  /work-items:
+    get: { summary: 查询工作事项, responses: { '200': { description: OK } } }
+    post: { summary: 新建工作事项, responses: { '201': { description: Created } } }
+  /work-sessions:
+    get: { summary: 查询工作时间会话, responses: { '200': { description: OK } } }
+    post: { summary: 写入工作时间事实, responses: { '201': { description: Created } } }
+  /work-evidence:
+    get: { summary: 查询工作证据, responses: { '200': { description: OK } } }
+    post: { summary: 写入工作证据, responses: { '201': { description: Created } } }
+  /money-events:
+    get: { summary: 查询金额事实, responses: { '200': { description: OK } } }
+    post: { summary: 写入收入/支出/成本事实, responses: { '201': { description: Created } } }
+  /results:
+    get: { summary: 查询结果事实, responses: { '200': { description: OK } } }
+    post: { summary: 写入结果事实, responses: { '201': { description: Created } } }
+  /events:
+    get: { summary: 查询统一业务事件, responses: { '200': { description: OK } } }
+    post: { summary: 写入统一业务事件, responses: { '201': { description: Created } } }
+  /knowledge-routes:
+    get: { summary: 查询知识/规则/帮助精准路由, responses: { '200': { description: OK } } }
+    post: { summary: 建立精准知识路由, responses: { '201': { description: Created } } }
+  /ai-executions:
+    get: { summary: 查询AI执行记录, responses: { '200': { description: OK } } }
+    post: { summary: 记录AI办公室执行, responses: { '201': { description: Created } } }
+  /time-summary:
+    get:
+      summary: 按人员汇总每日有效工作时间
+      parameters:
+        - { in: query, name: personId, required: true, schema: { type: string } }
+        - { in: query, name: from, schema: { type: string, format: date } }
+        - { in: query, name: to, schema: { type: string, format: date } }
+      responses:
+        '200': { description: OK }
+  /people/{personId}/work-summary:
+    get:
+      summary: 人才之家/工作之家共享的个人工作证据摘要
+      parameters:
+        - { in: path, name: personId, required: true, schema: { type: string } }
+      responses:
+        '200': { description: OK }
+  /ai-secretary/status:
+    get:
+      summary: 获取AI秘书Provider、模型、岗位AI办公室和Tool Layer状态
+      responses:
+        '200': { description: OK }
+  /ai-secretary/execute:
+    post:
+      summary: AI秘书受领目标；读取/分析可以直接执行，写入动作仅产生待确认方案
+      responses:
+        '200': { description: OK }
+        '400': { description: Invalid objective }
+  /ai-secretary/confirm:
+    post:
+      summary: 由已认证人类负责人确认AI秘书提出的写入动作
+      responses:
+        '200': { description: Confirmed }
+        '401': { description: Human confirmation required }

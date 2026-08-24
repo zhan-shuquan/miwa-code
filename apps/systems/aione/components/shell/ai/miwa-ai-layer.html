@@ -1,0 +1,81 @@
+<div class="miwa-ai-layer" id="miwa-ai-layer" data-mode="drawer" hidden>
+  <div class="miwa-ai-layer__backdrop" data-miwa-ai-action="close" aria-hidden="true"></div>
+
+  <section class="miwa-ai-panel" role="dialog" aria-modal="true" aria-labelledby="miwa-ai-title" data-miwa-ai-shell="flex-v1.9.7">
+    <header class="miwa-ai-panel__header">
+      <div class="miwa-ai-identity">
+        <span class="miwa-ai-brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 36 36" focusable="false">
+            <path class="miwa-ai-brand-mark__m" d="M6 26V10l6.5 9L18 10l5.5 9L30 10v16" />
+            <circle class="miwa-ai-brand-mark__core" cx="18" cy="8" r="2.8" />
+          </svg>
+        </span>
+        <span class="miwa-ai-identity__copy">
+          <span class="miwa-ai-identity__kicker">AIONE 智能能力层</span>
+          <strong id="miwa-ai-title">美和AI</strong>
+        </span>
+      </div>
+
+      <div class="miwa-ai-panel__header-actions">
+        <button class="miwa-ai-icon-button" id="miwa-ai-expand" type="button" data-miwa-ai-action="toggle-workspace" title="展开AI工作区" aria-label="展开AI工作区">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5M3 8l6-5M21 8l-6-5M3 16l6 5M21 16l-6 5"/></svg>
+        </button>
+        <button class="miwa-ai-icon-button" type="button" data-miwa-ai-action="close" title="关闭美和AI" aria-label="关闭美和AI">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="miwa-ai-contextbar">
+      <span class="miwa-ai-contextbar__label">当前上下文</span>
+      <strong id="miwa-ai-current-context">当前页面</strong>
+      <span class="miwa-ai-contextbar__route" id="miwa-ai-current-route">#/selection</span>
+    </div>
+
+    <div class="miwa-ai-panel__body">
+      <section class="miwa-ai-recommendations" aria-labelledby="miwa-ai-recommendations-title">
+        <div class="miwa-ai-section-heading">
+          <div><span>按当前页面推荐</span><strong id="miwa-ai-recommendations-title">你可以让美和AI</strong></div>
+          <small>能力随业务上下文动态变化</small>
+        </div>
+        <div class="miwa-ai-suggestion-grid" id="miwa-ai-suggestion-grid"></div>
+      </section>
+
+      <section class="miwa-ai-workarea" aria-label="美和AI工作区">
+        <div class="miwa-ai-runtime-row">
+          <span class="miwa-ai-runtime-dot" aria-hidden="true"></span>
+          <span id="ai-secretary-runtime-status" data-tone="neutral">美和AI已就绪</span>
+        </div>
+        <div class="miwa-ai-thread" id="ai-secretary-thread" aria-live="polite">
+          <article class="ai-secretary-message is-assistant miwa-ai-welcome">
+            <strong>美和AI</strong>
+            <div class="ai-secretary-message__body">已准备读取当前页面与业务上下文。你可以直接告诉我想分析、检查、生成或执行什么。</div>
+          </article>
+        </div>
+        <div class="miwa-ai-proposals" id="ai-secretary-proposals"></div>
+      </section>
+    </div>
+
+    <footer class="miwa-ai-composer-shell">
+      <div class="miwa-ai-composer-tools">
+        <button type="button" class="miwa-ai-composer-chip" data-miwa-ai-tool="attach" title="后续接入文件、商品、订单等对象">
+          <span aria-hidden="true">＋</span><span>添加</span>
+        </button>
+        <span class="miwa-ai-composer-auto" title="能力由当前业务上下文自动匹配">
+          <span aria-hidden="true">✦</span><span>能力自动匹配</span>
+        </span>
+        <span class="miwa-ai-composer-context" id="miwa-ai-composer-context">当前页面</span>
+      </div>
+      <div class="miwa-ai-composer">
+        <textarea id="ai-secretary-command-input" rows="1" placeholder="告诉美和AI你想做什么……" aria-label="给美和AI布置任务"></textarea>
+        <button id="ai-secretary-send" class="miwa-ai-send" type="button" aria-label="发送给美和AI">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>
+        </button>
+      </div>
+      <div class="miwa-ai-composer-foot">
+        <span>美和AI可调用当前业务上下文；关键写入仍需人类确认。</span>
+        <button type="button" data-miwa-ai-action="open-office">进入AI办公室 →</button>
+      </div>
+    </footer>
+  </section>
+</div>

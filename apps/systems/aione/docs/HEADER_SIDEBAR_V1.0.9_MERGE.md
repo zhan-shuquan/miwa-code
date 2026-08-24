@@ -1,3 +1,5 @@
+> **DEPRECATED / 历史资料（2026-08-24）**：本文涉及Sidebar / Aside的规则已被 `AIONE_SIDEBAR_ASIDE_LOCK_V1.0.md` 取代。凡与新标准冲突的内容不得继续作为开发依据。
+
 # AIONE Header + Sidebar 合并基线 V1.0.10
 
 状态：CANDIDATE｜2026-08-21

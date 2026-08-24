@@ -11,6 +11,7 @@ import { renderMiwaNineElements } from "../components/miwa-nine-elements.js";
 import { bindHorizontalRails } from "../components/horizontal-rail.js";
 import { loadContentObjects, createContentObject, importContentObjects } from "../data/content-object-store.js";
 import { getActiveSystemParameters } from "../shell/system-settings.js";
+import { coerceFieldValue, getHtmlInputType, validateObjectByFields } from "../fields/field-standard.js";
 
 const esc = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" }[char]));
 const fmtDate = (value) => value ? new Date(value).toLocaleString("zh-CN", { month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" }) : "—";
@@ -32,13 +33,11 @@ function parseCsv(text) {
   return rows.map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] ?? ""])));
 }
 
-function downloadCsv(filename, rows) {
-  const fields = [
-    ["标题","title"],["类型","type"],["状态","status"],["版本","version"],["负责人","owner"],["摘要","summary"],["链接类型","linkType"],["链接","url"]
-  ];
+function downloadCsv(filename, rows, fields = []) {
+  const exportFields = fields.filter((field) => !["body"].includes(field.key));
   const quote = (value) => `"${String(value ?? "").replaceAll('"','""')}"`;
-  const lines = [fields.map(([label]) => quote(label)).join(",")];
-  rows.forEach((row) => lines.push(fields.map(([, key]) => quote(row[key])).join(",")));
+  const lines = [exportFields.map((field) => quote(field.label)).join(",")];
+  rows.forEach((row) => lines.push(exportFields.map((field) => quote(row[field.key])).join(",")));
   const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type:"text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob); const anchor = document.createElement("a");
   anchor.href = url; anchor.download = filename; document.body.appendChild(anchor); anchor.click(); anchor.remove(); URL.revokeObjectURL(url);
@@ -57,23 +56,60 @@ function getHashQuery() {
   return new URLSearchParams(index >= 0 ? hash.slice(index + 1) : "");
 }
 
+function createContentReader(portal) {
+  if (!portal) return null;
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = `
+    <dialog class="miwa-content-reader" data-content-reader>
+      <header>
+        <div>
+          <small data-content-reader-type>知识内容</small>
+          <h2 data-content-reader-title>内容标题</h2>
+          <div class="miwa-content-reader__meta" data-content-reader-meta></div>
+        </div>
+        <button type="button" data-content-reader-close aria-label="关闭">×</button>
+      </header>
+      <article class="miwa-content-reader__body" data-content-reader-body></article>
+      <footer><button type="button" class="ghost" data-content-reader-close>关闭</button></footer>
+    </dialog>`;
+  const dialog = wrapper.firstElementChild;
+  portal.appendChild(dialog);
+  const title = dialog.querySelector("[data-content-reader-title]");
+  const type = dialog.querySelector("[data-content-reader-type]");
+  const meta = dialog.querySelector("[data-content-reader-meta]");
+  const body = dialog.querySelector("[data-content-reader-body]");
+  dialog.querySelectorAll("[data-content-reader-close]").forEach((button) => button.addEventListener("click", () => dialog.close()));
+  return {
+    dialog,
+    open(item = {}) {
+      title.textContent = item.title || "知识内容";
+      type.textContent = item.type || "知识内容";
+      meta.textContent = [item.status, item.version, item.owner].filter(Boolean).join(" · ");
+      body.textContent = item.body || item.summary || "暂无正文。";
+      if (!dialog.open) dialog.showModal();
+    }
+  };
+}
+
 function createContentDialog(portal, def, types) {
   if (!portal) return null;
+  const lifecycle = ["讨论中","验证中","正式锁定","待确认","废止"];
+  const linkTypes = [{value:"internal",label:"AIONE内部内容"},{value:"external",label:"外部来源"}];
+  const renderField = (field) => {
+    const required = field.required ? "required" : "";
+    const full = field.ui?.span === "full" ? ' style="grid-column:1/-1"' : "";
+    if (field.key === "type") return `<label${full}><span>${esc(field.label)}${field.required?" *":""}</span><select name="${esc(field.key)}" ${required}><option value="">请选择</option>${types.map((x)=>`<option>${esc(x)}</option>`).join("")}</select></label>`;
+    if (field.key === "status") return `<label${full}><span>${esc(field.label)}</span><select name="status">${lifecycle.map((x)=>`<option>${esc(x)}</option>`).join("")}</select></label>`;
+    if (field.key === "linkType") return `<label${full}><span>${esc(field.label)}</span><select name="linkType">${linkTypes.map((x)=>`<option value="${esc(x.value)}">${esc(x.label)}</option>`).join("")}</select></label>`;
+    if (field.ui?.input === "textarea") return `<label class="miwa-content-textarea"${full}><span>${esc(field.label)}${field.required?" *":""}</span><textarea name="${esc(field.key)}" rows="${Number(field.ui?.rows)||3}" ${required} placeholder="${esc(field.ui?.placeholder||"")}"></textarea></label>`;
+    return `<label${full}><span>${esc(field.label)}${field.required?" *":""}</span><input name="${esc(field.key)}" type="${esc(getHtmlInputType(field))}" ${required}></label>`;
+  };
   portal.innerHTML = `
     <dialog class="miwa-content-dialog" data-content-create-dialog>
       <form method="dialog" data-content-create-form>
-        <header><div><small>统一内容入口</small><h2>${esc(def.createLabel || "新建内容")}</h2><p>人工与AI秘书使用同一内容对象；页面只调用标准组件。</p></div><button type="button" data-content-dialog-close aria-label="关闭">×</button></header>
-        <div class="miwa-content-form-grid">
-          <label><span>标题 *</span><input name="title" required></label>
-          <label><span>类型 *</span><select name="type" required><option value="">请选择</option>${types.map((x) => `<option>${esc(x)}</option>`).join("")}</select></label>
-          <label><span>状态</span><select name="status"><option>讨论中</option><option>验证中</option><option>正式锁定</option><option>待确认</option><option>废止</option></select></label>
-          <label><span>版本</span><input name="version" placeholder="例如 V1.0"></label>
-          <label><span>负责人</span><input name="owner"></label>
-          <label><span>链接类型</span><select name="linkType"><option value="internal">AIONE内部内容</option><option value="external">外部来源</option></select></label>
-          <label style="grid-column:1/-1"><span>外部链接（可选）</span><input name="url" type="url" placeholder="https://..."></label>
-        </div>
-        <label class="miwa-content-textarea"><span>摘要</span><textarea name="summary" rows="3" placeholder="简要说明这份内容是什么"></textarea></label>
-        <label class="miwa-content-textarea"><span>正文 / 草稿</span><textarea name="body" rows="8" placeholder="后续内容详情页继续读取同一个内容对象"></textarea></label>
+        <header><div><small>统一内容入口</small><h2>${esc(def.createLabel || "新建内容")}</h2><p>人工与AI秘书使用同一内容对象与同一字段标准；页面只调用标准组件。</p></div><button type="button" data-content-dialog-close aria-label="关闭">×</button></header>
+        <div class="miwa-content-form-grid">${def.fields.filter((field)=>field.ui?.input!=="textarea").map(renderField).join("")}</div>
+        ${def.fields.filter((field)=>field.ui?.input==="textarea").map(renderField).join("")}
         <footer><button type="button" class="ghost" data-content-dialog-close>取消</button><button type="submit" class="primary">保存</button></footer>
       </form>
     </dialog>
@@ -94,13 +130,15 @@ export async function initContentPage() {
 
   const params = getActiveSystemParameters?.() || {};
   const configured = params.dictionaries?.[def.typeDictionaryKey];
-  const types = (Array.isArray(configured) && configured.length ? configured : def.types) || [];
+  const configuredTypes = (Array.isArray(configured) && configured.length ? configured : def.types) || [];
+  const types = [...new Set([...(def.requiredTypes || []), ...configuredTypes])];
   let items = loadContentObjects(routeId, def.seedObjects || []);
   let activeType = "";
   let toastTimer = null;
   const focusParams = getHashQuery();
   const focusId = focusParams.get("focus") || "";
   const anchorId = focusParams.get("anchor") || "";
+  const requestedType = focusParams.get("type") || "";
 
   const base = await mountLevel2EmptyBase(entry, { routeId, recipeId:"content", pageKind:"content" });
   renderPageHeader(base.pageHeader, {
@@ -153,7 +191,7 @@ export async function initContentPage() {
     onStateChange: () => renderItems(),
     onImportRequest: (fileInput) => fileInput?.click(),
     onExportRequest: () => {
-      downloadCsv(`${def.title}_${new Date().toISOString().slice(0,10)}.csv`, getVisibleItems());
+      downloadCsv(`${def.title}_${new Date().toISOString().slice(0,10)}.csv`, getVisibleItems(), def.fields);
       showToast("已按当前筛选与排序结果导出CSV");
     }
   });
@@ -171,6 +209,8 @@ export async function initContentPage() {
 
   renderMiwaNineElements(base.nineElements, { context:def.title });
   const dialog = createContentDialog(base.portal, def, types);
+  const reader = createContentReader(base.portal);
+  if (requestedType && types.includes(requestedType)) workspace.setFilterOptions(types, requestedType);
 
   function showToast(text) {
     const node = dialog?.toast; if (!node) return;
@@ -252,7 +292,8 @@ export async function initContentPage() {
     if (action?.dataset.objectAction === "detail") {
       const id = action.dataset.objectId;
       const item = items.find((row) => String(row.id) === String(id));
-      showToast(anchorId && id === focusId ? `已精准定位：${item?.title || "知识"} / ${anchorId}` : "内容详情页将在三级页面阶段继续接入；当前已保留稳定知识ID与锚点路由。");
+      if (item?.body) reader?.open(item);
+      else showToast(anchorId && id === focusId ? `已精准定位：${item?.title || "知识"} / ${anchorId}` : "当前内容尚未补充正文；已保留稳定知识ID与锚点路由。");
     }
   });
 
@@ -260,7 +301,10 @@ export async function initContentPage() {
   dialog?.dialog?.querySelectorAll("[data-content-dialog-close]").forEach((button) => button.addEventListener("click", () => dialog.dialog.close()));
   dialog?.form?.addEventListener("submit", (event) => {
     event.preventDefault();
-    const fd = new FormData(event.currentTarget); const obj = Object.fromEntries(fd.entries());
+    const fd = new FormData(event.currentTarget); const obj = {};
+    def.fields.forEach((field) => { obj[field.key] = coerceFieldValue(field, fd.get(field.key) ?? ""); });
+    const validation = validateObjectByFields(def.fields, obj);
+    if (!validation.ok) { showToast(validation.errors[0] || "字段校验未通过"); return; }
     const result = createContentObject(routeId, obj, def.seedObjects || []); items = result.items;
     dialog.dialog.close(); event.currentTarget.reset(); renderAll(); showToast("内容已保存到AIONE统一内容对象");
   });
@@ -274,14 +318,17 @@ export async function initContentPage() {
         const book = window.XLSX.read(await file.arrayBuffer(), { type:"array" });
         rows = window.XLSX.utils.sheet_to_json(book.Sheets[book.SheetNames[0]], { defval:"" });
       } else throw new Error("仅支持CSV/XLSX");
-      const mapped = rows.map((r) => ({ title:r["标题"]||r.title, type:r["类型"]||r.type, status:r["状态"]||r.status, version:r["版本"]||r.version, owner:r["负责人"]||r.owner, summary:r["摘要"]||r.summary, linkType:r["链接类型"]||r.linkType, url:r["链接"]||r.url })).filter((r)=>r.title);
+      const aliasMap = new Map();
+      def.fields.forEach((field) => [field.label,field.key,field.fieldCode,...(field.importAliases||[])].filter(Boolean).forEach((alias)=>aliasMap.set(String(alias).trim(),field)));
+      const mapped = rows.map((r) => { const obj={}; Object.entries(r||{}).forEach(([key,value])=>{const field=aliasMap.get(String(key).trim());if(field)obj[field.key]=coerceFieldValue(field,value);}); return obj; }).filter((r)=>r.title);
       const result = importContentObjects(routeId, mapped, def.seedObjects || []); items = result.items; renderAll(); showToast(`导入完成：新增 ${result.added} 条`);
     } catch (error) { showToast(`导入失败：${error.message || error}`); }
     finally { workspace.nodes.importFile.value = ""; }
   });
 
   function renderAll() { renderTypes(); renderMetrics(); renderItems(); renderRelated(); bindHorizontalRails(base.root); }
-  window.dispatchEvent(new CustomEvent("aione:page-ai-context", { detail:def.ai || { title:"AI秘书｜内容辅助", text:"可协助整理当前内容。" } }));
+  const asideItems=(def.auxiliary||[]).slice(0,3).map((item)=>({label:item.title||"关联信息",value:item.text||"",route:item.route||""}));
+  window.dispatchEvent(new CustomEvent("aione:page-aside-context", { detail:{state:asideItems.length?"standard":"light",kicker:"当前内容",title:def.title||"内容页面",text:def.description||"",items:asideItems} }));
   renderAll();
   return true;
 }

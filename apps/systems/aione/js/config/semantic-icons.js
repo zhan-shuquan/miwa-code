@@ -15,6 +15,8 @@ const ICON_PATHS = Object.freeze({
   shared: '<circle cx="7" cy="12" r="3"></circle><circle cx="17" cy="7" r="3"></circle><circle cx="17" cy="17" r="3"></circle><path d="m9.7 10.6 4.6-2.2M9.7 13.4l4.6 2.2"></path>',
   target: '<circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="4"></circle><path d="m12 12 7-7M16 5h3v3"></path>',
   people: '<circle cx="9" cy="8" r="3"></circle><circle cx="17" cy="10" r="2.5"></circle><path d="M3 20c.4-4 2.4-6 6-6s5.6 2 6 6M15 15c3.4 0 5.3 1.7 5.8 5"></path>',
+  customer: '<circle cx="9" cy="8" r="3"></circle><path d="M3 20c.4-4 2.4-6 6-6s5.6 2 6 6"></path><path d="M16 8h5M18.5 5.5V10.5"></path>',
+  supplier: '<path d="M4 8h10v10H4zM14 11h4l3 3v4h-7z"></path><path d="M7 8V5h4v3M7 19a2 2 0 1 0 0 .01M18 19a2 2 0 1 0 0 .01"></path>',
   opportunity: '<path d="M9 18h6M10 21h4"></path><path d="M8 14.5A6 6 0 1 1 16 14.5c-1.1.8-1.5 1.6-1.5 2.5h-5c0-.9-.4-1.7-1.5-2.5Z"></path>',
   standard: '<path d="M5 3h11l3 3v15H5z"></path><path d="M15 3v4h4M8 11h8M8 15h8M8 7h3"></path>',
   database: '<ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path>',

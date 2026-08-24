@@ -1,3 +1,194 @@
+## 2026-08-24 | V1.9.17 美和AI Context Router Candidate
+- Added one AIONE AI Context Builder covering business, workbench, page, current business object, state, user and current object data.
+- Added a capability registry and Context Router so employees use one “美和AI”; AI talent, AI job, Skill, Agent, model and Provider remain internal classification/orchestration concepts.
+- Product-opportunity detail pages now auto-route four Selection capabilities: analyze opportunity, check profit/risk, judge sampling need and generate selection summary.
+- Current opportunity context reuses AIONE source, workflow, cost/pricing, shipping, sampling and decision evidence; deterministic system calculations are preferred over model re-estimation.
+- Replaced the employee-facing “技能/工具” choice with passive “能力自动匹配”.
+- Hid provider/model names from normal ready-state UI while retaining diagnostics for development.
+- Preserved the existing Proposal Bridge and human-confirmation boundary; sampling advice does not silently change business state.
+
+## 2026-08-24 | V1.9.16 MIWA AI Proposal Bridge Candidate
+- Added a Backend Proposal Bridge so explicit work-item creation intent becomes a structured `create_work_item` proposal even when the first live-model turn only returns prose.
+- Added Backend pending-proposal state with generated proposal ids, `waiting_confirmation` status, actor/office ownership checks and a one-hour TTL.
+- Added natural-language human-confirmation fallback for phrases such as confirmation/create or confirmation/execute when a matching pending proposal exists.
+- Confirm requests now prefer `proposalId` and reject expired/mismatched staged proposals instead of trusting a client-edited payload.
+- Kept V1.9.15 database-first/local-AIONE fallback semantics after human confirmation.
+- Added safe Markdown-lite rendering for AI headings, bold text, ordered lists and bullet lists without interpreting raw HTML.
+- Preserved the independent AI Layer, current page business context, OpenAI Provider Layer and `/status -> /execute -> /confirm` safety boundary.
+
+## 2026-08-24 | V1.9.13 美和AI Model Provider Layer Candidate
+- Added a provider-neutral Backend `Model Provider Layer`; AI orchestration no longer imports OpenAI directly.
+- Preserved deterministic Preview mode and added `AIONE_AI_MODE=live` + `AIONE_AI_PROVIDER` selection with backward compatibility for the earlier `openai` mode.
+- Kept OpenAI as the first live provider through the Responses API while leaving the business orchestration vendor-neutral.
+- Added `START_MIWA_AI_REAL_MODEL.cmd/.ps1`; local API key entry is hidden and kept in Backend process memory only.
+- Added `VERIFY_MIWA_AI_REAL_MODEL.cmd/.ps1` for non-generative provider/runtime status verification.
+- Added `get_current_page_business_context`; the current Selection Workbench exposes UI-source metrics, stages, types and product-opportunity summaries to the AI Tool Layer.
+- Strengthened model instructions: page-specific business answers must read current-page evidence instead of guessing from page titles.
+- Preserved `/status -> /execute -> /confirm` and human confirmation for writes.
+
+## 2026-08-24 | V1.9.12 MIWA AI Windows Launcher Hotfix Candidate
+- Fixed the Windows CMD parsing failure seen as `EnableExtensions is not recognized` before Backend verification could start.
+- Replaced complex CMD logic with minimal ASCII + CRLF wrappers that delegate to PowerShell.
+- Added `START_MIWA_AI_RUNTIME_AND_VERIFY.ps1`, `START_AI_SECRETARY_PREVIEW.ps1`, and `SETUP_NODE_LTS.ps1`.
+- All PowerShell launcher files are UTF-8 BOM + CRLF for Windows PowerShell 5.1 compatibility.
+- Updated `.gitattributes` and `.editorconfig` so Windows launcher line endings are preserved.
+- The existing AI runtime endpoints and confirmation boundary remain unchanged: `/status -> /execute -> /confirm`.
+
+## 2026-08-24 | V1.9.11 美和AI Runtime Chain Verification Candidate
+- 在V1.9.10已经验证“美和AI可稳定打开并完整渲染”的基础上，正式进入周六既有AI执行链的端到端验证。
+- 新增根目录 `START_MIWA_AI_RUNTIME_AND_VERIFY.cmd`：Windows一键启动本地Preview Backend并调用验证脚本。
+- 新增 `VERIFY_MIWA_AI_RUNTIME.ps1`：依次验证 `/status → /execute → /confirm`，其中`/execute`必须生成待确认工作建议，`/confirm`必须由本地人类负责人上下文确认。
+- Preview模式且数据库未连接时允许返回`previewLocalAction`；数据库可用时允许真实写入测试工作事项。两者均验证“AI不能绕过人类确认”的执行边界。
+- 美和AI前端每次重新打开时重新检测Backend状态；Backend未连接提示直接指向一键验证脚本。
+- Sidebar / Aside / Main / Header结构、本轮已通过的AI Layer、AI Backend / Tool Layer / Provider架构均不重建。
+
+## 2026-08-24 | V1.9.10 美和AI Hard Entry Hotfix Candidate
+- 修复Windows/Live Server下“美和AI”按钮可见但点击无响应的残留问题。
+- 新增不依赖ES Module初始化成功与否的Hard Entry Bridge：点击Header后先强制打开独立AI Layer，再做增强初始化。
+- 美和AI打开动作不再被Route Context、推荐能力、AI Client或Backend初始化异常阻断。
+- 对AI Layer JS、AI Client JS和AI CSS增加独立版本URL，解决嵌套ES Module/@import未随index版本参数刷新导致的旧缓存继续生效问题。
+- 周六已接入的AI Backend / Tool Layer / execute / confirm链路保持不变。
+
+## 2026-08-24 | V1.9.7 美和AI Render Hotfix Candidate
+- Fixed the Windows preview defect where the independent 美和AI panel could show only its header while Context, Body and Composer appeared blank.
+- Replaced the AI panel outer four-row CSS Grid with a vertical Flex shell: Header → Context → Body → Composer.
+- Kept Workspace layout changes inside Body only, so expansion no longer risks collapsing outer AI sections.
+- Added safe route-context fallback, required-DOM validation, and non-fatal AI Client initialization handling.
+- Preserved the V1.9.6 independent AI-layer architecture and the existing AI Secretary Backend / Tool Layer / human-confirmation endpoints.
+
+## 2026-08-24 | V1.9.6 美和AI Independent Layer Candidate
+- Added a dedicated global 美和AI entry between Global Search and Notification; Help and Settings remain after it.
+- Added the same ordered AI entry to the mobile top bar.
+- Added an independent `#miwa-ai-layer-host`; AI is not nested in Sidebar, Main or Aside.
+- Implemented Drawer → AI Workspace → AI Office progressive interaction.
+- Added AIONE-specific M + red intelligent-core mark for the first 美和AI visual identity candidate.
+- Added route-aware AI capability suggestions and current-page context display.
+- Reused the validated AI Secretary Backend / Tool Layer / human-confirmation execution path instead of building a second AI backend.
+- Renamed user-facing AI chat identity to “美和AI” while keeping internal API compatibility.
+- Preserved V1.9.5 Universal Sidebar and Contextual Aside lock rules without reintroducing AI into Aside.
+
+## 2026-08-24 | V1.9.5 Sidebar + Aside Lock Candidate
+- Formally superseded all conflicting historical Sidebar / Aside rules; added one current lock standard and a deprecation index.
+- Rebuilt desktop Sidebar as a Universal Sidebar: current-space identity + tree/accordion Navigation + optional small Quick Actions dock.
+- Removed desktop business switching from Sidebar; Header remains the business-context switch owner.
+- Business Sidebar keeps all workbenches visible and auto-expands only the current workbench; content/tool/system routes reuse the same visual language.
+- Replaced the old lower secondary-navigation block with 0-3 high-frequency start actions (hard cap 4); Selection validates New Opportunity and Batch Import.
+- Rebuilt Aside as a pure Contextual Aside with hidden/light/standard states.
+- Removed AI Secretary chat/runtime/command/AI Office controls from Aside and stopped Global Shell from initializing the AI Secretary client through Aside.
+- Replaced active `aione:page-ai-context` runtime events with `aione:page-aside-context`.
+- Preserved AI Backend / Tool Layer / historical AI Office assets for the later independent 美和AI Layer phase.
+
+## 2026-08-24 | V1.9.4 Smart Header Lock Candidate
+- Promoted the Header from a menu bar to AIONE's global context/dispatch brain.
+- Locked the H1 context core as Company -> Business -> User -> Work -> Time.
+- Restored Store Home as a first-class H1 home and kept stable adjacency for Talent/AI, Customer/Supplier, and Category/Product/Store.
+- Added an overflow-aware horizontal rail for H1 core homes; controls stay hidden when no overflow exists.
+- Reframed H2 as Quick Access only: no Store Home/Application Home/shared-resource group labels are shown.
+- H2 shortcut groups are generated from metadata and separated only by thin dividers; overflow uses horizontal browse controls.
+- Replaced the user-facing All Resources entry with a simple apps icon + More entry that opens the Quick Access level-2 page.
+- Kept Shared Resources as an internal registry/management concept only; internal/external remains backend metadata and is not forced into the shortcut UI.
+- Updated active-route priority so a direct H2 shortcut such as ERP is highlighted before any parent directory route.
+- Locked H4 to Today Impression | Important Schedule | Important Notice.
+- Updated Header knowledge baseline to V1.2 and added V1.9.4 release-gate tests.
+
+## 2026-08-24｜V1.9.3 Header核心之家 + 共享资源快捷层 Candidate
+- H1新增人才之家、客户之家、供应商之家并按对象关系重排；人才之家与AI之家相邻，客户之家与供应商之家相邻。
+- H1移除共享之家；店铺之家、应用之家不再作为Header分类入口。
+- H2改为统一共享资源快捷层：资源元数据自动分组，仅用分隔符区分。
+- 新增ERP内部应用高频快捷入口；HR作为内部应用登记并支持headerHidden隐藏。
+- 共享资源产品形态统一为应用/工具/知识/代码/数据/模板/连接/服务/其他，内部/外部作为属性。
+- 新增“全部资源”入口与供应商之家页面/字段基础。
+## V1.9.2 CANDIDATE - 2026-08-24
+
+- 保持Header核心上下文链“公司 -> 事业 -> 人 -> 工作 -> 时间 -> Sidebar业务执行”不变。
+- Header共享之家组调整为：分类之家 -> 商品之家 -> AI之家 -> 分析之家 -> 知识之家 -> 共享之家。
+- 正式取消“帮助之家”；Desktop、Mobile与Footer帮助入口统一进入“知识之家 -> 帮助中心”。
+- 新增正式帮助文档《AIONE全局导航与页面上下文逻辑说明 V1.0》，稳定知识ID为`KNOW-AIONE-NAV-CONTEXT-V1`。
+- 知识之家新增“帮助中心”知识类型，并支持`?type=帮助中心`直接筛选。
+- 内容母版新增正文阅读器，正式知识可在AIONE内直接阅读。
+- 内容对象Store补充缺失seed合并机制，避免已有LocalStorage阻止新正式知识进入。
+- Sidebar第2阶段规则已写入正式知识，但本轮不改Sidebar代码，避免跨阶段混改。
+
+## V1.9.1 CANDIDATE - 2026-08-24
+
+- 执行AIONE全局架构优化第1阶段：先稳定Global Shell与Header，不扩具体工作台业务。
+- Header第一行上下文顺序正式收口为“公司 -> 事业 -> 人 -> 工作 -> 时间”，具体业务执行继续归属Sidebar。
+- 新增当前事业Header入口，并新增`platform-context.js`作为事业状态、路由识别和后续动态Sidebar/Aside的统一上下文契约。
+- 事业切换不再由Sidebar独立维护第二套LocalStorage；Header与Sidebar共享同一状态源。
+- Header核心共享入口收口为：分类之家 -> 商品之家 -> AI之家 -> 分析之家 -> 共享之家。
+- 客户之家、人才之家、收入之家、支出之家、知识之家保留Route与业务能力，但退出Header第一行堆叠。
+- 通知移动到全局工具区，不再打断“人 -> 工作之家 -> 美和日历”的工作上下文链。
+- 活动Header继续统一“工作之家”“分析之家”；今日印象移除节气/星座展示。
+- 移动端同步加入当前事业上下文，并保持工作之家 -> 美和日历顺序。
+- 新增V1.9.1专项验证；当前全部活动自动回归测试通过。
+- 当前容器Chromium受组织策略限制，无法访问127.0.0.1本地预览，因此浏览器视觉验收明确留给Windows + Live Server，不冒充已完成。
+
+## V1.9.0 CANDIDATE - 2026-08-23
+
+- 新增Google Cloud真实数据运行工程：Cloud SQL备份、Preflight Job、Migration Job、私有Cloud Run Backend和认证Smoke Test。
+- 新建`aione-backend-v190`作为验证目标，不覆盖现有`aione-backend`。
+- 云端默认关闭Preview Actor/System Writes，DB密码仅通过Secret Manager注入。
+- 数据库Preflight增强为同时检查既有4张主表、行数、目标Schema和已应用Migration。
+- 本轮不扩页面、不接真实OpenAI模型，先验证正式数据与Backend运行。
+
+# V1.7.0 CANDIDATE｜第6阶段：核心数据与后端基础｜2026-08-22
+
+- V1.6 Field Registry正式进入对象关系模型与PostgreSQL Schema阶段。
+- public.people继续作为唯一Person主数据；不复制人才表。
+- 新增Organization / Business / Position / Assignment，岗位与编制分离，任职历史可追溯。
+- 新增Object Registry / Object Relation，支持跨业务对象关系但不替代专业表。
+- 新增Work Item / Work Session / Work Evidence，为工作之家、人才之家和自动报告共享真实工作证据。
+- 新增Money Event / Result Fact，时间、钱、事、结果开始形成统一经营事实。
+- 新增Business Event、Knowledge Route、AI Execution最小底座。
+- 新增增量PostgreSQL迁移、Preflight与migration runner；不对现有people/product_opportunities等表做破坏性迁移。
+- 后端升级为模块化 `/api/v1`，保留选品Legacy API。
+- 新增个人时间汇总与工作证据汇总API、OpenAPI、事件契约、字段到DB映射。
+- 当前未对线上Cloud SQL执行迁移；必须先Preflight并人工确认。
+
+# V1.6.0 CANDIDATE｜第5阶段：字段标准化基础｜2026-08-22
+
+## 本轮定位
+
+- 从V1.5.0选品成熟业务迁移候选继续推进，不扩页面视觉和业务细节。
+- 建立独立Field Registry，把字段从页面定义中抽离。
+- 为下一阶段对象关系模型、PostgreSQL Schema、后端API与AIONE Tool Layer准备稳定业务语义。
+
+## 已完成
+
+1. 新增统一字段类型、字段标准核心与字段注册中心。
+2. 美和9要素定义独立为唯一配置，字段与组件共用。
+3. 13个标准业务页面改为 `fieldSchemaId → Field Registry`，页面定义不再保存字段数组。
+4. 美和之家/知识之家共用同一Content字段语义。
+5. 字段统一补齐 fieldCode、definition、dataType、nineElement、source、ownerRole、captureTiming、automation、validation、知识/规则/帮助路由、permission、history、event、ui、db建议。
+6. 新增统一系统审计字段：创建/更新人、时间、版本、来源系统、归档时间等。
+7. 标准业务母版与内容母版开始使用统一字段值转换、表单输入类型与校验。
+8. CSV/XLSX导入支持 label / key / fieldCode / importAliases。
+9. 选品批量导入通过Field Registry连接原详情存储键，保护V1.5成熟业务。
+10. 生成 `FIELD_CATALOG_V1.0.json` 机器可读快照。
+
+## 不做
+
+- 不建设正式数据库DDL。
+- 不一次补完ERP、HR、工资福利、调岗轮岗等具体字段。
+- 不修改测样旧页面。
+- 不重做选品业务流程。
+
+---
+
+# V1.5.0 CANDIDATE｜第4阶段：选品成熟业务迁移｜2026-08-22
+
+- 01选品工作台进入Legacy Migration：保留成熟选品业务与数据，只迁移页面基础设施。
+- 选品根页改为薄入口，正式调用唯一Level-2 Empty Base与`standard-business` Recipe。
+- 新增Selection Adapter，继续读取原`preview-opportunities`，不复制商品机会事实。
+- 新增共享TypeRail；FlowComponent支持节点Key、数量、当前态与点击筛选。
+- Universal Workspace升级为多条件筛选、排序、导入/导出、卡片/列表、3/4/6列、可选分页与标准状态。
+- Object Presenter新增共享`rich-media`卡片表达，选品不再维护独立卡片/列表HTML。
+- 保留直发选品/常规选品/产品开发、五段选品主流程、12条/页、新建/编辑详情与批量导入链路。
+- 活动`selection-workbench.css`只保留批量导入特有样式；旧选品页面JS/HTML/CSS移入`recovery/legacy-pages-v1.5`。
+- 标准业务母版同步改为调用共享TypeRail，避免选品形成新的特殊组件体系。
+- 新增V1.5选品迁移专项测试；全部活动JS语法、V1.4基础架构回归、路由/Global Shell、测样回归均通过。
+- 当前容器Chromium Headless因环境超时，浏览器运行/视觉验收仍需Windows + Live Server人工确认后才能正式锁定。
+
 # V1.4.0 CANDIDATE｜二级页面前三阶段收口
 
 - 唯一Level-2 Empty Base继续作为二级页面唯一底座。
@@ -722,3 +913,23 @@
 - Fixed missing shared CSS for the single-source `miwa-nine-elements` component.
 - Restored the standard Level-2 card, header, 9/9 status pill and nine-column element layout.
 - Added regression validation so component logic cannot ship without its shared styles again.
+
+## V1.9.8｜美和AI Entry Bridge Hotfix｜2026-08-24
+- 修复真实Windows/Live Server中Header“美和AI”点击无反应。
+- 入口改为document capture级事件委托，Desktop/Mobile统一，不依赖Header节点首次绑定时机。
+- 修复AI Layer一次DOM校验失败后被initialized永久锁死的问题。
+- AI Layer未挂载时自动等待并在挂载后打开。
+- Shell各区域初始化相互隔离，前序区域异常不再阻断美和AI。
+- 强制资源版本升级至V1.9.8，避免浏览器继续命中V1.9.7缓存。
+- AI Backend / Tool Layer / Aside锁定规则均未改变。
+
+
+## V1.9.10｜美和AI Self-Healing Layer Hotfix｜2026-08-24
+- 根据Windows/Live Server实测确认：V1.9.9已经解决“Header美和AI点击无反应”，入口层正式打通。
+- 新问题明确收敛为AI Layer正文DOM不完整：外壳/Header存在，但上下文、能力推荐、AI工作区与Composer可能未进入最终DOM。
+- 新增`REQUIRED_LAYER_IDS`与`LAYER_BODY_TEMPLATE`，打开美和AI后先检查必要结构。
+- 若检测到正文缺失，`repairLayerStructure()`会立即重建Context / Suggestions / Work Area / Composer，并写入`data-miwa-ai-repaired=true`诊断标记。
+- 自愈完成后才初始化AI Client，避免前端结构异常被误判为Backend异常。
+- 保留V1.9.9 Hard Entry Bridge；美和AI仍独立于Sidebar / Main / Aside / Footer。
+- 原AI Backend、Tool Layer、人类确认机制及`/status → /execute → /confirm`接口不重接、不删除。
+- 新增V1.9.10专项回归测试，并重新通过全部现有正式验证。

@@ -11,6 +11,7 @@
 @import url("./shell/header.css");
 @import url("./shell/primary-navigation.css");
 @import url("./shell/aside.css");
+@import url("./shell/miwa-ai-layer.css?v=20260824-v1.9.17-ai-context-router");
 @import url("./shell/footer.css");
 
 /* ========================================

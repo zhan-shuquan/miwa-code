@@ -1,5 +1,11 @@
-import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260822-v1.3.0-level2-empty-base-candidate";
+import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260824-v1.9.5-sidebar-aside-lock-candidate";
 import { getRouteDefinition } from "../config/route-registry.js";
+import {
+  getBusinessSpaceOptions,
+  getCurrentBusinessSpace,
+  setCurrentBusinessSpace,
+  syncPlatformContextFromRoute
+} from "./platform-context.js";
 
 /* ========================================
    MIWA System Header｜美和システム全局Header
@@ -7,17 +13,6 @@ import { getRouteDefinition } from "../config/route-registry.js";
    注記：画面上の権限制御はサーバー側権限検証の代替ではない。
 ======================================== */
 
-const SOLAR_TERM_NAMES = [
-  "小寒", "大寒", "立春", "雨水", "惊蛰", "春分", "清明", "谷雨",
-  "立夏", "小满", "芒种", "夏至", "小暑", "大暑", "立秋", "处暑",
-  "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪", "冬至"
-];
-
-const SOLAR_TERM_INFO = [
-  0, 21208, 42467, 63836, 85337, 107014, 128867, 150921,
-  173149, 195551, 218072, 240693, 263343, 285989, 308563, 331033,
-  353350, 375494, 397447, 419210, 440795, 462224, 483532, 504758
-];
 
 function getCurrentRoute() {
   const hash = window.location.hash.replace(/^#\/?/, "");
@@ -89,21 +84,6 @@ function getTimeZoneDateParts(timeZone) {
   return map;
 }
 
-function getZodiac(month, day) {
-  const signs = [
-    ["摩羯座", 1, 20], ["水瓶座", 2, 19], ["双鱼座", 3, 21], ["白羊座", 4, 20],
-    ["金牛座", 5, 21], ["双子座", 6, 22], ["巨蟹座", 7, 23], ["狮子座", 8, 23],
-    ["处女座", 9, 23], ["天秤座", 10, 24], ["天蝎座", 11, 23], ["射手座", 12, 22],
-    ["摩羯座", 12, 32]
-  ];
-
-  for (const [name, signMonth, signDay] of signs) {
-    if (month < signMonth || (month === signMonth && day < signDay)) return name;
-  }
-
-  return "摩羯座";
-}
-
 function getLunarText(date) {
   try {
     return new Intl.DateTimeFormat("zh-CN-u-ca-chinese", {
@@ -115,43 +95,6 @@ function getLunarText(date) {
   }
 }
 
-function solarTermDate(year, index) {
-  const base = Date.UTC(1900, 0, 6, 2, 5);
-  const millis = 31556925974.7 * (year - 1900) + SOLAR_TERM_INFO[index] * 60000;
-  return new Date(base + millis);
-}
-
-function getSolarTermText(date) {
-  const year = date.getFullYear();
-  const list = [];
-
-  for (let targetYear = year - 1; targetYear <= year + 1; targetYear += 1) {
-    for (let index = 0; index < 24; index += 1) {
-      list.push({ name: SOLAR_TERM_NAMES[index], date: solarTermDate(targetYear, index) });
-    }
-  }
-
-  list.sort((a, b) => a.date - b.date);
-
-  const now = date.getTime();
-  let current = null;
-  let next = null;
-
-  for (const item of list) {
-    if (item.date.getTime() <= now) current = item;
-    if (item.date.getTime() > now) {
-      next = item;
-      break;
-    }
-  }
-
-  if (!current || !next) return "--";
-
-  const days = Math.max(0, Math.ceil((next.date.getTime() - now) / 86400000));
-  return days <= 1
-    ? `${current.name} · 明日${next.name}`
-    : `${current.name} · ${days}天后${next.name}`;
-}
 
 function weatherTextFromCode(code) {
   const map = {
@@ -222,6 +165,92 @@ export function initHeader(initialConfig = {}) {
     }
   }
 
+  function createBusinessMenuItem(space, scope) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "miwa-business-menu__item";
+    button.dataset.businessSpace = space.id;
+    button.setAttribute("role", "menuitemradio");
+
+    const current = getCurrentBusinessSpace();
+    const active = current?.id === space.id;
+    button.setAttribute("aria-checked", String(active));
+    button.classList.toggle("is-active", active);
+
+    const label = document.createElement("span");
+    label.textContent = space.label;
+    const mark = document.createElement("span");
+    mark.className = "miwa-business-menu__check";
+    mark.textContent = active ? "✓" : "";
+    button.append(label, mark);
+
+    button.addEventListener("click", () => {
+      setCurrentBusinessSpace(space.id, { navigate: true, reason: `header-${scope}` });
+      closeBusinessMenus();
+    });
+
+    return button;
+  }
+
+  function renderBusinessContext() {
+    const current = getCurrentBusinessSpace();
+    if (!current) return;
+
+    setText("desktop-business-name", current.label);
+    setText("mobile-business-name", current.shortLabel || current.label);
+
+    const options = getBusinessSpaceOptions();
+    [["desktop-business-menu-list", "desktop"], ["mobile-business-menu-list", "mobile"]].forEach(([hostId, scope]) => {
+      const host = document.getElementById(hostId);
+      if (!host) return;
+      host.replaceChildren(...options.map((space) => createBusinessMenuItem(space, scope)));
+    });
+  }
+
+  function closeBusinessMenus() {
+    [["desktop-business-entry", "desktop-business-menu"], ["mobile-business-entry", "mobile-business-menu"]].forEach(([entryId, menuId]) => {
+      const entry = document.getElementById(entryId);
+      const menu = document.getElementById(menuId);
+      if (menu) menu.hidden = true;
+      if (entry) entry.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function bindBusinessContext() {
+    const bindings = [
+      { entryId: "desktop-business-entry", menuId: "desktop-business-menu" },
+      { entryId: "mobile-business-entry", menuId: "mobile-business-menu" }
+    ];
+
+    bindings.forEach(({ entryId, menuId }) => {
+      const entry = document.getElementById(entryId);
+      const menu = document.getElementById(menuId);
+      if (!entry || !menu) return;
+
+      entry.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const willOpen = menu.hidden;
+        closeBusinessMenus();
+        menu.hidden = !willOpen;
+        entry.setAttribute("aria-expanded", String(willOpen));
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      const clickedInside = bindings.some(({ entryId, menuId }) => {
+        const entry = document.getElementById(entryId);
+        const menu = document.getElementById(menuId);
+        return entry?.contains(event.target) || menu?.contains(event.target);
+      });
+      if (!clickedInside) closeBusinessMenus();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeBusinessMenus();
+    });
+
+    window.addEventListener("aione:platform-context-change", renderBusinessContext);
+  }
   /* Headerには安全な本人要約だけを表示する。 */
   function renderUser() {
     const user = config.user || {};
@@ -296,7 +325,8 @@ export function initHeader(initialConfig = {}) {
   function updateActiveRoute() {
     const currentRoute = getCurrentRoute();
     const definition = getRouteDefinition();
-    const activeRoute = definition.parent || currentRoute;
+    const hasDirectHeaderEntry = Boolean(document.querySelector(`[data-header-route="${currentRoute}"]`));
+    const activeRoute = hasDirectHeaderEntry ? currentRoute : (definition.parent || currentRoute);
 
     document.querySelectorAll("[data-header-route]").forEach((item) => {
       const isActive = item.dataset.headerRoute === activeRoute;
@@ -326,8 +356,6 @@ export function initHeader(initialConfig = {}) {
     }).format(new Date()));
     setText("miwaLocalTime", `${parts.hour}:${parts.minute}`);
     setText("miwaLunarDate", getLunarText(localDate));
-    setText("miwaSolarTerm", getSolarTermText(localDate));
-    setText("miwaZodiac", getZodiac(Number(parts.month), Number(parts.day)));
     setText("mobileSolarDate", `${parts.year}/${parts.month}/${parts.day}`);
     setText("mobileWeekday", new Intl.DateTimeFormat("zh-CN", {
       timeZone,
@@ -335,8 +363,6 @@ export function initHeader(initialConfig = {}) {
     }).format(new Date()));
     setText("mobileLocalTime", `${parts.hour}:${parts.minute}`);
     setText("mobileLunarDate", getLunarText(localDate));
-    setText("mobileSolarTerm", getSolarTermText(localDate));
-    setText("mobileZodiac", getZodiac(Number(parts.month), Number(parts.day)));
   }
 
   async function loadWeather() {
@@ -415,12 +441,12 @@ export function initHeader(initialConfig = {}) {
         root.hidden = !showEmptyState;
         root.classList.remove("is-urgent");
         root.dataset.noticeId = "";
-        type.textContent = "通知";
+        type.textContent = "重要通知";
         text.textContent = config.enterprise?.emptyNoticeText || "暂无重要通知";
         return;
       }
 
-      type.textContent = "通知";
+      type.textContent = "重要通知";
       text.textContent = notice.text || notice.title || "";
       root.hidden = false;
       root.classList.toggle("is-urgent", notice.level === "urgent");
@@ -431,15 +457,76 @@ export function initHeader(initialConfig = {}) {
     renderTarget({ rootId: "mobileDynamicNotice", typeId: "mobileNoticeType", textId: "mobileNoticeText" });
   }
 
+
+  const headerRails = [];
+
+  function syncHeaderRailControl(controller) {
+    if (!controller?.track || !controller.prev || !controller.next) return;
+    const maxScroll = Math.max(0, controller.track.scrollWidth - controller.track.clientWidth);
+    const hasOverflow = maxScroll > 3;
+    controller.prev.hidden = !hasOverflow;
+    controller.next.hidden = !hasOverflow;
+    if (!hasOverflow) return;
+    controller.prev.disabled = controller.track.scrollLeft <= 2;
+    controller.next.disabled = controller.track.scrollLeft >= maxScroll - 2;
+  }
+
+  function syncHeaderRails() {
+    headerRails.forEach(syncHeaderRailControl);
+  }
+
+  function bindHeaderRails() {
+    document.querySelectorAll("[data-header-rail-scroll]").forEach((button) => {
+      if (button.dataset.headerRailBound === "true") return;
+      const targetId = button.dataset.headerRailTarget;
+      const track = targetId ? document.getElementById(targetId) : null;
+      if (!track) return;
+      let controller = headerRails.find((item) => item.track === track);
+      if (!controller) {
+        controller = {
+          track,
+          prev: document.querySelector(`[data-header-rail-target="${targetId}"][data-header-rail-scroll="prev"]`),
+          next: document.querySelector(`[data-header-rail-target="${targetId}"][data-header-rail-scroll="next"]`)
+        };
+        headerRails.push(controller);
+        track.addEventListener("scroll", () => syncHeaderRailControl(controller), { passive: true });
+      }
+      button.dataset.headerRailBound = "true";
+      button.addEventListener("click", () => {
+        const direction = button.dataset.headerRailScroll === "prev" ? -1 : 1;
+        const amount = Math.max(220, track.clientWidth * 0.78);
+        track.scrollBy({ left: direction * amount, behavior: "smooth" });
+      });
+    });
+    window.addEventListener("resize", syncHeaderRails, { passive: true });
+    requestAnimationFrame(syncHeaderRails);
+  }
+
+  function normalizeInternalRoute(route) {
+    const value = String(route || "").trim();
+    if (!value) return "";
+    if (value.startsWith("#/")) return value;
+    return `#/${value.replace(/^\/+/, "")}`;
+  }
+
   function createCommonEntry(entry) {
+    const internalRoute = normalizeInternalRoute(entry.route);
+    const hasRoute = Boolean(internalRoute);
     const hasUrl = typeof entry.url === "string" && entry.url.trim().length > 0;
-    const element = document.createElement(hasUrl ? "a" : "button");
+    const element = document.createElement(hasRoute || hasUrl ? "a" : "button");
     element.className = "miwa-common-entry";
     element.dataset.commonEntry = entry.id || "";
+    element.dataset.resourceForm = entry.productForm || "";
+    element.dataset.resourceOrigin = entry.origin || "";
+    element.dataset.quickGroup = entry.quickGroup || "";
     element.classList.toggle("is-planned", entry.status === "planned");
-    element.classList.toggle("is-link-pending", !hasUrl);
+    element.classList.toggle("is-link-pending", !hasRoute && !hasUrl);
 
-    if (hasUrl) {
+    if (hasRoute) {
+      element.href = internalRoute;
+      const routeId = String(entry.route || "").split("?")[0].replace(/^#?\//, "");
+      if (routeId) element.dataset.headerRoute = routeId;
+    } else if (hasUrl) {
       element.href = entry.url;
       element.target = "_blank";
       element.rel = "noopener noreferrer";
@@ -449,6 +536,9 @@ export function initHeader(initialConfig = {}) {
       element.title = entry.status === "planned" ? "入口筹备中" : "链接将在系统启用前确认";
     }
 
+    const meta = [entry.productForm].filter(Boolean).join(" · ");
+    if ((hasRoute || hasUrl) && meta) element.title = `${entry.name || "资源"}｜${meta}`;
+
     const mark = document.createElement("span");
     mark.className = "miwa-common-entry__mark";
     mark.textContent = entry.mark || entry.name?.slice(0, 1) || "·";
@@ -457,7 +547,7 @@ export function initHeader(initialConfig = {}) {
     const copy = document.createElement("span");
     copy.className = "miwa-common-entry__copy";
     const name = document.createElement("strong");
-    name.textContent = entry.name || "未命名入口";
+    name.textContent = entry.name || "未命名资源";
     const subtitle = document.createElement("small");
     subtitle.textContent = entry.subtitle || "";
     copy.append(name, subtitle);
@@ -473,24 +563,70 @@ export function initHeader(initialConfig = {}) {
     return element;
   }
 
-  function renderCommonEntries() {
-    const commonEntries = config.commonEntries || {};
-    [
-      ["desktop-store-entries", "stores"],
-      ["desktop-logistics-entries", "logistics"],
-      ["desktop-office-entries", "office"],
-      ["desktop-shopping-entries", "shopping"],
-      ["desktop-mail-entries", "mail"],
-      ["mobile-store-entries", "stores"],
-      ["mobile-tool-entries", "tools"]
-    ].forEach(([hostId, groupId]) => {
-      const host = document.getElementById(hostId);
-      if (!host) return;
-      const entries = Array.isArray(commonEntries[groupId]?.items)
-        ? commonEntries[groupId].items
-        : [];
-      host.replaceChildren(...entries.map(createCommonEntry));
+  function getVisibleQuickResources() {
+    const resourceConfig = config.sharedResources || {};
+    const groupOrder = Array.isArray(resourceConfig.quickGroupOrder) ? resourceConfig.quickGroupOrder : [];
+    const groupRank = new Map(groupOrder.map((group, index) => [group, index]));
+    const items = Array.isArray(resourceConfig.items) ? resourceConfig.items : [];
+    return items
+      .filter((entry) => entry?.quickAccess === true && entry.headerHidden !== true && entry.hidden !== true)
+      .sort((left, right) => {
+        const groupDelta = (groupRank.get(left.quickGroup) ?? 999) - (groupRank.get(right.quickGroup) ?? 999);
+        if (groupDelta) return groupDelta;
+        return Number(left.sortOrder || 0) - Number(right.sortOrder || 0);
+      });
+  }
+
+  function renderQuickResourcesInto(host) {
+    if (!host) return;
+    const entries = getVisibleQuickResources();
+    const nodes = [];
+    let previousGroup = null;
+    entries.forEach((entry) => {
+      const group = entry.quickGroup || "ungrouped";
+      if (previousGroup !== null && group !== previousGroup) {
+        const divider = document.createElement("span");
+        divider.className = "miwa-common-entry-divider";
+        divider.setAttribute("aria-hidden", "true");
+        nodes.push(divider);
+      }
+      nodes.push(createCommonEntry(entry));
+      previousGroup = group;
     });
+    host.replaceChildren(...nodes);
+  }
+
+  function renderCommonEntries() {
+    renderQuickResourcesInto(document.getElementById("desktop-quick-resource-entries"));
+    renderQuickResourcesInto(document.getElementById("mobile-quick-resource-entries"));
+    requestAnimationFrame(syncHeaderRails);
+  }
+
+  function renderMoreHomes() {
+    const root = document.getElementById("desktop-more-homes");
+    const entry = document.getElementById("desktop-more-homes-entry");
+    const menu = document.getElementById("desktop-more-homes-menu");
+    if (!root || !entry || !menu) return;
+
+    const items = Array.isArray(config.moreHomes)
+      ? config.moreHomes.filter((item) => item && item.hidden !== true && item.route && item.name)
+      : [];
+    root.hidden = items.length === 0;
+    if (!items.length) {
+      menu.hidden = true;
+      entry.setAttribute("aria-expanded", "false");
+      menu.replaceChildren();
+      return;
+    }
+
+    const links = items.map((item) => {
+      const link = document.createElement("a");
+      link.href = normalizeInternalRoute(item.route);
+      link.role = "menuitem";
+      link.textContent = item.name;
+      return link;
+    });
+    menu.replaceChildren(...links);
   }
 
   function getSpiritContent(spiritId) {
@@ -552,8 +688,10 @@ export function initHeader(initialConfig = {}) {
 
   function render() {
     renderBrand();
+    renderBusinessContext();
     renderUser();
     renderCommonEntries();
+    renderMoreHomes();
     renderSemanticIcons(document);
     updateCount("desktop-work-count", config.workCount);
     updateCount("mobile-work-count", config.workCount);
@@ -738,6 +876,35 @@ export function initHeader(initialConfig = {}) {
     });
   }
 
+
+  function bindMoreHomes() {
+    const root = document.getElementById("desktop-more-homes");
+    const entry = document.getElementById("desktop-more-homes-entry");
+    const menu = document.getElementById("desktop-more-homes-menu");
+    if (!root || !entry || !menu) return;
+
+    entry.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const willOpen = menu.hidden;
+      menu.hidden = !willOpen;
+      entry.setAttribute("aria-expanded", String(willOpen));
+    });
+    menu.addEventListener("click", () => {
+      menu.hidden = true;
+      entry.setAttribute("aria-expanded", "false");
+    });
+    document.addEventListener("click", (event) => {
+      if (root.contains(event.target)) return;
+      menu.hidden = true;
+      entry.setAttribute("aria-expanded", "false");
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      menu.hidden = true;
+      entry.setAttribute("aria-expanded", "false");
+    });
+  }
+
   function bindCommonEntries() {
     document.querySelectorAll("[data-common-entry-group]").forEach((group) => {
       group.addEventListener("click", (event) => {
@@ -757,16 +924,23 @@ export function initHeader(initialConfig = {}) {
     });
   }
 
+  bindBusinessContext();
   bindEmployeeEntry();
   bindGlobalSearch();
   bindSpiritEvents();
   bindHeaderActions();
+  bindMoreHomes();
   bindCommonEntries();
   bindRuntimeUpdates();
   configure(config);
+  bindHeaderRails();
   restartTimers();
 
-  window.addEventListener("hashchange", updateActiveRoute);
+  window.addEventListener("hashchange", () => {
+    syncPlatformContextFromRoute({ reason: "header-route" });
+    renderBusinessContext();
+    updateActiveRoute();
+  });
 
   window.MIWAHeader = {
     configure,

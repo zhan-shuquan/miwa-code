@@ -1,3 +1,4 @@
+import { systemConfig } from "../config/system-config.js";
 /* ========================================
    Business Object Store｜二级页面统一对象存储（预演）
    正式数据库接入前，所有新业务页面只通过这一层读写对象。
@@ -10,12 +11,21 @@ function key(routeId) {
   return `${PREFIX}${routeId}`;
 }
 
+function currentActor() {
+  const user = systemConfig.header?.user || {};
+  return user.employeeId && user.employeeId !== "PENDING" ? user.employeeId : (user.displayName ? `USER:${user.displayName}` : "SYSTEM");
+}
 function normalizeObject(routeId, item = {}) {
+  const now = new Date().toISOString(); const actor = currentActor();
   return {
     ...item,
     id: item.id || `${routeId.toUpperCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    createdAt: item.createdAt || new Date().toISOString(),
-    updatedAt: item.updatedAt || new Date().toISOString()
+    createdAt: item.createdAt || now,
+    updatedAt: item.updatedAt || now,
+    createdBy: item.createdBy || actor,
+    updatedBy: item.updatedBy || actor,
+    recordVersion: Number(item.recordVersion || 1),
+    sourceSystem: item.sourceSystem || "AIONE"
   };
 }
 

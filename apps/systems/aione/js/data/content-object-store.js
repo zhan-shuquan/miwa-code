@@ -1,3 +1,4 @@
+import { systemConfig } from "../config/system-config.js";
 /* ========================================
    Content Object Store｜美和内容对象统一存储（预演）
    正式数据库接入前，美和之家与知识之家只通过这一层读写内容对象。
@@ -6,13 +7,21 @@ const PREFIX = "miwa-aione:v1.2:content-objects:";
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const key = (routeId) => `${PREFIX}${routeId}`;
 
+function currentActor() {
+  const user = systemConfig.header?.user || {};
+  return user.employeeId && user.employeeId !== "PENDING" ? user.employeeId : (user.displayName ? `USER:${user.displayName}` : "SYSTEM");
+}
 function normalize(routeId, item = {}) {
-  const now = new Date().toISOString();
+  const now = new Date().toISOString(); const actor = currentActor();
   return {
     ...item,
     id: item.id || `${routeId.toUpperCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     createdAt: item.createdAt || now,
-    updatedAt: item.updatedAt || now
+    updatedAt: item.updatedAt || now,
+    createdBy: item.createdBy || actor,
+    updatedBy: item.updatedBy || actor,
+    recordVersion: Number(item.recordVersion || 1),
+    sourceSystem: item.sourceSystem || "AIONE"
   };
 }
 
@@ -21,7 +30,11 @@ export function loadContentObjects(routeId, seed = []) {
     const raw = window.localStorage.getItem(key(routeId));
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        const existingIds = new Set(parsed.map((item) => String(item?.id || "")).filter(Boolean));
+        const missingSeeds = clone(seed || []).filter((item) => item?.id && !existingIds.has(String(item.id)));
+        return [...missingSeeds, ...parsed];
+      }
     }
   } catch (_) {}
   return clone(seed || []);

@@ -171,3 +171,33 @@
 @media(max-width:1440px){.miwa-universal-workspace__toolbar{grid-template-columns:minmax(200px,1fr) 130px 130px auto auto auto auto}.miwa-universal-workspace__toolbar>[data-workspace-reset]{grid-column:auto}}
 @media(max-width:1100px){.miwa-universal-workspace__toolbar{grid-template-columns:minmax(180px,1fr) 125px 125px auto auto auto}.miwa-universal-workspace__toolbar>[data-workspace-reset]{grid-column:auto}}
 @media(max-width:820px){.miwa-universal-workspace__toolbar{grid-template-columns:1fr 1fr}.miwa-universal-workspace__toolbar>[data-workspace-reset]{grid-column:auto}}
+
+/* ========================================
+   V1.5.0｜Universal Workspace 多筛选/分页 + Rich Media Object Card
+======================================== */
+.miwa-universal-workspace__toolbar{grid-template-columns:minmax(220px,1fr) minmax(170px,auto) 140px auto auto auto auto auto}
+.miwa-workspace-filter-group{display:flex;align-items:center;gap:6px;min-width:0;overflow-x:auto;scrollbar-width:thin}
+.miwa-workspace-filter-group select{min-width:118px;max-width:170px;height:38px;flex:0 0 auto;border:1px solid var(--border-soft);border-radius:9px;background:#fff;color:var(--miwa-green-deep);padding:0 28px 0 10px;font-size:9.5px}
+.miwa-workspace-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:11px;padding-top:10px;border-top:1px solid #EDF2EF;color:var(--text-muted);font-size:9.5px}
+.miwa-workspace-pagination[hidden]{display:none!important}.miwa-workspace-pagination nav{display:flex;align-items:center;gap:7px}.miwa-workspace-pagination button{height:30px;padding:0 9px;border:1px solid var(--border-soft);border-radius:7px;background:#fff;color:var(--miwa-green-deep);font-size:9px;cursor:pointer}.miwa-workspace-pagination button:disabled{opacity:.4;cursor:not-allowed}
+
+.miwa-object-card--rich-media{padding:0;overflow:hidden}
+.miwa-object-card--rich-media .miwa-object-card__rich-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:12px 12px 8px;border-bottom:1px solid #EDF2EF}
+.miwa-object-card--rich-media .miwa-object-card__rich-head h3{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.miwa-object-card__rich-identity{display:grid;grid-template-columns:minmax(110px,1.25fr) minmax(104px,.9fr);gap:10px;padding:11px 12px 0}
+.miwa-object-card__rich-visual{aspect-ratio:1;display:grid;place-items:center;overflow:hidden;border:1px solid var(--border-soft);border-radius:11px;background:#F7FAF8;color:#8EA49A;font-size:16px;font-weight:850}
+.miwa-object-card__rich-visual img{width:100%;height:100%;object-fit:cover}
+.miwa-object-card__rich-meta{display:grid;align-content:start;gap:6px;min-width:0}.miwa-object-card__rich-meta>div{min-width:0;padding:6px 7px;border-radius:7px;background:#F7FAF8}.miwa-object-card__rich-meta>div span{display:block;color:var(--text-muted);font-size:7.5px}.miwa-object-card__rich-meta>div strong{display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--miwa-green-deep);font-size:8.5px}
+.miwa-object-card__goal{display:flex;gap:4px;margin:10px 12px 0;padding:7px 8px;border:1px solid #DCE7E1;border-radius:8px;background:#F8FBF9;color:#52675E;font-size:8.5px;line-height:1.45}.miwa-object-card__goal strong{flex:0 0 auto;color:var(--miwa-green)}
+.miwa-object-card--rich-media .miwa-object-card__facts{margin:8px 12px 0}
+.miwa-object-card__result{margin-top:10px;padding:9px 12px 10px;border-top:1px solid #E7EEEA;background:#F8FBF9}.miwa-object-card__result>span{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;background:#E9F3EE;color:var(--miwa-green-deep);font-size:8px;font-weight:850}.miwa-object-card__result p{margin:6px 0 0;color:#607168;font-size:8.2px;line-height:1.45}.miwa-object-card__result.is-positive{background:#F3F8F5}.miwa-object-card__result.is-negative{background:#FFF7F6}.miwa-object-card__result.is-negative>span{background:#FBE3E0;color:var(--miwa-red)}
+.miwa-object-card--rich-media footer{padding:0 12px 11px;margin-top:8px}
+
+.miwa-object-card-grid[data-columns="4"] .miwa-object-card__rich-identity,.miwa-object-card-grid[data-columns="6"] .miwa-object-card__rich-identity{grid-template-columns:1fr}.miwa-object-card-grid[data-columns="4"] .miwa-object-card__rich-visual,.miwa-object-card-grid[data-columns="6"] .miwa-object-card__rich-visual{max-height:170px}.miwa-object-card-grid[data-columns="6"] .miwa-object-card__rich-meta{grid-template-columns:1fr 1fr}.miwa-object-card-grid[data-columns="6"] .miwa-object-card__goal{margin-left:10px;margin-right:10px}.miwa-object-card-grid[data-columns="6"] .miwa-object-card--rich-media .miwa-object-card__facts{margin-left:10px;margin-right:10px}
+
+@media(max-width:1440px){.miwa-universal-workspace__toolbar{grid-template-columns:minmax(200px,1fr) minmax(150px,auto) 130px auto auto auto auto}.miwa-workspace-filter-group select{min-width:110px}}
+@media(max-width:1100px){.miwa-universal-workspace__toolbar{grid-template-columns:minmax(180px,1fr) minmax(150px,auto) 125px auto auto auto}.miwa-object-card__rich-identity{grid-template-columns:minmax(100px,1fr) minmax(100px,.9fr)}}
+@media(max-width:820px){.miwa-universal-workspace__toolbar{grid-template-columns:1fr 1fr}.miwa-workspace-filter-group{grid-column:1/-1}.miwa-workspace-pagination{align-items:flex-start;flex-direction:column}.miwa-object-card__rich-identity{grid-template-columns:1fr}.miwa-object-card__rich-visual{max-height:none}}
+
+/* V1.5.0｜选品通过标准Object Presenter显示的列表摘要 */
+.miwa-selection-list-product{display:flex;align-items:center;gap:8px;min-width:220px}.miwa-selection-list-thumb{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--border-soft);border-radius:9px;background:#F7FAF8;color:#176B4D;font-weight:850}.miwa-selection-list-thumb img{width:100%;height:100%;object-fit:cover}.miwa-selection-list-product>span:last-child{display:grid;gap:4px;min-width:0}.miwa-selection-list-product strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--miwa-green-deep);font-size:9.5px}.miwa-selection-list-product small{color:var(--text-muted);font-size:8px}.miwa-selection-list-product small a{color:var(--miwa-green);text-decoration:none}.miwa-selection-list-product small em{font-style:normal}

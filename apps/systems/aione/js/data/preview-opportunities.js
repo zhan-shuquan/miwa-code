@@ -4,6 +4,7 @@
 ======================================== */
 
 import { selectionOpportunities } from './selection-opportunities.js';
+import { getSelectionRecordInputSchema } from '../config/field-registry.js';
 
 const DRAFT_PREFIX = 'aione:selection:draft:';
 const WORKFLOW_PREFIX = 'aione:selection:workflow:';
@@ -171,19 +172,17 @@ function nextPreviewIds(count){
 }
 
 function draftFieldsFromImport(row){
-  return {
-    'selection-record-source':String(row['采购来源链接'] || row['采购来源网址'] || '').trim(),
-    'selection-record-name':String(row['商品名称'] || '').trim(),
-    'pricing-purchase-unit':String(row['采购单价'] ?? '').trim(),
-    'pricing-currency':String(row['采购币种'] || '').trim(),
-    'pricing-units-per-sale':String(row['销售套装数量'] ?? '').trim(),
-    'pricing-quantity-unit':String(row['数量单位'] || '').trim(),
-    'pricing-unit-weight':String(row['单个预估毛重_g'] ?? '').trim(),
-    'pricing-shipping-length':String(row['销售套装发货长_cm'] ?? '').trim(),
-    'pricing-shipping-width':String(row['销售套装发货宽_cm'] ?? '').trim(),
-    'pricing-shipping-height':String(row['销售套装发货厚_cm'] ?? '').trim(),
-    'selection-confirmed-delivery-tier':''
-  };
+  const fields = {};
+  getSelectionRecordInputSchema().forEach((field) => {
+    if (!field.storageKey || field.key === "representativeImage") return;
+    const aliases = [...(field.importAliases || []), field.label, field.key].filter(Boolean);
+    let value = "";
+    for (const alias of aliases) {
+      if (Object.prototype.hasOwnProperty.call(row || {}, alias)) { value = row[alias]; break; }
+    }
+    fields[field.storageKey] = String(value ?? "").trim();
+  });
+  return fields;
 }
 
 export function importPreviewOpportunities(rows,selectionType){

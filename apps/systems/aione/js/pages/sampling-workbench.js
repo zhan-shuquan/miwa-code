@@ -335,7 +335,7 @@ function exportSamplingRows(rows = []) {
 export function initSamplingWorkbench() {
   const root = document.querySelector(".sampling-dashboard-page");
   renderMiwaNineElements(root?.querySelector('[data-miwa-nine-elements]'), { context: '测样业务' });
-  window.dispatchEvent(new CustomEvent('aione:page-ai-context', { detail: { title: 'AI秘书｜测样辅助', text: '可协助整理测样证据、识别异常、形成摘要并提示待复测事项；最终质量结论由负责人确认。' } }));
+  window.dispatchEvent(new CustomEvent('aione:page-aside-context', { detail: { state:'standard', kicker:'当前工作台', title:'测样工作台', text:'聚焦测样证据、成本与异常状态。', items:[{label:'当前重点',value:'测样证据与成本',detail:'异常、缺失与待复测信息优先显示。'},{label:'责任边界',value:'测样负责人',detail:'最终质量结论由负责人确认。'}] } }));
   if (!root || root.dataset.initialized === "true") return;
   root.dataset.initialized = "true";
   root._samplingFilterState = { search: "", status: "", owner: "", flow: "", view: "card" };

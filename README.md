@@ -1,9 +1,6 @@
 # 美和集团代码资产主仓库
 
-> 当前AIONE共享内测候选：`apps/systems/aione` **V1.3.0 CANDIDATE（唯一二级空母版 + Template Recipe + 标准组件基础架构）**。当前首个真实验证页面为“美和之家”；正式锁定需完成浏览器人工验收。详见 `apps/systems/aione/docs/BASELINE_V1.3.0_LEVEL2_EMPTY_BASE_COMPONENT_FOUNDATION_CANDIDATE.md`。
-
-
-本仓库是美和集团正式代码资产的统一版本管理入口，用于建立、整理、开发、测试、维护和追踪可执行的软件资产。正式代码以本仓库及其 GitHub 私有远程仓库为主版本；Google Drive 不作为正式代码主版本库。
+> Current AIONE candidate: `apps/systems/aione` **V1.9.20 1688 PERMANENT TOKEN DIRECT CANDIDATE**. V1.9.5 remains the Sidebar/Aside lock baseline, V1.9.6 the independent AI-layer architecture baseline, V1.9.13 the provider-neutral model baseline, V1.9.16 the Proposal Bridge baseline, V1.9.17 the unified AI Context Router baseline, V1.9.18 the 1688 source-data bridge baseline, V1.9.19 tested OAuth assumptions, and V1.9.20 corrects the real enterprise self-use path to AppKey + AppSecret + permanent authorized Access Token.
 
 ## 仓库定位
 
@@ -12,7 +9,7 @@
 - 默认分支：`main`
 - Codex 职责：协助完成代码资产识别、分类、开发、测试、安全检查、版本控制、Git 提交、GitHub 同步和工程说明维护
 
-与代码直接相关、需要和代码共同演进的架构及工程说明进入 `docs/`。业务知识正文不进入代码仓库，长期由 AIONE「知识之家」统一管理；文件、图片、视频等客观资产可以继续以 Google Drive 为正式本体，并由 AIONE「共享之家」管理目录、关系和入口。
+与代码直接相关、需要和代码共同演进的架构及工程说明进入 `docs/`。业务知识正文不进入代码仓库，长期由 AIONE「知识之家」统一管理；文件、图片、视频、应用、工具、代码、数据、模板、连接、服务等可共享资产由 AIONE「共享资源」统一登记目录、关系和入口，正式本体仍保留在各自唯一来源。
 
 ## 目录职责
 
@@ -36,45 +33,91 @@
 
 分类以代码承担的主责任为准，不以扩展名机械判断。一个资产只保留一个正式代码源，由其他位置调用，不复制多份。
 
-## `inbox` 规则
+## 数据工程规则
 
-`inbox/` 用于暂存遗留、下载、生成、外部交付、ZIP 解压或暂时无法判断归属的代码。默认工作流为：
+AIONE数据库建设默认遵循：
 
-`进入 inbox → 建立清单 → 识别来源 → 安全与依赖检查 → 判断归属 → 整理 → 测试 → 移入正式目录 → Git 版本管理`
+`业务语义 → 标准对象 → 标准字段 → 对象关系 → 事件/证据 → Schema → API`
 
-未审核内容默认不进入 Git。不得让正式业务系统长期依赖 `inbox/`；不得在未经确认时删除唯一原件。
-
-## 进入正式目录的条件
-
-代码进入正式目录前必须完成：
-
-1. 来源和用途可说明；
-2. 主责任及目标目录已确定；
-3. 不与现有正式资产重复或冲突；
-4. 不含密码、Token、API Key、私钥或其他秘密；
-5. 依赖、运行方式和风险已检查；
-6. 已完成与风险相称的测试；
-7. 必要的工程说明已同步更新。
-
-## Git 工作流
-
-常规生命周期：
-
-`需求 → 判断归属 → 开发或修改 → 测试 → 安全检查 → 检查 Git diff → Commit → Push → 验证远程`
-
-重大修改使用独立分支，经测试后提交、推送并通过 Pull Request 合并到 `main`。简单、明确、低风险维护可以简化，但正式版本必须可追溯。提交应聚焦单一目的，提交前必须检查暂存内容。
+页面结构变化不得驱动数据库随意变化；一份事实只保留一个正式来源。数据库迁移必须可追溯、默认增量、禁止把真实生产数据当作测试数据覆盖。
 
 ## 安全边界
 
-严禁提交密码、Token、API Key、私钥、含秘密的证书、凭据文件、真实 `.env`、本地缓存、日志和未审核的 `inbox` 内容。需要记录配置结构时，应提交不含真实秘密的示例文件，例如 `.env.example`，并使用清晰的占位值。
+严禁提交密码、Token、API Key、私钥、真实 `.env`、数据库凭据、本地缓存、日志和未审核的 `inbox` 内容。配置结构只提交 `.env.example` 等无秘密模板。
 
-`.gitignore` 是最后一道防线，不替代提交前检查。发现疑似秘密时应停止提交，确认泄露范围，并按需要撤销和轮换凭据。
+## V1.8.1 Windows launcher hotfix
 
-## 代码与非代码资料边界
+If `START_AI_SECRETARY_PREVIEW.cmd` reports that `npm` is not recognized, run `SETUP_NODE_LTS.cmd` once. V1.8.1 now auto-detects standard Node.js install locations and distinguishes a missing Windows prerequisite from an AIONE backend error.
 
-- GitHub：正式代码、测试、基础设施代码、代码配置模板，以及必须与代码共同演进的工程文档。
-- AIONE 知识之家：方法论、标准、制度、SOP、业务知识、培训、案例研究、系统/AI知识等知识正文的统一管理入口。
-- Google Drive：文件、表格、图片、视频、原始资料等客观文件资产的正式本体之一；由 AIONE 共享之家统一管理入口和关系。
-- `docs/`：仅存放与本仓库代码直接相关、需要版本共同演进的工程说明。
+## V1.9.12 Windows launcher hotfix
 
-历史旧代码迁移必须作为独立工作进行清点、评估、测试和留痕，不得批量直接并入正式目录。
+If the previous one-click verifier printed errors such as `EnableExtensions is not recognized`, the failure happened in Windows CMD parsing before the AI Backend was verified. V1.9.12 removes that ambiguity:
+
+- `.cmd` launchers are ASCII with Windows CRLF line endings.
+- Complex startup / verification logic lives in UTF-8 BOM PowerShell scripts.
+- `.gitattributes` and `.editorconfig` explicitly preserve CRLF for Windows launchers.
+- The existing AI endpoints remain unchanged: `/status`, `/execute`, `/confirm`.
+
+Use `START_MIWA_AI_RUNTIME_AND_VERIFY.cmd` as the primary one-click verification entry.
+
+## V1.9.13 Model Provider Layer
+
+- `AIONE_AI_MODE=preview` keeps deterministic plumbing verification.
+- `AIONE_AI_MODE=live` delegates through `AIONE_AI_PROVIDER`; first live provider is `openai`.
+- Use `START_MIWA_AI_REAL_MODEL.cmd` for local real-model validation. The API key is entered hidden and kept in Backend process memory only.
+- Current selection-workbench metrics, stages and opportunity summaries are exposed through `get_current_page_business_context`.
+- Production deployment must use Secret Manager for provider secrets.
+
+
+## V1.9.14 Windows real-model launcher diagnostic hotfix
+
+- `START_MIWA_AI_REAL_MODEL.cmd` now remains open if the Backend exits, so the real error is visible.
+- The launcher starts `node server.js` directly after dependencies are present, reducing one extra npm process layer.
+- The console explicitly marks the window that must remain open while using 美和AI.
+- No changes to Sidebar, Aside, Main, AI UI, Tool Layer, or `/status` → `/execute` → `/confirm`.
+
+
+## V1.9.15 Human-confirm write fallback
+
+- Live OpenAI model mode no longer implies that a local database must also be configured.
+- Confirmation still prefers the formal `work_items` database when database configuration is present.
+- Local real-model testing enables `AIONE_ALLOW_LOCAL_WRITE_FALLBACK=true`; if no database is configured, the confirmed work item is written into AIONE's local Collaboration Store and becomes visible to Work Home.
+- The UI explicitly reports `本地AIONE已写入` / `当前未同步正式数据库`; it never reports a local fallback as a formal database success.
+- Production defaults remain database-only and require a real authenticated human actor.
+
+## V1.9.16 Proposal Bridge
+
+- Explicit work-item creation intent now materializes a structured proposal in the same AI turn.
+- Pending proposals receive Backend ids and `waiting_confirmation` state.
+- Proposal confirmation resolves the Backend-staged proposal before write execution.
+- Explicit natural-language confirmation can execute the latest pending proposal for the same actor/office.
+- Assistant output now uses safe Markdown-lite rendering rather than displaying raw `###` / `**` markers.
+
+
+## V1.9.18 1688 Source API Bridge
+
+- Selection records can send a real 1688 product URL to `POST /api/v1/integrations/1688/product-by-url`.
+- Backend extracts the offer ID, signs the configured 1688 Open Platform product-detail request, normalizes returned product facts, and never fabricates missing fields.
+- AppKey/AppSecret and tokens stay backend-only; the local Windows launcher can hold AppKey/AppSecret in process memory for testing.
+- Auto-fill only writes deterministic facts and avoids overwriting existing human-entered values.
+- The same source facts are automatically included in the current MIWA AI Context; stale facts are rejected when the source URL changes.
+- Candidate status remains until a real authorized 1688 account completes the first live API response.
+
+
+## V1.9.19 1688 OAuth Bridge
+
+- The real V1.9.18 test confirmed AppKey/AppSecret are loaded and the remaining blocker is 1688 account OAuth.
+- Selection auto-fill now switches to `授权1688` only when account authorization is actually required.
+- Backend adds `/oauth/start` and `/oauth/callback`, exchanges Authorization Code server-side, caches Access/Refresh Tokens only in the current process, and reuses the refresh token after access-token expiry.
+- Default local callback is `http://127.0.0.1:8080/api/v1/integrations/1688/oauth/callback`; it must match the callback/redirect URI allowed by the 1688 application.
+- OAuth state is random and validated. AppSecret and tokens never enter the frontend.
+- After authorization, normal employee workflow returns to `粘贴链接 → 读取并自动填充`; OAuth is infrastructure setup, not a daily business step.
+
+
+## V1.9.20 1688 Permanent Token Direct Bridge
+
+- Real 1688 developer-guide evidence confirmed the application is enterprise self-use / multi-user authorization and already has a permanent authorized Access Token.
+- `START_MIWA_AI_REAL_MODEL.ps1` now asks for AppKey, AppSecret, and Access Token separately; both secrets are hidden and kept in Backend process memory only.
+- Normal runtime forces `ALIBABA_1688_TOKEN_MODE=static`; the selection page no longer converts missing-token errors into an employee-facing OAuth workflow.
+- Daily employee path remains: paste 1688 URL -> read and auto-fill -> MIWA AI analysis.
+- Candidate remains pending the first live product-detail API response with the real three credentials.

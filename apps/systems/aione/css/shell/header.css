@@ -1207,7 +1207,7 @@ button.miwa-common-entry{font:inherit;text-align:left}
 /* =========================================================
    Header V1.1.0｜两层全局Header收口
    第一层：平台＋用户＋集团级全局能力＋收入/支出经营组＋全局工具
-   第二层：店铺之家＋高频店铺｜应用之家＋高频应用
+   第二层：高频共享资源快捷入口
    ========================================================= */
 @media(min-width:1100px){
   .miwa-header-main__inner{
@@ -1286,3 +1286,349 @@ button.miwa-common-entry{font:inherit;text-align:left}
 .mobile-entry-group__label[href]{color:var(--miwa-green-deep);text-decoration:none;font-weight:850}
 
 .miwa-settings-change-reason{display:grid;gap:6px;margin:14px 0 8px;padding:12px;border:1px solid var(--border);border-radius:10px;background:#FBFCFA}.miwa-settings-change-reason>span{color:var(--miwa-green-deep);font-size:11px;font-weight:800}.miwa-settings-change-reason textarea{width:100%;resize:vertical;border:1px solid #CFE0D7;border-radius:8px;padding:9px 10px;background:#fff;color:var(--text);font:inherit;font-size:10px;line-height:1.5}.miwa-settings-change-reason small{color:var(--text-secondary);font-size:9px;line-height:1.5}
+
+/* =========================================================
+   V1.9.1 Phase 1｜Global Shell + Header Context Baseline
+   第一行语义顺序锁定：公司 -> 事业 -> 人 -> 工作 -> 时间。
+   具体业务执行仍由Sidebar承载；Header不再堆叠非核心“之家”。
+   ========================================================= */
+.miwa-business-context{
+  position:relative;
+  min-width:122px;
+  max-width:150px;
+  flex:0 0 auto;
+}
+
+.miwa-business-context__button{
+  width:100%;
+  min-height:48px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 14px;
+  align-items:center;
+  gap:7px;
+  padding:5px 8px 5px 10px;
+  border:1px solid #D9E5DF;
+  border-radius:12px;
+  color:#17382D;
+  background:#FFFFFF;
+  cursor:pointer;
+  text-align:left;
+  transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease;
+}
+
+.miwa-business-context__button:hover,
+.miwa-business-context__button[aria-expanded="true"]{
+  border-color:#BFD4CA;
+  background:#F5F9F7;
+  box-shadow:0 0 0 3px rgba(23,107,77,.06);
+}
+
+.miwa-business-context__copy{
+  min-width:0;
+  display:grid;
+  gap:2px;
+}
+
+.miwa-business-context__copy small{
+  color:#89938E;
+  font-size:8px;
+  font-weight:750;
+  line-height:1.1;
+}
+
+.miwa-business-context__copy strong{
+  overflow:hidden;
+  color:var(--miwa-green-deep);
+  font-size:11px;
+  font-weight:850;
+  line-height:1.2;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.miwa-business-menu,
+.mobile-business-menu{
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  z-index:3350;
+  width:190px;
+  overflow:hidden;
+  border:1px solid #D7E3DD;
+  border-radius:12px;
+  background:#FFFFFF;
+  box-shadow:0 16px 36px rgba(13,73,55,.14);
+}
+
+.miwa-business-menu[hidden],
+.mobile-business-menu[hidden]{display:none!important}
+
+.miwa-business-menu__title{
+  padding:10px 12px 7px;
+  color:#89938E;
+  font-size:9px;
+  font-weight:800;
+}
+
+.miwa-business-menu__list{display:grid;padding:0 6px 6px}
+
+.miwa-business-menu__item{
+  width:100%;
+  min-height:36px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:0 9px;
+  border:0;
+  border-radius:8px;
+  color:#29463A;
+  background:#FFFFFF;
+  cursor:pointer;
+  font-size:10px;
+  font-weight:760;
+  text-align:left;
+}
+
+.miwa-business-menu__item:hover{background:#F5F9F7}
+.miwa-business-menu__item.is-active{color:var(--miwa-green-deep);background:var(--miwa-green-light)}
+.miwa-business-menu__check{color:var(--miwa-green);font-weight:900}
+
+.miwa-nav-item--context{font-weight:850}
+.miwa-tool-notification{position:relative}
+.miwa-tool-notification .miwa-notification-badge{top:0;right:0}
+
+.mobile-business-context{position:relative;flex:0 0 auto}
+.mobile-business-context__button{
+  height:38px;
+  max-width:72px;
+  display:flex;
+  align-items:center;
+  gap:3px;
+  padding:0 7px;
+  border:1px solid #D9E5DF;
+  border-radius:9px;
+  color:var(--miwa-green-deep);
+  background:#F7FAF8;
+  font-size:9px;
+  font-weight:850;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.mobile-business-context__button > span:first-child{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.mobile-business-context__button .miwa-chevron{width:11px;height:11px;flex-basis:11px}
+.mobile-business-menu{
+  position:fixed;
+  top:calc(var(--mobile-top) + var(--safe-top) + 7px);
+  left:8px;
+  right:8px;
+  width:auto;
+  max-width:320px;
+  margin-inline:auto;
+}
+
+@media(min-width:1100px){
+  .miwa-header-main__inner{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    width:min(100%,1920px);
+    max-width:1920px;
+    padding:7px 14px;
+  }
+  .miwa-brand-system{min-width:188px}
+  .miwa-business-context{min-width:118px;max-width:142px}
+  .miwa-user-identity{min-width:128px;max-width:156px}
+  .miwa-primary-nav--global{gap:2px}
+  .miwa-primary-nav--global .miwa-nav-item{padding-inline:9px}
+  .miwa-global-search{width:clamp(130px,11vw,190px)}
+}
+
+@media(min-width:1100px) and (max-width:1399px){
+  .miwa-brand-system{min-width:150px}
+  .miwa-business-context{min-width:100px;max-width:112px}
+  .miwa-business-context__copy small{display:none}
+  .miwa-user-identity{min-width:112px;max-width:138px}
+  .miwa-primary-nav--global .miwa-nav-item{padding-inline:6px;font-size:10px}
+  .miwa-global-search{width:105px}
+}
+
+@media(max-width:520px){
+  .mobile-help-button{display:none}
+  .mobile-business-context__button{max-width:64px;padding-inline:6px}
+}
+
+@media(max-width:420px){
+  .mobile-business-context__button{max-width:58px}
+}
+
+
+/* V1.9.3｜核心之家 + 共享资源快捷层 */
+button.miwa-nav-item{border:0;background:transparent;font:inherit;cursor:pointer}
+.miwa-more-homes{position:relative;display:flex;align-items:center;flex:0 0 auto}
+.miwa-more-homes[hidden]{display:none!important}
+.miwa-more-homes__menu{position:absolute;top:calc(100% + 8px);right:0;z-index:2600;min-width:150px;padding:6px;border:1px solid #D7E1DC;border-radius:10px;background:#FFFFFF;box-shadow:0 14px 34px rgba(25,62,48,.14)}
+.miwa-more-homes__menu[hidden]{display:none!important}
+.miwa-more-homes__menu a{display:flex;align-items:center;min-height:34px;padding:0 10px;border-radius:7px;color:#274438;font-size:11px;font-weight:760;text-decoration:none;white-space:nowrap}
+.miwa-more-homes__menu a:hover{background:#F1F7F4;color:var(--miwa-green-deep)}
+.miwa-entry-list--auto{gap:6px}
+.miwa-resource-directory-divider{margin-left:2px}
+.miwa-resource-directory-entry{height:40px;display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;padding:0 10px;border:1px solid #C9DCD2;border-radius:9px;color:var(--miwa-green-deep);background:#F2F8F5;font-size:10px;font-weight:820;text-decoration:none;white-space:nowrap}
+.miwa-resource-directory-entry:hover{border-color:#AFCDBE;background:#EAF4EF}
+.miwa-resource-directory-entry .miwa-semantic-icon{width:14px;height:14px;flex-basis:14px}
+.mobile-nav-divider{width:1px;height:22px;flex:0 0 1px;margin-inline:2px;background:#D7E1DC}
+.mobile-entry-group--resources{gap:7px}
+.mobile-resource-directory-entry{height:38px;display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:0 8px;border:1px solid #C9DCD2;border-radius:8px;color:var(--miwa-green-deep);background:#F2F8F5;font-size:9px;font-weight:820;text-decoration:none;white-space:nowrap}
+.mobile-resource-directory-entry .miwa-semantic-icon{width:13px;height:13px;flex-basis:13px}
+
+@media(min-width:1100px) and (max-width:1680px){
+  .miwa-header-main__inner{gap:6px;padding-inline:12px}
+  .miwa-brand-system{min-width:188px}
+  .miwa-business-context{min-width:104px}
+  .miwa-user-identity{min-width:128px;max-width:150px}
+  .miwa-nav-item{gap:4px;padding-inline:6px;font-size:11px}
+  .miwa-nav-item .miwa-semantic-icon{width:15px;height:15px;flex-basis:15px}
+  .miwa-global-search{width:clamp(118px,11vw,170px)}
+}
+
+
+/* =========================================================
+   V1.9.4 | Smart Header Lock Candidate
+   H1: fixed context core + scrollable core homes + fixed tools
+   H2: scrollable quick access + separators + simple More entry
+   H4: Today / Important schedule / Important notice
+   ========================================================= */
+@media(min-width:1100px){
+  .miwa-header-main__inner{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    width:min(100%,1920px);
+    max-width:1920px;
+    padding:7px 14px;
+  }
+  .miwa-brand-system{min-width:180px;flex:0 0 auto}
+  .miwa-business-context{min-width:112px;max-width:134px;flex:0 0 auto}
+  .miwa-user-identity{min-width:124px;max-width:148px;flex:0 0 auto}
+
+  .miwa-context-actions{
+    display:flex;
+    align-items:center;
+    gap:2px;
+    flex:0 0 auto;
+    padding-right:5px;
+    border-right:1px solid #D7E1DC;
+  }
+  .miwa-context-actions .miwa-nav-item{height:38px;padding-inline:7px;font-size:11px}
+  .miwa-context-actions .miwa-semantic-icon{width:15px;height:15px;flex-basis:15px}
+
+  .miwa-core-nav-shell{
+    min-width:0;
+    flex:1 1 auto;
+    display:flex;
+    align-items:center;
+    gap:2px;
+  }
+  .miwa-primary-nav--global{
+    flex:1 1 auto;
+    min-width:0;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scroll-behavior:smooth;
+    overscroll-behavior-inline:contain;
+    scrollbar-width:none;
+  }
+  .miwa-primary-nav--global::-webkit-scrollbar{display:none}
+  .miwa-primary-nav--global .miwa-nav-item{height:38px;padding-inline:7px;font-size:11px}
+  .miwa-primary-nav--global .miwa-nav-item .miwa-semantic-icon{width:15px;height:15px;flex-basis:15px}
+
+  .miwa-header-rail-button{
+    width:26px;
+    height:34px;
+    display:grid;
+    place-items:center;
+    flex:0 0 26px;
+    padding:0;
+    border:1px solid #D7E1DC;
+    border-radius:8px;
+    color:#315346;
+    background:#FFFFFF;
+    font-size:20px;
+    line-height:1;
+    cursor:pointer;
+  }
+  .miwa-header-rail-button:hover:not(:disabled){border-color:#BFD4CA;background:#F1F7F4;color:var(--miwa-green-deep)}
+  .miwa-header-rail-button:disabled{opacity:.28;cursor:default}
+  .miwa-header-rail-button[hidden]{display:none!important}
+  .miwa-more-homes{flex:0 0 auto;margin-left:1px}
+
+  .miwa-global-tools{flex:0 0 auto;margin-left:2px}
+  .miwa-global-search{width:clamp(118px,10vw,175px)}
+
+  .miwa-common-entry-row{overflow:hidden}
+  .miwa-common-entry-row__inner{
+    width:min(100%,1920px);
+    min-width:0;
+    margin:0 auto;
+    display:flex;
+    align-items:center;
+    gap:5px;
+    padding:5px 14px;
+  }
+  .miwa-quick-access-viewport{
+    min-width:0;
+    flex:1 1 auto;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scroll-behavior:smooth;
+    overscroll-behavior-inline:contain;
+    scrollbar-width:none;
+  }
+  .miwa-quick-access-viewport::-webkit-scrollbar{display:none}
+  .miwa-quick-access-viewport .miwa-entry-list{width:max-content;min-width:max-content;padding-right:2px}
+  .miwa-quick-rail-button{height:32px;flex-basis:24px;width:24px;font-size:18px}
+  .miwa-quick-more-divider{height:28px;margin-inline:3px}
+  .miwa-quick-more-entry{
+    height:36px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    flex:0 0 auto;
+    padding:0 9px;
+    border:1px solid #C9DCD2;
+    border-radius:8px;
+    color:var(--miwa-green-deep);
+    background:#F2F8F5;
+    font-size:9.5px;
+    font-weight:820;
+    text-decoration:none;
+    white-space:nowrap;
+  }
+  .miwa-quick-more-entry:hover{border-color:#AFCDBE;background:#EAF4EF}
+  .miwa-quick-more-entry .miwa-semantic-icon{width:14px;height:14px;flex-basis:14px}
+
+  .miwa-daily-row__inner{
+    grid-template-columns:minmax(0,1.25fr) minmax(240px,1fr) minmax(240px,1fr);
+    gap:0;
+    padding:3px 14px;
+  }
+  .miwa-daily-fixed{justify-content:flex-start;padding-left:2px}
+  .miwa-dynamic-signal{justify-content:flex-start;padding-inline:14px}
+  .miwa-dynamic-signal__type{min-width:max-content;font-weight:850}
+}
+
+@media(min-width:1100px) and (max-width:1500px){
+  .miwa-brand-system{min-width:150px}
+  .miwa-system-brand__formal{display:none}
+  .miwa-business-context{min-width:96px;max-width:108px}
+  .miwa-business-context__copy small{display:none}
+  .miwa-user-identity{min-width:108px;max-width:128px}
+  .miwa-context-actions .miwa-nav-item{padding-inline:5px;font-size:10px}
+  .miwa-primary-nav--global .miwa-nav-item{padding-inline:5px;font-size:10px}
+  .miwa-global-search{width:105px}
+}

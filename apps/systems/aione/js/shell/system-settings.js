@@ -12,6 +12,7 @@ const INITIAL_PARAMETERS = {
   permissions: { mode: 'open', defaultDataScope: 'group', allowCreate: true, allowImport: true, allowExport: true, auditSensitiveExport: true },
   dictionaries: {
     customerTypes: ['批发客户','电商客户','美和留学客户','物流客户','不动产客户','商务咨询客户'],
+    supplierTypes: ['商品供应商','服务供应商','物流供应商','其他供应商'],
     applicationTypes: ['业务系统','物流应用','办公协作','云盘/文件','采购/购物平台','邮箱/通讯','其他应用'],
     storeTypes: ['跨境电商店铺','实体/线下店铺','其他事业店铺'],
     expenseTypes: ['固定支出','经营支出','采购成本','物流费用','人员费用','应用费用','广告费用','现金支出'],
@@ -21,9 +22,9 @@ const INITIAL_PARAMETERS = {
     categoryTypes: ['有形商品分类','无形业务分类','其他分类'],
     productTypes: ['有形商品','无形商品/服务','其他商品'],
     aiCapabilityTypes: ['AI人才','Skill','Agent','Connector','传统自动化/API','Computer Use'],
-    sharedResourceTypes: ['文件资产','账号资产','共用素材','共用模板','共享工具','公共资源','可复用能力','代码资产'],
+    sharedResourceTypes: ['应用','工具','知识','代码','数据','模板','连接','服务','其他'],
     miwaContentTypes: ['企业介绍','美和精神','美和准则','美和传承','发展历程','集团事业','组织与品牌','企业资料'],
-    knowledgeContentTypes: ['方法论','标准','制度','SOP','业务知识','培训资料','案例/研究','系统/AI知识'],
+    knowledgeContentTypes: ['帮助中心','方法论','标准','制度','SOP','业务知识','培训资料','案例/研究','系统/AI知识'],
     notificationTypes: ['重要通知','会议通知','制度/规则通知','业务通知','系统通知']
   },
   business: { priorityTypeCount: 3, overviewActionEnabled: true, createActionEnabled: true, requireMiwaNineElements: true },
@@ -60,7 +61,7 @@ const FIELD_LABELS = {
   'shop.couponRate':'优惠券率','shop.pointRate':'积分成本率','shop.otherOperatingCostJPY':'其他运营成本','pricing.targetContributionProfitJPY':'最低单件贡献利润',
   'pricing.targetContributionMarginRate':'最低运营前贡献利润率','pricing.minimumGrossMarginRate':'最低毛利率','pricing.minimumCampaignContributionMarginRate':'活动最低贡献利润率',
   'pricing.officialRetailMarkupRate':'官方建议零售价上浮率','pricing.officialRetailHighMarkupRate':'官方建议零售价高上浮档','pricing.normalDisposalLossRate':'正常处理允许亏损率','pricing.maximumDisposalLossRate':'最大处理亏损率','pricing.priceEndingRule':'售价尾数规则','common.directShippingFirstWeightGram':'直发首重重量','common.directShippingFirstWeightFeeCNY':'直发首重费用','common.directShippingAdditionalWeightUnitGram':'直发续重单位','common.directShippingAdditionalWeightFeeCNY':'直发续重费用','dictionaries.customerTypes':'客户类型',
-  'dictionaries.applicationTypes':'应用类型','dictionaries.storeTypes':'店铺类型','dictionaries.expenseTypes':'支出类型','dictionaries.incomeTypes':'收入类型','dictionaries.talentTypes':'人才类型','dictionaries.categoryTypes':'分类类型','dictionaries.productTypes':'商品类型','dictionaries.aiCapabilityTypes':'AI能力类型','dictionaries.sharedResourceTypes':'共享资源类型','dictionaries.miwaContentTypes':'美和之家内容类型','dictionaries.knowledgeContentTypes':'知识类型','dictionaries.notificationTypes':'通知类型'
+  'dictionaries.supplierTypes':'供应商类型','dictionaries.applicationTypes':'应用类型','dictionaries.storeTypes':'店铺类型','dictionaries.expenseTypes':'支出类型','dictionaries.incomeTypes':'收入类型','dictionaries.talentTypes':'人才类型','dictionaries.categoryTypes':'分类类型','dictionaries.productTypes':'商品类型','dictionaries.aiCapabilityTypes':'AI能力类型','dictionaries.sharedResourceTypes':'共享资源类型','dictionaries.miwaContentTypes':'美和之家内容类型','dictionaries.knowledgeContentTypes':'知识类型','dictionaries.notificationTypes':'通知类型'
 };
 
 const clone = (value) => JSON.parse(JSON.stringify(value));

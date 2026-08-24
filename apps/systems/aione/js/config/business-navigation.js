@@ -8,7 +8,8 @@ const item = (id, label, route, options = {}) => Object.freeze({
   label,
   route,
   icon: options.icon || "apps",
-  children: Object.freeze(options.children || [])
+  children: Object.freeze(options.children || []),
+  quickActions: Object.freeze(options.quickActions || [])
 });
 
 const child = (id, label, route) => Object.freeze({ id, label, route });
@@ -26,6 +27,9 @@ export const BUSINESS_SPACES = Object.freeze({
         child("selection-opportunities", "商品机会", "selection-opportunities"),
         child("selection-ai-talent", "AI选品人才", "selection-ai-talent"),
         child("selection-records", "选品记录", "selection-records")
+      ], quickActions: [
+        { id: "selection-create", label: "新建商品机会", icon: "opportunity", event: "selection-create" },
+        { id: "selection-import", label: "批量导入", icon: "file", event: "selection-import" }
       ]}),
       item("sampling", "测样工作台", "sampling", { icon: "sampling", children: [
         child("sampling-overview", "测样概览", "sampling-overview"),

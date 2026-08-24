@@ -73,6 +73,6 @@ export function initNotificationDetailPage() {
   };
 
   renderMiwaNineElements(root.querySelector("[data-miwa-nine-elements]"), { context:"通知管理" });
-  window.dispatchEvent(new CustomEvent("aione:page-ai-context", { detail:{ title:"AI秘书｜通知详情辅助", text:"可解释当前通知、提炼行动要求、提醒截止时间并追踪确认；正式通知内容和关键发布仍由负责人确认。" } }));
+  window.dispatchEvent(new CustomEvent("aione:page-aside-context", { detail:{ state:"standard", kicker:"当前通知", title:"通知详情", text:"只保留与当前通知直接相关的行动要求、截止时间和确认状态。" } }));
   render();
 }

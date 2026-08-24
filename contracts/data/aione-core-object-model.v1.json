@@ -1,0 +1,252 @@
+{
+  "version": "1.1",
+  "status": "validating",
+  "principle": "一份业务事实，多处调用；页面不是数据库边界。",
+  "nineElements": [
+    "goal",
+    "people",
+    "object",
+    "matter",
+    "platform",
+    "time",
+    "money",
+    "information",
+    "result"
+  ],
+  "canonicalPersonSource": "public.people",
+  "objects": {
+    "organization": {
+      "table": "public.organizations",
+      "purpose": "集团、公司、部门、团队等组织层级。",
+      "key": "id",
+      "nineElements": [
+        "people",
+        "platform",
+        "information"
+      ]
+    },
+    "business": {
+      "table": "public.businesses",
+      "purpose": "事业及未来事业规划/启动状态。",
+      "key": "id",
+      "nineElements": [
+        "goal",
+        "people",
+        "matter",
+        "time",
+        "money",
+        "result"
+      ]
+    },
+    "position": {
+      "table": "public.positions",
+      "purpose": "岗位定义；岗位存在不等于编制已启用。",
+      "key": "id",
+      "nineElements": [
+        "people",
+        "goal",
+        "matter",
+        "money"
+      ]
+    },
+    "assignment": {
+      "table": "public.assignments",
+      "purpose": "人在哪个时间段，以什么岗位、事业和组织身份承担责任。",
+      "key": "id",
+      "nineElements": [
+        "people",
+        "matter",
+        "time",
+        "result"
+      ]
+    },
+    "objectRegistry": {
+      "table": "public.object_registry",
+      "purpose": "跨业务对象稳定索引，不替代各专业业务表。",
+      "key": "id",
+      "nineElements": [
+        "object",
+        "information"
+      ]
+    },
+    "objectRelation": {
+      "table": "public.object_relations",
+      "purpose": "跨对象关系，如工作关联商品、客户关联事业、知识关联字段。",
+      "key": "id",
+      "nineElements": [
+        "object",
+        "matter",
+        "information"
+      ]
+    },
+    "workItem": {
+      "table": "public.work_items",
+      "purpose": "工作之家的正式工作事实。",
+      "key": "id",
+      "nineElements": [
+        "goal",
+        "people",
+        "object",
+        "matter",
+        "platform",
+        "time",
+        "money",
+        "information",
+        "result"
+      ]
+    },
+    "workSession": {
+      "table": "public.work_sessions",
+      "purpose": "有效工作时间及未归属时间的后台证据，不等同页面停留时长。",
+      "key": "id",
+      "nineElements": [
+        "people",
+        "matter",
+        "platform",
+        "time",
+        "result"
+      ]
+    },
+    "workEvidence": {
+      "table": "public.work_evidence",
+      "purpose": "谁在何时对什么对象做了什么以及产生什么结果的证据。",
+      "key": "id",
+      "nineElements": [
+        "people",
+        "object",
+        "matter",
+        "platform",
+        "time",
+        "information",
+        "result"
+      ]
+    },
+    "moneyEvent": {
+      "table": "public.money_events",
+      "purpose": "收入、支出、成本等金额事实；一笔事实只保存一次。",
+      "key": "id",
+      "nineElements": [
+        "people",
+        "object",
+        "matter",
+        "time",
+        "money",
+        "information",
+        "result"
+      ]
+    },
+    "resultFact": {
+      "table": "public.result_facts",
+      "purpose": "可量化或可描述的阶段/最终结果事实。",
+      "key": "id",
+      "nineElements": [
+        "people",
+        "object",
+        "matter",
+        "time",
+        "information",
+        "result"
+      ]
+    },
+    "businessEvent": {
+      "table": "public.business_events",
+      "purpose": "统一业务事件与审计事实，为AI、自动化、通知和回放提供基础。",
+      "key": "id",
+      "nineElements": [
+        "people",
+        "object",
+        "matter",
+        "platform",
+        "time",
+        "information",
+        "result"
+      ]
+    },
+    "knowledgeRoute": {
+      "table": "public.knowledge_routes",
+      "purpose": "对象/字段到知识、规则、制度、标准、SOP、帮助的精准内部路由。",
+      "key": "id",
+      "nineElements": [
+        "information"
+      ]
+    },
+    "aiExecution": {
+      "table": "public.ai_executions",
+      "purpose": "岗位AI办公室与AI秘书未来执行记录的底座；最终责任仍归人。",
+      "key": "id",
+      "nineElements": [
+        "goal",
+        "people",
+        "matter",
+        "platform",
+        "time",
+        "money",
+        "information",
+        "result"
+      ]
+    },
+    "aiTalent": {
+      "table": "public.ai_talents",
+      "purpose": "AI人才主档；AI岗位可以提前预设，AI人才通过真实任务逐步验证。",
+      "key": "id",
+      "nineElements": [
+        "people",
+        "object",
+        "matter",
+        "platform",
+        "time",
+        "money",
+        "information",
+        "result"
+      ]
+    },
+    "aiOffice": {
+      "table": "public.ai_offices",
+      "purpose": "岗位AI办公室组织单元；AI之家供给能力，AI办公室组织使用，AI秘书统一调度。",
+      "key": "id",
+      "nineElements": [
+        "goal",
+        "people",
+        "matter",
+        "platform",
+        "time",
+        "information",
+        "result"
+      ]
+    },
+    "aiAssignment": {
+      "table": "public.ai_assignments",
+      "purpose": "AI人才在某岗位AI办公室承担AI岗位的任职关系；最终责任仍归人类岗位负责人。",
+      "key": "id",
+      "nineElements": [
+        "people",
+        "matter",
+        "time",
+        "information",
+        "result"
+      ]
+    }
+  },
+  "relations": [
+    "organization.parent_id -> organization.id",
+    "business.company_org_id -> organization.id",
+    "position.organization_id -> organization.id",
+    "position.business_id -> business.id",
+    "assignment.position_id -> position.id",
+    "assignment.organization_id -> organization.id",
+    "assignment.business_id -> business.id",
+    "assignment.person_id -> public.people.id (logical reference until live-schema preflight confirms physical type)",
+    "work_item.owner_assignment_id -> assignment.id",
+    "work_item.business_id -> business.id",
+    "work_session.work_item_id -> work_item.id",
+    "work_evidence.work_item_id -> work_item.id",
+    "money_event.work_item_id -> work_item.id",
+    "result_fact.work_item_id -> work_item.id",
+    "ai_execution.work_item_id -> work_item.id",
+    "ai_office.ai_secretary_talent_id -> ai_talent.id",
+    "ai_assignment.ai_talent_id -> ai_talent.id",
+    "ai_assignment.ai_office_id -> ai_office.id",
+    "ai_assignment.ai_position_id -> position.id where position.position_type = ai (business rule)",
+    "ai_execution.office_code -> ai_office.code (logical reference)"
+  ]
+}

@@ -1,196 +1,104 @@
 /* ========================================
    MIWA Primary Navigation｜美和主要ナビゲーション
-   担当範囲：デスクトップSidebar／モバイル主ナビ／ドロワー
+   Desktop Sidebar统一母版：Navigation + Quick Actions。
+   Mobile Drawer继续作为独立移动导航形态。
 ======================================== */
 
 .mobile-bottom-nav{
-  position:fixed;
-  left:0;
-  right:0;
-  bottom:0;
-  z-index:1000;
+  position:fixed;left:0;right:0;bottom:0;z-index:1000;
   height:calc(var(--mobile-bottom) + var(--safe-bottom));
   padding:5px 8px var(--safe-bottom);
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  background:#FFFFFF;
-  border-top:1px solid var(--border);
+  display:grid;grid-template-columns:repeat(5,1fr);
+  background:#FFFFFF;border-top:1px solid var(--border);
   box-shadow:0 -4px 16px rgba(13,73,55,.06);
 }
-
-.mobile-nav-item{
-  min-width:0;
-  min-height:54px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:3px;
-  border:0;
-  border-radius:10px;
-  background:transparent;
-  color:#75817B;
-  font-size:9.5px;
-  font-weight:700;
-}
-
+.mobile-nav-item{min-width:0;min-height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;border-radius:10px;background:transparent;color:#75817B;font-size:9.5px;font-weight:700}
 .mobile-nav-item .icon{font-size:19px;line-height:1}
 .mobile-nav-item.active{color:var(--miwa-green);background:#F2F7F4}
 .mobile-nav-item.ai{color:var(--miwa-green);font-weight:850}
-.mobile-nav-item.ai .icon{
-  width:30px;
-  height:30px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:50%;
-  background:var(--miwa-green);
-  color:#FFFFFF;
-  box-shadow:0 4px 12px rgba(23,107,77,.20);
-}
+.mobile-nav-item.ai .icon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--miwa-green);color:#FFFFFF;box-shadow:0 4px 12px rgba(23,107,77,.20)}
 
-.drawer-backdrop{
-  position:fixed;
-  inset:0;
-  z-index:1090;
-  display:none;
-  background:rgba(15,30,24,.32);
-}
-
+.drawer-backdrop{position:fixed;inset:0;z-index:1090;display:none;background:rgba(15,30,24,.32)}
 .drawer-backdrop.open{display:block}
-
-.mobile-drawer{
-  position:fixed;
-  left:0;
-  right:0;
-  bottom:0;
-  z-index:1100;
-  max-height:82dvh;
-  display:none;
-  overflow:auto;
-  padding:10px 14px calc(18px + var(--safe-bottom));
-  border-radius:18px 18px 0 0;
-  background:#FFFFFF;
-  box-shadow:0 -12px 32px rgba(13,73,55,.15);
-}
-
+.mobile-drawer{position:fixed;left:0;right:0;bottom:0;z-index:1100;max-height:82dvh;display:none;overflow:auto;padding:10px 14px calc(18px + var(--safe-bottom));border-radius:18px 18px 0 0;background:#FFFFFF;box-shadow:0 -12px 32px rgba(13,73,55,.15)}
 .mobile-drawer.open{display:block}
 .drawer-handle{width:42px;height:4px;margin:0 auto 12px;border-radius:999px;background:#DCE4DF}
 .drawer-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
 .drawer-title{margin:0;color:var(--miwa-green-deep);font-size:17px}
 .drawer-close{width:40px;height:40px;border:0;border-radius:10px;background:#F2F5F3;color:#53615A}
 .drawer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-.drawer-link{
-  min-height:58px;
-  display:flex;
-  align-items:center;
-  padding:10px;
-  border:1px solid var(--border);
-  border-radius:12px;
-  background:#FFFFFF;
-  color:#48564F;
-  font-size:11.5px;
-  font-weight:750;
-}
+.drawer-link{min-height:58px;display:flex;align-items:center;padding:10px;border:1px solid var(--border);border-radius:12px;background:#FFFFFF;color:#48564F;font-size:11.5px;font-weight:750}
+.drawer-link__icon{width:18px;height:18px;margin-right:8px;color:var(--miwa-green)}
+.drawer-business-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0 0 12px}
+.drawer-business-button{min-height:38px;border:1px solid var(--border);border-radius:8px;background:#FFFFFF;color:#62746B;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+.drawer-business-button:hover{border-color:#AFC9BD;color:var(--miwa-green)}
+.drawer-business-button.active{border-color:#BFD5CB;background:#EAF3EE;color:var(--miwa-green-deep)}
 
+/* Desktop Universal Sidebar */
 .desktop-sidebar{
   position:sticky;
   top:calc(var(--desktop-header-main) + var(--desktop-header-info));
   height:calc(100vh - var(--desktop-header-main) - var(--desktop-header-info));
   min-height:calc(100vh - var(--desktop-header-main) - var(--desktop-header-info));
-  overflow-y:auto;
-  overscroll-behavior:contain;
-  padding:14px 12px 20px;
-  display:grid;
-  grid-auto-rows:max-content;
-  align-content:start;
-}
-
-.sidebar-section{display:grid;grid-auto-rows:max-content;align-content:start}
-.sidebar-nav-list{display:grid;grid-auto-rows:max-content;align-content:start}
-.sidebar-section + .sidebar-section{margin-top:17px}
-.sidebar-title{margin:0 8px 7px;color:#98A19C;font-size:10px;font-weight:800}
-.sidebar-link{
-  width:100%;
-  flex:0 0 auto;
-  min-height:38px;
   display:flex;
-  align-items:center;
-  gap:9px;
-  padding:8px 10px;
-  border-radius:9px;
-  color:#2F433A;
-  font-size:12px;
-  font-weight:650;
-}
-
-.sidebar-link:hover{color:var(--miwa-green)}
-.sidebar-link.active,
-.sidebar-link[aria-current="page"]{background:var(--miwa-green);color:#FFFFFF}
-
-.sidebar-icon{
-  width:20px;
-  height:20px;
-  flex:0 0 20px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  color:#6F877D;
-}
-
-.sidebar-icon svg{
-  width:20px;
-  height:20px;
-  display:block;
-  fill:none;
-  stroke:currentColor;
-  stroke-width:1.8;
-  stroke-linecap:round;
-  stroke-linejoin:round;
-}
-
-.sidebar-link:hover .sidebar-icon{color:var(--miwa-green)}
-.sidebar-link.active .sidebar-icon,
-.sidebar-link[aria-current="page"] .sidebar-icon{color:#FFFFFF}
-
-.quick-links-empty{margin:4px 8px 0;color:#9AA49F;font-size:10px;line-height:1.6}
-.sidebar-context-link{min-height:31px;display:flex;align-items:center;margin:0 5px;padding:0 8px;border-left:2px solid transparent;border-radius:5px;color:#62746B;font-size:10px;font-weight:700}
-.sidebar-context-link:hover{color:var(--miwa-green);background:#F5F9F7}
-.sidebar-context-link[aria-current="page"]{border-left-color:var(--miwa-green);color:var(--miwa-green-deep);background:#EEF5F1}
-.drawer-link__icon{width:18px;height:18px;margin-right:8px;color:var(--miwa-green)}
-
-@media(min-width:768px) and (max-width:1099px){
-  .drawer-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-}
-
-/* Business space switch｜事业切换 */
-.sidebar-business-section{padding-bottom:2px}
-.sidebar-business-switch,
-.drawer-business-switch{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:6px;
-}
-.sidebar-business-switch{margin:0 4px}
-.sidebar-business-button,
-.drawer-business-button{
-  min-height:32px;
-  border:1px solid var(--border);
-  border-radius:8px;
+  flex-direction:column;
+  overflow:hidden;
   background:#FFFFFF;
-  color:#62746B;
-  font:inherit;
-  font-size:10.5px;
-  font-weight:800;
-  cursor:pointer;
 }
-.sidebar-business-button:hover,
-.drawer-business-button:hover{border-color:#AFC9BD;color:var(--miwa-green)}
-.sidebar-business-button.active,
-.drawer-business-button.active{
-  border-color:#BFD5CB;
-  background:#EAF3EE;
-  color:var(--miwa-green-deep);
+
+.sidebar-context-head{
+  flex:0 0 auto;
+  padding:15px 14px 12px;
+  border-bottom:1px solid var(--border-soft);
 }
-.drawer-business-switch{margin:0 0 12px}
-.drawer-business-button{min-height:38px;font-size:11px}
+.sidebar-context-head__kicker{display:block;margin-bottom:6px;color:#98A19C;font-size:9px;font-weight:800;letter-spacing:.03em}
+.sidebar-context-head__title{display:flex;align-items:center;gap:8px;min-width:0}
+.sidebar-context-head__title strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--miwa-green-deep);font-size:13px;font-weight:850}
+.sidebar-context-head__icon{width:21px;height:21px;flex:0 0 21px;display:inline-flex;align-items:center;justify-content:center;color:var(--miwa-green)}
+.sidebar-context-head__icon svg,.sidebar-icon svg,.sidebar-tree-toggle__icon svg,.sidebar-quick-action__icon svg{width:100%;height:100%;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.sidebar-navigation-area{
+  flex:1 1 auto;
+  min-height:0;
+  overflow:auto;
+  overscroll-behavior:contain;
+  padding:10px 10px 14px;
+}
+.sidebar-navigation-tree{display:grid;gap:2px}
+.sidebar-tree-group{display:grid}
+.sidebar-tree-row{display:grid;grid-template-columns:24px minmax(0,1fr);align-items:center;min-height:38px;border-radius:9px}
+.sidebar-tree-toggle{width:24px;height:32px;display:flex;align-items:center;justify-content:center;border:0;border-radius:7px;background:transparent;color:#8A9791;cursor:pointer}
+.sidebar-tree-toggle:hover{color:var(--miwa-green);background:#F4F8F6}
+.sidebar-tree-toggle__icon{width:17px;height:17px;display:inline-flex;transition:transform .16s ease}
+.sidebar-tree-group.is-expanded .sidebar-tree-toggle__icon{transform:rotate(180deg)}
+.sidebar-tree-toggle-spacer{width:24px;height:1px}
+.sidebar-tree-link,.sidebar-flat-link{min-width:0;min-height:36px;display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;color:#35473F;font-size:11.5px;font-weight:700;text-decoration:none}
+.sidebar-tree-link:hover,.sidebar-flat-link:hover{color:var(--miwa-green);background:#F6F9F7}
+.sidebar-tree-group.is-current-group>.sidebar-tree-row .sidebar-tree-link{color:var(--miwa-green-deep);font-weight:850}
+.sidebar-tree-link[aria-current="page"],.sidebar-flat-link[aria-current="page"]{background:#EAF3EE;color:var(--miwa-green-deep);box-shadow:inset 3px 0 0 var(--miwa-green)}
+.sidebar-icon{width:19px;height:19px;flex:0 0 19px;display:inline-flex;align-items:center;justify-content:center;color:#71847B}
+.sidebar-tree-link:hover .sidebar-icon,.sidebar-flat-link:hover .sidebar-icon,.sidebar-tree-link[aria-current="page"] .sidebar-icon,.sidebar-flat-link[aria-current="page"] .sidebar-icon{color:var(--miwa-green)}
+.sidebar-flat-link{margin-left:2px}
+.sidebar-flat-link__indent{width:8px;flex:0 0 8px}
+
+.sidebar-tree-children{display:grid;gap:1px;margin:0 0 4px 34px;padding:1px 0 2px 9px;border-left:1px solid #E5ECE8}
+.sidebar-tree-children[hidden]{display:none}
+.sidebar-child-link{min-height:31px;display:flex;align-items:center;padding:5px 8px;border-radius:6px;color:#66766E;font-size:10.5px;font-weight:650;text-decoration:none}
+.sidebar-child-link:hover{color:var(--miwa-green);background:#F6F9F7}
+.sidebar-child-link[aria-current="page"]{color:var(--miwa-green-deep);background:#EEF5F1;font-weight:800;box-shadow:inset 2px 0 0 var(--miwa-green)}
+
+.sidebar-quick-actions{
+  flex:0 0 auto;
+  max-height:20%;
+  padding:10px 10px 12px;
+  border-top:1px solid var(--border-soft);
+  background:#FCFDFC;
+}
+.sidebar-quick-actions[hidden]{display:none}
+.sidebar-quick-actions__label{margin:0 6px 6px;color:#98A19C;font-size:8.5px;font-weight:800}
+.sidebar-quick-actions__list{display:grid;gap:5px}
+.sidebar-quick-action{width:100%;min-height:34px;display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--border-soft);border-radius:8px;background:#FFFFFF;color:var(--miwa-green-deep);font:inherit;font-size:10.5px;font-weight:800;text-align:left;text-decoration:none;cursor:pointer}
+.sidebar-quick-action:hover{border-color:#BFD5CB;background:#F5F9F7}
+.sidebar-quick-action__icon{width:17px;height:17px;flex:0 0 17px;display:inline-flex;color:var(--miwa-green)}
+
+@media(min-width:768px) and (max-width:1099px){.drawer-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}

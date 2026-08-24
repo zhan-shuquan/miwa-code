@@ -8,7 +8,9 @@ import { ROUTE_REGISTRY, getRouteDefinition, getRouteId } from "./config/route-r
 import { loadComponents } from "./core/component-loader.js";
 import { initHeader } from "./shell/header.js";
 import { initPrimaryNavigation } from "./shell/primary-navigation.js";
+import { initPlatformContext } from "./shell/platform-context.js";
 import { initAside } from "./shell/aside.js";
+import { initMiwaAILayer } from "./shell/miwa-ai-layer.js?v=20260824-v1.9.17-ai-context-router";
 import { initFooter } from "./shell/footer.js";
 import { initSystemSettings } from "./shell/system-settings.js";
 import { initSelectionWorkbench } from "./pages/selection-workbench.js";
@@ -29,7 +31,7 @@ const SELECTION_SUBVIEWS = Object.freeze({
 });
 
 const BUSINESS_TEMPLATE_ROUTES = new Set([
-  "category-home", "product-home", "customer-home", "talent-home", "ai-home", "shared-home",
+  "category-home", "product-home", "customer-home", "supplier-home", "talent-home", "ai-home", "ai-office", "shared-home",
   "store-home", "application-home", "income-home", "expense-home", "cash-expense", "work", "analysis"
 ]);
 const CONTENT_TEMPLATE_ROUTES = new Set(["company", "knowledge-home"]);
@@ -95,9 +97,9 @@ function renderReservedRoute(route) {
 }
 
 async function renderCurrentRoute() {
-  window.dispatchEvent(new CustomEvent("aione:page-ai-context", { detail: { title: "AI秘书｜上下文辅助", text: "根据当前页面自动生成摘要、提醒与高价值辅助；没有有效内容时保持轻量。" } }));
   const route = getRouteDefinition();
   const routeId = getRouteId();
+  window.dispatchEvent(new CustomEvent("aione:page-aside-context", { detail: { state: "light", kicker: "当前上下文", title: route.title, text: "当前页面暂无必须展开的辅助信息；如出现关键状态、风险或关联信息，右侧将按需更新。" } }));
 
   document.title = `美和AIONE一体化工作平台｜${route.title}`;
   document.body.dataset.currentRoute = routeId;
@@ -202,20 +204,30 @@ async function startMiwaSystem() {
     });
 
     if (!window.location.hash) history.replaceState(null, "", "#/selection");
+    initPlatformContext();
 
     const shellComponents = systemConfig.components.filter(([hostId]) => hostId !== "selection-main-host");
     await loadComponents(shellComponents);
 
-    initHeader({
+    const initShellModule = (name, fn) => {
+      try { return fn(); }
+      catch (error) {
+        console.error(`[AIONE] ${name} 初始化失败；其他Shell区域继续启动。`, error);
+        return false;
+      }
+    };
+
+    initShellModule("Header", () => initHeader({
       ...systemConfig.header,
       ...previewHeaderConfig,
       user: { ...systemConfig.header.user, ...previewHeaderConfig.user }
-    });
-    initPrimaryNavigation();
-    initAside(systemConfig.aside);
-    initFooter(systemConfig.footer);
-    initSystemSettings();
-    syncNotificationHeader();
+    }));
+    initShellModule("Primary Navigation", () => initPrimaryNavigation());
+    initShellModule("Aside", () => initAside(systemConfig.aside));
+    initShellModule("美和AI", () => initMiwaAILayer());
+    initShellModule("Footer", () => initFooter(systemConfig.footer));
+    initShellModule("System Settings", () => initSystemSettings());
+    initShellModule("Notification Header", () => syncNotificationHeader());
 
     // 路由监听必须独立于任何单个工作台初始化。即使某个页面局部报错，
     // 也不能阻断其他工作台、平台入口和后续 hash 路由切换。

@@ -3,7 +3,7 @@
    実データ接続後は値だけを差し替え、各コンポーネントを直接変更しない。
 ======================================== */
 
-export const SYSTEM_ASSET_VERSION = "20260822-v1.3.0-level2-empty-base-candidate";
+export const SYSTEM_ASSET_VERSION = "20260824-v1.9.20-1688-permanent-token-direct";
 const versionedComponent = (path) => `${path}?v=${SYSTEM_ASSET_VERSION}`;
 
 export const systemConfig = Object.freeze({
@@ -17,6 +17,7 @@ export const systemConfig = Object.freeze({
     ["desktop-footer-host", versionedComponent("./components/shell/footer/footer.html")],
     ["mobile-bottom-host", versionedComponent("./components/shell/primary-navigation/mobile-bottom.html")],
     ["mobile-drawer-host", versionedComponent("./components/shell/primary-navigation/mobile-drawer.html")],
+    ["miwa-ai-layer-host", versionedComponent("./components/shell/ai/miwa-ai-layer.html")],
     ["global-settings-host", versionedComponent("./components/shell/settings/global-settings.html")]
   ],
 
@@ -52,171 +53,46 @@ export const systemConfig = Object.freeze({
        共通入口は原則公開する。将来制限が必要な場合だけ権限設定から追加する。
        URL未確定項目はnullのまま保持し、偽リンクを作成しない。
     */
-    commonEntries: {
-      stores: {
-        label: "店铺之家",
-        items: [
-          { id: "rakuten-1", name: "幸せ屋", subtitle: "", mark: "幸", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" },
-          { id: "rakuten-2", name: "PrimeLife", subtitle: "", mark: "P", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" },
-          { id: "rakuten-3", name: "永井GD", subtitle: "", mark: "GD", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" }
-        ],
-        developmentNote: "店铺入口按真实业务持续增加；预设平台不代表已经开店。",
-        recentChanges: [
-          { date: "2026-08-21", title: "集团店铺总览入口升级", detail: "店铺之家统一承担店铺管理与全部店铺入口；Header只保留高频店铺快捷打开。" }
-        ],
-        catalogSections: [
-          {
-            id: "rakuten",
-            label: "楽天市場",
-            hint: "现有店铺",
-            items: [
-              { id: "rakuten-1-more", name: "幸せ屋", subtitle: "1号店", mark: "幸", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" },
-              { id: "rakuten-2-more", name: "PrimeLife", subtitle: "2号店", mark: "P", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" },
-              { id: "rakuten-3-more", name: "永井GD", subtitle: "3号店", mark: "GD", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active" }
-            ]
-          },
-          { id: "amazon-store", label: "Amazon", hint: "按业务增加", items: [] },
-          { id: "temu-store", label: "TEMU", hint: "按业务增加", items: [] },
-          { id: "qoo10-store", label: "Qoo10", hint: "按业务增加", items: [] },
-          { id: "tiktok-store", label: "TikTok Shop", hint: "按业务增加", items: [] }
-        ]
-      },
-      logistics: {
-        label: "订单与面单",
-        items: [
-          { id: "robot-in", name: "Robot-in", subtitle: "订单", mark: "R", color: "#176B4D", url: "https://sso.cloud-robot.co/login/", status: "active" },
-          { id: "sagawa", name: "佐川", subtitle: "面单", mark: "佐", color: "#176B4D", url: "https://www.e-service.sagawa-exp.co.jp/portal/do/login/show?fr=bs", status: "active" },
-          { id: "yamato", name: "黑猫", subtitle: "面单", mark: "黒", color: "#176B4D", url: "https://newb2web.kuronekoyamato.co.jp/", status: "active" },
-          { id: "fukuyama", name: "福山", subtitle: "面单·日暮里", mark: "福", color: "#176B4D", url: "https://wwwisx.fukutsu.co.jp/iSTARX/?timeout=true", status: "active" }
-        ]
-      },
-      office: {
-        label: "办公",
-        items: [
-          { id: "gpt", name: "GPT", subtitle: "办公", mark: "AI", color: "#176B4D", url: "https://chatgpt.com/", status: "active" },
-          { id: "wps", name: "WPS", subtitle: "办公", mark: "W", color: "#176B4D", url: "https://www.kdocs.cn/latest", status: "active" },
-          { id: "feishu", name: "飞书", subtitle: "办公", mark: "飞", color: "#176B4D", url: null, status: "active" },
-          { id: "google-drive", name: "Google Drive", subtitle: "云盘", mark: "D", color: "#176B4D", url: "https://drive.google.com/", status: "active" }
-        ]
-      },
-      shopping: {
-        label: "购物",
-        items: [
-          { id: "amazon", name: "亚马逊", subtitle: "购物", mark: "A", color: "#176B4D", url: "https://www.amazon.co.jp/", status: "active" },
-          { id: "rakuten-shopping", name: "乐天", subtitle: "购物", mark: "楽", color: "#176B4D", url: "https://www.rakuten.co.jp/", status: "active" },
-          { id: "hako-one", name: "箱ワン", subtitle: "购物", mark: "箱", color: "#176B4D", url: "https://www.notosiki.co.jp/mypage/login", status: "active" }
-        ]
-      },
-      mail: {
-        label: "邮箱",
-        items: [
-          { id: "gmail", name: "Gmail", subtitle: "邮箱", mark: "G", color: "#176B4D", url: "https://mail.google.com/mail/u/0/#inbox", status: "active" }
-        ]
-      },
-      tools: {
-        label: "应用之家",
-        catalogSections: [
-          {
-            id: "tool-logistics",
-            label: "订单・物流",
-            hint: "高频业务工具",
-            items: [
-              { id: "tool-robot", name: "Robot-in", subtitle: "订单", mark: "R", color: "#176B4D", url: "https://sso.cloud-robot.co/login/", status: "active" },
-              { id: "tool-sagawa", name: "佐川", subtitle: "面单", mark: "佐", color: "#176B4D", url: "https://www.e-service.sagawa-exp.co.jp/portal/do/login/show?fr=bs", status: "active" },
-              { id: "tool-yamato", name: "黑猫", subtitle: "面单", mark: "黒", color: "#176B4D", url: "https://newb2web.kuronekoyamato.co.jp/", status: "active" },
-              { id: "tool-fukuyama", name: "福山", subtitle: "日暮里", mark: "福", color: "#176B4D", url: "https://wwwisx.fukutsu.co.jp/iSTARX/?timeout=true", status: "active" },
-              { id: "tool-japanpost", name: "日本邮政", subtitle: "物流", mark: "郵", color: "#176B4D", url: "https://btoolbox.post.japanpost.jp/portal/PT/PTPT/PTPT0001.do?op=init", status: "active" }
-            ]
-          },
-          {
-            id: "tool-office",
-            label: "办公・AI",
-            hint: "集团共用",
-            items: [
-              { id: "tool-gpt", name: "GPT", subtitle: "办公", mark: "AI", color: "#176B4D", url: "https://chatgpt.com/", status: "active" },
-              { id: "tool-wps", name: "WPS", subtitle: "办公", mark: "W", color: "#176B4D", url: "https://www.kdocs.cn/latest", status: "active" },
-              { id: "tool-feishu", name: "飞书", subtitle: "办公", mark: "飞", color: "#176B4D", url: null, status: "active" },
-              { id: "tool-drive", name: "Google Drive", subtitle: "云盘", mark: "D", color: "#176B4D", url: "https://drive.google.com/", status: "active" },
-              { id: "tool-sique", name: "思雀AI", subtitle: "生图", mark: "思", color: "#176B4D", url: "https://ai.sique.com/", status: "active" },
-              { id: "tool-biiino", name: "biiino", subtitle: "上架", mark: "b", color: "#176B4D", url: "https://home.biiino.com/login", status: "active" },
-              { id: "tool-stepcoupon", name: "Step Coupon", subtitle: "运营", mark: "S", color: "#176B4D", url: "https://step-coupon.com/login.html", status: "active" }
-            ]
-          },
-          {
-            id: "tool-shopping",
-            label: "购物・采购",
-            hint: "公司采购",
-            items: [
-              { id: "tool-amazon", name: "亚马逊", subtitle: "购物", mark: "A", color: "#176B4D", url: "https://www.amazon.co.jp/", status: "active" },
-              { id: "tool-rakuten", name: "乐天", subtitle: "购物", mark: "楽", color: "#176B4D", url: "https://www.rakuten.co.jp/", status: "active" },
-              { id: "tool-hako", name: "箱ワン", subtitle: "包装采购", mark: "箱", color: "#176B4D", url: "https://www.notosiki.co.jp/mypage/login", status: "active" }
-            ]
-          },
-          {
-            id: "tool-mail",
-            label: "邮箱・Google",
-            hint: "集团账号",
-            items: [
-              { id: "tool-gmail-info", name: "Gmail", subtitle: "info", mark: "G", color: "#176B4D", url: "https://mail.google.com/mail/u/0/#inbox", status: "active" },
-              { id: "tool-gmail-support", name: "Gmail", subtitle: "support", mark: "G", color: "#176B4D", url: "https://mail.google.com/mail/u/0/#inbox", status: "active" }
-            ]
-          },
-          {
-            id: "tool-business",
-            label: "公共・财务",
-            hint: "按需使用",
-            items: [
-              { id: "tool-gs1", name: "GS1", subtitle: "合规", mark: "G", color: "#176B4D", url: "https://mygs1.gs1jp.org", status: "active" },
-              { id: "tool-iwill", name: "i-WiLL", subtitle: "关税", mark: "i", color: "#176B4D", url: "https://webcsw.ocs.co.jp/csw/login/JPOCS", status: "active" },
-              { id: "tool-moneytree", name: "Moneytree", subtitle: "财务", mark: "M", color: "#176B4D", url: "https://business.getmoneytree.com/", status: "active" },
-              { id: "tool-billpay", name: "楽天BillPay", subtitle: "结算", mark: "楽", color: "#176B4D", url: "https://billpay.rakuten.co.jp/login", status: "active" }
-            ]
-          }
-        ],
-        items: [
-          { id: "robot-in", name: "Robot-in", subtitle: "订单", mark: "R", color: "#176B4D", url: "https://sso.cloud-robot.co/login/", status: "active" },
-          { id: "sagawa", name: "佐川", subtitle: "面单", mark: "佐", color: "#176B4D", url: "https://www.e-service.sagawa-exp.co.jp/portal/do/login/show?fr=bs", status: "active" },
-          { id: "yamato", name: "黑猫", subtitle: "面单", mark: "黒", color: "#176B4D", url: "https://newb2web.kuronekoyamato.co.jp/", status: "active" },
-          { id: "gpt", name: "GPT", subtitle: "办公", mark: "AI", color: "#176B4D", url: "https://chatgpt.com/", status: "active" },
-          { id: "wps", name: "WPS", subtitle: "办公", mark: "W", color: "#176B4D", url: "https://www.kdocs.cn/latest", status: "active" },
-          { id: "google-drive", name: "Google Drive", subtitle: "云盘", mark: "D", color: "#176B4D", url: "https://drive.google.com/", status: "active" }
-        ]
-      }
+    sharedResources: {
+      /*
+         共享资源仅作为内部管理与注册概念，不作为Header前台页面名称。
+         productForm定义产品形态；origin定义内部/外部属性；quickGroup只负责Header第2行自动分隔；
+         quickAccess决定是否进入快捷层；headerHidden允许保留资源登记但隐藏Header入口。
+      */
+      allResourcesRoute: "shared-home",
+      quickGroupOrder: ["core", "stores", "logistics", "office", "procurement", "mail"],
+      items: [
+        { id: "erp", name: "ERP", subtitle: "资源", mark: "E", color: "#176B4D", route: "erp-home", status: "active", productForm: "应用", origin: "内部", quickAccess: true, headerHidden: false, quickGroup: "core", sortOrder: 10, owner: "财务/系统负责人" },
+        { id: "hr", name: "HR", subtitle: "人事", mark: "HR", color: "#176B4D", route: "people-home", status: "planned", productForm: "应用", origin: "内部", quickAccess: true, headerHidden: true, quickGroup: "core", sortOrder: 20, owner: "人事负责人" },
+
+        { id: "rakuten-1", name: "幸せ屋", subtitle: "店铺", mark: "幸", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "stores", sortOrder: 10, owner: "店铺负责人" },
+        { id: "rakuten-2", name: "PrimeLife", subtitle: "店铺", mark: "P", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "stores", sortOrder: 20, owner: "店铺负责人" },
+        { id: "rakuten-3", name: "永井GD", subtitle: "店铺", mark: "GD", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "stores", sortOrder: 30, owner: "店铺负责人" },
+
+        { id: "robot-in", name: "Robot-in", subtitle: "订单", mark: "R", color: "#176B4D", url: "https://sso.cloud-robot.co/login/", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "logistics", sortOrder: 10, owner: "订单/物流负责人" },
+        { id: "sagawa", name: "佐川", subtitle: "面单", mark: "佐", color: "#176B4D", url: "https://www.e-service.sagawa-exp.co.jp/portal/do/login/show?fr=bs", status: "active", productForm: "工具", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "logistics", sortOrder: 20, owner: "物流负责人" },
+        { id: "yamato", name: "黑猫", subtitle: "面单", mark: "黒", color: "#176B4D", url: "https://newb2web.kuronekoyamato.co.jp/", status: "active", productForm: "工具", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "logistics", sortOrder: 30, owner: "物流负责人" },
+        { id: "fukuyama", name: "福山", subtitle: "日暮里", mark: "福", color: "#176B4D", url: "https://wwwisx.fukutsu.co.jp/iSTARX/?timeout=true", status: "active", productForm: "工具", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "logistics", sortOrder: 40, owner: "物流负责人" },
+
+        { id: "gpt", name: "GPT", subtitle: "办公", mark: "AI", color: "#176B4D", url: "https://chatgpt.com/", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "office", sortOrder: 10, owner: "系统负责人" },
+        { id: "wps", name: "WPS", subtitle: "办公", mark: "W", color: "#176B4D", url: "https://www.kdocs.cn/latest", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "office", sortOrder: 20, owner: "系统负责人" },
+        { id: "feishu", name: "飞书", subtitle: "办公", mark: "飞", color: "#176B4D", url: null, status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "office", sortOrder: 30, owner: "系统负责人" },
+        { id: "google-drive", name: "Google Drive", subtitle: "云盘", mark: "D", color: "#176B4D", url: "https://drive.google.com/", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "office", sortOrder: 40, owner: "系统负责人" },
+
+        { id: "amazon", name: "亚马逊", subtitle: "采购", mark: "A", color: "#176B4D", url: "https://www.amazon.co.jp/", status: "active", productForm: "服务", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "procurement", sortOrder: 10, owner: "采购负责人" },
+        { id: "rakuten-shopping", name: "乐天", subtitle: "采购", mark: "楽", color: "#176B4D", url: "https://www.rakuten.co.jp/", status: "active", productForm: "服务", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "procurement", sortOrder: 20, owner: "采购负责人" },
+        { id: "hako-one", name: "箱ワン", subtitle: "采购", mark: "箱", color: "#176B4D", url: "https://www.notosiki.co.jp/mypage/login", status: "active", productForm: "服务", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "procurement", sortOrder: 30, owner: "采购负责人" },
+
+        { id: "gmail", name: "Gmail", subtitle: "邮箱", mark: "G", color: "#176B4D", url: "https://mail.google.com/mail/u/0/#inbox", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "mail", sortOrder: 10, owner: "系统负责人" },
+
+        { id: "aione-nav-standard", name: "AIONE导航规范", subtitle: "帮助中心", mark: "知", color: "#176B4D", route: "knowledge-home?type=帮助中心", status: "active", productForm: "知识", origin: "内部", quickAccess: false, headerHidden: true, quickGroup: "", sortOrder: 0, owner: "AIONE平台架构" },
+        { id: "aione-code", name: "AIONE代码资产", subtitle: "GitHub", mark: "</>", color: "#176B4D", url: "https://github.com/", status: "active", productForm: "代码", origin: "内部", quickAccess: false, headerHidden: true, quickGroup: "", sortOrder: 0, owner: "系统负责人" }
+      ]
     },
 
-    /* 現段階は全員に全ワークベンチを公開。将来必要時のみ restricted に切替える。 */
-    permissionMode: "open",
-    permissions: [],
+    /* 扩展之家只有在真实配置后才显示“更多”，不为空占位。 */
+    moreHomes: [],
 
-    workCount: 0,
-    notificationCount: 0,
-    searchRoute: "search",
-    spiritReferenceRoute: "principles",
-
-    /* 今日印象恢复为轻量全局信息带；天气暂不启用，避免无必要外部请求。 */
-    weather: {
-      enabled: false,
-      provider: "open-meteo",
-      refreshMinutes: 15
-    },
-
-    /* モバイル既存情報帯との互換用。正式企業通知はnoticeに実データを入れる。 */
-    enterprise: {
-      tag: "日本团队",
-      type: "weather",
-      text: null,
-      timeZone: "Asia/Tokyo",
-      /* 顶部信息带固定为：今日印象｜日程｜通知。日程是否重要由用户明确选择。 */
-      showScheduleSlotWhenEmpty: true,
-      emptyScheduleText: "暂无重要日程",
-      importantSchedule: null,
-      showNoticeSlotWhenEmpty: true,
-      emptyNoticeLabel: "通知",
-      emptyNoticeText: "暂无重要通知",
-      notice: null
-    },
-
-    /* 433説明はHeader構造から分離し、設定データとして管理する。 */
     spiritContent: {
       "miwa-spirit": {
         kicker: "美和精神",
@@ -304,25 +180,20 @@ export const systemConfig = Object.freeze({
       }
     },
 
-    /* ERP入口は配置と権限の議論完了まで表示しない */
-    reservedInterfaces: {
-      erp: {
-        enabled: false,
-        route: "erp",
-        permission: "erp.access",
-        placement: "pending"
-      }
-    }
+    /* 高频资源的显示由sharedResources.items中的quickAccess/headerHidden统一控制。 */
+    reservedInterfaces: {}
   },
 
   aside: {
-    title: "AI秘书｜上下文辅助",
-    content: "根据当前页面自动提供摘要、提醒和高价值AI辅助；没有有效内容时保持轻量。"
+    state: "light",
+    kicker: "当前上下文",
+    title: "当前页面",
+    content: "只展示当前页面真正有价值的辅助信息；无有效内容时允许隐藏。"
   },
 
   footer: {
-    status: "Global Shell唯一源码 + Level-2 Empty Base + 标准组件 + 母版Recipe",
+    status: "Global Shell + Smart Header + Universal Sidebar + Contextual Aside + Independent 美和AI Layer + Level-2 Base",
     environment: "INTERNAL TEST REBUILD",
-    version: "v1.3.0-level2-empty-base-candidate"
+    version: "v1.9.20-1688-permanent-token-direct"
   }
 });

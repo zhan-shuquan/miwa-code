@@ -1,10 +1,21 @@
-<header class="mobile-topbar" data-component="miwa-mobile-header">
-  <a class="mobile-brand" href="#/company" data-header-route="company" aria-label="打开美和之家">
+<header class="mobile-topbar" data-component="miwa-mobile-header" data-platform-context-order="company business person work time execution">
+  <a class="mobile-brand" href="#/company" data-header-route="company" data-context-stage="company" aria-label="打开美和之家">
     <img class="mobile-logo" src="./assets/brand/miwa-commerce-logo.png" alt="美和正式Logo" />
     <span class="mobile-brand-name">AIONE</span>
   </a>
 
-  <section class="mobile-user-identity" aria-label="用户登录区">
+  <section class="mobile-business-context" data-context-stage="business" aria-label="当前事业">
+    <button class="mobile-business-context__button" id="mobile-business-entry" type="button" aria-haspopup="menu" aria-expanded="false">
+      <span id="mobile-business-name">跨境</span>
+      <span class="miwa-semantic-icon miwa-chevron" data-icon="chevronDown"></span>
+    </button>
+    <div class="mobile-business-menu" id="mobile-business-menu" role="menu" hidden>
+      <div class="miwa-business-menu__title">切换事业</div>
+      <div class="miwa-business-menu__list" id="mobile-business-menu-list"></div>
+    </div>
+  </section>
+
+  <section class="mobile-user-identity" data-context-stage="person" aria-label="用户登录区">
     <button class="mobile-user-identity__button" id="mobile-employee-entry" type="button" aria-haspopup="dialog" aria-expanded="false">
       <span class="mobile-user-avatar miwa-user-avatar" id="mobile-user-avatar">占</span>
       <span class="mobile-user-line"><strong id="mobile-user-name">占树全</strong><span class="miwa-grade-badge" id="mobile-position-grade">P9</span></span>
@@ -28,8 +39,9 @@
 
   <div class="mobile-top-spacer"></div>
   <button class="mobile-icon-button" id="mobile-search-button" type="button" aria-label="全局搜索"><span class="miwa-semantic-icon" data-icon="search"></span></button>
+  <button class="mobile-icon-button mobile-miwa-ai-entry" id="mobile-miwa-ai-entry" data-miwa-ai-entry="mobile" type="button" onclick="window.AIONEMiwaAIHardBridge?.open('mobile-inline')" aria-haspopup="dialog" aria-expanded="false" aria-label="打开美和AI" title="美和AI"><span class="miwa-ai-mini-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M6 26V10l6.5 9L18 10l5.5 9L30 10v16"></path><circle cx="18" cy="8" r="2.8"></circle></svg></span></button>
   <a class="mobile-icon-button" href="#/notifications" data-header-route="notifications" aria-label="通知"><span class="miwa-semantic-icon" data-icon="notification"></span><span class="mobile-badge" id="mobile-notification-count" hidden>0</span></a>
-  <a class="mobile-icon-button mobile-help-button" href="#/help-home" data-header-route="help-home" aria-label="帮助之家"><span class="miwa-semantic-icon" data-icon="help"></span></a>
+  <a class="mobile-icon-button mobile-help-button" href="#/knowledge-home?type=帮助中心" aria-label="帮助中心"><span class="miwa-semantic-icon" data-icon="help"></span></a>
   <a class="mobile-icon-button" href="#/settings" data-header-route="settings" aria-label="设置"><span class="miwa-semantic-icon" data-icon="settings"></span></a>
 </header>
 

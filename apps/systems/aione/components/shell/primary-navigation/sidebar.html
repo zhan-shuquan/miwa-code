@@ -1,21 +1,18 @@
-<nav class="desktop-sidebar" aria-label="AIONE业务导航">
-  <section class="sidebar-section sidebar-business-section">
-    <div class="sidebar-title">当前事业</div>
-    <div class="sidebar-business-switch" id="sidebar-business-switch" role="group" aria-label="事业切换">
-      <button type="button" class="sidebar-business-button active" data-business-space="crossborder">美和跨境</button>
-      <button type="button" class="sidebar-business-button" data-business-space="wholesale">美和批发</button>
+<nav class="desktop-sidebar" aria-label="AIONE当前空间导航" data-universal-sidebar>
+  <header class="sidebar-context-head">
+    <span class="sidebar-context-head__kicker" id="sidebar-context-kicker">当前空间</span>
+    <div class="sidebar-context-head__title">
+      <span class="sidebar-context-head__icon miwa-semantic-icon" id="sidebar-context-icon" data-icon="apps" aria-hidden="true"></span>
+      <strong id="sidebar-context-title">美和跨境</strong>
     </div>
+  </header>
+
+  <section class="sidebar-navigation-area" aria-label="导航">
+    <div class="sidebar-navigation-tree" id="sidebar-navigation-tree"></div>
   </section>
 
-  <section class="sidebar-section">
-    <div class="sidebar-title" id="sidebar-business-title">美和跨境</div>
-    <div class="sidebar-nav-list" id="workbench-navigation-list"></div>
-  </section>
-
-  <section class="sidebar-section">
-    <div class="sidebar-title">当前工作台</div>
-    <div id="business-quick-links">
-      <div class="quick-links-empty">进入工作台后显示当前工作台核心业务入口。</div>
-    </div>
+  <section class="sidebar-quick-actions" id="sidebar-quick-actions" aria-label="快捷操作" hidden>
+    <div class="sidebar-quick-actions__label">快捷操作</div>
+    <div class="sidebar-quick-actions__list" id="sidebar-quick-actions-list"></div>
   </section>
 </nav>

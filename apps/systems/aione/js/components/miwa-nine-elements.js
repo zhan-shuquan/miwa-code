@@ -1,4 +1,4 @@
-import { MIWA_NINE_ELEMENTS } from "../config/business-page-definitions.js";
+import { MIWA_NINE_ELEMENTS } from "../config/miwa-nine-elements.js";
 
 /* ========================================
    MIWA 9 Elements｜美和9要素唯一组件

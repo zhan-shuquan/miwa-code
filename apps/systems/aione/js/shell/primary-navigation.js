@@ -1,171 +1,228 @@
 /* ========================================
-   MIWA Primary Navigation｜事业切换・現在地・二级业务导航
+   MIWA Primary Navigation｜Universal Sidebar
+   上部 Navigation：树形/手风琴导航；下部 Quick Actions：0-3个高频启动动作。
 ======================================== */
 
-import { ROUTE_REGISTRY } from "../config/route-registry.js";
-import { BUSINESS_SPACES, getBusinessSpaceForRoute, getWorkbenchForRoute } from "../config/business-navigation.js";
-import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260822-v1.3.0-level2-empty-base-candidate";
-
-const STORAGE_KEY = "aione.currentBusinessSpace";
+import { BUSINESS_SPACES } from "../config/business-navigation.js";
+import { getCurrentBusinessSpaceId, syncPlatformContextFromRoute } from "./platform-context.js";
+import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260824-v1.9.5-sidebar-aside-lock-candidate";
+import { resolveSidebarContext } from "../config/sidebar-registry.js";
 
 function getCurrentRoute() {
   const hash = window.location.hash.replace(/^#\/?/, "");
-  return hash.split(/[/?]/)[0] || "work";
+  return hash.split(/[/?]/)[0] || "selection";
 }
 
-function getStoredBusinessSpace() {
-  try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    return BUSINESS_SPACES[saved] ? saved : "crossborder";
-  } catch {
-    return "crossborder";
-  }
+function getCurrentPath() {
+  return window.location.hash.replace(/^#\/?/, "").split("?")[0] || "selection";
 }
 
-function setStoredBusinessSpace(spaceId) {
-  try { window.localStorage.setItem(STORAGE_KEY, spaceId); } catch { /* no-op */ }
+function isRouteCurrent(route, routeId, currentPath) {
+  return route === currentPath || route === routeId;
 }
 
-function resolveBusinessSpace() {
-  const routeSpace = getBusinessSpaceForRoute(getCurrentRoute());
-  return routeSpace?.id || getStoredBusinessSpace();
-}
-
-function createWorkbenchLink(workbench, mobile = false) {
-  const link = document.createElement("a");
-  link.href = `#/${workbench.route}`;
-  link.dataset.navRoute = workbench.route;
-  link.className = mobile ? "drawer-link" : "sidebar-link";
-
+function createIcon(iconName, className = "sidebar-icon") {
   const icon = document.createElement("span");
-  icon.className = mobile ? "drawer-link__icon miwa-semantic-icon" : "sidebar-icon miwa-semantic-icon";
-  icon.dataset.icon = workbench.icon || "apps";
-  const label = document.createElement("span");
-  label.textContent = workbench.label;
-  link.append(icon, label);
+  icon.className = `${className} miwa-semantic-icon`;
+  icon.dataset.icon = iconName || "apps";
+  return icon;
+}
+
+function createChildLink(entry, routeId, currentPath) {
+  const link = document.createElement("a");
+  link.className = "sidebar-child-link";
+  link.href = `#/${entry.route}`;
+  link.textContent = entry.label;
+  if (isRouteCurrent(entry.route, routeId, currentPath)) link.setAttribute("aria-current", "page");
   return link;
 }
 
-function renderBusinessSwitch(spaceId) {
-  document.querySelectorAll("[data-business-space]").forEach((button) => {
-    const active = button.dataset.businessSpace === spaceId;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", String(active));
-  });
-  const space = BUSINESS_SPACES[spaceId];
-  const desktopTitle = document.getElementById("sidebar-business-title");
-  const mobileTitle = document.getElementById("mobile-business-title");
-  if (desktopTitle) desktopTitle.textContent = space.label;
-  if (mobileTitle) mobileTitle.textContent = space.label;
+function setGroupExpanded(group, expanded) {
+  const toggle = group.querySelector("[data-sidebar-tree-toggle]");
+  const children = group.querySelector(".sidebar-tree-children");
+  group.classList.toggle("is-expanded", expanded);
+  if (toggle) toggle.setAttribute("aria-expanded", String(expanded));
+  if (children) children.hidden = !expanded;
 }
 
-function renderWorkbenchNavigation(spaceId = resolveBusinessSpace()) {
-  const space = BUSINESS_SPACES[spaceId] || BUSINESS_SPACES.crossborder;
-  const desktopHost = document.getElementById("workbench-navigation-list");
-  const mobileHost = document.getElementById("mobile-workbench-navigation-list");
-  if (desktopHost) desktopHost.replaceChildren(...space.workbenches.map((entry) => createWorkbenchLink(entry)));
-  if (mobileHost) mobileHost.replaceChildren(...space.workbenches.map((entry) => createWorkbenchLink(entry, true)));
-  renderBusinessSwitch(space.id);
+function createAccordionItem(entry, context, routeId, currentPath) {
+  const group = document.createElement("div");
+  group.className = "sidebar-tree-group";
+  group.dataset.sidebarTreeGroup = entry.id;
+
+  const row = document.createElement("div");
+  row.className = "sidebar-tree-row";
+
+  const hasChildren = Array.isArray(entry.children) && entry.children.length > 0;
+  if (hasChildren) {
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "sidebar-tree-toggle";
+    toggle.dataset.sidebarTreeToggle = entry.id;
+    toggle.setAttribute("aria-label", `展开或收起${entry.label}`);
+    toggle.append(createIcon("chevronDown", "sidebar-tree-toggle__icon"));
+    row.append(toggle);
+  } else {
+    const spacer = document.createElement("span");
+    spacer.className = "sidebar-tree-toggle-spacer";
+    row.append(spacer);
+  }
+
+  const link = document.createElement("a");
+  link.className = "sidebar-tree-link";
+  link.href = `#/${entry.route}`;
+  link.dataset.navRoute = entry.route;
+  link.append(createIcon(entry.icon || "apps"), Object.assign(document.createElement("span"), { textContent: entry.label }));
+  row.append(link);
+  group.append(row);
+
+  const childCurrent = hasChildren && entry.children.some((child) => isRouteCurrent(child.route, routeId, currentPath));
+  const parentCurrent = isRouteCurrent(entry.route, routeId, currentPath);
+  const currentGroup = context.activeWorkbenchId === entry.id || childCurrent || parentCurrent;
+  group.classList.toggle("is-current-group", currentGroup);
+  if (parentCurrent) link.setAttribute("aria-current", "page");
+
+  if (hasChildren) {
+    const children = document.createElement("div");
+    children.className = "sidebar-tree-children";
+    children.append(...entry.children.map((child) => createChildLink(child, routeId, currentPath)));
+    group.append(children);
+    setGroupExpanded(group, currentGroup);
+  }
+
+  return group;
+}
+
+function createFlatItem(entry, routeId, currentPath) {
+  const link = document.createElement("a");
+  link.className = "sidebar-flat-link";
+  link.href = `#/${entry.route}`;
+  link.dataset.navRoute = entry.route;
+  const icon = entry.icon ? createIcon(entry.icon) : document.createElement("span");
+  if (!entry.icon) icon.className = "sidebar-flat-link__indent";
+  link.append(icon, Object.assign(document.createElement("span"), { textContent: entry.label }));
+  if (isRouteCurrent(entry.route, routeId, currentPath)) link.setAttribute("aria-current", "page");
+  return link;
+}
+
+function renderQuickActions(context) {
+  const section = document.getElementById("sidebar-quick-actions");
+  const host = document.getElementById("sidebar-quick-actions-list");
+  if (!section || !host) return;
+  const actions = (context.quickActions || []).slice(0, 4);
+  section.hidden = actions.length === 0;
+  host.replaceChildren();
+
+  actions.forEach((action) => {
+    const node = action.route ? document.createElement("a") : document.createElement("button");
+    node.className = "sidebar-quick-action";
+    if (action.route) node.href = action.route.startsWith("#/") ? action.route : `#/${action.route}`;
+    else {
+      node.type = "button";
+      node.dataset.sidebarQuickAction = action.event || action.id;
+    }
+    node.append(createIcon(action.icon || "apps", "sidebar-quick-action__icon"), Object.assign(document.createElement("span"), { textContent: action.label }));
+    host.append(node);
+  });
+}
+
+function renderSidebar() {
+  const routeId = getCurrentRoute();
+  const currentPath = getCurrentPath();
+  const context = resolveSidebarContext(routeId, currentPath, getCurrentBusinessSpaceId());
+  const title = document.getElementById("sidebar-context-title");
+  const kicker = document.getElementById("sidebar-context-kicker");
+  const icon = document.getElementById("sidebar-context-icon");
+  const host = document.getElementById("sidebar-navigation-tree");
+  if (!host) return;
+
+  if (title) title.textContent = context.title;
+  if (kicker) kicker.textContent = context.kicker;
+  if (icon) {
+    icon.dataset.icon = context.icon || "apps";
+    icon.dataset.iconReady = "false";
+  }
+
+  const nodes = context.type === "business"
+    ? context.items.map((entry) => createAccordionItem(entry, context, routeId, currentPath))
+    : context.items.map((entry) => createFlatItem(entry, routeId, currentPath));
+  host.replaceChildren(...nodes);
+  renderQuickActions(context);
   renderSemanticIcons(document);
 }
 
-function renderContextNavigation() {
-  const host = document.getElementById("business-quick-links");
-  if (!host) return;
-  const routeId = getCurrentRoute();
-  const currentPath = window.location.hash.replace(/^#\/?/, "").split("?")[0];
-  const workbench = getWorkbenchForRoute(routeId);
+function bindDesktopAccordion() {
+  document.querySelector("[data-universal-sidebar]")?.addEventListener("click", (event) => {
+    const toggle = event.target.closest("[data-sidebar-tree-toggle]");
+    if (toggle) {
+      event.preventDefault();
+      const group = toggle.closest(".sidebar-tree-group");
+      const shell = group?.parentElement;
+      if (!group || !shell) return;
+      const nextExpanded = !group.classList.contains("is-expanded");
+      shell.querySelectorAll(".sidebar-tree-group.is-expanded").forEach((other) => {
+        if (other !== group) setGroupExpanded(other, false);
+      });
+      setGroupExpanded(group, nextExpanded);
+      return;
+    }
 
-  if (!workbench?.children?.length) {
-    const empty = document.createElement("div");
-    empty.className = "quick-links-empty";
-    empty.textContent = "当前页面的二级业务入口将在模块建设时接入。";
-    host.replaceChildren(empty);
-    return;
-  }
-
-  const links = workbench.children.map((entry) => {
-    const link = document.createElement("a");
-    link.className = "sidebar-context-link";
-    link.href = `#/${entry.route}`;
-    link.textContent = entry.label;
-    if (entry.route === currentPath || entry.route === routeId) link.setAttribute("aria-current", "page");
-    return link;
-  });
-  host.replaceChildren(...links);
-}
-
-function updateActiveRoute() {
-  const routeId = getCurrentRoute();
-  const workbench = getWorkbenchForRoute(routeId);
-  const activeWorkbenchRoute = workbench?.route || routeId;
-
-  document.querySelectorAll("[data-nav-route]").forEach((item) => {
-    const isActive = item.dataset.navRoute === activeWorkbenchRoute;
-    item.classList.toggle("active", isActive);
-    if (isActive) item.setAttribute("aria-current", "page");
-    else item.removeAttribute("aria-current");
-  });
-
-  document.querySelectorAll("[data-mobile-route]").forEach((item) => {
-    item.classList.toggle("active", item.dataset.mobileRoute === routeId);
-  });
-
-  const isBusinessRoute = Boolean(workbench);
-  document.querySelectorAll('[data-mobile-section="workbenches"]').forEach((item) => {
-    item.classList.toggle("active", isBusinessRoute);
+    const quick = event.target.closest("[data-sidebar-quick-action]");
+    if (quick) {
+      const mainHost = document.getElementById("selection-main-host");
+      mainHost?.dispatchEvent(new CustomEvent("aione:sidebar-quick-action", {
+        bubbles: false,
+        detail: { action: quick.dataset.sidebarQuickAction, route: getCurrentRoute() }
+      }));
+    }
   });
 }
 
-function bindBusinessSwitch() {
-  document.querySelectorAll("[data-business-space]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const spaceId = button.dataset.businessSpace;
-      const space = BUSINESS_SPACES[spaceId];
-      if (!space) return;
-      setStoredBusinessSpace(spaceId);
-      renderWorkbenchNavigation(spaceId);
-      renderContextNavigation();
-      window.location.hash = `#/${space.defaultRoute}`;
-    });
-  });
+function createMobileWorkbenchLink(workbench) {
+  const link = document.createElement("a");
+  link.href = `#/${workbench.route}`;
+  link.dataset.navRoute = workbench.route;
+  link.className = "drawer-link";
+  link.append(createIcon(workbench.icon || "apps", "drawer-link__icon"), Object.assign(document.createElement("span"), { textContent: workbench.label }));
+  return link;
 }
 
-export function initPrimaryNavigation() {
-  const initialSpace = resolveBusinessSpace();
-  renderWorkbenchNavigation(initialSpace);
-  bindBusinessSwitch();
+function renderMobileBusinessNavigation(spaceId = getCurrentBusinessSpaceId()) {
+  const space = BUSINESS_SPACES[spaceId] || BUSINESS_SPACES.crossborder;
+  const host = document.getElementById("mobile-workbench-navigation-list");
+  if (host) host.replaceChildren(...space.workbenches.map(createMobileWorkbenchLink));
+  const title = document.getElementById("mobile-business-title");
+  if (title) title.textContent = space.label;
+  renderSemanticIcons(document);
+}
 
+function bindMobileDrawer() {
   const drawer = document.getElementById("mobile-drawer");
   const backdrop = document.getElementById("drawer-backdrop");
   const closeButton = drawer?.querySelector(".drawer-close");
   const workbenchMenu = document.getElementById("mobile-workbench-menu");
-  const openDrawer = () => {
-    drawer?.classList.add("open");
-    backdrop?.classList.add("open");
-  };
-  const closeDrawer = () => {
-    drawer?.classList.remove("open");
-    backdrop?.classList.remove("open");
-  };
-
+  const openDrawer = () => { drawer?.classList.add("open"); backdrop?.classList.add("open"); };
+  const closeDrawer = () => { drawer?.classList.remove("open"); backdrop?.classList.remove("open"); };
   closeButton?.addEventListener("click", closeDrawer);
   backdrop?.addEventListener("click", closeDrawer);
   workbenchMenu?.addEventListener("click", openDrawer);
-  drawer?.addEventListener("click", (event) => {
-    if (event.target.closest("a")) closeDrawer();
+  drawer?.addEventListener("click", (event) => { if (event.target.closest("a")) closeDrawer(); });
+}
+
+export function initPrimaryNavigation() {
+  renderSidebar();
+  bindDesktopAccordion();
+  renderMobileBusinessNavigation();
+  bindMobileDrawer();
+
+  window.addEventListener("aione:platform-context-change", (event) => {
+    const spaceId = event?.detail?.businessSpaceId;
+    if (spaceId && BUSINESS_SPACES[spaceId]) renderMobileBusinessNavigation(spaceId);
+    renderSidebar();
   });
 
-  updateActiveRoute();
-  renderContextNavigation();
-
   window.addEventListener("hashchange", () => {
-    const routeSpace = getBusinessSpaceForRoute(getCurrentRoute());
-    if (routeSpace) {
-      setStoredBusinessSpace(routeSpace.id);
-      renderWorkbenchNavigation(routeSpace.id);
-    }
-    updateActiveRoute();
-    renderContextNavigation();
+    syncPlatformContextFromRoute({ reason: "sidebar-route" });
+    renderSidebar();
   });
 }
