@@ -4,7 +4,7 @@
 ======================================== */
 
 import { BUSINESS_SPACES } from "../config/business-navigation.js";
-import { getCurrentBusinessSpaceId, syncPlatformContextFromRoute } from "./platform-context.js";
+import { getBusinessSpaceOptions, getCurrentBusinessSpaceId, setCurrentBusinessSpace, syncPlatformContextFromRoute } from "./platform-context.js";
 import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260824-v1.9.5-sidebar-aside-lock-candidate";
 import { resolveSidebarContext } from "../config/sidebar-registry.js";
 
@@ -126,10 +126,56 @@ function renderQuickActions(context) {
   });
 }
 
+function renderBusinessSwitcher(context, routeId) {
+  const host = document.getElementById("sidebar-business-switcher");
+  const select = document.getElementById("sidebar-business-select");
+  const label = document.getElementById("sidebar-business-switcher-label");
+
+  if (!host || !select) return;
+
+  const isBusinessContext = context?.type === "business";
+  const isBusinessHome =
+    routeId === "business-home" ||
+    String(routeId || "").startsWith("business-");
+
+  const shouldShow = isBusinessContext || isBusinessHome;
+  host.hidden = !shouldShow;
+
+  if (!shouldShow) return;
+
+  const currentId = getCurrentBusinessSpaceId();
+  const options = getBusinessSpaceOptions();
+
+  select.replaceChildren(
+    ...options.map((space) => {
+      const option = document.createElement("option");
+      option.value = space.id;
+      option.textContent = space.label;
+      option.selected = space.id === currentId;
+      return option;
+    })
+  );
+
+  if (label) {
+    label.textContent = isBusinessContext ? "切换事业" : "进入事业";
+  }
+
+  if (select.dataset.bound !== "true") {
+    select.dataset.bound = "true";
+    select.addEventListener("change", () => {
+      if (!select.value) return;
+      setCurrentBusinessSpace(select.value, {
+        navigate: true,
+        reason: "sidebar-business-switcher"
+      });
+    });
+  }
+}
 function renderSidebar() {
   const routeId = getCurrentRoute();
   const currentPath = getCurrentPath();
   const context = resolveSidebarContext(routeId, currentPath, getCurrentBusinessSpaceId());
+  renderBusinessSwitcher(context, routeId);
   const title = document.getElementById("sidebar-context-title");
   const kicker = document.getElementById("sidebar-context-kicker");
   const icon = document.getElementById("sidebar-context-icon");
