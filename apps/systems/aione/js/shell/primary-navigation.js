@@ -233,7 +233,46 @@ function createMobileWorkbenchLink(workbench) {
   return link;
 }
 
+function renderMobileBusinessSwitcher(spaceId = getCurrentBusinessSpaceId()) {
+  const select = document.getElementById("mobile-drawer-business-select");
+  if (!select) return;
+
+  const options = getBusinessSpaceOptions();
+
+  select.replaceChildren(
+    ...options.map((space) => {
+      const option = document.createElement("option");
+      option.value = space.id;
+      option.textContent = space.label;
+      return option;
+    })
+  );
+
+  select.value = spaceId;
+
+  if (select.dataset.bound !== "true") {
+    select.dataset.bound = "true";
+
+    select.addEventListener("change", () => {
+      const nextId = select.value;
+      if (!nextId || nextId === getCurrentBusinessSpaceId()) return;
+
+      setCurrentBusinessSpace(nextId, {
+        navigate: true,
+        reason: "mobile-drawer-business-switcher"
+      });
+    });
+  }
+}
 function renderMobileBusinessNavigation(spaceId = getCurrentBusinessSpaceId()) {
+  renderMobileBusinessSwitcher(spaceId);
+
+  const currentSpace = getBusinessSpaceOptions().find((space) => space.id === spaceId);
+  const mobileBusinessLabel = document.getElementById("mobile-workbench-menu-label");
+
+  if (mobileBusinessLabel && currentSpace) {
+    mobileBusinessLabel.textContent = `${currentSpace.shortLabel || currentSpace.label}业务`;
+  }
   const space = BUSINESS_SPACES[spaceId] || BUSINESS_SPACES.crossborder;
   const host = document.getElementById("mobile-workbench-navigation-list");
   if (host) host.replaceChildren(...space.workbenches.map(createMobileWorkbenchLink));

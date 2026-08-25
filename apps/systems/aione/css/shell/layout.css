@@ -188,3 +188,87 @@
   }
 
 }
+/* ============================================================
+   V1.9.22 MOBILE FULL WIDTH FIX
+   Mobile Global Shell must use the full viewport width.
+   ============================================================ */
+@media(max-width:1099px){
+
+  html,
+  body{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    overflow-x:hidden;
+  }
+
+  #selection-main-host{
+    grid-column:1 / -1 !important;
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    justify-self:stretch;
+    box-sizing:border-box;
+  }
+
+  #selection-main-host > *{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    box-sizing:border-box;
+  }
+
+  #footer-host,
+  footer,
+  .miwa-footer{
+    grid-column:1 / -1 !important;
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    justify-self:stretch;
+    box-sizing:border-box;
+  }
+
+  #mobile-info-host,
+  #mobile-bottom-host,
+  #mobile-drawer-host{
+    width:100%;
+    max-width:100vw;
+    min-width:0;
+    box-sizing:border-box;
+  }
+}
+/* ============================================================
+   V1.9.22 MOBILE VERTICAL SCROLL FIX
+   Restore normal page vertical scrolling on mobile.
+   ============================================================ */
+@media(max-width:1099px){
+
+  html{
+    height:auto !important;
+    min-height:100%;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+  }
+
+  body{
+    height:auto !important;
+    min-height:100%;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+    position:static !important;
+  }
+
+  #selection-main-host{
+    height:auto !important;
+    min-height:0 !important;
+    overflow:visible !important;
+    padding-bottom:calc(var(--mobile-bottom) + var(--safe-bottom) + 20px);
+  }
+
+  main{
+    height:auto !important;
+    min-height:0 !important;
+    overflow:visible !important;
+  }
+}

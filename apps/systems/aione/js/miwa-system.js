@@ -236,6 +236,7 @@ async function renderCurrentRoute() {
   }
   if (routeId === "business-home") {
     await loadComponents([["selection-main-host", route.page]]);
+    await initBusinessPage();
     renderBusinessHomePage();
     return;
   }
