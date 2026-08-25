@@ -75,6 +75,17 @@ async function exchangeVercelOidcForFederatedToken(env) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || !payload.access_token) {
+    const claims = decodeJwtPayload(subjectToken);
+    console.error("AIONE GCP STS exchange failed", {
+      status: response.status,
+      providerId,
+      audience,
+      oidcIssuer: claims.iss || "",
+      oidcAudience: claims.aud || "",
+      oidcSubject: claims.sub || "",
+      gcpError: payload.error || "",
+      gcpErrorDescription: payload.error_description || "",
+    });
     const error = new Error("gcp_sts_exchange_failed");
     error.status = response.status;
     throw error;
