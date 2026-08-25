@@ -31,6 +31,9 @@ const SELECTION_SUBVIEWS = Object.freeze({
 });
 
 const BUSINESS_TEMPLATE_ROUTES = new Set([
+  "finance-home",
+  "channel-home",
+  "business-home",
   "category-home", "product-home", "customer-home", "supplier-home", "talent-home", "ai-home", "ai-office", "shared-home",
   "store-home", "application-home", "income-home", "expense-home", "cash-expense", "work", "analysis"
 ]);
