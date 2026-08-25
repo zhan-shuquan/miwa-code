@@ -40,16 +40,30 @@ async function loadAuthView() {
   return host;
 }
 
-function writeSession(identity, authSource, profile = {}) {
+function writeSession(identity, authSource, profile = {}, googleCredential = "") {
+  const googleExpiresAt = profile.exp ? Number(profile.exp) * 1000 : 0;
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({
     subjectId: identity.subjectId,
     authSource,
     authenticatedEmail: profile.email || identity.email,
     googleSub: profile.sub || null,
     googlePicture: profile.picture || null,
+    googleCredential: String(googleCredential || ""),
+    googleExpiresAt,
     loginAt: new Date().toISOString()
   }));
   sessionStorage.removeItem(LEGACY_SESSION_KEY);
+}
+
+function publicAuthSession(session = {}) {
+  return {
+    authSource: session.authSource || "google",
+    authenticatedEmail: session.authenticatedEmail || null,
+    googleSub: session.googleSub || null,
+    googlePicture: session.googlePicture || null,
+    googleExpiresAt: Number(session.googleExpiresAt || 0),
+    loginAt: session.loginAt || null
+  };
 }
 
 function clearSession() {
@@ -62,12 +76,19 @@ function readSession() {
   if (raw) {
     try {
       const session = JSON.parse(raw);
-      if (session.authSource !== "google") {
+      if (session.authSource !== "google" || !session.googleCredential) {
         clearSession();
         return null;
       }
+      const payload = decodeJwtPayload(session.googleCredential);
+      validateGooglePayload(payload);
       const identity = findPreviewIdentity(session.subjectId);
-      return identity ? { identity, session } : null;
+      if (!identity || String(payload.email || "").toLowerCase() !== String(identity.email || "").toLowerCase()) {
+        clearSession();
+        return null;
+      }
+      session.googleExpiresAt = Number(payload.exp || 0) * 1000;
+      return { identity, session };
     } catch {
       clearSession();
     }
@@ -181,7 +202,7 @@ async function initGoogleSignIn(host, onAuthenticated) {
             return;
           }
           setGoogleStatus(host, `登录成功：${identity.displayName}`, "success");
-          onAuthenticated(identity, payload);
+          onAuthenticated(identity, payload, response.credential);
         } catch (error) {
           console.error(error);
           setGoogleStatus(host, "Google登录验证失败，请重试或联系AIONE管理员。", "error");
@@ -208,7 +229,7 @@ export async function resolvePreviewIdentity() {
   const existing = readSession();
   if (existing) {
     window.AIONEPreviewIdentity = existing.identity;
-    window.AIONEPreviewAuthSession = existing.session;
+    window.AIONEPreviewAuthSession = publicAuthSession(existing.session);
     recordPreviewActivity(existing.identity, "session.resume", {
       authSource: "google",
       authenticatedEmail: existing.session.authenticatedEmail || existing.identity.email
@@ -218,16 +239,17 @@ export async function resolvePreviewIdentity() {
 
   const host = await loadAuthView();
   return new Promise((resolve) => {
-    initGoogleSignIn(host, (identity, payload) => {
-      writeSession(identity, "google", payload);
+    initGoogleSignIn(host, (identity, payload, googleCredential) => {
+      writeSession(identity, "google", payload, googleCredential);
       window.AIONEPreviewIdentity = identity;
-      window.AIONEPreviewAuthSession = {
+      window.AIONEPreviewAuthSession = publicAuthSession({
         authSource: "google",
         authenticatedEmail: payload.email,
         googleSub: payload.sub || null,
         googlePicture: payload.picture || null,
+        googleExpiresAt: Number(payload.exp || 0) * 1000,
         loginAt: new Date().toISOString()
-      };
+      });
       host.remove();
       recordPreviewActivity(identity, "session.login.google", {
         authenticatedEmail: payload.email,

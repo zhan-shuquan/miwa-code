@@ -1,5 +1,6 @@
 /* AIONE API Client｜统一前端后端入口 */
 const STORAGE_KEY = "miwa-aione:api-base-url:v1";
+const AUTH_SESSION_KEY = "aione.preview.session.v3";
 function normalizeBase(value) { return String(value || "").replace(/\/$/, ""); }
 export function getAioneApiBaseUrl() {
   if (window.AIONE_API_BASE_URL) return normalizeBase(window.AIONE_API_BASE_URL);
@@ -9,9 +10,25 @@ export function getAioneApiBaseUrl() {
   return "";
 }
 export function setAioneApiBaseUrl(value) { try { localStorage.setItem(STORAGE_KEY, normalizeBase(value)); } catch (_) {} }
+function getGoogleIdToken() {
+  try {
+    const raw = sessionStorage.getItem(AUTH_SESSION_KEY);
+    if (!raw) return "";
+    const session = JSON.parse(raw);
+    const token = String(session.googleCredential || "").trim();
+    const expiresAt = Number(session.googleExpiresAt || 0);
+    if (!token || !expiresAt || expiresAt <= Date.now() + 30000) return "";
+    return token;
+  } catch (_) {
+    return "";
+  }
+}
+
 function actorHeaders() {
   const identity = window.AIONEPreviewIdentity || {};
   const headers = { "Content-Type": "application/json", "x-aione-source-system": "aione-web" };
+  const googleIdToken = getGoogleIdToken();
+  if (googleIdToken) headers.Authorization = `Bearer ${googleIdToken}`;
   if (identity.subjectId) headers["x-aione-person-id"] = identity.subjectId;
   const assignmentId = window.AIONEPreviewPermissionContext?.assignmentId;
   if (assignmentId) headers["x-aione-assignment-id"] = assignmentId;

@@ -33,6 +33,15 @@ RUNTIME_SA_EMAIL="${RUNTIME_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 DB_NAME="${AIONE_DB_NAME:-aione}"
 DB_USER="${AIONE_DB_USER:-aione_app}"
 AI_MODE="${AIONE_AI_MODE:-preview}"
+GOOGLE_CLIENT_ID="${AIONE_GOOGLE_CLIENT_ID:-49629089449-5lkfjfnadvq14f9uuid91chqgjjdihmi.apps.googleusercontent.com}"
+VERCEL_TEAM_SLUG="${AIONE_VERCEL_TEAM_SLUG:-info-64613987s-projects}"
+VERCEL_PROJECT_NAME="${AIONE_VERCEL_PROJECT_NAME:-miwa-aione-test}"
+VERCEL_ENVIRONMENT="${AIONE_VERCEL_ENVIRONMENT:-production}"
+WIF_POOL_ID="${AIONE_WIF_POOL_ID:-vercel-aione}"
+WIF_PROVIDER_ID="${AIONE_WIF_PROVIDER_ID:-vercel-aione-prod}"
+VERCEL_INVOKER_SA_NAME="${AIONE_VERCEL_INVOKER_SERVICE_ACCOUNT_NAME:-aione-vercel-invoker}"
+VERCEL_INVOKER_SA_EMAIL="${VERCEL_INVOKER_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+IMAGE_TAG="${AIONE_IMAGE_TAG:-v1.9.21}"
 
 service_json(){ gcloud run services describe "$SOURCE_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format=json 2>/dev/null || true; }
 
@@ -70,7 +79,7 @@ if [[ -n "$SERVICE_JSON" ]]; then
   [[ -n "$DETECTED_DB_USER" ]] && DB_USER="$DETECTED_DB_USER"
 fi
 
-IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:v1.9.0"
+IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
 
 require_db_secret(){
   [[ -n "$DB_PASSWORD_SECRET" ]] || die "DB_PASS secret name was not auto-detected. Set AIONE_DB_PASSWORD_SECRET in infra/gcp/cloud-shell/cloud-config.sh."
@@ -92,6 +101,8 @@ print_context(){
 [AIONE] Runtime service acct  : $RUNTIME_SA_EMAIL
 [AIONE] Artifact image        : $IMAGE_URI
 [AIONE] AI mode for cloud test: $AI_MODE
+[AIONE] Vercel team/project    : $VERCEL_TEAM_SLUG / $VERCEL_PROJECT_NAME
+[AIONE] Vercel invoker SA     : $VERCEL_INVOKER_SA_EMAIL
 CTX
 }
 

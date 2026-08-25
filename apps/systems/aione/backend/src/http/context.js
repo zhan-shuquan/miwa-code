@@ -2,7 +2,7 @@ export function getRequestContext(req) {
   const allowPreview = String(process.env.AIONE_ALLOW_PREVIEW_ACTOR || "false").toLowerCase() === "true";
   const authenticatedIdentity = req.aioneIdentity || {};
   const personId = authenticatedIdentity.personId || (allowPreview ? (req.header("x-aione-person-id") || null) : null);
-  const assignmentId = authenticatedIdentity.assignmentId || (allowPreview ? (req.header("x-aione-assignment-id") || null) : null);
+  const assignmentId = authenticatedIdentity.assignmentId || (authenticatedIdentity.personId ? (req.header("x-aione-assignment-id") || null) : (allowPreview ? (req.header("x-aione-assignment-id") || null) : null));
 
   return {
     personId,

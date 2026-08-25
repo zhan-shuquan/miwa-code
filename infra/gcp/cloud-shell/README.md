@@ -31,6 +31,27 @@ chmod +x *.sh
 
 `04_DB_MIGRATE.sh`需要人工输入`MIGRATE AIONE`，避免误迁移错误项目/实例。
 
+
+## V1.9.21｜生产子域名 API Bridge 快速路径
+
+如果数据库迁移已经完成、当前目标只是修复 `aione.miwa-happyhouse.com/api/*` 在 Vercel 返回 404，使用：
+
+```bash
+cd <repo>/infra/gcp/cloud-shell
+chmod +x *.sh
+./RUN_C_SUBDOMAIN_BRIDGE.sh
+```
+
+`RUN_C_SUBDOMAIN_BRIDGE.sh` **不会执行数据库迁移**。它只会：
+
+1. 构建 V1.9.21 Backend 镜像；
+2. 继续以 `--no-allow-unauthenticated` 部署私有 Cloud Run；
+3. 配置 Vercel OIDC → Google Workload Identity Federation → 专用 Cloud Run Invoker；
+4. 执行双层认证 smoke test；
+5. 输出需要填入 Vercel Production 的 5 个非秘密环境变量。
+
+填入 Vercel 环境变量并重新部署 `main` 后，浏览器需要重新进行一次 Google 登录，然后再验证 `/api/v1/ai-secretary/status`。
+
 ## 自动发现
 
 脚本优先从现有`aione-backend` Cloud Run服务读取：

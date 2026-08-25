@@ -3967,7 +3967,7 @@ body{overflow-x:hidden}
 
 <script type="module">
 import { getPreviewOpportunity, upsertPreviewOpportunity, removePreviewOpportunity, voidPreviewOpportunity } from '../../../js/data/preview-opportunities.js';
-import { aioneApi, getAioneApiBaseUrl } from '../../../js/services/aione-api-client.js';
+import { aioneApi } from '../../../js/services/aione-api-client.js';
 
 (async () => {
   'use strict';
@@ -4100,14 +4100,25 @@ import { aioneApi, getAioneApiBaseUrl } from '../../../js/services/aione-api-cli
   }
 
   function begin1688Authorization(){
-    const base=getAioneApiBaseUrl() || 'http://127.0.0.1:8080';
-    const authUrl=`${base}/api/v1/integrations/1688/oauth/start`;
-    const popup=window.open(authUrl,'aione-1688-oauth','width=980,height=760,resizable=yes,scrollbars=yes');
-    if(!popup){
-      window.location.href=authUrl;
-      return;
-    }
-    try{ popup.focus(); }catch(_){}
+    const popup=window.open('about:blank','aione-1688-oauth','width=980,height=760,resizable=yes,scrollbars=yes');
+    (async()=>{
+      try{
+        const result=await aioneApi('/api/v1/integrations/1688/oauth/start?response=json');
+        const authUrl=String(result?.authorizeUrl || '').trim();
+        if(!authUrl) throw new Error('1688_oauth_url_missing');
+        if(popup && !popup.closed){
+          popup.location.href=authUrl;
+          try{ popup.focus(); }catch(_){}
+          return;
+        }
+        window.location.href=authUrl;
+      }catch(error){
+        try{ if(popup && !popup.closed) popup.close(); }catch(_){}
+        const toast=$('selection-record-toast');
+        if(toast){ toast.textContent='1688授权入口生成失败，请确认AIONE登录状态后重试。'; toast.hidden=false; window.setTimeout(()=>{toast.hidden=true;},3600); }
+        console.error('[1688 OAuth] start failed',error);
+      }
+    })();
   }
 
   window.addEventListener('message',(event)=>{

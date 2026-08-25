@@ -1,6 +1,8 @@
 # MIWA AIONE Integrated Work Platform
 
-> **Current candidate: V1.9.17 美和AI CONTEXT ROUTER CANDIDATE.**
+> **Current candidate: V1.9.21 SUBDOMAIN SECURE API BRIDGE CANDIDATE.**
+
+V1.9.17 remains the locked AI Context Router baseline inherited by this candidate.
 
 V1.9.17 makes the employee-facing AI interaction simpler: employees use one **美和AI** and AIONE automatically matches capabilities from the current business context. AI人才、AI岗位、Skill、Agent、模型与Provider继续作为后台分类/编排概念，不成为员工选择步骤。The first real validation target is the Selection product-opportunity detail page, where the router reads the current opportunity plus AIONE cost/pricing, shipping, sampling and decision evidence and automatically exposes four business capabilities. Deterministic system calculations remain authoritative; writes still follow the existing Proposal + Human Confirm boundary.
 

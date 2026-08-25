@@ -1,3 +1,13 @@
+# V1.9.21｜Subdomain Secure API Bridge Candidate
+
+- Fixes production subdomain `/api/*` 404 by adding a Vercel Function bridge.
+- Keeps Cloud Run private and authenticates Vercel through OIDC + Google Workload Identity Federation.
+- Uses `X-Serverless-Authorization` for Cloud Run service identity while preserving the employee Google ID Token in `Authorization`.
+- Adds server-side Google ID Token verification and server-side preview identity ownership mapping; production no longer trusts browser person-id headers.
+- Old browser preview sessions without the Google credential are invalidated and require one fresh Google login.
+- Denies direct public routing to backend/docs/tests/tools/recovery source paths on the Vercel production site.
+- Adds idempotent Cloud Shell setup script `07_SETUP_VERCEL_OIDC_BRIDGE.sh`.
+
 ## 2026-08-24 | V1.9.17 美和AI Context Router Candidate
 - Added one AIONE AI Context Builder covering business, workbench, page, current business object, state, user and current object data.
 - Added a capability registry and Context Router so employees use one “美和AI”; AI talent, AI job, Skill, Agent, model and Provider remain internal classification/orchestration concepts.

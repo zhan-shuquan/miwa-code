@@ -1,0 +1,51 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "functions": {
+    "api/aione-bridge.js": {
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    {
+      "src": "/backend(?:/.*)?",
+      "status": 404
+    },
+    {
+      "src": "/docs(?:/.*)?",
+      "status": 404
+    },
+    {
+      "src": "/tests(?:/.*)?",
+      "status": 404
+    },
+    {
+      "src": "/tools(?:/.*)?",
+      "status": 404
+    },
+    {
+      "src": "/recovery(?:/.*)?",
+      "status": 404
+    },
+    {
+      "src": "/(?:README|CHANGELOG)\\.md",
+      "status": 404
+    },
+    {
+      "src": "/SHA256SUMS\\.txt",
+      "status": 404
+    },
+    {
+      "src": "/package(?:-lock)?\\.json",
+      "status": 404
+    },
+    {
+      "src": "/vercel\\.json",
+      "status": 404
+    },
+    {
+      "src": "/api/(?<path>.*)",
+      "dest": "/api/aione-bridge?__aione_path=$path"
+    }
+  ]
+}

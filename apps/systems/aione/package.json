@@ -1,0 +1,9 @@
+{
+  "name": "miwa-aione-vercel-edge-bridge",
+  "version": "1.9.21",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@vercel/oidc": "3.8.5"
+  }
+}

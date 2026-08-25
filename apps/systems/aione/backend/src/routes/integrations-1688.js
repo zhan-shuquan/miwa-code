@@ -42,6 +42,10 @@ router.get("/oauth/start", (req, res, next) => {
       redirectUri: authorization.redirectUri,
       expiresAt: Date.now() + OAUTH_STATE_TTL_MS
     });
+    if (String(req.query?.response || "").toLowerCase() === "json") {
+      res.json({ ok: true, authorizeUrl: authorization.url });
+      return;
+    }
     res.redirect(302, authorization.url);
   } catch (error) {
     next(error);
