@@ -1,1 +1,238 @@
-<div class="miwa-level2-template-entry" id="miwa-business-template-entry" data-template-recipe="standard-business"></div>
+<section class="business-home-page" aria-labelledby="business-home-title">
+  <header class="business-home-hero">
+    <div class="business-home-hero__mark" aria-hidden="true">事</div>
+    <div class="business-home-hero__content">
+      <div class="business-home-hero__eyebrow">MIWA GROUP BUSINESS</div>
+      <h1 id="business-home-title">事业之家</h1>
+      <p>统一了解、进入和管理美和集团各项事业。事业负责方向与认知，进入事业后由左侧导航承载具体业务执行。</p>
+    </div>
+  </header>
+
+  <section class="business-home-overview" aria-label="事业概览">
+    <div class="business-home-overview__item">
+      <span>已接入 AIONE</span>
+      <strong id="business-space-count">0</strong>
+    </div>
+    <div class="business-home-overview__note">
+      当前仅展示已进入正式事业配置的数据。事业起源、负责人、策划、规划与重要决策将逐步补充。
+    </div>
+  </section>
+
+  <section class="business-home-section" aria-labelledby="business-list-title">
+    <div class="business-home-section__head">
+      <div>
+        <h2 id="business-list-title">集团事业</h2>
+        <p>选择一个事业进入对应的工作空间。</p>
+      </div>
+    </div>
+
+    <div class="business-space-grid" id="business-space-cards"></div>
+  </section>
+</section>
+
+<style>
+.business-home-page{
+  display:grid;
+  gap:16px;
+  padding:28px 32px 40px;
+  color:#17352b;
+}
+.business-home-hero{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  padding:24px 28px;
+  background:#fff;
+  border:1px solid #e4ebe7;
+  border-radius:16px;
+  box-shadow:0 6px 18px rgba(22,56,43,.05);
+}
+.business-home-hero__mark{
+  display:grid;
+  place-items:center;
+  width:52px;
+  height:52px;
+  flex:0 0 52px;
+  border-radius:14px;
+  background:#e8f2ed;
+  color:#176b4d;
+  font-size:23px;
+  font-weight:800;
+}
+.business-home-hero__eyebrow{
+  margin-bottom:4px;
+  color:#5e9b82;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.08em;
+}
+.business-home-hero h1{
+  margin:0;
+  font-size:25px;
+  line-height:1.25;
+  color:#0d4937;
+}
+.business-home-hero p{
+  margin:8px 0 0;
+  color:#60736b;
+  font-size:13px;
+  line-height:1.7;
+}
+.business-home-overview{
+  display:grid;
+  grid-template-columns:190px 1fr;
+  gap:12px;
+}
+.business-home-overview__item,
+.business-home-overview__note{
+  background:#fff;
+  border:1px solid #e4ebe7;
+  border-radius:14px;
+}
+.business-home-overview__item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:17px 20px;
+  color:#60736b;
+  font-size:12px;
+}
+.business-home-overview__item strong{
+  color:#176b4d;
+  font-size:24px;
+}
+.business-home-overview__note{
+  display:flex;
+  align-items:center;
+  padding:17px 20px;
+  color:#718078;
+  font-size:12px;
+  line-height:1.6;
+}
+.business-home-section{
+  padding:22px;
+  background:#fff;
+  border:1px solid #e4ebe7;
+  border-radius:16px;
+  box-shadow:0 6px 18px rgba(22,56,43,.04);
+}
+.business-home-section__head{
+  margin-bottom:16px;
+}
+.business-home-section__head h2{
+  margin:0;
+  color:#0d4937;
+  font-size:17px;
+}
+.business-home-section__head p{
+  margin:5px 0 0;
+  color:#7b8983;
+  font-size:12px;
+}
+.business-space-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:14px;
+}
+.business-space-card{
+  display:flex;
+  flex-direction:column;
+  min-height:210px;
+  padding:20px;
+  border:1px solid #dfe8e3;
+  border-radius:14px;
+  background:#fff;
+  transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+.business-space-card:hover{
+  border-color:#9fc5b5;
+  box-shadow:0 8px 22px rgba(23,107,77,.08);
+  transform:translateY(-1px);
+}
+.business-space-card__top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+}
+.business-space-card__identity{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.business-space-card__icon{
+  display:grid;
+  place-items:center;
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  background:#e8f2ed;
+  color:#176b4d;
+  font-weight:800;
+}
+.business-space-card h3{
+  margin:0;
+  color:#0d4937;
+  font-size:18px;
+}
+.business-space-card__short{
+  margin-top:3px;
+  color:#829089;
+  font-size:11px;
+}
+.business-space-card__status{
+  padding:4px 9px;
+  border-radius:999px;
+  background:#e8f2ed;
+  color:#176b4d;
+  font-size:11px;
+  font-weight:700;
+  white-space:nowrap;
+}
+.business-space-card__body{
+  flex:1;
+  margin-top:18px;
+}
+.business-space-card__meta{
+  display:flex;
+  gap:18px;
+  margin-bottom:10px;
+  color:#718078;
+  font-size:12px;
+}
+.business-space-card__workbenches{
+  color:#566a61;
+  font-size:12px;
+  line-height:1.7;
+}
+.business-space-card__actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:18px;
+  padding-top:15px;
+  border-top:1px solid #edf1ef;
+}
+.business-space-card__enter{
+  min-height:34px;
+  padding:0 15px;
+  border:1px solid #176b4d;
+  border-radius:8px;
+  background:#176b4d;
+  color:#fff;
+  font:inherit;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+.business-space-card__enter:hover{
+  background:#0d4937;
+}
+@media (max-width:900px){
+  .business-home-page{
+    padding:18px;
+  }
+  .business-home-overview{
+    grid-template-columns:1fr;
+  }
+}
+</style>
