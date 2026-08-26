@@ -11,6 +11,7 @@ import { announceWorkItemsChanged } from "../services/work-attention-service.js?
 import { loadSelectionItems, getSelectionMetrics, getSelectionTypeCards, getSelectionFlowSteps } from "../data/selection-workbench-adapter.js";
 import { buildAIONEAIContext } from "./ai-context-router.js?v=20260826-v1.9.30-work-execution-loop";
 import { MIWA_COMPANY_PAGES, MIWA_GROUP_CORE_ASSETS } from "../data/miwa-company-content.js";
+import { MIWA_BUSINESS_PAGES, MIWA_BUSINESS_BY_ROUTE, MIWA_BUSINESSES } from "../data/miwa-business-home-content.js";
 
 const HISTORY_LIMIT = 24;
 const PERSISTED_HISTORY_LIMIT = 36;
@@ -79,6 +80,34 @@ function buildCompanyPageContext(routeId) {
   return context;
 }
 
+
+function buildBusinessHomeContext(routeId) {
+  if (!(routeId === "business-home" || String(routeId || "").startsWith("business-"))) return null;
+  const page = MIWA_BUSINESS_PAGES[routeId] || null;
+  if (!page) return null;
+  const businessItem = MIWA_BUSINESS_BY_ROUTE[routeId] || null;
+  return {
+    source:"aione_miwa_business_home_content",
+    routeId,
+    title:page.title,
+    subtitle:page.subtitle,
+    kind:page.kind,
+    business:businessItem ? {
+      id:businessItem.id,
+      name:businessItem.name,
+      stage:businessItem.stage,
+      tagline:businessItem.tagline,
+      description:businessItem.description,
+      category:businessItem.category,
+      systemReady:businessItem.systemReady,
+      flow:[...(businessItem.flow || [])],
+      facts:[...(businessItem.facts || [])],
+      future:businessItem.future
+    } : null,
+    portfolio:MIWA_BUSINESSES.map((item) => ({ id:item.id,name:item.name,stage:item.stage,tagline:item.tagline,category:item.category,systemReady:item.systemReady }))
+  };
+}
+
 function buildCurrentPageBusinessContext(route, aiContext) {
   if (aiContext?.object) {
     return {
@@ -102,6 +131,16 @@ function buildCurrentPageBusinessContext(route, aiContext) {
     workbench:null,
     state:null,
     data:companyPage
+  };
+  const businessHome = buildBusinessHomeContext(route?.id);
+  if (businessHome) return {
+    contextType:"miwa_business_home_content_page",
+    source:"aione_miwa_business_home_content",
+    generatedAt:new Date().toISOString(),
+    business:aiContext?.business || null,
+    workbench:null,
+    state:null,
+    data:businessHome
   };
   if (route?.id !== "selection") return aiContext ? {
     contextType: aiContext.page?.type || "aione_page",

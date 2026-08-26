@@ -25,6 +25,14 @@ const COMPANY = Object.freeze([
   quick("company_next", "下一步建议", "结合当前页面给出下一步建设建议", "给出当前集团内容最值得推进的下一步。", {icon:"→"})
 ]);
 
+const BUSINESS = Object.freeze([
+  quick("business_summarize", "总结当前事业", "总结当前事业定位、阶段和经营重点", "总结当前事业的定位、当前阶段、真实业务基础、经营闭环与建设边界。", {icon:"事"}),
+  quick("business_compare", "比较事业", "例如：比较美和跨境和美和采购代理", "比较指定事业的客户价值、经营主体、流程、共享能力和当前阶段。", {icon:"比"}),
+  quick("business_check_stage", "检查事业阶段", "判断当前事业是否具备下一阶段条件", "检查当前事业的目标、负责人、业务闭环、数据和真实证据，判断阶段定义是否准确。", {icon:"阶"}),
+  quick("business_shared_capabilities", "查共享能力", "这个事业可以调用哪些集团能力？", "根据当前事业说明可以复用的人才、AI、客户、供应商、商品、财务、知识和数字平台能力。", {icon:"共"}),
+  quick("business_next", "下一步建议", "给出当前事业最少必要的下一步", "基于当前事业阶段给出少量、明确、不过度建设的下一步建议。", {icon:"→"})
+]);
+
 const ANALYSIS = Object.freeze([
   quick("analysis_key_points", "提炼重点", "提炼当前分析页最重要的结论", "提炼当前分析页面最关键的经营结论。", {icon:"◎"}),
   quick("analysis_anomaly", "解释异常", "告诉我想重点分析哪个异常", "解释当前异常，区分事实、推断与待确认。", {icon:"!"}),
@@ -41,6 +49,7 @@ const WORK = Object.freeze([
 function contextGroup(context = {}) {
   const routeId = String(context.routeId || "");
   if (routeId === "company" || routeId.startsWith("company-")) return "company";
+  if (routeId === "business-home" || routeId.startsWith("business-")) return "business";
   if (routeId === "analysis" || routeId.startsWith("analysis-")) return "analysis";
   if (routeId === "work" || routeId.startsWith("work-")) return "work";
   return "global";
@@ -66,9 +75,9 @@ export function recordQuickIntentUsage(code, context = {}) {
 
 export function getQuickIntentsForAIContext(context = {}) {
   const group = contextGroup(context);
-  const source = group === "company" ? COMPANY : group === "analysis" ? ANALYSIS : group === "work" ? WORK : GLOBAL;
+  const source = group === "company" ? COMPANY : group === "business" ? BUSINESS : group === "analysis" ? ANALYSIS : group === "work" ? WORK : GLOBAL;
   const usage = readUsage(context);
   return [...source].sort((a,b) => Number(usage[b.code] || 0) - Number(usage[a.code] || 0));
 }
 
-export { GLOBAL as GLOBAL_QUICK_INTENTS, COMPANY as COMPANY_QUICK_INTENTS };
+export { GLOBAL as GLOBAL_QUICK_INTENTS, COMPANY as COMPANY_QUICK_INTENTS, BUSINESS as BUSINESS_QUICK_INTENTS };

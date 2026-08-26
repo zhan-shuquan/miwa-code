@@ -6,6 +6,7 @@
 import { ROUTE_REGISTRY } from "./route-registry.js";
 import { BUSINESS_SPACES, getBusinessSpaceForRoute, getWorkbenchForRoute } from "./business-navigation.js";
 import { MIWA_COMPANY_NAVIGATION } from "../data/miwa-company-content.js";
+import { MIWA_BUSINESS_NAVIGATION } from "../data/miwa-business-home-content.js";
 
 const PLATFORM_CONTEXT_META = Object.freeze({
   company: { icon: "knowledge", type: "content" },
@@ -69,6 +70,7 @@ function buildPlatformItems(rootId) {
   const root = ROUTE_REGISTRY[rootId];
   if (!root) return [];
   if (rootId === "company") return MIWA_COMPANY_NAVIGATION;
+  if (rootId === "business-home") return MIWA_BUSINESS_NAVIGATION;
   const children = childrenFor(rootId);
   const homeLabel = rootId === "work" ? "工作概览" : (children.length ? "概览" : root.label);
   return [

@@ -23,6 +23,7 @@ import { initMiwaWorkHome } from "./pages/miwa-work-home.js?v=20260826-v1.9.30.2
 import { initBusinessPage } from "./pages/business-page-template.js";
 import { initContentPage } from "./pages/content-page-template.js";
 import { initMiwaCompanyHome } from "./pages/miwa-company-home.js?v=20260826-v1.9.26-drive-proxy";
+import { initMiwaBusinessHome } from "./pages/miwa-business-home.js?v=20260826-v1.9.31-business-home";
 import { initNotificationsPage } from "./pages/notifications.js";
 import { initNotificationDetailPage } from "./pages/notification-detail.js";
 import { syncNotificationHeader } from "./data/notification-store.js";
@@ -86,84 +87,6 @@ function renderOpportunityFrame(context) {
   `;
 }
 
-function renderBusinessHomePage() {
-  const host = document.getElementById("business-space-cards");
-  const count = document.getElementById("business-space-count");
-  if (!host) return;
-
-  const spaces = Object.values(BUSINESS_SPACES);
-  if (count) count.textContent = String(spaces.length);
-
-  const cards = spaces.map((space) => {
-    const card = document.createElement("article");
-    card.className = "business-space-card";
-
-    const top = document.createElement("div");
-    top.className = "business-space-card__top";
-
-    const identity = document.createElement("div");
-    identity.className = "business-space-card__identity";
-
-    const icon = document.createElement("div");
-    icon.className = "business-space-card__icon";
-    icon.textContent = space.shortLabel?.slice(0, 1) || "事";
-
-    const names = document.createElement("div");
-
-    const title = document.createElement("h3");
-    title.textContent = space.label;
-
-    const shortLabel = document.createElement("div");
-    shortLabel.className = "business-space-card__short";
-    shortLabel.textContent = `事业简称：${space.shortLabel || space.label}`;
-
-    names.append(title, shortLabel);
-    identity.append(icon, names);
-
-    const status = document.createElement("span");
-    status.className = "business-space-card__status";
-    status.textContent = "已配置";
-
-    top.append(identity, status);
-
-    const body = document.createElement("div");
-    body.className = "business-space-card__body";
-
-    const workbenches = Array.from(space.workbenches || []);
-    const meta = document.createElement("div");
-    meta.className = "business-space-card__meta";
-    meta.textContent = `工作台 ${workbenches.length} 个`;
-
-    const workbenchText = document.createElement("div");
-    workbenchText.className = "business-space-card__workbenches";
-    workbenchText.textContent = workbenches.length
-      ? workbenches.slice(0, 6).map((item) => item.label).join(" · ")
-      : "事业执行结构待配置";
-
-    body.append(meta, workbenchText);
-
-    const actions = document.createElement("div");
-    actions.className = "business-space-card__actions";
-
-    const enter = document.createElement("button");
-    enter.type = "button";
-    enter.className = "business-space-card__enter";
-    enter.textContent = "进入事业";
-    enter.addEventListener("click", () => {
-      setCurrentBusinessSpace(space.id, {
-        navigate: true,
-        reason: "business-home-card"
-      });
-    });
-
-    actions.append(enter);
-    card.append(top, body, actions);
-
-    return card;
-  });
-
-  host.replaceChildren(...cards);
-}
 function renderReservedRoute(route) {
   const host = document.getElementById("selection-main-host");
   if (!host) return;
@@ -250,10 +173,9 @@ async function renderCurrentRoute() {
     await initContentPage();
     return;
   }
-  if (routeId === "business-home") {
-    await loadComponents([["selection-main-host", route.page]]);
-    await initBusinessPage();
-    renderBusinessHomePage();
+  if (routeId === "business-home" || routeId.startsWith("business-")) {
+    await loadComponents([["selection-main-host", route.page || ROUTE_REGISTRY["business-home"].page]]);
+    await initMiwaBusinessHome();
     return;
   }
 

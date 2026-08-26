@@ -7,6 +7,7 @@ import { getRouteDefinition, getRouteId, ROUTE_REGISTRY, WORKBENCH_ROUTES } from
 import { getPlatformContextSnapshot } from "../shell/platform-context.js";
 import { getPreviewOpportunity } from "../data/preview-opportunities.js";
 import { getCapabilitiesForAIContext } from "./ai-capability-registry.js?v=20260826-v1.9.30-work-execution-loop";
+import { MIWA_BUSINESS_BY_ROUTE } from "../data/miwa-business-home-content.js";
 
 const WORKBENCH_LABELS = Object.freeze(Object.fromEntries(
   WORKBENCH_ROUTES.map((id) => [id, ROUTE_REGISTRY[id]?.label || id])
@@ -156,6 +157,8 @@ export function buildAIONEAIContext(hash = window.location.hash) {
   const routeId = getRouteId(hash);
   const route = getRouteDefinition(hash);
   const platform = getPlatformContextSnapshot();
+  const businessHomeItem = MIWA_BUSINESS_BY_ROUTE[routeId] || null;
+  const isBusinessHomeContext = routeId === "business-home" || String(routeId || "").startsWith("business-");
   const opportunityRoute = parseOpportunityRoute(hash);
   const activeWork = String(routeId || "").startsWith("work") ? (window.AIONEWorkExecutionContext || null) : null;
   const defaultWorkbench = resolveWorkbench(routeId, route);
@@ -199,7 +202,11 @@ export function buildAIONEAIContext(hash = window.location.hash) {
     hash: String(hash || "#/selection"),
     displayRoute,
     company: { id:"miwa-group", label:"美和集团" },
-    business: {
+    business: isBusinessHomeContext ? (businessHomeItem ? {
+      id: businessHomeItem.id,
+      label: businessHomeItem.name,
+      shortLabel: businessHomeItem.name.replace(/^美和/, "") || businessHomeItem.name
+    } : { id:null, label:"事业之家", shortLabel:"事业" }) : {
       id: platform.businessSpaceId || null,
       label: platform.businessLabel || "待确认事业",
       shortLabel: platform.businessShortLabel || platform.businessLabel || "事业"
