@@ -98,3 +98,14 @@ chmod +x *.sh
 7. 原选品数据没有被覆盖。
 
 真实OpenAI模型不是本阶段前置条件。先把真实数据/后端运行稳，再接模型。
+
+## V1.9.26 | Shared Drive secure download
+
+After installing V1.9.26, the secure file-download runtime can be deployed without re-running database migrations:
+
+```bash
+cd ~/miwa-code/infra/gcp/cloud-shell
+./RUN_D_DRIVE_SECURE_DOWNLOAD.sh
+```
+
+The script prints the Cloud Run runtime service-account email. Add that account once to Shared Drive `美和集团（全球）` as **Viewer**. Then AIONE `下载原件` is delivered by the authenticated backend instead of a browser-direct Google download URL.

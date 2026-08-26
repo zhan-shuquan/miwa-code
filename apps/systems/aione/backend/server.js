@@ -4,6 +4,7 @@ import coreRouter from "./src/routes/core.js";
 import legacyProductOpportunitiesRouter from "./src/routes/legacy-product-opportunities.js";
 import aiSecretaryRouter from "./src/routes/ai-secretary.js";
 import integrations1688Router from "./src/routes/integrations-1688.js";
+import driveAssetsRouter from "./src/routes/drive-assets.js";
 import { resolveAioneGoogleIdentity } from "./src/http/google-auth.js";
 
 const app = express();
@@ -19,6 +20,7 @@ app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, x-aione-person-id, x-aione-assignment-id, x-aione-source-system, x-correlation-id");
+    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition, Content-Length, X-AIONE-Asset-Id");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,OPTIONS");
   }
   if (req.method === "OPTIONS") return res.sendStatus(204);
@@ -51,6 +53,7 @@ app.use(resolveAioneGoogleIdentity);
 
 app.use("/api/v1/ai-secretary", aiSecretaryRouter);
 app.use("/api/v1/integrations/1688", integrations1688Router);
+app.use("/api/v1/drive-assets", driveAssetsRouter);
 app.use("/api/v1", coreRouter);
 app.use("/api/product-opportunities", legacyProductOpportunitiesRouter);
 

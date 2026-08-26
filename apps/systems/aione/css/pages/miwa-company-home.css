@@ -537,3 +537,157 @@
   .miwa-company-now-next article,.miwa-company-philosophy-grid a,.miwa-company-architecture-groups article,.miwa-company-business-grid>*{break-inside:avoid;page-break-inside:avoid}
   .miwa-company-related,.miwa-company-assets-toolbar,.miwa-company-package-bar{display:none!important}
 }
+
+/* ========================================
+   V1.9.25｜Google Drive原件绑定与资料索引
+======================================== */
+.miwa-company-source-panel{
+  display:grid;
+  grid-template-columns:82px minmax(0,1fr);
+  gap:12px;
+  align-items:start;
+  margin-top:15px;
+  padding:12px 14px;
+  border:1px solid #DCE7E1;
+  border-radius:10px;
+  background:#F7FAF8;
+}
+.miwa-company-source-panel>span{
+  padding-top:2px;
+  color:var(--miwa-green);
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.miwa-company-source-panel>div{display:grid;gap:6px}
+.miwa-company-source-panel article{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:baseline;
+}
+.miwa-company-source-panel strong{color:#3B4E45;font-size:9px}
+.miwa-company-source-panel small{color:#829089;font-size:7.5px;white-space:nowrap}
+
+.miwa-company-execution-principles{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:9px;
+  margin-top:18px;
+}
+.miwa-company-execution-principles article{
+  min-height:108px;
+  padding:14px 15px;
+  border:1px solid #DCE6E1;
+  border-radius:11px;
+  background:rgba(255,255,255,.78);
+}
+.miwa-company-execution-principles b{
+  display:block;
+  margin-bottom:7px;
+  color:#A4B7AD;
+  font-size:7.5px;
+  letter-spacing:.08em;
+}
+.miwa-company-execution-principles strong{
+  display:block;
+  margin-bottom:6px;
+  color:var(--miwa-green-deep);
+  font-size:10px;
+}
+.miwa-company-execution-principles span{
+  display:block;
+  color:#68776F;
+  font-size:8px;
+  line-height:1.65;
+}
+.miwa-company-execution-principles--detail article{min-height:138px;padding:18px}
+.miwa-company-execution-principles--detail strong{font-size:11px}
+.miwa-company-execution-principles--detail span{font-size:9px;line-height:1.75}
+
+.miwa-company-force-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin-top:20px;
+}
+.miwa-company-force-grid article{
+  min-height:156px;
+  padding:20px;
+  border:1px solid var(--border);
+  border-top:3px solid var(--miwa-green);
+  border-radius:12px;
+  background:#fff;
+}
+.miwa-company-force-grid span{
+  display:block;
+  margin-bottom:16px;
+  color:var(--miwa-green);
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.miwa-company-force-grid h3{margin-bottom:9px;font-size:13px;line-height:1.45}
+.miwa-company-force-grid p{margin:0!important;color:#6A7871!important;font-size:8.5px!important;line-height:1.65!important}
+
+.miwa-company-operation-loop{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:9px;
+  margin-top:18px;
+}
+.miwa-company-operation-loop article{
+  position:relative;
+  min-height:92px;
+  padding:14px 12px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:#fff;
+}
+.miwa-company-operation-loop article:not(:nth-child(5)):not(:nth-child(10))::after{
+  content:"→";
+  position:absolute;
+  right:-9px;
+  top:50%;
+  z-index:2;
+  transform:translateY(-50%);
+  color:#8CA398;
+  font-size:11px;
+  font-weight:900;
+}
+.miwa-company-operation-loop b{display:block;margin-bottom:9px;color:#A0B3A9;font-size:8px}
+.miwa-company-operation-loop span{color:#3E5148;font-size:9px;font-weight:800;line-height:1.5}
+
+.miwa-company-asset-row__name small{
+  display:block;
+  margin-top:4px;
+  color:#A0AAA5;
+  font-size:7px;
+  line-height:1.45;
+  word-break:break-word;
+}
+.miwa-company-asset-row>div:last-child button:disabled{
+  cursor:not-allowed;
+  color:#98A39D;
+  background:#F5F7F6;
+}
+
+@media(max-width:1099px){
+  .miwa-company-execution-principles,.miwa-company-force-grid{grid-template-columns:repeat(2,1fr)}
+  .miwa-company-operation-loop{grid-template-columns:repeat(2,1fr)}
+  .miwa-company-operation-loop article::after{display:none}
+  .miwa-company-source-panel article{display:block}
+  .miwa-company-source-panel small{display:block;margin-top:2px;white-space:normal}
+}
+
+@media(max-width:760px){
+  .miwa-company-source-panel{grid-template-columns:1fr}
+  .miwa-company-execution-principles,.miwa-company-force-grid,.miwa-company-operation-loop{grid-template-columns:1fr}
+  .miwa-company-execution-principles article,.miwa-company-force-grid article,.miwa-company-operation-loop article{min-height:0}
+}
+
+@media print{
+  .miwa-company-source-panel{break-inside:avoid;page-break-inside:avoid;background:#F7FAF8!important}
+  .miwa-company-execution-principles,.miwa-company-force-grid,.miwa-company-operation-loop{break-inside:avoid;page-break-inside:avoid}
+  .miwa-company-execution-principles article,.miwa-company-force-grid article,.miwa-company-operation-loop article{break-inside:avoid;page-break-inside:avoid}
+}

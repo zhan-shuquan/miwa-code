@@ -1,4 +1,5 @@
 import { getRouteId } from "../config/route-registry.js";
+import { aioneDownload } from "../services/aione-api-client.js";
 import { mountLevel2EmptyBase } from "../templates/level2-empty-base.js";
 import { getTemplateRecipe } from "../templates/template-registry.js";
 import {
@@ -8,7 +9,7 @@ import {
   MIWA_GROUP_CORE_ASSETS,
   getMiwaCompanyPage,
   getMiwaCompanyGroupForRoute
-} from "../data/miwa-company-content.js";
+} from "../data/miwa-company-content.js?v=20260826-v1.9.26-drive-proxy";
 
 const esc = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" }[char]));
 
@@ -17,13 +18,22 @@ function routeHref(route) {
 }
 
 function statusClass(status = "") {
-  if (/正式|已有内容/.test(status)) return "is-ready";
+  if (/正式|已有内容|真实内容|已接入|已确认/.test(status)) return "is-ready";
   if (/待|未/.test(status)) return "is-pending";
   return "is-validating";
 }
 
 function currentGroup(routeId) {
   return getMiwaCompanyGroupForRoute(routeId) || MIWA_COMPANY_NAVIGATION[0];
+}
+
+function sourcePanel(page) {
+  const sources = Array.isArray(page?.sources) ? page.sources : [];
+  if (!sources.length) return "";
+  return `<div class="miwa-company-source-panel">
+    <span>内容来源</span>
+    <div>${sources.map((item) => `<article><strong>${esc(item.title)}</strong><small>${esc(item.version)} · ${esc(item.date)} · ${esc(item.status)}</small></article>`).join("")}</div>
+  </div>`;
 }
 
 function pageHero(page, options = {}) {
@@ -38,8 +48,9 @@ function pageHero(page, options = {}) {
         <div class="miwa-company-meta-row">
           <span>${esc(page.status || "验证中")}</span>
           <span>美和之家</span>
-          <span>内容与出版共源</span>
+          <span>${Array.isArray(page.sources) && page.sources.length ? "真实资料已接入" : "内容与出版共源"}</span>
         </div>
+        ${sourcePanel(page)}
       </div>
       <div class="miwa-company-page-hero__actions screen-only">${back}${action}</div>
     </header>`;
@@ -117,6 +128,12 @@ function overviewHtml() {
         </div>
         <div class="miwa-company-flow-strip"><span>经营目标</span><b>→</b><span>业务流程</span><b>→</b><span>业务对象</span><b>→</b><span>状态与数据</span><b>→</b><span>规则与责任</span><b>→</b><span>AI与自动化</span><b>→</b><span>人类负责人</span><b>→</b><span>结果指标</span><b>→</b><span>管理决策</span><b>→</b><span>持续优化</span></div>
         <div class="miwa-company-subflow">操作闭环 → 业务闭环 → 经营闭环</div>
+        <div class="miwa-company-execution-principles">
+          <article><b>01</b><strong>战略未动 · 情报先行</strong><span>先看清外部环境与内部真实状态。</span></article>
+          <article><b>02</b><strong>作战未起 · 粮草先行</strong><span>先确认资金、商品、数字资源、数据与人才。</span></article>
+          <article><b>03</b><strong>命令一出 · 执行到底</strong><span>任务找到正确的人或AI，权责与异常升级清楚。</span></article>
+          <article><b>04</b><strong>战果必留 · 复盘必做</strong><span>结果、数据、证据和经验重新进入下一轮经营。</span></article>
+        </div>
         <a class="miwa-company-inline-link screen-only" href="#/company-management-architecture">查看完整经营架构 →</a>
       </section>
 
@@ -218,10 +235,19 @@ function factsHtml(page, routeId) {
 
 function architectureHtml(page, routeId) {
   const group = currentGroup(routeId);
+  const forces = [
+    ["指挥军","总参谋部 / 战略情报 / 集团指挥与调度","看清、想清、指挥清楚"],
+    ["作战军","品牌宣传 / 市场作战 / 各事业作战军团","创造客户价值、收入与市场影响"],
+    ["建设军","工程建设 / AI人才建设 / 科研创新","制造系统、AI、工具和新能力"],
+    ["保障军","军需后勤 / 人才训练 / 安全监察 / 战备","保证前线长期有粮、有兵、有装备、有安全"]
+  ];
+  const steps = ["确定目标","侦察环境","形成方案","确认粮草","准备装备与兵力","宣传/销售打开市场","事业执行交付","记录战果","分析复盘","重新决策"];
   return `
     <article class="miwa-company-publication miwa-company-article-page">
       ${pageHero(page, { backRoute:group?.route || "company", backLabel:group?.label || "经营与战略" })}
       <section class="miwa-company-content-sheet miwa-company-content-sheet--architecture miwa-company-print-page">
+        <span class="miwa-company-eyebrow">STRATEGIC MOTHER ARCHITECTURE</span>
+        <h2>433｜美和经营方法的稳定表达</h2>
         <div class="miwa-company-architecture-board miwa-company-architecture-board--detail">
           <div class="miwa-company-architecture-center"><strong>美和原创AI经营架构</strong><span>真实经营 → 标准 → AI/自动化 → 决策 → 持续优化</span></div>
           <div class="miwa-company-architecture-groups">
@@ -233,7 +259,37 @@ function architectureHtml(page, routeId) {
         <div class="miwa-company-flow-strip"><span>经营目标</span><b>→</b><span>业务流程</span><b>→</b><span>业务对象</span><b>→</b><span>状态与数据</span><b>→</b><span>规则与责任</span><b>→</b><span>AI与自动化</span><b>→</b><span>人类负责人</span><b>→</b><span>结果指标</span><b>→</b><span>管理决策</span><b>→</b><span>持续优化</span></div>
         <div class="miwa-company-subflow">操作闭环 → 业务闭环 → 经营闭环</div>
       </section>
-      <section class="miwa-company-content-sheet miwa-company-print-page"><span class="miwa-company-eyebrow">AI & HUMAN</span><h2>人与AI的责任关系</h2><p>能规则化的规则化，能自动化的自动化，需要判断的交给AI，需要负责的留给人。能够通过规则、函数或API稳定完成的工作，不为了“使用AI”而AI化。</p></section>
+
+      <section class="miwa-company-content-sheet miwa-company-print-page">
+        <span class="miwa-company-eyebrow">EXECUTION SYSTEM</span>
+        <h2>现代企业军团｜把战略转化为执行结果</h2>
+        <p>现代企业军团不是新的母架构，而是美和原创经营架构之下的集团级执行体系。它借鉴统一指挥、情报、后勤、训练、作战、监察与复盘等组织逻辑，强化责任边界和协同关系。</p>
+        <div class="miwa-company-force-grid">${forces.map(([name,units,mission]) => `<article><span>${esc(name)}</span><h3>${esc(mission)}</h3><p>${esc(units)}</p></article>`).join("")}</div>
+      </section>
+
+      <section class="miwa-company-content-sheet miwa-company-print-page">
+        <span class="miwa-company-eyebrow">FOUR EXECUTION PRINCIPLES</span>
+        <h2>四条底层作战原则</h2>
+        <div class="miwa-company-execution-principles miwa-company-execution-principles--detail">
+          <article><b>01</b><strong>战略未动 · 情报先行</strong><span>重大行动前必须有外部环境与内部真实状态的事实和证据基础。</span></article>
+          <article><b>02</b><strong>作战未起 · 粮草先行</strong><span>行动前确认资金、商品、数字资源、数据与人才是否能够持续支撑。</span></article>
+          <article><b>03</b><strong>命令一出 · 执行到底</strong><span>任务必须找到正确的人或AI，明确权责、时限、权限与异常升级。</span></article>
+          <article><b>04</b><strong>战果必留 · 复盘必做</strong><span>每次经营形成结果、数据、证据与经验，并反馈到下一轮资源配置。</span></article>
+        </div>
+      </section>
+
+      <section class="miwa-company-content-sheet miwa-company-print-page">
+        <span class="miwa-company-eyebrow">STANDARD OPERATION LOOP</span>
+        <h2>十步经营闭环</h2>
+        <div class="miwa-company-operation-loop">${steps.map((step,index) => `<article><b>${index + 1}</b><span>${esc(step)}</span></article>`).join("")}</div>
+        <div class="miwa-company-content-note">每一次经营都必须形成结果、数据与证据，并重新进入下一轮经营判断和资源配置。</div>
+      </section>
+
+      <section class="miwa-company-content-sheet miwa-company-print-page">
+        <span class="miwa-company-eyebrow">AI & HUMAN</span>
+        <h2>人与AI的责任关系</h2>
+        <p>能规则化的规则化，能自动化的自动化，需要判断的交给AI，需要负责的留给人。AI可以在授权范围内承担分析和执行主责，但最终经营责任、重大授权与高风险异常必须有明确的人类负责人。</p>
+      </section>
       ${relatedNav(group, routeId)}
     </article>`;
 }
@@ -333,7 +389,7 @@ function assetsHtml(page, routeId) {
       <section class="miwa-company-content-sheet miwa-company-assets-sheet miwa-company-print-page">
         <div class="miwa-company-assets-toolbar screen-only"><label><span>搜索资料</span><input type="search" data-company-asset-search placeholder="名称 / 类型 / 主题"></label><label><span>类型</span><select data-company-asset-type><option value="">全部</option><option>PDF</option><option>PPTX</option><option>DOCX</option><option>XLSX</option><option>IMAGE</option></select></label></div>
         <div class="miwa-company-assets-list" data-company-assets-list>
-          ${items.length ? items.map(assetRow).join("") : `<div class="miwa-company-empty-state"><strong>目录已就位</strong><p>当前没有已绑定的正式文件。后续只需要把真实文件路径、版本和权限接入，不必重新设计页面。</p></div>`}
+          ${items.length ? items.map(assetRow).join("") : `<div class="miwa-company-empty-state"><strong>目录已就位</strong><p>当前没有符合该范围的资料。真实资料索引与内容摘要已经进入AIONE；原始文件只需按正式目录绑定，不必重新设计页面。</p></div>`}
         </div>
         <div class="miwa-company-package-bar screen-only" data-company-package-bar hidden><span>已选择 <b data-company-package-count>0</b> 项</span><button type="button" data-company-action="package">生成PDF资料包（预留）</button></div>
       </section>
@@ -343,11 +399,22 @@ function assetsHtml(page, routeId) {
 
 function assetRow(asset) {
   const available = Boolean(asset.url);
-  return `<article class="miwa-company-asset-row" data-company-asset-row data-title="${esc(asset.title)}" data-type="${esc(asset.type)}">
+  const downloadable = Boolean(asset.downloadPath);
+  const hasContent = Boolean(asset.contentRoute);
+  return `<article class="miwa-company-asset-row" data-company-asset-row data-title="${esc([asset.title,asset.summary,asset.fileName].filter(Boolean).join(" "))}" data-type="${esc(asset.type)}">
     <label class="screen-only"><input type="checkbox" data-company-asset-select value="${esc(asset.id)}"></label>
-    <div><strong>${esc(asset.title)}</strong><span>${esc(asset.status)}</span></div>
-    <b>${esc(asset.type)}</b><span>${esc(asset.version)}</span><span>${esc(asset.visibility)}</span>
-    <div class="screen-only">${available ? `<a href="${esc(asset.url)}" target="_blank" rel="noopener noreferrer">查看</a><a href="${esc(asset.url)}" download>下载</a>` : `<button type="button" disabled title="正式文件尚未接入">待接入</button>`}</div>
+    <div class="miwa-company-asset-row__name">
+      <strong>${esc(asset.title)}</strong>
+      <span>${esc(asset.summary || asset.status)}</span>
+      <small>${esc(asset.fileName || "")}${asset.sourceDate ? ` · ${esc(asset.sourceDate)}` : ""}</small>
+    </div>
+    <b>${esc(asset.type)}</b>
+    <span>${esc(asset.version)}</span>
+    <span>${esc(asset.recordStatus || asset.visibility)}</span>
+    <div class="screen-only">
+      ${hasContent ? `<a href="${routeHref(asset.contentRoute)}">看内容</a>` : ""}
+      ${available ? `<a href="${esc(asset.url)}" target="_blank" rel="noopener noreferrer" title="在Google Drive打开当前原件">查看原件 ↗</a>${downloadable ? `<button type="button" data-company-action="download-asset" data-asset-id="${esc(asset.id)}" data-download-path="${esc(asset.downloadPath)}" title="通过AIONE安全下载当前原始文件">下载原件</button>` : ""}` : `<button type="button" disabled title="资料索引已接入，但当前没有绑定正式原件">原件待绑定</button>`}
+    </div>
   </article>`;
 }
 
@@ -387,6 +454,26 @@ function renderPage(page, routeId) {
 function bindPageActions(root) {
   root.querySelectorAll('[data-company-action="print"]').forEach((button) => button.addEventListener("click", () => window.print()));
 
+  root.querySelectorAll('[data-company-action="download-asset"]').forEach((button) => button.addEventListener("click", async () => {
+    const path = String(button.dataset.downloadPath || "");
+    if (!path) return;
+    const original = button.textContent;
+    button.disabled = true;
+    button.textContent = "下载中...";
+    try {
+      await aioneDownload(path);
+    } catch (error) {
+      const code = error?.payload?.error || "";
+      const message = code === "drive_runtime_access_missing"
+        ? "AIONE后台尚未取得美和共享云盘读取权限。请先给AIONE运行服务账号授予共享云盘 Viewer 权限。"
+        : (error?.message || "下载失败，请稍后再试。");
+      window.alert(message);
+    } finally {
+      button.disabled = false;
+      button.textContent = original;
+    }
+  }));
+
   const search = root.querySelector("[data-company-asset-search]");
   const type = root.querySelector("[data-company-asset-type]");
   const rows = [...root.querySelectorAll("[data-company-asset-row]")];
@@ -412,7 +499,7 @@ function bindPageActions(root) {
   };
   selections.forEach((input) => input.addEventListener("change", syncPackage));
   root.querySelector('[data-company-action="package"]')?.addEventListener("click", () => {
-    window.alert("V1已完成资料选择与出版入口；正式文件接入后再启用多资料合并PDF。PPT自动生成按当前计划后置。");
+    window.alert("V1.9.26已将原件下载切换为AIONE后台安全代理；当前下载不再依赖浏览器直接访问Google下载URL。多资料合并PDF继续作为后续出版能力，PPT自动生成继续后置。");
   });
 }
 
@@ -420,7 +507,7 @@ function dispatchAside(page, routeId) {
   const group = currentGroup(routeId);
   const items = routeId === "company" ? [
     { label:"当前阶段", value:"全员正式启用准备期" },
-    { label:"内容状态", value:"V1结构验证中" },
+    { label:"内容状态", value:"V1.9.26 Shared Drive安全下载" },
     { label:"经营架构", value:"查看美和原创AI经营架构", route:"company-management-architecture" },
     { label:"企业资料", value:"查看集团核心资料", route:"company-core-assets" }
   ] : [

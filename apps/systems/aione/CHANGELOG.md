@@ -1,3 +1,33 @@
+# V1.9.25｜美和之家 Google Drive 原件绑定 Candidate
+
+## V1.9.26 - MIWA Shared Drive secure download runtime
+
+- Replaces direct browser Google Drive download URLs with authenticated AIONE backend downloads.
+- Adds allow-listed backend Drive asset registry and ADC-based Google Drive streaming.
+- Keeps internal assets non-public and returns a clear runtime-access error when the Cloud Run service account lacks Shared Drive membership.
+- Adds best-effort business-event audit logging for corporate asset downloads.
+- Streams binary responses through the Vercel WIF bridge and forwards content-disposition/content-length.
+- Adds one-time Shared Drive runtime identity check helper.
+
+
+- 建立 `miwa-google-drive-registry.js`，集中登记美和之家Google Drive镜像目录Folder ID与集团核心资料File ID。
+- 00-09现代企业军团核心资料已经迁移到 `美和之家｜AIONE内容源 / 08_企业资料 / 集团核心资料` 并完成真实Drive绑定。
+- 企业资料页将“原件待绑定”升级为“查看原件 ↗ / 下载原件”，AIONE不复制第二份正式文件。
+- `getMiwaCompanySearchRecords()` 增加sourceId/sourceType/sourceUrl/downloadUrl/sourceFolderId/sourceName，为美和AI下一步企业资料检索与来源返回做准备。
+- 集团核心资料原有V0.1“构想/验证中”状态保持不变；绑定文件不等于内容正式锁定。
+- 目录、Main、Aside、PDF出版母版保持V1.9.24结构，不把视觉微调升级为当前主线。
+
+# V1.9.24｜美和之家真实内容与集团核心资料索引 Candidate
+
+- 在V1.9.23已锁定的两级Sidebar与数字出版型Main基础上，开始把既有美和集团真实内容接入页面，不再以占位说明为主。
+- 理念与文化首批接入“美和灵魂 / 美和准则 / 美和传承”的现有核心表达，并继续保持正式内容可迭代、来源可追溯。
+- 经营架构页接入美和原创433母架构、现代企业军团执行体系、四大军种、四条底层作战原则、十步经营闭环及人与AI责任边界。
+- 集团定位、集团简介、集团组织、发展战略、全球布局、治理架构、合规原则、集团动态等页面补入已有真实项目结论；事实型公司字段仍坚持“待确认/待补充”，不编造法定资料。
+- 集团核心资料页建立00-09现代企业军团资料索引，记录正式文件名、类型、版本、状态、日期、摘要与内部内容Route；源文件尚未复制到AIONE时明确显示“原件待绑定”，不伪造下载链接。
+- 新增内容来源面板，让页面能够展示支撑当前内容的集团资料名称、版本、日期与状态。
+- 新增美和之家搜索记录种子，统一输出页面与资料的title/subtitle/status/visibility/version/text，为下一阶段美和AI“找得到、知道最新版、返回来源”做准备。
+- 新增集团核心资料资产绑定目录与Manifest；PPT自动生成继续后置，当前仍以真实内容、PDF和美和AI检索准备为主线。
+
 # V1.9.23｜美和之家数字出版型空间 V1 Candidate
 
 - 美和之家从通用内容管理页升级为集团级“数字出版型 Main”，保留现有 Global Shell，不重建 Header / Footer。

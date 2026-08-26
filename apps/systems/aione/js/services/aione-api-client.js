@@ -51,3 +51,46 @@ export async function aioneApi(path, options = {}) {
   }
   return payload;
 }
+
+
+function filenameFromDisposition(value, fallback = "download") {
+  const raw = String(value || "");
+  const utf8 = raw.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8?.[1]) {
+    try { return decodeURIComponent(utf8[1]); } catch (_) {}
+  }
+  const basic = raw.match(/filename="?([^";]+)"?/i);
+  return basic?.[1] || fallback;
+}
+
+export async function aioneDownload(path, options = {}) {
+  const base = getAioneApiBaseUrl();
+  const response = await fetch(`${base}${path}`, {
+    method: "GET",
+    headers: { ...actorHeaders(), Accept: options.accept || "application/octet-stream", ...(options.headers || {}) },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    let payload = {};
+    try { payload = await response.json(); } catch (_) {}
+    const error = new Error(payload?.message || payload?.error || `AIONE download ${response.status}`);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
+
+  const blob = await response.blob();
+  const fileName = filenameFromDisposition(response.headers.get("content-disposition"), options.fileName || "download");
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = fileName;
+  anchor.rel = "noopener";
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+  return { fileName, size: blob.size, contentType: blob.type || response.headers.get("content-type") || "" };
+}

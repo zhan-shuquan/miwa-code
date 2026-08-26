@@ -4,6 +4,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 require_db_secret
 print_context
+gcloud services enable drive.googleapis.com --project="$PROJECT_ID" >/dev/null
 
 say "Enable only the Google Cloud APIs required for this stage"
 gcloud services enable \

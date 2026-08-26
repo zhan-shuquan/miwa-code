@@ -34,6 +34,6 @@ for (const text of ["美和集团","理念与文化","美和原创AI经营架构
 must(page.includes("miwa-company-logo-preview.png"), "白底公司Logo未接入美和之家");
 must(page.includes('data-company-action="print"') && css.includes("@page") && css.includes("@media print"), "A4 PDF出版模式缺失");
 must(page.includes("集团核心资料") && page.includes("生成PDF资料包（预留）"), "企业资料入口或PDF资料包预留缺失");
-must(index.includes("miwa-company-home.css") && index.includes("v1.9.23-miwa-home"), "V1.9.23页面样式/缓存版本未接入index");
+must(index.includes("miwa-company-home.css"), "美和之家页面样式未接入index");
 
 console.log("V1.9.23 MIWA company home publication validation passed.");

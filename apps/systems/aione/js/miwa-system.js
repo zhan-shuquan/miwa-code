@@ -21,7 +21,7 @@ import { completeTaskForBusinessObject } from "./data/collaboration-store.js";
 import { initMiwaCalendar } from "./pages/miwa-calendar.js";
 import { initBusinessPage } from "./pages/business-page-template.js";
 import { initContentPage } from "./pages/content-page-template.js";
-import { initMiwaCompanyHome } from "./pages/miwa-company-home.js";
+import { initMiwaCompanyHome } from "./pages/miwa-company-home.js?v=20260826-v1.9.26-drive-proxy";
 import { initNotificationsPage } from "./pages/notifications.js";
 import { initNotificationDetailPage } from "./pages/notification-detail.js";
 import { syncNotificationHeader } from "./data/notification-store.js";

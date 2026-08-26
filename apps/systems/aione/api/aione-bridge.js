@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import { getVercelOidcToken } from "@vercel/oidc";
 
 const STS_URL = "https://sts.googleapis.com/v1/token";
@@ -227,7 +228,15 @@ export default async function handler(req, res) {
     if (location) res.setHeader("location", location);
     const contentDisposition = upstream.headers.get("content-disposition");
     if (contentDisposition) res.setHeader("content-disposition", contentDisposition);
-    res.end(Buffer.from(await upstream.arrayBuffer()));
+    const contentLength = upstream.headers.get("content-length");
+    if (contentLength) res.setHeader("content-length", contentLength);
+    const contentTypeOptions = upstream.headers.get("x-content-type-options");
+    if (contentTypeOptions) res.setHeader("x-content-type-options", contentTypeOptions);
+    const assetId = upstream.headers.get("x-aione-asset-id");
+    if (assetId) res.setHeader("x-aione-asset-id", assetId);
+
+    if (!upstream.body) return res.end();
+    Readable.fromWeb(upstream.body).pipe(res);
   } catch (error) {
     console.error("AIONE Vercel bridge request failed", {
       name: error?.name || "Error",
