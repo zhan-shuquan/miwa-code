@@ -1,131 +1,233 @@
 /* ========================================
-   MIWA Business Home | Strategic Book Main V1.9.31.1
-   Content pages use an A4-landscape-like reading canvas.
-   Business execution pages remain SaaS-oriented elsewhere.
+   MIWA Business Home | Digital Book Overview V1.9.31.3
+   Screen: portrait A4 two-page spreads. Print: portrait A4 single pages.
+   Information model: space=book, group=chapter, child=section, content=page.
 ======================================== */
 
 import { getRouteId } from "../config/route-registry.js";
 import { setCurrentBusinessSpace } from "../shell/platform-context.js";
-import { bindPublicationActions, publicationToolbar, setPublicationPageMode } from "../components/miwa-publication-master.js?v=20260826-v1.9.31.2";
+import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260824-v1.9.5-sidebar-aside-lock-candidate";
+import {
+  bindPublicationActions,
+  configurePublicationAside,
+  publicationChapterSummary,
+  publicationCover,
+  publicationPage,
+  publicationSingle,
+  publicationSpread,
+  setPublicationPageMode,
+  validatePublicationPages
+} from "../components/miwa-publication-master.js?v=20260826-v1.9.31.3";
 import { initMiwaBusinessHome as initLegacyBusinessHome } from "./miwa-business-home.js?v=20260826-v1.9.31-business-home";
 import {
   MIWA_BUSINESS_HOME_SUBTITLE,
+  MIWA_BUSINESS_NAVIGATION,
   MIWA_BUSINESSES
 } from "../data/miwa-business-home-content.js";
 
 const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
 
-function bookFooter(pageNo) {
-  return `<div class="miwa-business-book-footer"><span>\u4e8b\u4e1a\u4e4b\u5bb6\uff5c\u6218\u7565\u5185\u5bb9\u7248</span><b>${String(pageNo).padStart(2,"0")}</b></div>`;
+const FALLBACK_BUSINESS_ICONS = Object.freeze({
+  crossborder: "store",
+  wholesale: "orders",
+  "procurement-agency": "procurement",
+  logistics: "supplier",
+  "study-abroad": "knowledge",
+  "real-estate": "shared",
+  consulting: "analysis",
+  brand: "brand"
+});
+
+function businessVisual(item) {
+  if (item.iconAsset) {
+    return `<img src="${esc(item.iconAsset)}" alt="${esc(item.name)}图标">`;
+  }
+  return `<span class="miwa-business-publication-icon is-fallback" data-icon="${esc(FALLBACK_BUSINESS_ICONS[item.id] || "apps")}" aria-hidden="true"></span>`;
 }
 
-function enterAction(item) {
-  if (!item.spaceId) return "";
-  return `<button type="button" class="miwa-business-book-action" data-business-enter="${esc(item.spaceId)}">\u8fdb\u5165\u4e8b\u4e1a</button>`;
-}
-
-function bookBusinessCard(item, index) {
-  const flow = item.flow?.length ? `<p class="miwa-business-book-card__flow">${item.flow.slice(0, 4).map((step) => esc(step)).join(" / ")}${item.flow.length > 4 ? " / ..." : ""}</p>` : "";
-  return `<article class="miwa-business-book-card" data-accent="${(index % 5) + 1}">
-    <div class="miwa-business-book-card__meta"><span>${esc(item.tagline)}</span><b>${esc(item.stage)}</b></div>
-    <h3>${esc(item.name)}</h3>
-    <p>${esc(item.description)}</p>
-    ${flow}
-    <div class="miwa-business-book-card__actions"><a href="#/${esc(item.route)}">\u4e8b\u4e1a\u8bf4\u660e \u2192</a>${enterAction(item)}</div>
-  </article>`;
-}
-
-function capabilityCard(index, title, text, links) {
-  return `<article class="miwa-business-book-capability" data-accent="${index}">
-    <h3>${title}</h3><p>${text}</p><div>${links.map(([label,route]) => `<a href="#/${route}">${label}</a>`).join("")}</div>
-  </article>`;
-}
-
-function coverHtml() {
-  return `<section class="miwa-business-cover miwa-business-print-page miwa-business-book-cover">
-    <div class="miwa-business-cover__rule"></div>
-    <div class="miwa-business-cover__copy">
-      <span class="miwa-business-cover__eyebrow">MIWA GROUP BUSINESS</span>
-      <h1>\u96c6\u56e2\u4e8b\u4e1a</h1>
-      <p>${esc(MIWA_BUSINESS_HOME_SUBTITLE)}</p>
-      <div class="miwa-business-cover__statement">\u771f\u5b9e\u4e1a\u52a1\u4f18\u5148 \u00b7 \u4e8b\u4e1a\u72ec\u7acb\u7ecf\u8425 \u00b7 \u96c6\u56e2\u80fd\u529b\u5171\u4eab \u00b7 \u4ebaAI\u534f\u540c</div>
+function compactBusinessCard(item, options = {}) {
+  const wide = options.wide ? " is-wide" : "";
+  const action = item.spaceId ? `<button type="button" data-business-enter="${esc(item.spaceId)}">进入事业</button>` : `<a href="#/${esc(item.route)}">查看事业说明 →</a>`;
+  return `<article class="miwa-business-publication-card${wide}">
+    <div class="miwa-business-publication-card__icon" data-business-icon-slot="${esc(item.id)}">${businessVisual(item)}</div>
+    <div class="miwa-business-publication-card__copy">
+      <span>${esc(item.tagline)}</span>
+      <h3>${esc(item.name)}</h3>
+      <p>${esc(item.description)}</p>
+      <div class="miwa-business-publication-card__meta"><b>${esc(item.stage)}</b>${action}</div>
     </div>
-    <div class="miwa-business-cover__footer"><span>\u7f8e\u548cAIONE\u4e00\u4f53\u5316\u5de5\u4f5c\u5e73\u53f0\uff5c\u4e8b\u4e1a\u4e4b\u5bb6</span><b>2026.08</b></div>
-  </section>`;
+  </article>`;
 }
 
-function overviewHtml() {
+function chapterDirectory() {
+  return MIWA_BUSINESS_NAVIGATION.filter((item) => item.children?.length).map((group, index) => {
+    const sectionText = group.children.map((child, childIndex) => `${String(index + 1).padStart(2, "0")}.${String(childIndex + 1).padStart(2, "0")} ${child.label}`).join(" · ");
+    return `<article class="miwa-business-toc-card">
+      <span>${String(index + 1).padStart(2, "0")}</span>
+      <h3>${esc(group.label)}</h3>
+      <p>${esc(group.subtitle)}</p>
+      <small>${esc(sectionText)}</small>
+    </article>`;
+  }).join("");
+}
+
+function overviewPage2() {
+  const content = `<div class="miwa-business-publication-two">
+    <article><span>01</span><h3>事业独立经营</h3><p>每个事业有自己的客户价值、经营闭环和最终责任，不因共享系统而混成一个流程。</p></article>
+    <article><span>02</span><h3>集团能力共享</h3><p>人才、AI、客户、供应商、商品、财务、知识和数字基础设施按需跨事业复用。</p></article>
+  </div>
+  <article class="miwa-business-publication-feature"><span>03</span><div><h3>真实阶段管理</h3><p>正式经营、既有业务基础、培育与未来方向必须清楚区分，不把规划中的事业包装成已经成熟。</p></div></article>`;
+  return publicationPage({
+    pageNumber: 2,
+    section: "概览｜为什么需要事业之家",
+    title: "不是把所有事业塞进一个系统，而是让集团看清在哪里经营、怎么进入、如何共享能力",
+    lead: "事业之家负责事业认知、事业版图、经营状态与进入路径；进入具体事业后，再由对应工作台承载真实业务执行。",
+    content,
+    conclusion: "事业之家回答“集团有哪些事业、现在在哪里、我要进入哪里”；具体事业负责把经营目标变成结果。",
+    bookLabel: "事业之家"
+  });
+}
+
+function overviewPage3() {
+  const content = `<div class="miwa-business-toc-grid">${chapterDirectory()}</div>`;
+  return publicationPage({
+    pageNumber: 3,
+    section: "概览｜全书结构",
+    title: "空间即书，目录即章，子目录即节，内容即页",
+    lead: "Sidebar不只是网页导航，也是这本书的实时目录。每个一级目录代表一章，二级目录代表一节；章节内容按书页组织。",
+    content,
+    conclusion: "内容页面先建立认知，再连接系统执行；阅读结构与AIONE信息架构保持一致。",
+    bookLabel: "事业之家"
+  });
+}
+
+function overviewPage4() {
+  const core = MIWA_BUSINESSES.filter((item) => item.category === "current");
+  const restart = MIWA_BUSINESSES.find((item) => item.category === "restart");
+  const content = `<div class="miwa-business-core-grid">
+    ${core.map((item) => compactBusinessCard(item)).join("")}
+    ${restart ? compactBusinessCard(restart, { wide:true }) : ""}
+  </div>`;
+  return publicationPage({
+    pageNumber: 4,
+    section: "第01章｜集团事业 · 01.01 核心与既有事业",
+    title: "真实业务优先：先把已经存在的经营前线讲清楚",
+    lead: "事业版图可以持续发展，但AIONE首先服务真实经营。当前正式经营与已有真实业务基础必须清楚区分。",
+    content,
+    conclusion: "美和跨境与美和批发属于当前真实经营；美和采购代理有历史业务基础，当前先做事业认知，暂不提前建设客户系统。",
+    bookLabel: "事业之家"
+  });
+}
+
+function overviewPage5() {
   const current = MIWA_BUSINESSES.filter((item) => item.category === "current");
   const restart = MIWA_BUSINESSES.filter((item) => item.category === "restart");
   const incubating = MIWA_BUSINESSES.filter((item) => item.category === "incubating");
-  const core = [...current, ...restart];
+  const content = `<div class="miwa-business-stage-grid">
+    <article><span>01</span><h3>正式经营</h3><strong>${current.length}个事业</strong><p>${current.map((item) => item.name).join(" / ")}</p></article>
+    <article><span>02</span><h3>既有业务基础</h3><strong>${restart.length}个事业</strong><p>${restart.map((item) => item.name).join(" / ")}</p></article>
+    <article><span>03</span><h3>培育方向</h3><strong>${incubating.length}个事业</strong><p>${incubating.map((item) => item.name).join(" / ")}</p></article>
+    <article><span>04</span><h3>未来事业</h3><strong>按真实经营判断新增</strong><p>不为了版图完整而预设未经确认的经营事实、负责人或目标。</p></article>
+  </div>`;
+  return publicationPage({
+    pageNumber: 5,
+    section: "第01章｜集团事业 · 01.02 事业阶段",
+    title: "格局可以大，建设必须脚踏实地",
+    lead: "所有事业使用统一阶段语言。阶段不是装饰标签，而是决定系统投入、资源配置和管理方式的经营事实。",
+    content,
+    conclusion: "先确认真实阶段，再决定是否进入系统建设、资源投入和经营目标管理。",
+    bookLabel: "事业之家"
+  });
+}
 
-  return `${publicationToolbar({ title:"事业之家", meta:"A4横向｜战略内容母版 V1.0" })}<article class="miwa-business-publication miwa-business-book miwa-publication-book">
-    ${coverHtml().replace("miwa-business-print-page", "miwa-business-print-page miwa-publication-page")}
+function overviewPage6() {
+  const groups = [
+    ["人才 / AI", "人与AI协同、能力配置与最终责任。", "人才之家 · AI之家"],
+    ["客户 / 供应商", "客户价值与供应关系在集团层形成长期资产。", "客户之家 · 供应商之家"],
+    ["商品 / 品牌", "商品主数据、分类、规格属性与品牌资产按需复用。", "商品之家"],
+    ["财务 / 数据", "财务口径、经营数据、证据和分析形成共同经营语言。", "财务之家 · 分析之家"],
+    ["知识 / 数字平台", "标准、SOP、资料、系统和基础设施形成可持续数字粮草。", "知识之家 · AIONE"]
+  ];
+  const content = `<div class="miwa-business-capability-grid">${groups.map((item, index) => `<article class="${index === 4 ? "is-wide" : ""}"><span>${String(index + 1).padStart(2, "0")}</span><h3>${item[0]}</h3><p>${item[1]}</p><small>${item[2]}</small></article>`).join("")}</div>`;
+  return publicationPage({
+    pageNumber: 6,
+    section: "第01章｜集团事业 · 01.03 集团共享能力",
+    title: "事业承担经营结果，集团共享长期能力",
+    lead: "共享的是能够跨事业重复使用的能力、资源和数字底座，而不是把所有事业组织成同一个流程。",
+    content,
+    conclusion: "先明确经营目标与业务闭环，再确认能力与责任，再判断由人、AI、自动化、集团共享能力或外部资源承担。",
+    bookLabel: "事业之家"
+  });
+}
 
-    <section class="miwa-business-sheet miwa-business-print-page miwa-business-book-page miwa-publication-page">
-      <div class="miwa-business-book-topline"><span>01｜\u4e3a\u4ec0\u4e48\u9700\u8981\u4e8b\u4e1a\u4e4b\u5bb6</span><b>02</b></div>
-      <h2>\u4e0d\u662f\u628a\u6240\u6709\u4e8b\u4e1a\u585e\u8fdb\u4e00\u4e2a\u7cfb\u7edf\uff0c\u800c\u662f\u8ba9\u96c6\u56e2\u770b\u6e05\u201c\u5728\u54ea\u91cc\u7ecf\u8425\u3001\u600e\u4e48\u8fdb\u5165\u3001\u5982\u4f55\u5171\u4eab\u80fd\u529b\u201d</h2>
-      <p class="miwa-business-book-lead">\u4e8b\u4e1a\u4e4b\u5bb6\u8d1f\u8d23\u4e8b\u4e1a\u8ba4\u77e5\u3001\u4e8b\u4e1a\u7248\u56fe\u3001\u7ecf\u8425\u72b6\u6001\u4e0e\u8fdb\u5165\u8def\u5f84\uff1b\u8fdb\u5165\u5177\u4f53\u4e8b\u4e1a\u540e\uff0c\u518d\u7531\u5bf9\u5e94\u5de5\u4f5c\u53f0\u627f\u8f7d\u771f\u5b9e\u4e1a\u52a1\u6267\u884c\u3002</p>
-      <div class="miwa-business-book-columns miwa-business-book-columns--3">
-        <article><span>01</span><h3>\u4e8b\u4e1a\u72ec\u7acb\u7ecf\u8425</h3><p>\u6bcf\u4e2a\u4e8b\u4e1a\u6709\u81ea\u5df1\u7684\u5ba2\u6237\u4ef7\u503c\u3001\u7ecf\u8425\u95ed\u73af\u548c\u6700\u7ec8\u8d23\u4efb\uff0c\u4e0d\u56e0\u5171\u4eab\u7cfb\u7edf\u800c\u6df7\u6210\u4e00\u4e2a\u6d41\u7a0b\u3002</p></article>
-        <article><span>02</span><h3>\u96c6\u56e2\u80fd\u529b\u5171\u4eab</h3><p>\u4eba\u624d\u3001AI\u3001\u5ba2\u6237\u3001\u4f9b\u5e94\u5546\u3001\u5546\u54c1\u3001\u8d22\u52a1\u3001\u77e5\u8bc6\u548c\u6570\u5b57\u57fa\u7840\u8bbe\u65bd\u6309\u9700\u8de8\u4e8b\u4e1a\u590d\u7528\u3002</p></article>
-        <article><span>03</span><h3>\u771f\u5b9e\u9636\u6bb5\u7ba1\u7406</h3><p>\u6b63\u5f0f\u7ecf\u8425\u3001\u65e2\u6709\u57fa\u7840\u3001\u57f9\u80b2\u4e0e\u672a\u6765\u65b9\u5411\u5fc5\u987b\u533a\u5206\uff0c\u4e0d\u628a\u89c4\u5212\u4e2d\u7684\u4e8b\u4e1a\u5305\u88c5\u6210\u5df2\u7ecf\u6210\u719f\u3002</p></article>
-      </div>
-      <div class="miwa-business-conclusion">\u4e8b\u4e1a\u4e4b\u5bb6\u56de\u7b54\u201c\u96c6\u56e2\u6709\u54ea\u4e9b\u4e8b\u4e1a\u3001\u73b0\u5728\u5728\u54ea\u91cc\u3001\u6211\u8981\u8fdb\u5165\u54ea\u91cc\u201d\uff1b\u5177\u4f53\u4e8b\u4e1a\u8d1f\u8d23\u628a\u7ecf\u8425\u76ee\u6807\u53d8\u6210\u7ed3\u679c\u3002</div>
-      ${bookFooter(2)}
-    </section>
+function overviewPage7() {
+  return publicationChapterSummary({
+    pageNumber: 7,
+    chapter: "第01章｜集团事业 · 本章总结",
+    title: "集团事业这一章，需要记住四件事",
+    points: [
+      "事业首先对应真实客户价值和经营结果，不以页面、部门或系统功能来定义。",
+      "美和跨境与美和批发是当前真实经营事业；美和采购代理已有业务基础但处于重新开发阶段。",
+      "事业可以独立经营，但人才、AI、客户、供应商、商品、财务、知识与数字平台可以持续共享。",
+      "所有事业必须标明真实阶段；未经确认的目标、负责人和经营事实不得由系统或AI自行补全。"
+    ],
+    next: "第02章｜事业管理：定位、负责人、阶段、目标与事业关系",
+    bookLabel: "事业之家"
+  });
+}
 
-    <section class="miwa-business-sheet miwa-business-print-page miwa-business-book-page miwa-publication-page">
-      <div class="miwa-business-book-topline"><span>02｜\u96c6\u56e2\u4e8b\u4e1a\u7248\u56fe</span><b>03</b></div>
-      <h2>\u4e8b\u4e1a\u4e0d\u662f\u5b64\u7acb\u9879\u76ee\uff0c\u800c\u662f\u96c6\u56e2\u80fd\u529b\u5171\u540c\u652f\u6491\u7684\u7ecf\u8425\u524d\u7ebf</h2>
-      <p class="miwa-business-book-lead">\u6bcf\u4e2a\u4e8b\u4e1a\u72ec\u7acb\u627f\u62c5\u5ba2\u6237\u4ef7\u503c\u4e0e\u7ecf\u8425\u7ed3\u679c\uff0c\u540c\u65f6\u5171\u4eab\u96c6\u56e2\u957f\u671f\u80fd\u529b\u4e0e\u6570\u5b57\u5e95\u5ea7\u3002</p>
-      <div class="miwa-business-book-statline"><span>${MIWA_BUSINESSES.length}\u4e2a\u4e8b\u4e1a\u65b9\u5411</span><span>${current.length}\u4e2a\u6b63\u5f0f\u7ecf\u8425</span><span>${restart.length}\u4e2a\u65e2\u6709\u4e1a\u52a1\u57fa\u7840</span></div>
-      <div class="miwa-business-book-businesses miwa-business-book-businesses--3">${core.map((item,index) => bookBusinessCard(item,index)).join("")}</div>
-      <div class="miwa-business-conclusion">\u96c6\u56e2\u4e8b\u4e1a\u4e0d\u662f\u51e0\u4e2a\u5b64\u7acb\u9879\u76ee\uff0c\u800c\u662f\u4e00\u7ec4\u5171\u4eab\u80fd\u529b\u652f\u6491\u4e0b\u7684\u7ecf\u8425\u524d\u7ebf\u3002</div>
-      ${bookFooter(3)}
-    </section>
+function overviewHtml() {
+  const cover = publicationCover({
+    title: "集团事业",
+    englishTitle: "BUSINESS PORTFOLIO",
+    subtitle: MIWA_BUSINESS_HOME_SUBTITLE,
+    statement: "真实业务优先 · 事业独立经营 · 集团能力共享 · 人AI协同",
+    bookLabel: "事业之家",
+    visualHtml: `<span class="miwa-business-book-cover-icon" data-icon="shared" aria-hidden="true"></span>`
+  });
 
-    <section class="miwa-business-sheet miwa-business-print-page miwa-business-book-page miwa-publication-page">
-      <div class="miwa-business-book-topline"><span>03｜\u57f9\u80b2\u4e0e\u89c4\u5212</span><b>04</b></div>
-      <h2>\u683c\u5c40\u53ef\u4ee5\u5927\uff0c\u5efa\u8bbe\u5fc5\u987b\u811a\u8e0f\u5b9e\u5730</h2>
-      <p class="miwa-business-book-lead">\u57f9\u80b2\u4e8b\u4e1a\u53ea\u9501\u5b9a\u65b9\u5411\uff0c\u4e0d\u7528\u672a\u6765\u60f3\u8c61\u586b\u6ee1\u5f53\u524d\u9875\u9762\u3002</p>
-      <div class="miwa-business-book-businesses miwa-business-book-businesses--5">${incubating.map((item,index) => bookBusinessCard(item,index)).join("")}</div>
-      <div class="miwa-business-conclusion">\u4e8b\u4e1a\u53ef\u4ee5\u4e0d\u65ad\u589e\u52a0\uff0c\u4f46\u96c6\u56e2\u5171\u4eab\u80fd\u529b\u3001\u7ecf\u8425\u539f\u5219\u548c\u6570\u5b57\u5e95\u5ea7\u5e94\u6301\u7eed\u590d\u7528\u3002</div>
-      ${bookFooter(4)}
-    </section>
-
-    <section class="miwa-business-sheet miwa-business-print-page miwa-business-book-page miwa-publication-page">
-      <div class="miwa-business-book-topline"><span>04｜\u5171\u4eab\u5173\u7cfb</span><b>05</b></div>
-      <h2>\u4e8b\u4e1a\u627f\u62c5\u7ecf\u8425\u7ed3\u679c\uff0c\u96c6\u56e2\u5171\u4eab\u957f\u671f\u80fd\u529b</h2>
-      <p class="miwa-business-book-lead">\u5171\u4eab\u80fd\u529b\u670d\u52a1\u591a\u4e2a\u4e8b\u4e1a\uff0c\u4f46\u6bcf\u4e2a\u4e8b\u4e1a\u4ecd\u72ec\u7acb\u627f\u62c5\u5ba2\u6237\u4ef7\u503c\u3001\u7ecf\u8425\u7ed3\u679c\u4e0e\u6700\u7ec8\u8d23\u4efb\u3002</p>
-      <div class="miwa-business-book-capabilities">
-        ${capabilityCard(1,"\u4eba\u624d/AI","\u4eba\u3001AI\u3001\u80fd\u529b\u4e0e\u7ec4\u7ec7",[["\u4eba\u624d\u4e4b\u5bb6","talent-home"],["AI\u4e4b\u5bb6","ai-home"]])}
-        ${capabilityCard(2,"\u5ba2\u6237/\u4f9b\u5e94\u5546","\u5ba2\u6237\u4ef7\u503c\u4e0e\u4f9b\u5e94\u5173\u7cfb",[["\u5ba2\u6237\u4e4b\u5bb6","customer-home"],["\u4f9b\u5e94\u5546\u4e4b\u5bb6","supplier-home"]])}
-        ${capabilityCard(3,"\u5546\u54c1/\u54c1\u724c","\u5546\u54c1\u4e3b\u6570\u636e\u4e0e\u54c1\u724c\u8d44\u4ea7",[["\u5546\u54c1\u4e4b\u5bb6","product-home"]])}
-        ${capabilityCard(4,"\u8d22\u52a1/\u6570\u636e","\u8d22\u52a1\u53e3\u5f84\u3001\u7ecf\u8425\u6570\u636e\u4e0e\u8bc1\u636e",[["\u8d22\u52a1\u4e4b\u5bb6","finance-home"],["\u5206\u6790\u4e4b\u5bb6","analysis"]])}
-        ${capabilityCard(5,"\u77e5\u8bc6/\u6570\u5b57\u5e73\u53f0","\u6807\u51c6\u3001SOP\u3001\u8d44\u6599\u3001\u7cfb\u7edf\u4e0e\u57fa\u7840\u8bbe\u65bd",[["\u77e5\u8bc6\u4e4b\u5bb6","knowledge-home"]])}
-      </div>
-      <div class="miwa-business-operating-rule"><b>\u5e95\u5c42\u539f\u5219</b><span>\u5148\u660e\u786e\u7ecf\u8425\u76ee\u6807\u4e0e\u4e1a\u52a1\u95ed\u73af\uff0c\u518d\u786e\u8ba4\u80fd\u529b\u4e0e\u8d23\u4efb\uff0c\u518d\u5224\u65ad\u7531\u4eba\u3001AI\u3001\u81ea\u52a8\u5316\u3001\u96c6\u56e2\u5171\u4eab\u80fd\u529b\u6216\u5916\u90e8\u8d44\u6e90\u627f\u62c5\u3002</span></div>
-      ${bookFooter(5)}
-    </section>
+  return `<article class="miwa-business-publication miwa-business-book miwa-publication-book" data-publication-book="business-home">
+    ${publicationSingle(cover)}
+    ${publicationSpread(overviewPage2(), overviewPage3(), "overview")}
+    ${publicationSpread(overviewPage4(), overviewPage5(), "chapter-01-a")}
+    ${publicationSpread(overviewPage6(), overviewPage7(), "chapter-01-b")}
   </article>`;
 }
 
 export async function initMiwaBusinessHome() {
   const routeId = getRouteId();
   setPublicationPageMode(true);
-  if (routeId !== "business-home") return initLegacyBusinessHome();
+
+  if (routeId !== "business-home") {
+    await initLegacyBusinessHome();
+    configurePublicationAside({
+      kicker: "事业之家",
+      title: document.title.split("｜").pop() || "事业内容",
+      summary: "当前属于事业之家内容空间。正式母版规则为：一级目录=章，二级目录=节，内容=页；打印与PDF操作归右侧辅助区。",
+      bookTitle: "美和集团事业手册",
+      chapter: "当前章节"
+    });
+    bindPublicationActions(document);
+    return;
+  }
+
   const root = document.getElementById("miwa-business-home-entry");
   if (!root) return;
   root.innerHTML = overviewHtml();
+  renderSemanticIcons(root);
   bindPublicationActions(root);
   root.querySelectorAll("[data-business-enter]").forEach((button) => button.addEventListener("click", () => {
     const spaceId = button.dataset.businessEnter;
     if (!spaceId) return;
-    setCurrentBusinessSpace(spaceId, { navigate:true, reason:"business-home-book" });
+    setCurrentBusinessSpace(spaceId, { navigate:true, reason:"business-home-digital-book" });
   }));
-  window.dispatchEvent(new CustomEvent("aione:page-aside-context", { detail:{
-    state:"light", kicker:"\u4e8b\u4e1a\u4e4b\u5bb6", title:"\u4e8b\u4e1a\u6982\u89c8", text:MIWA_BUSINESS_HOME_SUBTITLE
-  }}));
+
+  configurePublicationAside({
+    kicker: "事业之家",
+    title: "事业概览",
+    summary: "桌面按双页展开阅读；移动端单页连续阅读；导出后为A4纵向单页，可直接打印装订。",
+    bookTitle: "美和集团事业手册",
+    chapter: "概览 + 第01章｜集团事业"
+  });
+  validatePublicationPages(root);
 }

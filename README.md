@@ -1,6 +1,6 @@
 # 美和集团代码资产主仓库
 
-> Current AIONE candidate: `apps/systems/aione` **V1.9.30.2 WORK HOME ATTENTION REALTIME SYNC CANDIDATE**. `main` remains the current development baseline; V1.9.30 Work execution and V1.9.30.1 Drive Registry auto-sync are inherited validated foundations.
+> Current AIONE candidate: `apps/systems/aione` **V1.9.31.3 DIGITAL PUBLICATION BOOK MASTER CANDIDATE**. `main` remains the current development baseline; V1.9.30 Work execution, V1.9.30.1 Drive Registry auto-sync and V1.9.30.2 Work Home attention sync are inherited validated foundations.
 
 ## 仓库定位
 

@@ -202,3 +202,85 @@
   .miwa-business-book-card,.miwa-business-book-businesses--5 .miwa-business-book-card{min-height:0}
   .miwa-business-book-capability{min-height:0}
 }
+
+/* ========================================
+   V1.9.31.3 | Business Home as a real digital book
+   Portrait page content layouts. Odd counts use 2+1 / 2+2+1, not forced 3 columns.
+======================================== */
+.miwa-business-book-cover-icon{display:grid;place-items:center;width:58px;height:58px;color:#FFF}
+.miwa-business-book-cover-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round}
+
+.miwa-business-publication-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.miwa-business-publication-two article,
+.miwa-business-publication-feature,
+.miwa-business-stage-grid article,
+.miwa-business-capability-grid article,
+.miwa-business-toc-card{
+  border:1px solid #DCE5E0;
+  background:#FFF;
+}
+.miwa-business-publication-two article{min-height:160px;padding:17px 16px}
+.miwa-business-publication-two article>span,
+.miwa-business-publication-feature>span,
+.miwa-business-stage-grid article>span,
+.miwa-business-capability-grid article>span,
+.miwa-business-toc-card>span{display:block;margin-bottom:14px;color:#C83A32;font-size:8px;font-weight:900}
+.miwa-business-publication-two h3,
+.miwa-business-publication-feature h3,
+.miwa-business-stage-grid h3,
+.miwa-business-capability-grid h3,
+.miwa-business-toc-card h3{margin:0 0 8px;color:#0D4937;font-size:15px;line-height:1.35}
+.miwa-business-publication-two p,
+.miwa-business-publication-feature p,
+.miwa-business-stage-grid p,
+.miwa-business-capability-grid p,
+.miwa-business-toc-card p{margin:0;color:#66756E;font-size:9px;line-height:1.7}
+
+.miwa-business-publication-feature{display:grid;grid-template-columns:36px 1fr;gap:12px;margin-top:14px;padding:16px 17px;border-left:5px solid #176B4D;background:#F7FAF8}
+.miwa-business-publication-feature>span{margin:2px 0 0}
+
+.miwa-business-toc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.miwa-business-toc-card{min-height:178px;padding:15px 16px}
+.miwa-business-toc-card small{display:block;margin-top:13px;color:#7E8A84;font-size:7.5px;line-height:1.65}
+
+.miwa-business-core-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.miwa-business-publication-card{display:grid;grid-template-columns:54px 1fr;gap:12px;min-height:194px;padding:15px;border:1px solid #DCE5E0;background:#FFF}
+.miwa-business-publication-card.is-wide{grid-column:1/-1;min-height:150px;grid-template-columns:64px 1fr}
+.miwa-business-publication-card__icon{width:54px;height:54px;display:grid;place-items:center;border:1px solid #DDE7E2;background:#F4F8F6;color:#176B4D}
+.miwa-business-publication-card.is-wide .miwa-business-publication-card__icon{width:64px;height:64px}
+.miwa-business-publication-icon{display:grid;place-items:center;width:27px;height:27px}
+.miwa-business-publication-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.miwa-business-publication-card__copy>span{display:block;margin-bottom:5px;color:#78867F;font-size:7.5px;font-weight:850}
+.miwa-business-publication-card__copy h3{margin:0 0 7px;color:#0D4937;font-size:17px;line-height:1.25}
+.miwa-business-publication-card__copy p{margin:0;color:#62716A;font-size:8.4px;line-height:1.65}
+.miwa-business-publication-card__meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.miwa-business-publication-card__meta b{color:#176B4D;font-size:7.5px}
+.miwa-business-publication-card__meta button,.miwa-business-publication-card__meta a{min-height:25px;display:inline-flex;align-items:center;padding:4px 8px;border:1px solid #176B4D;border-radius:5px;background:#FFF;color:#176B4D;font:inherit;font-size:7px;font-weight:850;text-decoration:none;cursor:pointer}
+.miwa-business-publication-card__meta button{background:#176B4D;color:#FFF}
+
+.miwa-business-stage-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.miwa-business-stage-grid article{min-height:174px;padding:16px}
+.miwa-business-stage-grid strong{display:block;margin:10px 0 6px;color:#176B4D;font-size:12px}
+
+.miwa-business-capability-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.miwa-business-capability-grid article{min-height:150px;padding:15px 16px}
+.miwa-business-capability-grid article.is-wide{grid-column:1/-1;min-height:118px;border-left:5px solid #176B4D;background:#F7FAF8}
+.miwa-business-capability-grid small{display:block;margin-top:11px;color:#176B4D;font-size:7.5px;font-weight:850}
+
+@media(max-width:640px){
+  .miwa-business-publication-two,.miwa-business-toc-grid,.miwa-business-core-grid,.miwa-business-stage-grid,.miwa-business-capability-grid{grid-template-columns:1fr}
+  .miwa-business-publication-card.is-wide,.miwa-business-capability-grid article.is-wide{grid-column:auto}
+  .miwa-business-publication-two article,.miwa-business-toc-card,.miwa-business-stage-grid article,.miwa-business-capability-grid article{min-height:0}
+  .miwa-business-publication-card,.miwa-business-publication-card.is-wide{min-height:0;grid-template-columns:48px 1fr}
+  .miwa-business-publication-card.is-wide .miwa-business-publication-card__icon{width:48px;height:48px}
+}
+
+@media print{
+  .miwa-business-publication-card__meta button,.miwa-business-publication-card__meta a{display:none!important}
+  .miwa-business-publication-card,.miwa-business-publication-card.is-wide{break-inside:avoid;page-break-inside:avoid}
+  .miwa-business-publication-two,.miwa-business-toc-grid,.miwa-business-core-grid,.miwa-business-stage-grid,.miwa-business-capability-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .miwa-business-publication-card.is-wide,.miwa-business-capability-grid article.is-wide{grid-column:1/-1!important}
+}
+
+/* Publication actions never occupy Main. Legacy chapter routes inherit Aside actions. */
+body[data-page-mode="publication"] .miwa-business-page-hero__actions [data-business-action="print"]{display:none!important}

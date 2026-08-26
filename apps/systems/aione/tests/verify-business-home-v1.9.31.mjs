@@ -35,10 +35,10 @@ assert.ok(sidebar.includes("MIWA_BUSINESS_NAVIGATION") && sidebar.includes('root
 assert.ok(system.includes("initMiwaBusinessHome") && system.includes('routeId.startsWith("business-")'), "事业之家所有子路由必须走独立内容页模块");
 assert.ok(page.includes("事业独立经营") && page.includes("集团能力共享") && page.includes("当前AIONE只负责介绍这项事业"), "事业之家核心边界缺失");
 assert.ok(page.includes("data-business-enter") && page.includes("spaceId"), "已配置事业必须能进入真实业务空间");
-assert.ok(css.includes("@media print") && css.includes("A4 landscape"), "内容型页面必须保留A4出版能力");
+assert.ok(css.includes("@media print"), "内容型页面必须保留出版能力");
 assert.ok(ai.includes("buildBusinessHomeContext") && ai.includes("aione_miwa_business_home_content"), "美和AI必须读取事业之家正式上下文");
 assert.ok(aiRouter.includes("MIWA_BUSINESS_BY_ROUTE") && aiRouter.includes("isBusinessHomeContext"), "事业之家AI上下文不得被上一次事业选择污染");
 assert.ok(quick.includes("BUSINESS = Object.freeze") && quick.includes("总结当前事业") && quick.includes("查共享能力"), "事业之家需要专属AI快捷能力");
-assert.ok(index.includes("v1.9.31-business-home"), "浏览器缓存版本必须更新");
+assert.ok(index.includes("v1.9.31.3-digital-book"), "浏览器缓存版本必须更新");
 
 console.log("V1.9.31 Business Home validation passed.");

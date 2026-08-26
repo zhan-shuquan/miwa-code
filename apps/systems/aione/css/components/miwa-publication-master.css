@@ -1,190 +1,310 @@
 /* =========================================================
-   AIONE Content Publication Master V1.0 | V1.9.31.2
-   Scope: content/recognition pages only. Execution pages keep SaaS layout.
-   Principles: A4 landscape reading ratio, MIWA green/red, generous whitespace,
-   fixed left navigation, balanced contextual aside, screen = publication source.
+   AIONE Digital Publication Master V1.1 | V1.9.31.3
+   Default page: A4 portrait. Desktop: two-page spread. Mobile: one page.
+   Print/PDF: true A4 portrait single pages.
    ========================================================= */
 
 :root{
-  --miwa-publication-page-max:1240px;
+  --miwa-publication-spread-max:1120px;
+  --miwa-publication-page-max:540px;
   --miwa-publication-aside-light:260px;
-  --miwa-publication-aside-standard:292px;
+  --miwa-publication-aside-standard:300px;
   --miwa-publication-red:#C83A32;
   --miwa-publication-green:#176B4D;
   --miwa-publication-green-deep:#0D4937;
   --miwa-publication-green-mid:#5E9B82;
   --miwa-publication-green-soft:#E8F2ED;
+  --miwa-publication-paper:#FFF;
+  --miwa-publication-ink:#173B31;
+  --miwa-publication-muted:#68766F;
+  --miwa-publication-line:#DCE5E0;
 }
 
-/* Screen shell: Sidebar stays on platform token (232px). Publication only balances Main/Aside. */
+/* Platform shell responsibility remains unchanged: Sidebar uses platform 232px token. */
 @media(min-width:1100px){
-  .app-body[data-page-mode="publication"][data-aside-state="light"]{
-    --desktop-aside:var(--miwa-publication-aside-light);
-  }
-  .app-body[data-page-mode="publication"][data-aside-state="standard"]{
-    --desktop-aside:var(--miwa-publication-aside-standard);
-  }
-  .app-body[data-page-mode="publication"] .app-main{
-    padding:16px 18px 26px;
-  }
-  .app-body[data-page-mode="publication"] .page-host{
-    max-width:none;
-  }
-  .app-body[data-page-mode="publication"] .desktop-aside{
-    padding:10px 9px;
-  }
+  .app-body[data-page-mode="publication"][data-aside-state="light"]{--desktop-aside:var(--miwa-publication-aside-light)}
+  .app-body[data-page-mode="publication"][data-aside-state="standard"]{--desktop-aside:var(--miwa-publication-aside-standard)}
+  .app-body[data-page-mode="publication"] .app-main{padding:18px 14px 30px;background:#F3F5F3}
+  .app-body[data-page-mode="publication"] .page-host{max-width:none}
+  .app-body[data-page-mode="publication"] .desktop-aside{padding:10px 9px}
 }
 
 .miwa-publication-book{
-  width:min(100%,var(--miwa-publication-page-max));
+  width:100%;
+  max-width:var(--miwa-publication-spread-max);
   margin:0 auto;
+  padding:4px 0 30px;
   touch-action:pan-y;
 }
 
-.miwa-publication-toolbar{
-  width:min(100%,var(--miwa-publication-page-max));
-  min-height:46px;
+.miwa-publication-single,
+.miwa-publication-spread{
+  width:100%;
+  margin:0 auto 26px;
+}
+
+.miwa-publication-single{
+  display:flex;
+  justify-content:center;
+}
+
+.miwa-publication-spread{
+  position:relative;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;
+  align-items:start;
+}
+
+/* Subtle center seam: visual language of an opened book, not a 3D animation. */
+.miwa-publication-spread::after{
+  content:"";
+  position:absolute;
+  z-index:2;
+  left:50%;
+  top:8px;
+  bottom:8px;
+  width:14px;
+  transform:translateX(-50%);
+  pointer-events:none;
+  background:linear-gradient(90deg,rgba(17,61,49,.025),rgba(17,61,49,.075),rgba(255,255,255,.8),rgba(17,61,49,.06),rgba(17,61,49,.02));
+  filter:blur(.2px);
+}
+
+.miwa-publication-page{
+  position:relative;
+  width:100%;
+  max-width:var(--miwa-publication-page-max);
+  aspect-ratio:210/297;
+  min-width:0;
+  padding:40px 38px 42px;
+  box-sizing:border-box;
+  overflow:hidden;
+  border:1px solid var(--miwa-publication-line);
+  border-radius:2px;
+  background:var(--miwa-publication-paper);
+  box-shadow:0 12px 34px rgba(13,73,55,.065);
+  color:var(--miwa-publication-ink);
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+
+.miwa-publication-page[data-page-overflow="true"]{outline:2px solid rgba(200,58,50,.35);outline-offset:-2px}
+
+/* Book gutter: inner margin is intentionally a little larger. */
+.miwa-publication-page[data-page-side="left"]{padding-right:44px}
+.miwa-publication-page[data-page-side="right"]{padding-left:44px}
+
+.miwa-publication-page--content::before,
+.miwa-publication-page--summary::before{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  top:0;
+  height:7px;
+  background:var(--miwa-publication-green);
+}
+
+.miwa-publication-page__topline{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin:0 0 22px;
+  color:var(--miwa-publication-green);
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.04em;
+}
+.miwa-publication-page__topline b{color:var(--miwa-publication-red);font-size:9px}
+
+.miwa-publication-page h2{
+  margin:0 0 12px;
+  color:var(--miwa-publication-green-deep);
+  font-size:28px;
+  line-height:1.22;
+  letter-spacing:-.035em;
+}
+.miwa-publication-page__lead{
+  margin:0;
+  color:var(--miwa-publication-muted);
+  font-size:10.5px;
+  line-height:1.78;
+}
+.miwa-publication-page__body{margin-top:26px}
+
+.miwa-publication-page__conclusion{
+  position:absolute;
+  left:38px;
+  right:38px;
+  bottom:58px;
+  padding:13px 15px;
+  border-left:4px solid var(--miwa-publication-red);
+  background:var(--miwa-publication-green-soft);
+  color:var(--miwa-publication-green-deep);
+  font-size:10px;
+  font-weight:850;
+  line-height:1.6;
+}
+.miwa-publication-page[data-page-side="left"] .miwa-publication-page__conclusion{right:44px}
+.miwa-publication-page[data-page-side="right"] .miwa-publication-page__conclusion{left:44px}
+
+.miwa-publication-page__footer{
+  position:absolute;
+  left:38px;
+  right:38px;
+  bottom:22px;
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:14px;
-  margin:0 auto 12px;
-  padding:8px 10px 8px 14px;
-  border:1px solid #DCE7E1;
-  border-radius:10px;
-  background:#FFFFFF;
-  box-shadow:0 4px 14px rgba(13,73,55,.035);
+  color:#99A49F;
+  font-size:7.5px;
 }
-.miwa-publication-toolbar__meta{
-  min-width:0;
-  display:flex;
-  align-items:center;
-  gap:9px;
-  color:#68776F;
-  font-size:9px;
+.miwa-publication-page[data-page-side="left"] .miwa-publication-page__footer{right:44px}
+.miwa-publication-page[data-page-side="right"] .miwa-publication-page__footer{left:44px}
+.miwa-publication-page__footer b{color:var(--miwa-publication-green);font-size:8px}
+
+/* Cover system: stable corporate identity + swappable title / icon / positioning copy. */
+.miwa-publication-page--cover{
+  padding:34px 38px 38px;
+  border:0;
+  background:var(--miwa-publication-green-deep);
+  color:#FFF;
+  box-shadow:0 14px 38px rgba(13,73,55,.15);
 }
-.miwa-publication-toolbar__meta::before{
+.miwa-publication-page--cover::before{
   content:"";
-  width:6px;
-  height:6px;
-  flex:0 0 6px;
-  border-radius:50%;
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:8px;
   background:var(--miwa-publication-red);
 }
-.miwa-publication-toolbar__meta strong{
-  color:var(--miwa-publication-green-deep);
-  font-size:10.5px;
+.miwa-publication-cover__brand{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;color:#D9E8E1;font-size:8px;font-weight:850;letter-spacing:.1em}
+.miwa-publication-cover__brand b{font-weight:700;letter-spacing:.14em}
+.miwa-publication-cover__copy{position:relative;z-index:2;margin-top:72px;max-width:84%}
+.miwa-publication-cover__kicker{display:block;margin-bottom:16px;color:#D4E6DD;font-size:9px;font-weight:900;letter-spacing:.08em}
+.miwa-publication-page--cover h1{margin:0;color:#FFF;font-size:48px;line-height:1.05;letter-spacing:-.05em}
+.miwa-publication-cover__english{margin-top:10px;color:#AFCFC0;font-size:10px;font-weight:850;letter-spacing:.18em}
+.miwa-publication-page--cover p{margin:28px 0 0;max-width:86%;color:#E8F2ED;font-size:11px;line-height:1.9}
+.miwa-publication-cover__statement{margin-top:34px;padding-left:14px;border-left:4px solid var(--miwa-publication-red);color:#FFF;font-size:11px;font-weight:850;line-height:1.75}
+.miwa-publication-cover__visual{
+  position:absolute;
+  right:34px;
+  bottom:82px;
+  width:104px;
+  height:104px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.045);
 }
-.miwa-publication-toolbar__actions{display:flex;align-items:center;gap:8px}
-.miwa-publication-export{
-  min-height:32px;
-  padding:6px 12px;
-  border:1px solid var(--miwa-publication-green);
-  border-radius:7px;
-  background:var(--miwa-publication-green);
-  color:#FFFFFF;
-  font:inherit;
-  font-size:9px;
-  font-weight:850;
-  cursor:pointer;
-}
-.miwa-publication-export:hover{background:var(--miwa-publication-green-deep)}
-.miwa-publication-export--secondary{background:#FFFFFF;color:var(--miwa-publication-green)}
-.miwa-publication-export--secondary:hover{background:#F4F8F6}
+.miwa-publication-cover__visual img{max-width:78%;max-height:78%;object-fit:contain}
+.miwa-publication-cover__visual-placeholder{color:rgba(255,255,255,.42);font-size:14px;font-weight:900;letter-spacing:.16em}
+.miwa-publication-cover__footer{position:absolute;left:38px;right:38px;bottom:26px;display:flex;justify-content:space-between;gap:16px;color:#B9D1C6;font-size:7.5px}
 
-/* Page geometry. Content can grow only when necessary; otherwise it reads as one book page. */
-.miwa-publication-page{
-  position:relative;
-  width:100%;
-  aspect-ratio:297/210;
-  min-height:0;
-  margin:0 auto 22px;
-  overflow:hidden;
-}
+/* Summary page: intentional right-hand close of an odd chapter. */
+.miwa-publication-page--summary{background:#FBFCFB}
+.miwa-publication-page--summary h2{max-width:88%;font-size:31px}
+.miwa-publication-summary-list{display:grid;gap:11px;margin-top:8px}
+.miwa-publication-summary-list article{display:grid;grid-template-columns:30px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid #E2E8E4}
+.miwa-publication-summary-list article span{color:var(--miwa-publication-red);font-size:8px;font-weight:900}
+.miwa-publication-summary-list article p{margin:0;color:#405149;font-size:10px;line-height:1.65}
+.miwa-publication-summary-next{position:absolute;left:44px;right:38px;bottom:64px;padding:14px 16px;border:1px solid #DDE7E2;background:#FFF}
+.miwa-publication-summary-next span{display:block;margin-bottom:4px;color:#88958F;font-size:7px;font-weight:900}
+.miwa-publication-summary-next strong{color:var(--miwa-publication-green);font-size:10px}
 
-/* MIWA publication color discipline: green is primary, red is rare emphasis. */
-.miwa-publication-accent{color:var(--miwa-publication-red)}
-.miwa-publication-rule-red{background:var(--miwa-publication-red)!important}
+/* Mobile publication actions live outside Main / book. */
+.miwa-publication-mobile-tools{display:none}
 
-/* Mobile/tablet: keep page feeling where possible, but never block reading/scrolling. */
+/* Mobile/tablet: one portrait page at a time, natural vertical reading. */
 @media(max-width:1099px){
-  body[data-page-mode="publication"]{
-    height:auto!important;
-    min-height:100%!important;
-    overflow-x:hidden!important;
-    overflow-y:auto!important;
-    overscroll-behavior-y:auto!important;
-    touch-action:pan-y!important;
-  }
+  body[data-page-mode="publication"]{height:auto!important;min-height:100%!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior-y:auto!important;touch-action:pan-y!important;background:#F3F5F3}
   body[data-page-mode="publication"] .app-shell,
   body[data-page-mode="publication"] .app-body,
   body[data-page-mode="publication"] .app-main,
-  body[data-page-mode="publication"] #selection-main-host{
-    height:auto!important;
-    min-height:0!important;
-    overflow:visible!important;
-    touch-action:pan-y!important;
-  }
-  .miwa-publication-toolbar{
-    position:relative;
-    z-index:2;
-    margin:0 0 10px;
-    border-radius:9px;
-  }
-  .miwa-publication-book{width:100%;max-width:none;overflow:visible}
+  body[data-page-mode="publication"] #selection-main-host{height:auto!important;min-height:0!important;overflow:visible!important;touch-action:pan-y!important}
+  .miwa-publication-book{width:100%;max-width:none;padding:0 12px 74px;overflow:visible}
+  .miwa-publication-single,.miwa-publication-spread{display:block;margin-bottom:16px}
+  .miwa-publication-spread::after{display:none}
   .miwa-publication-page{
-    aspect-ratio:auto;
-    min-height:calc((100vw - 28px) * .70707);
+    width:min(100%,620px);
+    max-width:620px;
+    min-height:calc(min(100vw - 24px,620px) * 1.4142857);
     height:auto;
+    aspect-ratio:auto;
+    margin:0 auto 16px;
     overflow:visible;
   }
+  .miwa-publication-page[data-page-side="left"],.miwa-publication-page[data-page-side="right"]{padding-left:38px;padding-right:38px}
+  .miwa-publication-page__conclusion,.miwa-publication-summary-next{position:static;margin-top:24px}
+  .miwa-publication-page__footer{position:static;margin-top:28px;padding-top:12px;border-top:1px solid #E2E8E4}
+  .miwa-publication-mobile-tools{
+    position:fixed;
+    z-index:80;
+    right:12px;
+    bottom:68px;
+    display:flex;
+    gap:6px;
+    padding:6px;
+    border:1px solid #DDE6E1;
+    border-radius:10px;
+    background:rgba(255,255,255,.96);
+    box-shadow:0 8px 24px rgba(13,73,55,.12);
+  }
+  .miwa-publication-mobile-tools button{min-height:32px;padding:6px 9px;border:1px solid var(--miwa-publication-green);border-radius:7px;background:#FFF;color:var(--miwa-publication-green);font:inherit;font-size:8.5px;font-weight:850}
+  .miwa-publication-mobile-tools .is-primary{background:var(--miwa-publication-green);color:#FFF}
 }
 
 @media(max-width:640px){
-  .miwa-publication-toolbar{padding:7px 8px 7px 10px}
-  .miwa-publication-toolbar__meta span{display:none}
-  .miwa-publication-toolbar__actions{gap:6px}
-  .miwa-publication-export{min-height:30px;padding:5px 9px;font-size:8.5px}
+  .miwa-publication-page{padding:30px 26px 32px}
+  .miwa-publication-page[data-page-side="left"],.miwa-publication-page[data-page-side="right"]{padding-left:26px;padding-right:26px}
+  .miwa-publication-page h2{font-size:24px}
+  .miwa-publication-page__body{margin-top:20px}
+  .miwa-publication-page--cover{padding:28px 28px 32px}
+  .miwa-publication-cover__copy{margin-top:58px;max-width:92%}
+  .miwa-publication-page--cover h1{font-size:42px}
+  .miwa-publication-cover__visual{right:26px;bottom:78px;width:84px;height:84px}
+  .miwa-publication-cover__footer{left:28px;right:28px}
 }
 
-/* Print/PDF: only the publication pages remain. Browser print should use A4 landscape. */
+/* Print/PDF: screen spreads are flattened into real A4 portrait single pages. */
 @media print{
-  @page{size:A4 landscape;margin:0}
-  #desktop-header-host,
-  #mobile-topbar-host,
-  #mobile-info-host,
-  #sidebar-host,
-  #aside-host,
-  #desktop-footer-host,
-  #mobile-bottom-host,
-  #mobile-drawer-host,
-  #miwa-ai-layer-host,
-  #global-settings-host,
-  .miwa-publication-toolbar{display:none!important}
+  @page{size:A4 portrait;margin:0}
+  #desktop-header-host,#mobile-topbar-host,#mobile-info-host,#sidebar-host,#aside-host,#desktop-footer-host,#mobile-bottom-host,#mobile-drawer-host,#miwa-ai-layer-host,#global-settings-host,#miwa-publication-mobile-tools,[data-no-print]{display:none!important}
 
-  html,body,#app,.app-shell,.app-body,.app-main,.page-host,#selection-main-host{
-    width:auto!important;
-    max-width:none!important;
-    height:auto!important;
-    min-height:0!important;
-    margin:0!important;
-    padding:0!important;
-    overflow:visible!important;
-    background:#FFFFFF!important;
-  }
+  html,body,#app,.app-shell,.app-body,.app-main,.page-host,#selection-main-host{width:auto!important;max-width:none!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;overflow:visible!important;background:#FFF!important}
   .app-body{display:block!important}
-  .miwa-publication-book{width:auto!important;max-width:none!important;margin:0!important}
-  .miwa-publication-page{
-    width:297mm!important;
-    height:210mm!important;
-    min-height:210mm!important;
+  .miwa-publication-book,.miwa-publication-single,.miwa-publication-spread{display:block!important;width:auto!important;max-width:none!important;margin:0!important;padding:0!important}
+  .miwa-publication-spread::after{display:none!important}
+  .miwa-publication-page,
+  .miwa-publication-page[data-page-side="left"],
+  .miwa-publication-page[data-page-side="right"]{
+    width:210mm!important;
+    height:297mm!important;
+    min-height:297mm!important;
+    max-width:none!important;
     aspect-ratio:auto!important;
     margin:0!important;
+    padding:16mm 15mm 17mm!important;
     overflow:hidden!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
     break-after:page!important;
     page-break-after:always!important;
+    break-inside:avoid!important;
+    page-break-inside:avoid!important;
     -webkit-print-color-adjust:exact!important;
     print-color-adjust:exact!important;
   }
   .miwa-publication-page:last-child{break-after:auto!important;page-break-after:auto!important}
+  .miwa-publication-page__conclusion{left:15mm!important;right:15mm!important;bottom:20mm!important}
+  .miwa-publication-page__footer{left:15mm!important;right:15mm!important;bottom:8mm!important}
+  .miwa-publication-page--cover{padding:16mm 15mm 17mm!important}
+  .miwa-publication-cover__footer{left:15mm!important;right:15mm!important;bottom:9mm!important}
+  .miwa-publication-summary-next{left:15mm!important;right:15mm!important;bottom:20mm!important}
 }

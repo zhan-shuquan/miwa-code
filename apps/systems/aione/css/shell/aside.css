@@ -116,3 +116,33 @@
   .app-body[data-aside-state="light"]{--desktop-aside:240px}
   .app-body[data-aside-state="standard"]{--desktop-aside:300px}
 }
+
+/* V1.9.31.3 | Contextual page operations belong to Aside lower zone. */
+.context-aside-actions{
+  margin-top:auto;
+  padding-top:10px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+  border-top:1px solid var(--border-soft);
+}
+.context-aside-actions[hidden]{display:none!important}
+.context-aside-action{
+  min-height:34px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 9px;
+  border:1px solid var(--miwa-green);
+  border-radius:8px;
+  background:#FFF;
+  color:var(--miwa-green);
+  font:inherit;
+  font-size:9px;
+  font-weight:850;
+  text-decoration:none;
+  cursor:pointer;
+}
+.context-aside-action[data-tone="primary"]{background:var(--miwa-green);color:#FFF}
+.context-aside-action[data-tone="primary"]:hover{background:var(--miwa-green-deep)}
+.context-aside-action[data-tone="secondary"]:hover{background:#F4F8F6}

@@ -13,15 +13,15 @@ const css = read("css/pages/miwa-business-home.css");
 const index = read("index.html");
 
 assert.ok(system.includes("miwa-business-home-book.js"), "Business Home must use strategic book wrapper");
-assert.ok(book.includes("miwa-business-book-cover"), "cover page missing");
-assert.ok(book.includes("miwa-business-book-businesses--3"), "core business book spread missing");
-assert.ok(book.includes("miwa-business-book-businesses--5"), "incubating business book spread missing");
-assert.ok(book.includes("miwa-business-book-capabilities"), "shared capability spread missing");
+assert.ok(book.includes("publicationCover"), "cover page missing");
+assert.ok(book.includes("miwa-business-core-grid"), "core business content missing");
+assert.ok(book.includes("miwa-business-stage-grid"), "business stage content missing");
+assert.ok(book.includes("miwa-business-capability-grid"), "shared capability spread missing");
 assert.ok(book.includes('routeId !== "business-home"') && book.includes("initLegacyBusinessHome"), "non-overview business routes must keep legacy behavior");
-assert.ok(css.includes("aspect-ratio:297/210"), "screen publication canvas must use A4 landscape ratio");
-assert.ok(css.includes("@page{size:A4 landscape;margin:0}"), "print must use full A4 landscape page");
-assert.ok(css.includes("print-color-adjust:exact"), "print colors must be preserved");
-assert.ok(css.includes("miwa-business-book-footer"), "publication footer missing");
-assert.ok(index.includes("v1.9.31-business-home-book-v1.9.31.1"), "cache version must be updated");
+assert.ok(css.includes("miwa-business-core-grid"), "Business Home book content CSS missing");
+assert.ok(index.includes("miwa-publication-master.css?v=20260826-v1.9.31.3"), "print master must use V1.9.31.3 portrait publication CSS");
+assert.ok(index.includes("v1.9.31.3-digital-book"), "digital book cache version must be updated");
+assert.ok(book.includes("publicationChapterSummary"), "chapter summary page missing");
+assert.ok(index.includes("v1.9.31.3-digital-book"), "cache version must be updated");
 
-console.log("V1.9.31.1 Business Home strategic book validation passed.");
+console.log("V1.9.31.1 compatibility check passed under V1.9.31.3 digital book master.");

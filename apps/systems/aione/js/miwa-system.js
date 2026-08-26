@@ -23,7 +23,7 @@ import { initMiwaWorkHome } from "./pages/miwa-work-home.js?v=20260826-v1.9.30.2
 import { initBusinessPage } from "./pages/business-page-template.js";
 import { initContentPage } from "./pages/content-page-template.js";
 import { initMiwaCompanyHome } from "./pages/miwa-company-home.js?v=20260826-v1.9.26-drive-proxy";
-import { initMiwaBusinessHome } from "./pages/miwa-business-home-book.js?v=20260826-v1.9.31-business-home-book-v1.9.31.1";
+import { initMiwaBusinessHome } from "./pages/miwa-business-home-book.js?v=20260826-v1.9.31.3-digital-book";
 import { initNotificationsPage } from "./pages/notifications.js";
 import { initNotificationDetailPage } from "./pages/notification-detail.js";
 import { syncNotificationHeader } from "./data/notification-store.js";
@@ -114,6 +114,7 @@ async function renderCurrentRoute() {
   document.title = `美和AIONE一体化工作平台｜${route.title}`;
   document.body.dataset.currentRoute = routeId;
   document.body.dataset.pageMode = "application";
+  document.getElementById("miwa-publication-mobile-tools")?.remove();
   const appBody = document.querySelector(".app-body");
   if (appBody) appBody.dataset.pageMode = "application";
 
