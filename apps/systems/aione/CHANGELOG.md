@@ -1048,3 +1048,8 @@
 - 浏览器重新获得焦点、页面重新可见时自动刷新，并以60秒轻量轮询作为多人协作兜底。
 - 继续直接读取既有 `work_items` / `/api/v1/work-home`，不新增重复统计表。
 - 新增 `aione:work-items-changed` 与 `aione:work-attention-updated` 事件，为后续全局工作神经和通知协同保留统一入口。
+
+## V1.9.31.1
+- Business Home overview upgraded to strategic book/A4-landscape content layout.
+- Content-reading visual language separated from business-execution UI.
+- Existing V1.9.31 routes, content and business entry behavior preserved.
