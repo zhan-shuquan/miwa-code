@@ -67,20 +67,21 @@
 ======================================== */
 
 .miwa-business-book{max-width:1180px;padding-bottom:28px}
-.miwa-business-book .miwa-business-print-page{position:relative;width:100%;aspect-ratio:297/210;min-height:680px;margin:0 auto 24px;padding:42px 54px 48px;border:1px solid #dce5e0;border-radius:2px;background:#fff;box-shadow:0 10px 30px rgba(13,73,55,.055);overflow:hidden}
+.miwa-business-book .miwa-business-print-page{position:relative;width:100%;aspect-ratio:297/210;min-height:0;margin:0 auto 24px;padding:42px 54px 48px;border:1px solid #dce5e0;border-radius:2px;background:#fff;box-shadow:0 10px 30px rgba(13,73,55,.055);overflow:hidden}
 
-.miwa-business-book-cover{min-height:680px!important;padding:72px 74px 62px 108px!important;border:0!important;border-radius:2px!important;background:#0d3d31!important;box-shadow:0 12px 34px rgba(13,73,55,.12)!important}
-.miwa-business-book-cover .miwa-business-cover__rule{left:52px;top:48px;bottom:54px;width:9px;background:#c8a24a}
+.miwa-business-book-cover{min-height:0!important;padding:72px 74px 62px 108px!important;border:0!important;border-radius:2px!important;background:#0d3d31!important;box-shadow:0 12px 34px rgba(13,73,55,.12)!important}
+.miwa-business-book-cover .miwa-business-cover__rule{left:52px;top:48px;bottom:54px;width:9px;background:#C83A32}
 .miwa-business-book-cover .miwa-business-cover__copy{max-width:820px;margin-top:26px}
 .miwa-business-book-cover .miwa-business-cover__eyebrow{margin-bottom:30px;color:#d6e5de;font-size:11px;letter-spacing:.16em}
 .miwa-business-book-cover h1{max-width:780px;margin:0 0 24px;font-size:56px;line-height:1.08;letter-spacing:-.045em}
 .miwa-business-book-cover p{max-width:720px;font-size:15px;line-height:1.9;color:#edf4f0}
-.miwa-business-cover__statement{margin-top:46px;color:#d2aa55;font-size:14px;font-weight:850;letter-spacing:.015em}
+.miwa-business-cover__statement{margin-top:46px;color:#FFFFFF;font-size:14px;font-weight:850;letter-spacing:.015em}
+.miwa-business-cover__statement::before{content:"";display:inline-block;width:18px;height:3px;margin:0 10px 3px 0;border-radius:2px;background:#C83A32}
 .miwa-business-book-cover .miwa-business-cover__footer{left:108px;right:74px;bottom:34px;color:#c7d8d0}
 
 .miwa-business-book-page::before{content:"";position:absolute;left:0;right:0;top:0;height:12px;background:#176b4d}
 .miwa-business-book-topline{display:flex;align-items:center;justify-content:space-between;margin:2px 0 24px;color:#176b4d;font-size:10px;font-weight:900;letter-spacing:.025em}
-.miwa-business-book-topline b{color:#a88743;font-size:10px}
+.miwa-business-book-topline b{color:#C83A32;font-size:10px}
 .miwa-business-book-page h2{max-width:980px;margin:0 0 12px;font-size:31px;line-height:1.28;letter-spacing:-.028em;color:#123f31}
 .miwa-business-book-lead{max-width:930px;margin:0;color:#6a7871;font-size:12px;line-height:1.8}
 
@@ -88,8 +89,8 @@
 .miwa-business-book-columns--3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .miwa-business-book-columns>article{position:relative;min-height:250px;padding:22px 22px 20px;border:1px solid #d9e1dd;border-radius:8px;background:#fff}
 .miwa-business-book-columns>article::before{content:"";position:absolute;left:-1px;top:-1px;bottom:-1px;width:7px;background:#176b4d}
-.miwa-business-book-columns>article:nth-child(2)::before{background:#3d6f8e}
-.miwa-business-book-columns>article:nth-child(3)::before{background:#c1923c}
+.miwa-business-book-columns>article:nth-child(2)::before{background:#C83A32}
+.miwa-business-book-columns>article:nth-child(3)::before{background:#5E9B82}
 .miwa-business-book-columns article>span{display:block;margin:0 0 28px;color:#176b4d;font-size:10px;font-weight:900}
 .miwa-business-book-columns h3{margin:0 0 12px;font-size:19px;line-height:1.35}
 .miwa-business-book-columns p{margin:0;color:#596960;font-size:10.5px;line-height:1.82}
@@ -102,10 +103,10 @@
 .miwa-business-book-businesses--5{grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
 .miwa-business-book-card{position:relative;display:flex;flex-direction:column;min-height:300px;padding:20px 18px 16px;border:1px solid #d9e1dd;border-radius:7px;background:#fff}
 .miwa-business-book-card::before{content:"";position:absolute;left:-1px;top:-1px;bottom:-1px;width:7px;background:#176b4d}
-.miwa-business-book-card[data-accent="2"]::before{background:#b77c2a}
-.miwa-business-book-card[data-accent="3"]::before{background:#3d6f8e}
-.miwa-business-book-card[data-accent="4"]::before{background:#5e9b82}
-.miwa-business-book-card[data-accent="5"]::before{background:#8b7356}
+.miwa-business-book-card[data-accent="2"]::before{background:#C83A32}
+.miwa-business-book-card[data-accent="3"]::before{background:#0D4937}
+.miwa-business-book-card[data-accent="4"]::before{background:#5E9B82}
+.miwa-business-book-card[data-accent="5"]::before{background:#8FB7A4}
 .miwa-business-book-card__meta{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;min-height:34px;color:#6b7c74;font-size:8px;font-weight:800}
 .miwa-business-book-card__meta b{color:#176b4d;font-size:8px;white-space:nowrap}
 .miwa-business-book-card h3{margin:10px 0 14px;font-size:20px;line-height:1.25;color:#113f31}
@@ -123,10 +124,10 @@
 .miwa-business-book-capabilities{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-top:34px}
 .miwa-business-book-capability{position:relative;min-height:260px;padding:22px 17px 18px;border:1px solid #d9e1dd;border-radius:7px;background:#fff}
 .miwa-business-book-capability::before{content:"";position:absolute;left:-1px;top:-1px;bottom:-1px;width:7px;background:#176b4d}
-.miwa-business-book-capability[data-accent="2"]::before{background:#b77c2a}
-.miwa-business-book-capability[data-accent="3"]::before{background:#3d6f8e}
-.miwa-business-book-capability[data-accent="4"]::before{background:#5e9b82}
-.miwa-business-book-capability[data-accent="5"]::before{background:#8b7356}
+.miwa-business-book-capability[data-accent="2"]::before{background:#C83A32}
+.miwa-business-book-capability[data-accent="3"]::before{background:#0D4937}
+.miwa-business-book-capability[data-accent="4"]::before{background:#5E9B82}
+.miwa-business-book-capability[data-accent="5"]::before{background:#8FB7A4}
 .miwa-business-book-capability h3{margin:0 0 20px;font-size:18px;line-height:1.3}
 .miwa-business-book-capability p{min-height:58px;margin:0 0 18px;color:#5e6e66;font-size:9.5px;line-height:1.7}
 .miwa-business-book-capability>div{display:flex;flex-wrap:wrap;gap:7px}
@@ -169,4 +170,35 @@
   .miwa-business-book-page .miwa-business-operating-rule{left:18mm;right:18mm;bottom:21mm}
   .miwa-business-book-footer{left:17mm;right:17mm;bottom:8mm}
   .miwa-business-book-action,.miwa-business-book-card__actions a{display:none!important}
+}
+
+/* V1.9.31.2 | Mobile publication refinement: readable book pages + vertical scroll. */
+@media(max-width:1099px){
+  .miwa-business-book .miwa-business-print-page{
+    min-height:clamp(420px,70.7vw,620px);
+  }
+  .miwa-business-book-cover{
+    min-height:clamp(420px,70.7vw,620px)!important;
+  }
+}
+
+@media(max-width:640px){
+  .miwa-business-book .miwa-business-print-page{padding:24px 18px 34px}
+  .miwa-business-book-cover{padding:34px 26px 34px 50px!important}
+  .miwa-business-book-cover .miwa-business-cover__rule{left:22px;top:26px;bottom:28px;width:6px}
+  .miwa-business-book-cover .miwa-business-cover__copy{margin-top:10px}
+  .miwa-business-book-cover .miwa-business-cover__eyebrow{margin-bottom:18px;font-size:8px}
+  .miwa-business-book-cover h1{font-size:38px;margin-bottom:16px}
+  .miwa-business-book-cover p{font-size:11px;line-height:1.75}
+  .miwa-business-cover__statement{margin-top:24px;font-size:10px;line-height:1.7}
+  .miwa-business-book-cover .miwa-business-cover__footer{left:50px;right:26px;bottom:18px;font-size:7px}
+  .miwa-business-book-topline{margin-bottom:15px;font-size:8px}
+  .miwa-business-book-page h2{font-size:23px;line-height:1.35}
+  .miwa-business-book-lead{font-size:10px;line-height:1.7}
+  .miwa-business-book-columns{margin-top:20px;gap:12px}
+  .miwa-business-book-columns>article{min-height:0;padding:18px 18px 16px}
+  .miwa-business-book-columns article>span{margin-bottom:16px}
+  .miwa-business-book-businesses--5,.miwa-business-book-capabilities{grid-template-columns:1fr}
+  .miwa-business-book-card,.miwa-business-book-businesses--5 .miwa-business-book-card{min-height:0}
+  .miwa-business-book-capability{min-height:0}
 }

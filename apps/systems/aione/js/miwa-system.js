@@ -113,6 +113,9 @@ async function renderCurrentRoute() {
 
   document.title = `美和AIONE一体化工作平台｜${route.title}`;
   document.body.dataset.currentRoute = routeId;
+  document.body.dataset.pageMode = "application";
+  const appBody = document.querySelector(".app-body");
+  if (appBody) appBody.dataset.pageMode = "application";
 
   const opportunityRoute = getOpportunityRoute();
   if (opportunityRoute) {

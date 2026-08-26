@@ -6,6 +6,7 @@
 
 import { getRouteId } from "../config/route-registry.js";
 import { setCurrentBusinessSpace } from "../shell/platform-context.js";
+import { bindPublicationActions, publicationToolbar, setPublicationPageMode } from "../components/miwa-publication-master.js?v=20260826-v1.9.31.2";
 import { initMiwaBusinessHome as initLegacyBusinessHome } from "./miwa-business-home.js?v=20260826-v1.9.31-business-home";
 import {
   MIWA_BUSINESS_HOME_SUBTITLE,
@@ -59,10 +60,10 @@ function overviewHtml() {
   const incubating = MIWA_BUSINESSES.filter((item) => item.category === "incubating");
   const core = [...current, ...restart];
 
-  return `<article class="miwa-business-publication miwa-business-book">
-    ${coverHtml()}
+  return `${publicationToolbar({ title:"事业之家", meta:"A4横向｜战略内容母版 V1.0" })}<article class="miwa-business-publication miwa-business-book miwa-publication-book">
+    ${coverHtml().replace("miwa-business-print-page", "miwa-business-print-page miwa-publication-page")}
 
-    <section class="miwa-business-sheet miwa-business-print-page miwa-business-book-page">
+    <section class="miwa-business-sheet miwa-business-print-page miwa-business-book-page miwa-publication-page">
       <div class="miwa-business-book-topline"><span>01｜\u4e3a\u4ec0\u4e48\u9700\u8981\u4e8b\u4e1a\u4e4b\u5bb6</span><b>02</b></div>
       <h2>\u4e0d\u662f\u628a\u6240\u6709\u4e8b\u4e1a\u585e\u8fdb\u4e00\u4e2a\u7cfb\u7edf\uff0c\u800c\u662f\u8ba9\u96c6\u56e2\u770b\u6e05\u201c\u5728\u54ea\u91cc\u7ecf\u8425\u3001\u600e\u4e48\u8fdb\u5165\u3001\u5982\u4f55\u5171\u4eab\u80fd\u529b\u201d</h2>
       <p class="miwa-business-book-lead">\u4e8b\u4e1a\u4e4b\u5bb6\u8d1f\u8d23\u4e8b\u4e1a\u8ba4\u77e5\u3001\u4e8b\u4e1a\u7248\u56fe\u3001\u7ecf\u8425\u72b6\u6001\u4e0e\u8fdb\u5165\u8def\u5f84\uff1b\u8fdb\u5165\u5177\u4f53\u4e8b\u4e1a\u540e\uff0c\u518d\u7531\u5bf9\u5e94\u5de5\u4f5c\u53f0\u627f\u8f7d\u771f\u5b9e\u4e1a\u52a1\u6267\u884c\u3002</p>
@@ -75,7 +76,7 @@ function overviewHtml() {
       ${bookFooter(2)}
     </section>
 
-    <section class="miwa-business-sheet miwa-business-print-page miwa-business-book-page">
+    <section class="miwa-business-sheet miwa-business-print-page miwa-business-book-page miwa-publication-page">
       <div class="miwa-business-book-topline"><span>02｜\u96c6\u56e2\u4e8b\u4e1a\u7248\u56fe</span><b>03</b></div>
       <h2>\u4e8b\u4e1a\u4e0d\u662f\u5b64\u7acb\u9879\u76ee\uff0c\u800c\u662f\u96c6\u56e2\u80fd\u529b\u5171\u540c\u652f\u6491\u7684\u7ecf\u8425\u524d\u7ebf</h2>
       <p class="miwa-business-book-lead">\u6bcf\u4e2a\u4e8b\u4e1a\u72ec\u7acb\u627f\u62c5\u5ba2\u6237\u4ef7\u503c\u4e0e\u7ecf\u8425\u7ed3\u679c\uff0c\u540c\u65f6\u5171\u4eab\u96c6\u56e2\u957f\u671f\u80fd\u529b\u4e0e\u6570\u5b57\u5e95\u5ea7\u3002</p>
@@ -85,7 +86,7 @@ function overviewHtml() {
       ${bookFooter(3)}
     </section>
 
-    <section class="miwa-business-sheet miwa-business-print-page miwa-business-book-page">
+    <section class="miwa-business-sheet miwa-business-print-page miwa-business-book-page miwa-publication-page">
       <div class="miwa-business-book-topline"><span>03｜\u57f9\u80b2\u4e0e\u89c4\u5212</span><b>04</b></div>
       <h2>\u683c\u5c40\u53ef\u4ee5\u5927\uff0c\u5efa\u8bbe\u5fc5\u987b\u811a\u8e0f\u5b9e\u5730</h2>
       <p class="miwa-business-book-lead">\u57f9\u80b2\u4e8b\u4e1a\u53ea\u9501\u5b9a\u65b9\u5411\uff0c\u4e0d\u7528\u672a\u6765\u60f3\u8c61\u586b\u6ee1\u5f53\u524d\u9875\u9762\u3002</p>
@@ -94,7 +95,7 @@ function overviewHtml() {
       ${bookFooter(4)}
     </section>
 
-    <section class="miwa-business-sheet miwa-business-print-page miwa-business-book-page">
+    <section class="miwa-business-sheet miwa-business-print-page miwa-business-book-page miwa-publication-page">
       <div class="miwa-business-book-topline"><span>04｜\u5171\u4eab\u5173\u7cfb</span><b>05</b></div>
       <h2>\u4e8b\u4e1a\u627f\u62c5\u7ecf\u8425\u7ed3\u679c\uff0c\u96c6\u56e2\u5171\u4eab\u957f\u671f\u80fd\u529b</h2>
       <p class="miwa-business-book-lead">\u5171\u4eab\u80fd\u529b\u670d\u52a1\u591a\u4e2a\u4e8b\u4e1a\uff0c\u4f46\u6bcf\u4e2a\u4e8b\u4e1a\u4ecd\u72ec\u7acb\u627f\u62c5\u5ba2\u6237\u4ef7\u503c\u3001\u7ecf\u8425\u7ed3\u679c\u4e0e\u6700\u7ec8\u8d23\u4efb\u3002</p>
@@ -113,10 +114,12 @@ function overviewHtml() {
 
 export async function initMiwaBusinessHome() {
   const routeId = getRouteId();
+  setPublicationPageMode(true);
   if (routeId !== "business-home") return initLegacyBusinessHome();
   const root = document.getElementById("miwa-business-home-entry");
   if (!root) return;
   root.innerHTML = overviewHtml();
+  bindPublicationActions(root);
   root.querySelectorAll("[data-business-enter]").forEach((button) => button.addEventListener("click", () => {
     const spaceId = button.dataset.businessEnter;
     if (!spaceId) return;

@@ -1,0 +1,190 @@
+/* =========================================================
+   AIONE Content Publication Master V1.0 | V1.9.31.2
+   Scope: content/recognition pages only. Execution pages keep SaaS layout.
+   Principles: A4 landscape reading ratio, MIWA green/red, generous whitespace,
+   fixed left navigation, balanced contextual aside, screen = publication source.
+   ========================================================= */
+
+:root{
+  --miwa-publication-page-max:1240px;
+  --miwa-publication-aside-light:260px;
+  --miwa-publication-aside-standard:292px;
+  --miwa-publication-red:#C83A32;
+  --miwa-publication-green:#176B4D;
+  --miwa-publication-green-deep:#0D4937;
+  --miwa-publication-green-mid:#5E9B82;
+  --miwa-publication-green-soft:#E8F2ED;
+}
+
+/* Screen shell: Sidebar stays on platform token (232px). Publication only balances Main/Aside. */
+@media(min-width:1100px){
+  .app-body[data-page-mode="publication"][data-aside-state="light"]{
+    --desktop-aside:var(--miwa-publication-aside-light);
+  }
+  .app-body[data-page-mode="publication"][data-aside-state="standard"]{
+    --desktop-aside:var(--miwa-publication-aside-standard);
+  }
+  .app-body[data-page-mode="publication"] .app-main{
+    padding:16px 18px 26px;
+  }
+  .app-body[data-page-mode="publication"] .page-host{
+    max-width:none;
+  }
+  .app-body[data-page-mode="publication"] .desktop-aside{
+    padding:10px 9px;
+  }
+}
+
+.miwa-publication-book{
+  width:min(100%,var(--miwa-publication-page-max));
+  margin:0 auto;
+  touch-action:pan-y;
+}
+
+.miwa-publication-toolbar{
+  width:min(100%,var(--miwa-publication-page-max));
+  min-height:46px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin:0 auto 12px;
+  padding:8px 10px 8px 14px;
+  border:1px solid #DCE7E1;
+  border-radius:10px;
+  background:#FFFFFF;
+  box-shadow:0 4px 14px rgba(13,73,55,.035);
+}
+.miwa-publication-toolbar__meta{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  color:#68776F;
+  font-size:9px;
+}
+.miwa-publication-toolbar__meta::before{
+  content:"";
+  width:6px;
+  height:6px;
+  flex:0 0 6px;
+  border-radius:50%;
+  background:var(--miwa-publication-red);
+}
+.miwa-publication-toolbar__meta strong{
+  color:var(--miwa-publication-green-deep);
+  font-size:10.5px;
+}
+.miwa-publication-toolbar__actions{display:flex;align-items:center;gap:8px}
+.miwa-publication-export{
+  min-height:32px;
+  padding:6px 12px;
+  border:1px solid var(--miwa-publication-green);
+  border-radius:7px;
+  background:var(--miwa-publication-green);
+  color:#FFFFFF;
+  font:inherit;
+  font-size:9px;
+  font-weight:850;
+  cursor:pointer;
+}
+.miwa-publication-export:hover{background:var(--miwa-publication-green-deep)}
+.miwa-publication-export--secondary{background:#FFFFFF;color:var(--miwa-publication-green)}
+.miwa-publication-export--secondary:hover{background:#F4F8F6}
+
+/* Page geometry. Content can grow only when necessary; otherwise it reads as one book page. */
+.miwa-publication-page{
+  position:relative;
+  width:100%;
+  aspect-ratio:297/210;
+  min-height:0;
+  margin:0 auto 22px;
+  overflow:hidden;
+}
+
+/* MIWA publication color discipline: green is primary, red is rare emphasis. */
+.miwa-publication-accent{color:var(--miwa-publication-red)}
+.miwa-publication-rule-red{background:var(--miwa-publication-red)!important}
+
+/* Mobile/tablet: keep page feeling where possible, but never block reading/scrolling. */
+@media(max-width:1099px){
+  body[data-page-mode="publication"]{
+    height:auto!important;
+    min-height:100%!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior-y:auto!important;
+    touch-action:pan-y!important;
+  }
+  body[data-page-mode="publication"] .app-shell,
+  body[data-page-mode="publication"] .app-body,
+  body[data-page-mode="publication"] .app-main,
+  body[data-page-mode="publication"] #selection-main-host{
+    height:auto!important;
+    min-height:0!important;
+    overflow:visible!important;
+    touch-action:pan-y!important;
+  }
+  .miwa-publication-toolbar{
+    position:relative;
+    z-index:2;
+    margin:0 0 10px;
+    border-radius:9px;
+  }
+  .miwa-publication-book{width:100%;max-width:none;overflow:visible}
+  .miwa-publication-page{
+    aspect-ratio:auto;
+    min-height:calc((100vw - 28px) * .70707);
+    height:auto;
+    overflow:visible;
+  }
+}
+
+@media(max-width:640px){
+  .miwa-publication-toolbar{padding:7px 8px 7px 10px}
+  .miwa-publication-toolbar__meta span{display:none}
+  .miwa-publication-toolbar__actions{gap:6px}
+  .miwa-publication-export{min-height:30px;padding:5px 9px;font-size:8.5px}
+}
+
+/* Print/PDF: only the publication pages remain. Browser print should use A4 landscape. */
+@media print{
+  @page{size:A4 landscape;margin:0}
+  #desktop-header-host,
+  #mobile-topbar-host,
+  #mobile-info-host,
+  #sidebar-host,
+  #aside-host,
+  #desktop-footer-host,
+  #mobile-bottom-host,
+  #mobile-drawer-host,
+  #miwa-ai-layer-host,
+  #global-settings-host,
+  .miwa-publication-toolbar{display:none!important}
+
+  html,body,#app,.app-shell,.app-body,.app-main,.page-host,#selection-main-host{
+    width:auto!important;
+    max-width:none!important;
+    height:auto!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+    background:#FFFFFF!important;
+  }
+  .app-body{display:block!important}
+  .miwa-publication-book{width:auto!important;max-width:none!important;margin:0!important}
+  .miwa-publication-page{
+    width:297mm!important;
+    height:210mm!important;
+    min-height:210mm!important;
+    aspect-ratio:auto!important;
+    margin:0!important;
+    overflow:hidden!important;
+    break-after:page!important;
+    page-break-after:always!important;
+    -webkit-print-color-adjust:exact!important;
+    print-color-adjust:exact!important;
+  }
+  .miwa-publication-page:last-child{break-after:auto!important;page-break-after:auto!important}
+}
