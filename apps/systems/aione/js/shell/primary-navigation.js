@@ -217,7 +217,8 @@ function renderSidebar() {
     icon.dataset.iconReady = "false";
   }
 
-  const nodes = context.type === "business"
+  const hasTreeItems = context.items.some((entry) => Array.isArray(entry.children) && entry.children.length > 0);
+  const nodes = context.type === "business" || hasTreeItems
     ? context.items.map((entry) => createAccordionItem(entry, context, routeId, currentPath))
     : context.items.map((entry) => createFlatItem(entry, routeId, currentPath));
   host.replaceChildren(...nodes);

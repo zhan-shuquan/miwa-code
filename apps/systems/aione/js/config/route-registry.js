@@ -14,7 +14,53 @@ const route = (id, label, kind, options = {}) => Object.freeze({
 });
 
 export const ROUTE_REGISTRY = Object.freeze({
-  company: route("company", "美和之家", "platform", { status: "active", page: "./pages/content-home/template.html" }),
+  company: route("company", "美和之家", "platform", { status: "active", page: "./pages/company-home/template.html" }),
+
+  /* 美和之家：两级树形目录。目录按长期格局设计，内容按当前事实逐步补充。 */
+  "company-introduction": route("company-introduction", "集团介绍", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company" }),
+  "company-positioning": route("company-positioning", "集团定位", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-introduction" }),
+  "company-summary": route("company-summary", "集团简介", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-introduction" }),
+  "company-profile": route("company-profile", "会社概要", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-introduction" }),
+  "company-organization": route("company-organization", "集团组织", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-introduction" }),
+
+  "company-philosophy": route("company-philosophy", "理念与文化", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company" }),
+  "company-spirit": route("company-spirit", "美和灵魂", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-philosophy" }),
+  "company-principles": route("company-principles", "美和准则", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-philosophy" }),
+  "company-heritage": route("company-heritage", "美和传承", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-philosophy" }),
+
+  "company-strategy": route("company-strategy", "经营与战略", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company" }),
+  "company-management-architecture": route("company-management-architecture", "经营架构", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-strategy" }),
+  "company-development-strategy": route("company-development-strategy", "发展战略", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-strategy" }),
+  "company-development-plan": route("company-development-plan", "发展规划", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-strategy" }),
+
+  "company-global": route("company-global", "事业与全球", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company" }),
+  "company-business-map": route("company-business-map", "事业版图", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-global" }),
+  "company-global-layout": route("company-global-layout", "全球布局", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-global" }),
+  "company-locations": route("company-locations", "公司与据点", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-global" }),
+
+  "company-governance": route("company-governance", "组织与治理", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company" }),
+  "company-governance-structure": route("company-governance-structure", "治理架构", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-governance" }),
+  "company-leadership": route("company-leadership", "经营团队", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-governance" }),
+  "company-compliance": route("company-compliance", "合规原则", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-governance" }),
+
+  "company-brand-value": route("company-brand-value", "品牌与价值", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company" }),
+  "company-brand-system": route("company-brand-system", "品牌体系", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-brand-value" }),
+  "company-image": route("company-image", "企业形象", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-brand-value" }),
+  "company-responsibility": route("company-responsibility", "社会责任", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-brand-value" }),
+
+  "company-development": route("company-development", "发展与动态", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company" }),
+  "company-history": route("company-history", "发展历程", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-development" }),
+  "company-milestones": route("company-milestones", "重要里程碑", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-development" }),
+  "company-news": route("company-news", "集团动态", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-development" }),
+
+  "company-assets": route("company-assets", "企业资料", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company" }),
+  "company-documents": route("company-documents", "公司资料", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-assets" }),
+  "company-core-assets": route("company-core-assets", "集团核心资料", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-assets" }),
+  "company-brand-guidelines": route("company-brand-guidelines", "品牌规范", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-assets" }),
+  "company-public-assets": route("company-public-assets", "公开资料", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-assets" }),
+
+  "company-external": route("company-external", "外部连接", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company" }),
+  "company-website": route("company-website", "美和集团官网", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-external" }),
   work: route("work", "工作之家", "platform", { status: "active", page: "./pages/business-home/template.html" }),
   calendar: route("calendar", "美和日历", "platform", {
     status: "active",

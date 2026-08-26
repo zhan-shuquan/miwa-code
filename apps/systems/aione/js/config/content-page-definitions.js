@@ -18,7 +18,7 @@ export const CONTENT_PAGE_DEFINITIONS = Object.freeze({
     objectPlural: "美和内容",
     typeTitle: "内容类型",
     typeDictionaryKey: "miwaContentTypes",
-    types: ["企业介绍", "美和精神", "美和准则", "美和传承", "发展历程", "集团事业", "组织与品牌", "企业资料"],
+    types: ["企业介绍", "美和灵魂", "美和准则", "美和传承", "发展历程", "集团事业", "组织与品牌", "企业资料"],
     metrics: [
       { key: "total", label: "内容总数", source: "objects" },
       { key: "locked", label: "正式锁定", status: "正式锁定" },
@@ -28,7 +28,7 @@ export const CONTENT_PAGE_DEFINITIONS = Object.freeze({
     ],
     seedObjects: [
       { id: "MIWA-CONTENT-INTRO", title: "美和集团介绍", type: "企业介绍", status: "待整理", version: "—", owner: "待确认", summary: "集团基本介绍、事业与定位的统一内容入口。", linkType: "internal", url: "" },
-      { id: "MIWA-CONTENT-SPIRIT", title: "美和精神", type: "美和精神", status: "待整理", version: "—", owner: "待确认", summary: "美和长期经营与做事方式的精神内核。", linkType: "internal", url: "" },
+      { id: "MIWA-CONTENT-SPIRIT", title: "美和灵魂", type: "美和灵魂", status: "待整理", version: "—", owner: "待确认", summary: "美和长期坚持的核心信念与存在意义。", linkType: "internal", url: "" },
       { id: "MIWA-CONTENT-PRINCIPLES", title: "美和准则", type: "美和准则", status: "待整理", version: "—", owner: "待确认", summary: "用于指导判断与实践的稳定原则。", linkType: "internal", url: "" },
       { id: "MIWA-CONTENT-HERITAGE", title: "美和传承", type: "美和传承", status: "待整理", version: "—", owner: "待确认", summary: "值得长期传承的精神、方法、责任与成果。", linkType: "internal", url: "" }
     ],
