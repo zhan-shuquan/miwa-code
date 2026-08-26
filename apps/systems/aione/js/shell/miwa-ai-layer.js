@@ -3,9 +3,9 @@
    Frontend: 美和AI → AI工作区 → AI办公室
    Internal: AI Layer / Drawer / Workspace / AI Office
 ======================================== */
-import { initAISecretaryClient } from "../ai/ai-secretary-client.js?v=20260826-v1.9.28-ai-context-capabilities";
-import { buildAIONEAIContext, routeAIONEAIContext } from "../ai/ai-context-router.js";
-import { getQuickIntentsForAIContext, recordQuickIntentUsage } from "../ai/ai-quick-intents.js";
+import { initAISecretaryClient } from "../ai/ai-secretary-client.js?v=20260826-v1.9.30-work-execution-loop";
+import { buildAIONEAIContext, routeAIONEAIContext } from "../ai/ai-context-router.js?v=20260826-v1.9.30-work-execution-loop";
+import { getQuickIntentsForAIContext, recordQuickIntentUsage } from "../ai/ai-quick-intents.js?v=20260826-v1.9.30-work-execution-loop";
 
 const ENTRY_SELECTOR = "#desktop-miwa-ai-entry,#mobile-miwa-ai-entry";
 // Legacy route-only suggestion tables were retired in V1.9.17.
@@ -223,6 +223,7 @@ function ensureLayerInitialized() {
   if (!routeListenerInstalled) {
     routeListenerInstalled = true;
     window.addEventListener("hashchange", renderContext);
+    window.addEventListener("aione:work-detail-context-change", renderContext);
   }
   initialized = true;
   root.dataset.miwaAiInitialized = "true";

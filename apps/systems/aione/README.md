@@ -1,6 +1,9 @@
 # MIWA AIONE Integrated Work Platform
 
-> **Current candidate: V1.9.29 MIWA AI ARCHITECTURE NAMING / ANALYSIS-TO-PROPOSAL EXECUTION CANDIDATE.**
+> **Current candidate: V1.9.30 WORK EXECUTION / EVIDENCE / RESULT / AI REVIEW LOOP CANDIDATE.**
+
+
+V1.9.30在V1.9.29.1工作之家正式恢复基础上继续向执行结果推进：**工作事项可从待处理进入进行中，持续记录执行说明和证据地址，提交结果后写入正式work_evidence / result_facts / business_events；工作详情会作为美和AI当前上下文，支持“复盘工作结果 / 检查执行证据 / 判断是否完成 / 下一轮建议”。** 新一轮正式工作仍需Proposal + Human Confirm。
 
 V1.9.29在V1.9.28真实上下文分析基础上完成两项收口：**正式区分“美和集团AI经营总架构”与“美和集团AI执行总架构”，旧“现代企业军团总架构”作为执行总架构历史别名保留；美和AI把编号优化清单继续转换为多个待确认工作事项Proposal，逐项由人类确认后写入工作之家。** Google Drive原件仍通过共享云盘安全交付；当前经营总架构新版原件尚待绑定，不以旧基石版冒充新版。
 
@@ -60,6 +63,8 @@ V1.9.0的Google Cloud安全运行工程完整保留：
 
 主要文档：
 
+- `docs/BASELINE_V1.9.30_WORK_EXECUTION_EVIDENCE_AI_REVIEW_CANDIDATE.md`
+- `docs/VALIDATION_V1.9.30_WORK_EXECUTION_EVIDENCE_AI_REVIEW_CANDIDATE.md`
 - `docs/BASELINE_V1.9.29_MIWA_AI_ARCHITECTURE_PROPOSAL_EXECUTION_CANDIDATE.md`
 - `docs/BASELINE_V1.9.28_MIWA_AI_CONTEXT_CAPABILITIES_CANDIDATE.md`
 - `docs/VALIDATION_V1.9.29_MIWA_AI_ARCHITECTURE_PROPOSAL_EXECUTION_CANDIDATE.md`

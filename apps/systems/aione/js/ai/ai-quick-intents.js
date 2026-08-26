@@ -31,10 +31,18 @@ const ANALYSIS = Object.freeze([
   quick("analysis_actions", "行动建议", "把当前分析转成可执行动作", "把分析结论转换成少量明确动作。", {icon:"→"})
 ]);
 
+const WORK = Object.freeze([
+  quick("work_review", "复盘工作结果", "基于当前工作目标、证据和结果做复盘", "复盘当前工作事项的目标、执行证据、实际结果和遗留问题。", {icon:"复"}),
+  quick("work_evidence", "检查执行证据", "检查当前工作的证据链是否完整", "检查当前工作执行记录、证据链接和结果事实是否足以支持完成结论。", {icon:"证"}),
+  quick("work_completion", "判断是否完成", "判断当前工作是否真正达到目标", "判断当前工作是已完成、部分完成、证据不足还是需要返工，并说明依据。", {icon:"✓"}),
+  quick("work_next", "下一轮建议", "根据结果形成下一轮最少必要动作", "根据当前工作结果形成下一轮少量动作，并标记可规则化、知识化、Skill化或自动化的内容。", {icon:"→"})
+]);
+
 function contextGroup(context = {}) {
   const routeId = String(context.routeId || "");
   if (routeId === "company" || routeId.startsWith("company-")) return "company";
   if (routeId === "analysis" || routeId.startsWith("analysis-")) return "analysis";
+  if (routeId === "work" || routeId.startsWith("work-")) return "work";
   return "global";
 }
 
@@ -58,7 +66,7 @@ export function recordQuickIntentUsage(code, context = {}) {
 
 export function getQuickIntentsForAIContext(context = {}) {
   const group = contextGroup(context);
-  const source = group === "company" ? COMPANY : group === "analysis" ? ANALYSIS : GLOBAL;
+  const source = group === "company" ? COMPANY : group === "analysis" ? ANALYSIS : group === "work" ? WORK : GLOBAL;
   const usage = readUsage(context);
   return [...source].sort((a,b) => Number(usage[b.code] || 0) - Number(usage[a.code] || 0));
 }

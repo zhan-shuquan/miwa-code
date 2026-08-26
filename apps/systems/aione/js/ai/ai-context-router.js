@@ -6,7 +6,7 @@
 import { getRouteDefinition, getRouteId, ROUTE_REGISTRY, WORKBENCH_ROUTES } from "../config/route-registry.js";
 import { getPlatformContextSnapshot } from "../shell/platform-context.js";
 import { getPreviewOpportunity } from "../data/preview-opportunities.js";
-import { getCapabilitiesForAIContext } from "./ai-capability-registry.js";
+import { getCapabilitiesForAIContext } from "./ai-capability-registry.js?v=20260826-v1.9.30-work-execution-loop";
 
 const WORKBENCH_LABELS = Object.freeze(Object.fromEntries(
   WORKBENCH_ROUTES.map((id) => [id, ROUTE_REGISTRY[id]?.label || id])
@@ -157,27 +157,40 @@ export function buildAIONEAIContext(hash = window.location.hash) {
   const route = getRouteDefinition(hash);
   const platform = getPlatformContextSnapshot();
   const opportunityRoute = parseOpportunityRoute(hash);
+  const activeWork = String(routeId || "").startsWith("work") ? (window.AIONEWorkExecutionContext || null) : null;
   const defaultWorkbench = resolveWorkbench(routeId, route);
   const workbench = opportunityRoute
     ? { id:opportunityRoute.workbenchId, label:WORKBENCH_LABELS[opportunityRoute.workbenchId] || opportunityRoute.workbenchId }
     : defaultWorkbench;
 
-  const object = opportunityRoute ? {
+  const object = activeWork?.workItem?.id ? {
+    type:"work_item",
+    id:activeWork.workItem.id,
+    label:"工作事项"
+  } : opportunityRoute ? {
     type: opportunityRoute.objectType,
     id: opportunityRoute.objectId,
     label: "商品机会"
   } : null;
 
-  const pageType = opportunityRoute
-    ? (opportunityRoute.workbenchId === "sampling" ? "sampling_opportunity_detail" : "selection_opportunity_detail")
-    : (workbench ? "workbench_page" : "platform_page");
-  const data = object?.type === "product_opportunity" ? getOpportunityDetailData(object.id) : null;
-  const title = object
-    ? `${workbench?.label || route.title} · ${object.label} ${object.id}`
-    : route?.title || "当前页面";
-  const displayRoute = object
-    ? `${data?.opportunity?.stageName || "当前状态"} · ${object.id}`
-    : (workbench?.label || platform.businessLabel || route?.title || "当前页面");
+  const pageType = activeWork?.workItem?.id
+    ? "work_item_execution_detail"
+    : opportunityRoute
+      ? (opportunityRoute.workbenchId === "sampling" ? "sampling_opportunity_detail" : "selection_opportunity_detail")
+      : (workbench ? "workbench_page" : "platform_page");
+  const data = object?.type === "work_item"
+    ? activeWork
+    : object?.type === "product_opportunity" ? getOpportunityDetailData(object.id) : null;
+  const title = object?.type === "work_item"
+    ? `工作之家 · ${activeWork?.workItem?.title || object.id}`
+    : object
+      ? `${workbench?.label || route.title} · ${object.label} ${object.id}`
+      : route?.title || "当前页面";
+  const displayRoute = object?.type === "work_item"
+    ? `${activeWork?.workItem?.status || "当前状态"} · ${activeWork?.workItem?.title || object.id}`
+    : object
+      ? `${data?.opportunity?.stageName || "当前状态"} · ${object.id}`
+      : (workbench?.label || platform.businessLabel || route?.title || "当前页面");
 
   return {
     version: "1.0",
@@ -194,7 +207,7 @@ export function buildAIONEAIContext(hash = window.location.hash) {
     workbench,
     page: { type:pageType, routeId, title:route?.title || title },
     object,
-    state: data?.opportunity?.stage || null,
+    state: object?.type === "work_item" ? (activeWork?.workItem?.status || null) : (data?.opportunity?.stage || null),
     user: getCurrentUserContext(),
     data
   };

@@ -1,6 +1,6 @@
 {
   "name": "miwa-aione-vercel-edge-bridge",
-  "version": "1.9.29",
+  "version": "1.9.30",
   "private": true,
   "type": "module",
   "dependencies": {

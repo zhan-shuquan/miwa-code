@@ -1,6 +1,6 @@
 # 美和集团代码资产主仓库
 
-> Current AIONE candidate: `apps/systems/aione` **V1.9.29 MIWA AI ARCHITECTURE NAMING / ANALYSIS-TO-PROPOSAL EXECUTION CANDIDATE**. `main` remains the current development baseline; V1.9.26 Shared Drive secure delivery, V1.9.27 deterministic corporate retrieval and V1.9.28 live context analysis are inherited validated foundations.
+> Current AIONE candidate: `apps/systems/aione` **V1.9.30 WORK EXECUTION / EVIDENCE / RESULT / AI REVIEW LOOP CANDIDATE**. `main` remains the current development baseline; V1.9.29 Proposal handoff and V1.9.29.1 Work Home restoration are inherited validated foundations.
 
 ## 仓库定位
 

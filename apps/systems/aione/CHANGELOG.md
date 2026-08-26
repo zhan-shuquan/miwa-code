@@ -1013,3 +1013,11 @@
 - 保留V1.9.9 Hard Entry Bridge；美和AI仍独立于Sidebar / Main / Aside / Footer。
 - 原AI Backend、Tool Layer、人类确认机制及`/status → /execute → /confirm`接口不重接、不删除。
 - 新增V1.9.10专项回归测试，并重新通过全部现有正式验证。
+## V1.9.30｜工作执行・证据・结果・AI复盘闭环｜2026-08-26
+- 工作之家新增正式工作详情执行层：打开工作、开始执行、添加执行记录、提交结果、确认完成。
+- 复用既有 `work_items / work_evidence / result_facts / business_events`，不新增重复事实表。
+- 工作状态强制经过 `pending → in_progress` 后才能提交完成；负责人和创建者不同则进入 `waiting` 复核。
+- 执行证据支持说明与证据链接/文件地址，文件本体继续由正式文件体系/Google Shared Drive管理。
+- 当前工作详情自动进入美和AI上下文，新增复盘结果、检查证据、判断完成、下一轮建议四类能力；用户明确发起的AI复盘以 `ai_review` 执行记录留痕，不自动改变工作状态。
+- 新工作写入边界不变：AI只能建议，正式创建仍需 Proposal + Human Confirm。
+

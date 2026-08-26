@@ -58,6 +58,34 @@ function snakeToCamel(row) {
   return out;
 }
 
+function workAccess(row, context) {
+  const personId = String(context?.personId || "");
+  const ownerId = String(row?.owner_person_id || "");
+  const creatorId = String(row?.created_by_person_id || "");
+  return {
+    canRead: Boolean(personId && (personId === ownerId || personId === creatorId)),
+    canExecute: Boolean(personId && personId === ownerId),
+    canReview: Boolean(personId && personId === creatorId),
+    ownerIsCreator: Boolean(ownerId && creatorId && ownerId === creatorId)
+  };
+}
+
+async function loadAccessibleWork(client, workItemId, context) {
+  const result = await client.query("SELECT * FROM public.work_items WHERE id=$1 AND archived_at IS NULL", [workItemId]);
+  if (!result.rowCount) return { row:null, access:null };
+  const row = result.rows[0];
+  const access = workAccess(row, context);
+  return { row, access };
+}
+
+function workPermissionDenied(res, message = "当前人员无权执行此工作事项。") {
+  return res.status(403).json({ error:"work_permission_denied", message });
+}
+
+function cleanText(value, maxLength = 4000) {
+  return String(value ?? "").trim().slice(0, maxLength);
+}
+
 function createCoreResourceRoutes(resourceName, def) {
   router.get(`/${resourceName}`, async (req, res, next) => {
     try {
@@ -268,6 +296,159 @@ router.get("/work-home", async (req, res, next) => {
   } catch (error) {
     return next(error);
   }
+});
+
+router.get("/work-home/:id/execution", async (req, res, next) => {
+  try {
+    const context = getRequestContext(req);
+    if (!context.personId) return res.status(401).json({ error:"authenticated_actor_required", message:"工作详情需要已认证的AIONE人员身份。" });
+    const { row, access } = await loadAccessibleWork(pool, req.params.id, context);
+    if (!row) return res.status(404).json({ error:"not_found" });
+    if (!access.canRead) return workPermissionDenied(res, "当前人员无权查看此工作事项。");
+    const [evidence, results] = await Promise.all([
+      pool.query("SELECT * FROM public.work_evidence WHERE work_item_id=$1 ORDER BY happened_at DESC, created_at DESC LIMIT 100", [row.id]),
+      pool.query("SELECT * FROM public.result_facts WHERE work_item_id=$1 ORDER BY observed_at DESC, created_at DESC LIMIT 50", [row.id])
+    ]);
+    return res.json({
+      workItem: snakeToCamel(row),
+      evidence: evidence.rows.map(snakeToCamel),
+      results: results.rows.map(snakeToCamel),
+      permissions: {
+        canStart: access.canExecute && row.status === "pending",
+        canAddEvidence: access.canExecute && ["pending","in_progress","blocked","waiting"].includes(row.status),
+        canSubmitCompletion: access.canExecute && ["in_progress","blocked"].includes(row.status),
+        canApproveCompletion: access.canReview && row.status === "waiting",
+        canAIReview: ["waiting","completed"].includes(row.status) || Boolean(row.result_summary)
+      }
+    });
+  } catch (error) { next(error); }
+});
+
+router.post("/work-home/:id/start", requireWriteActor, async (req, res, next) => {
+  try {
+    const context = req.aioneContext || getRequestContext(req);
+    const updated = await withTransaction(async (client) => {
+      const { row, access } = await loadAccessibleWork(client, req.params.id, context);
+      if (!row) return { notFound:true };
+      if (!access.canExecute) return { forbidden:true };
+      if (row.status !== "pending") return { conflict:true, status:row.status };
+      const result = await client.query(
+        `UPDATE public.work_items SET status='in_progress', started_at=COALESCE(started_at,NOW()), updated_at=NOW(), updated_by_person_id=$2, record_version=record_version+1 WHERE id=$1 RETURNING *`,
+        [row.id, context.personId]
+      );
+      await recordBusinessEvent(client, { eventType:"work.started", objectType:"work_item", objectId:row.id, context, payload:{ previousStatus:row.status, nextStatus:"in_progress" } });
+      return { row:result.rows[0] };
+    });
+    if (updated.notFound) return res.status(404).json({ error:"not_found" });
+    if (updated.forbidden) return workPermissionDenied(res);
+    if (updated.conflict) return res.status(409).json({ error:"work_status_conflict", message:`当前状态为 ${updated.status}，不能重复开始执行。` });
+    return res.json({ workItem:snakeToCamel(updated.row) });
+  } catch (error) { next(error); }
+});
+
+router.post("/work-home/:id/evidence", requireWriteActor, async (req, res, next) => {
+  const summary = cleanText(req.body?.summary, 2000);
+  const evidenceUri = cleanText(req.body?.evidenceUri, 2000);
+  const evidenceType = cleanText(req.body?.evidenceType || "execution_note", 80) || "execution_note";
+  if (!summary && !evidenceUri) return badRequest(res, "请填写执行记录或证据链接。");
+  try {
+    const context = req.aioneContext || getRequestContext(req);
+    const output = await withTransaction(async (client) => {
+      const { row, access } = await loadAccessibleWork(client, req.params.id, context);
+      if (!row) return { notFound:true };
+      if (!access.canExecute) return { forbidden:true };
+      if (["completed","cancelled","archived"].includes(row.status)) return { conflict:true, status:row.status };
+      const evidenceId = makeId("evi");
+      const evidence = await client.query(
+        `INSERT INTO public.work_evidence (id,work_item_id,person_id,assignment_id,business_id,related_object_type,related_object_id,evidence_type,action_code,summary,evidence_uri,source_system,payload)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'work_execution',$9,$10,$11,$12::jsonb) RETURNING *`,
+        [evidenceId,row.id,context.personId,context.assignmentId || null,row.business_id,row.related_object_type,row.related_object_id,evidenceType,summary || null,evidenceUri || null,context.sourceSystem || "aione",JSON.stringify({ statusAtEvidence:row.status })]
+      );
+      await client.query("UPDATE public.work_items SET updated_at=NOW(), updated_by_person_id=$2, record_version=record_version+1 WHERE id=$1", [row.id,context.personId]);
+      await recordBusinessEvent(client, { eventType:"work.evidence_added", objectType:"work_item", objectId:row.id, context, payload:{ evidenceId,evidenceType,hasUri:Boolean(evidenceUri) } });
+      return { evidence:evidence.rows[0] };
+    });
+    if (output.notFound) return res.status(404).json({ error:"not_found" });
+    if (output.forbidden) return workPermissionDenied(res);
+    if (output.conflict) return res.status(409).json({ error:"work_status_conflict", message:`当前状态为 ${output.status}，不能继续添加执行记录。` });
+    return res.status(201).json({ evidence:snakeToCamel(output.evidence) });
+  } catch (error) { next(error); }
+});
+
+router.post("/work-home/:id/complete", requireWriteActor, async (req, res, next) => {
+  const resultSummary = cleanText(req.body?.resultSummary, 4000);
+  const evidenceSummary = cleanText(req.body?.evidenceSummary, 2000);
+  const evidenceUri = cleanText(req.body?.evidenceUri, 2000);
+  if (!resultSummary) return badRequest(res, "提交完成前请填写执行结果。");
+  try {
+    const context = req.aioneContext || getRequestContext(req);
+    const output = await withTransaction(async (client) => {
+      const { row, access } = await loadAccessibleWork(client, req.params.id, context);
+      if (!row) return { notFound:true };
+      if (!access.canExecute) return { forbidden:true };
+      if (!["in_progress","blocked"].includes(row.status)) return { conflict:true, status:row.status };
+      const nextStatus = access.ownerIsCreator || !row.created_by_person_id ? "completed" : "waiting";
+      const evidenceId = makeId("evi");
+      await client.query(
+        `INSERT INTO public.work_evidence (id,work_item_id,person_id,assignment_id,business_id,related_object_type,related_object_id,evidence_type,action_code,summary,evidence_uri,source_system,payload)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'completion','submit_completion',$8,$9,$10,$11::jsonb)`,
+        [evidenceId,row.id,context.personId,context.assignmentId || null,row.business_id,row.related_object_type,row.related_object_id,evidenceSummary || resultSummary,evidenceUri || null,context.sourceSystem || "aione",JSON.stringify({ previousStatus:row.status,nextStatus })]
+      );
+      const resultId = makeId("res");
+      await client.query(
+        `INSERT INTO public.result_facts (id,result_type,status,business_id,work_item_id,person_id,related_object_type,related_object_id,text_value,observed_at,evidence_id,metadata,source_system)
+         VALUES ($1,'work_completion',$2,$3,$4,$5,$6,$7,$8,NOW(),$9,$10::jsonb,$11)`,
+        [resultId,nextStatus === "completed" ? "validated" : "observed",row.business_id,row.id,context.personId,row.related_object_type,row.related_object_id,resultSummary,evidenceId,JSON.stringify({ submittedBy:context.personId }),context.sourceSystem || "aione"]
+      );
+      const updated = await client.query(
+        `UPDATE public.work_items
+         SET status=$2, result_summary=$3, started_at=COALESCE(started_at,NOW()), completed_at=CASE WHEN $2='completed' THEN NOW() ELSE NULL END, updated_at=NOW(), updated_by_person_id=$4, record_version=record_version+1
+         WHERE id=$1 RETURNING *`,
+        [row.id,nextStatus,resultSummary,context.personId]
+      );
+      await recordBusinessEvent(client, { eventType:nextStatus === "completed" ? "work.completed" : "work.completion_submitted", objectType:"work_item", objectId:row.id, context, payload:{ previousStatus:row.status,nextStatus,evidenceId,resultId } });
+      return { row:updated.rows[0], nextStatus };
+    });
+    if (output.notFound) return res.status(404).json({ error:"not_found" });
+    if (output.forbidden) return workPermissionDenied(res);
+    if (output.conflict) return res.status(409).json({ error:"work_status_conflict", message:`当前状态为 ${output.status}，不能提交完成。` });
+    return res.json({ workItem:snakeToCamel(output.row), completionState:output.nextStatus });
+  } catch (error) { next(error); }
+});
+
+router.post("/work-home/:id/approve", requireWriteActor, async (req, res, next) => {
+  const reviewSummary = cleanText(req.body?.reviewSummary || "确认执行结果，工作完成。", 2000);
+  try {
+    const context = req.aioneContext || getRequestContext(req);
+    const output = await withTransaction(async (client) => {
+      const { row, access } = await loadAccessibleWork(client, req.params.id, context);
+      if (!row) return { notFound:true };
+      if (!access.canReview) return { forbidden:true };
+      if (row.status !== "waiting") return { conflict:true, status:row.status };
+      const evidenceId = makeId("evi");
+      await client.query(
+        `INSERT INTO public.work_evidence (id,work_item_id,person_id,assignment_id,business_id,related_object_type,related_object_id,evidence_type,action_code,summary,source_system,payload)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'review','approve_completion',$8,$9,$10::jsonb)`,
+        [evidenceId,row.id,context.personId,context.assignmentId || null,row.business_id,row.related_object_type,row.related_object_id,reviewSummary,context.sourceSystem || "aione",JSON.stringify({ approved:true })]
+      );
+      const resultId = makeId("res");
+      await client.query(
+        `INSERT INTO public.result_facts (id,result_type,status,business_id,work_item_id,person_id,related_object_type,related_object_id,text_value,observed_at,evidence_id,metadata,source_system)
+         VALUES ($1,'work_completion_review','validated',$2,$3,$4,$5,$6,$7,NOW(),$8,$9::jsonb,$10)`,
+        [resultId,row.business_id,row.id,context.personId,row.related_object_type,row.related_object_id,row.result_summary || reviewSummary,evidenceId,JSON.stringify({ approvedBy:context.personId }),context.sourceSystem || "aione"]
+      );
+      const updated = await client.query(
+        `UPDATE public.work_items SET status='completed', completed_at=NOW(), updated_at=NOW(), updated_by_person_id=$2, record_version=record_version+1 WHERE id=$1 RETURNING *`,
+        [row.id,context.personId]
+      );
+      await recordBusinessEvent(client, { eventType:"work.completion_approved", objectType:"work_item", objectId:row.id, context, payload:{ evidenceId,resultId } });
+      return { row:updated.rows[0] };
+    });
+    if (output.notFound) return res.status(404).json({ error:"not_found" });
+    if (output.forbidden) return workPermissionDenied(res, "只有工作创建者可以确认该完成结果。");
+    if (output.conflict) return res.status(409).json({ error:"work_status_conflict", message:`当前状态为 ${output.status}，无需再次确认完成。` });
+    return res.json({ workItem:snakeToCamel(output.row) });
+  } catch (error) { next(error); }
 });
 
 for (const [resourceName, def] of Object.entries(CORE_RESOURCES)) createCoreResourceRoutes(resourceName, def);

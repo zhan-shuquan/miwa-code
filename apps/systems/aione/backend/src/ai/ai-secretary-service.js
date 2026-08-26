@@ -85,6 +85,26 @@ async function finishExecution(id, result, status = "completed") {
   } catch (_) {}
 }
 
+async function persistAIWorkReview({ executionId, result, contextSnapshot = {}, requestContext = {} }) {
+  const capabilityCode = contextSnapshot?.aiRequest?.capabilityCode || contextSnapshot?.aiRequest?.quickIntentCode || null;
+  if (!['work.execution_review','work_review'].includes(capabilityCode)) return false;
+  const businessContext = contextSnapshot?.page?.businessContext || {};
+  const workItemId = businessContext?.objectType === 'work_item' ? businessContext?.objectId : businessContext?.data?.workItem?.id;
+  const personId = requestContext?.personId || contextSnapshot?.user?.personId || null;
+  const answer = String(result?.answer || '').trim().slice(0,4000);
+  if (!workItemId || !personId || !answer) return false;
+  try {
+    const access = await pool.query("SELECT 1 FROM public.work_items WHERE id=$1 AND archived_at IS NULL AND (owner_person_id=$2 OR created_by_person_id=$2)", [workItemId,personId]);
+    if (!access.rowCount) return false;
+    await pool.query(
+      `INSERT INTO public.work_evidence (id,work_item_id,person_id,assignment_id,evidence_type,action_code,summary,source_system,payload)
+       VALUES ($1,$2,$3,$4,'ai_review','ai_review_generated',$5,'aione-ai-secretary',$6::jsonb)`,
+      [makeId('evi'),workItemId,personId,requestContext?.assignmentId || null,answer,JSON.stringify({ aiGenerated:true, aiExecutionId:executionId, capabilityCode, provider:result?.provider || null, model:result?.model || null })]
+    );
+    return true;
+  } catch (_) { return false; }
+}
+
 export async function executeAISecretary({ objective, officeCode, contextSnapshot, requestContext }) {
   const office = getAIOffice(officeCode);
   const runtime = getAISecretaryRuntimeStatus();
@@ -136,6 +156,7 @@ export async function executeAISecretary({ objective, officeCode, contextSnapsho
       requestContext,
       contextSnapshot
     });
+    normalized.workReviewPersisted = await persistAIWorkReview({ executionId, result:normalized, contextSnapshot, requestContext });
     await finishExecution(executionId, normalized, "completed");
     return { executionId, office, ...normalized };
   } catch (error) {

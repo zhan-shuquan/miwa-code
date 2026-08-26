@@ -48,6 +48,12 @@ const ROUTE_CAPABILITIES = Object.freeze({
     capability("company.architecture_ai", "识别AI机会", "判断哪些环节适合规则、Skill、Agent或API", "按确定性规则、API、Skill、Agent、Computer Use的边界识别当前架构中的AI与自动化机会。"),
     capability("company.architecture_next", "形成优化清单", "把分析收敛为优先级明确的少量优化项", "把经营架构优化收敛为少量高价值事项，区分立即做、运行后验证和长期升级。")
   ]),
+  work: Object.freeze([
+    capability("work.execution_review", "复盘工作结果", "基于目标、执行记录、证据与结果判断是否真正完成", "复盘当前工作事项。先检查目标与实际结果是否一致，再检查执行证据、遗留问题和下一轮动作。"),
+    capability("work.evidence_gap", "检查执行证据", "识别执行记录、结果和证据链的缺口", "检查当前工作事项的执行证据是否足以证明结果；缺失的事实、附件、时间、责任或结果指标明确列出。"),
+    capability("work.completion_check", "判断是否完成", "判断工作是否真正达到目标而不仅是状态完成", "判断当前工作是否真正完成目标。区分已完成、部分完成、证据不足和需要返工，并说明依据。"),
+    capability("work.next_iteration", "形成下一轮建议", "把复盘结果转成少量后续动作", "基于当前工作结果与证据形成下一轮最少必要动作；能沉淀为规则、知识、Skill或自动化的单独标记。")
+  ]),
   "customer-home": Object.freeze([
     capability("customer.summary", "总结客户空间", "汇总客户分类、状态与当前重点", "总结当前客户上下文的重点事实和状态。"),
     capability("customer.followup", "识别待跟进客户", "寻找当前最需要行动的客户对象", "识别当前需要跟进的客户并说明依据。"),

@@ -99,6 +99,7 @@ export async function runOpenAISecretary({ objective, office, contextSnapshot, r
     "当用户引用上一轮编号项目要求安排、执行或落地时，要把被选中的项目分别转成工作事项Proposal；不同项目不要强行合并。",
     "当用户询问当前页面、当前工作台、当前商品或页面业务状态时，优先调用get_current_page_business_context，再根据返回证据回答；不得只凭页面标题猜测。",
     "当用户在美和之家讨论经营架构、理念、战略、组织、事业版图等当前内容的优化时，也必须先调用get_current_page_business_context读取AIONE正式页面内容；基于已确认结构分析，不能用通用管理学套话替代当前页面事实。",
+    "当当前页面是工作事项执行详情时，必须先调用get_current_page_business_context读取工作目标、状态、work_evidence与result_facts；复盘时严格区分已记录事实、AI判断和待确认项，不能仅凭status=completed就断言目标已经达成。",
     "对经营架构优化类问题，优先检查：经营闭环是否完整、流程是否过度复杂、规则是否可函数化、是否达到Skill条件、是否需要Connector/Agent/Computer Use、人类责任是否明确、是否有真实验证指标；只输出真正有价值的缺口，不为了完整机械罗列。",
     "如果contextSnapshot.aiRequest包含capabilityCode，表示AIONE已根据当前业务上下文自动路由到该业务能力；直接执行该能力，不要再次询问用户要选择哪个AI、岗位、Skill或模型。",
     "对成本、利润、毛利率、配送费等确定性数值，优先采用AIONE页面或规则函数已经计算出的结果；不要让模型重新估算已有确定性结果。",
