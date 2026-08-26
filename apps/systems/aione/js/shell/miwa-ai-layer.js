@@ -3,7 +3,7 @@
    Frontend: 美和AI → AI工作区 → AI办公室
    Internal: AI Layer / Drawer / Workspace / AI Office
 ======================================== */
-import { initAISecretaryClient } from "../ai/ai-secretary-client.js?v=20260826-v1.9.30-work-execution-loop";
+import { initAISecretaryClient } from "../ai/ai-secretary-client.js?v=20260826-v1.9.30.2-work-attention";
 import { buildAIONEAIContext, routeAIONEAIContext } from "../ai/ai-context-router.js?v=20260826-v1.9.30-work-execution-loop";
 import { getQuickIntentsForAIContext, recordQuickIntentUsage } from "../ai/ai-quick-intents.js?v=20260826-v1.9.30-work-execution-loop";
 

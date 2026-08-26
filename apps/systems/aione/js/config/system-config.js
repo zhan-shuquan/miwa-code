@@ -3,7 +3,7 @@
    実データ接続後は値だけを差し替え、各コンポーネントを直接変更しない。
 ======================================== */
 
-export const SYSTEM_ASSET_VERSION = "20260826-v1.9.29.1-work-home-restoration";
+export const SYSTEM_ASSET_VERSION = "20260826-v1.9.30.2-work-attention";
 const versionedComponent = (path) => `${path}?v=${SYSTEM_ASSET_VERSION}`;
 
 export const systemConfig = Object.freeze({

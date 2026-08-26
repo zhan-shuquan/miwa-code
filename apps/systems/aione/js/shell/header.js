@@ -967,6 +967,9 @@ export function initHeader(initialConfig = {}) {
     setNotificationCount(count) {
       configure({ notificationCount: normalizeCount(count) });
     },
+    setWorkCount(count) {
+      configure({ workCount: normalizeCount(count) });
+    },
     refreshWeather: loadWeather,
     getConfig() {
       return mergeConfig({}, config);

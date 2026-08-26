@@ -16,8 +16,14 @@ const registryText = read("js/data/miwa-google-drive-registry.js");
 const contentText = read("js/data/miwa-company-content.js");
 
 must(Number(packageJson.version.split(".")[2]) >= 25, "package版本低于V1.9.25");
-must(index.includes("20260826-v1.9.2"), "index缓存版本低于V1.9.2x");
-must(systemConfig.includes("20260826-v1.9.2"), "系统组件缓存版本低于V1.9.2x");
+const versionFromText = (value) => {
+  const matches = [...String(value).matchAll(/v1\.9\.(\d+)(?:\.(\d+))?/g)]
+    .map((m) => [Number(m[1]), Number(m[2] || 0)]);
+  return matches.sort((a,b) => (b[0]-a[0]) || (b[1]-a[1]))[0] || [0, 0];
+};
+const atLeast = ([minor, patch], reqMinor, reqPatch = 0) => minor > reqMinor || (minor === reqMinor && patch >= reqPatch);
+must(atLeast(versionFromText(index), 25), "index缓存版本低于V1.9.25");
+must(atLeast(versionFromText(systemConfig), 25), "系统组件缓存版本低于V1.9.25");
 must(registryText.includes("美和之家｜AIONE内容源") && registryText.includes("集团核心资料"), "Drive镜像目录注册缺失");
 must(["google_drive_bound","google_drive_secure_proxy"].includes(manifest.status), "Manifest没有进入Google Drive绑定状态");
 must(manifest.documents.length === 10, "Manifest核心资料数量不是10");

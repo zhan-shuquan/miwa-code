@@ -1,6 +1,6 @@
 # 美和集团代码资产主仓库
 
-> Current AIONE candidate: `apps/systems/aione` **V1.9.30.1 DRIVE REGISTRY AUTO-SYNC + WORK EXECUTION LOOP CANDIDATE**. `main` remains the current development baseline; V1.9.29 Proposal handoff and V1.9.29.1 Work Home restoration are inherited validated foundations.
+> Current AIONE candidate: `apps/systems/aione` **V1.9.30.2 WORK HOME ATTENTION REALTIME SYNC CANDIDATE**. `main` remains the current development baseline; V1.9.30 Work execution and V1.9.30.1 Drive Registry auto-sync are inherited validated foundations.
 
 ## 仓库定位
 

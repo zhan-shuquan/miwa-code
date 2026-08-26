@@ -12,20 +12,21 @@ import { initHeader } from "./shell/header.js";
 import { initPrimaryNavigation } from "./shell/primary-navigation.js";
 import { initPlatformContext } from "./shell/platform-context.js";
 import { initAside } from "./shell/aside.js";
-import { initMiwaAILayer } from "./shell/miwa-ai-layer.js?v=20260826-v1.9.30-work-execution-loop";
+import { initMiwaAILayer } from "./shell/miwa-ai-layer.js?v=20260826-v1.9.30.2-work-attention";
 import { initFooter } from "./shell/footer.js";
 import { initSystemSettings } from "./shell/system-settings.js";
 import { initSelectionWorkbench } from "./pages/selection-workbench.js";
 import { initSamplingQueue, initSamplingTasks, initSamplingWorkbench } from "./pages/sampling-workbench.js";
 import { completeTaskForBusinessObject } from "./data/collaboration-store.js";
 import { initMiwaCalendar } from "./pages/miwa-calendar.js";
-import { initMiwaWorkHome } from "./pages/miwa-work-home.js?v=20260826-v1.9.30-work-execution-loop";
+import { initMiwaWorkHome } from "./pages/miwa-work-home.js?v=20260826-v1.9.30.2-work-attention";
 import { initBusinessPage } from "./pages/business-page-template.js";
 import { initContentPage } from "./pages/content-page-template.js";
 import { initMiwaCompanyHome } from "./pages/miwa-company-home.js?v=20260826-v1.9.26-drive-proxy";
 import { initNotificationsPage } from "./pages/notifications.js";
 import { initNotificationDetailPage } from "./pages/notification-detail.js";
 import { syncNotificationHeader } from "./data/notification-store.js";
+import { initWorkAttentionSync } from "./services/work-attention-service.js?v=20260826-v1.9.30.2-work-attention";
 import { resolvePreviewIdentity, getPreviewHeaderConfig, getPreviewPermissionContext } from "./auth/preview-auth.js";
 import { recordPreviewActivity, getPreviewActivityRecords, getPreviewActivitySummary } from "./auth/preview-activity.js";
 
@@ -333,6 +334,7 @@ async function startMiwaSystem() {
     initShellModule("Footer", () => initFooter(systemConfig.footer));
     initShellModule("System Settings", () => initSystemSettings());
     initShellModule("Notification Header", () => syncNotificationHeader());
+    initShellModule("Work Attention Sync", () => initWorkAttentionSync());
 
     // 路由监听必须独立于任何单个工作台初始化。即使某个页面局部报错，
     // 也不能阻断其他工作台、平台入口和后续 hash 路由切换。

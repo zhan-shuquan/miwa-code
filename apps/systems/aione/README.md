@@ -1,6 +1,9 @@
 # MIWA AIONE Integrated Work Platform
 
-> **Current candidate: V1.9.30.1 DRIVE REGISTRY AUTO-SYNC + WORK EXECUTION LOOP CANDIDATE.**
+> **Current candidate: V1.9.30.2 WORK HOME ATTENTION REALTIME SYNC CANDIDATE.**
+
+
+V1.9.30.2收敛工作之家Header红色数字的真实业务语义：**只提示当前需要本人处理的工作（待处理、待确认、超期、阻断/异常），普通进行中与已完成不进入提醒。** Proposal人工确认、工作状态变化后立即同步；浏览器重新获得焦点/重新可见时自动同步，并以60秒轻量轮询作为多人协作兜底。继续读取同一份work_items事实，不新增重复统计表。
 
 
 V1.9.30.1补齐Google Drive到AIONE资料索引的最后一公里：**美和AI在明确查找资料、图片、链接或原件时，先由Cloud Run Runtime Service Account扫描已确认的“经营架构”共享云盘目录，把匹配文件登记到既有knowledge_routes，再与AIONE固定Registry合并检索。** 第一阶段只覆盖正式确认的经营架构目录，不对整个共享云盘无规则扫描；文件本体仍只保存在Google Drive，未确认的正式版本号不会自动猜测。

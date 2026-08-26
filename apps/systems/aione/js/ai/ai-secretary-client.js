@@ -7,6 +7,7 @@ import { resolveAIOfficeForIdentity } from "../config/ai-office-registry.js";
 import { getCollaborationData, addTask } from "../data/collaboration-store.js";
 import { getNotifications } from "../data/notification-store.js";
 import { aioneApi, aioneDownload } from "../services/aione-api-client.js";
+import { announceWorkItemsChanged } from "../services/work-attention-service.js?v=20260826-v1.9.30.2-work-attention";
 import { loadSelectionItems, getSelectionMetrics, getSelectionTypeCards, getSelectionFlowSteps } from "../data/selection-workbench-adapter.js";
 import { buildAIONEAIContext } from "./ai-context-router.js?v=20260826-v1.9.30-work-execution-loop";
 import { MIWA_COMPANY_PAGES, MIWA_GROUP_CORE_ASSETS } from "../data/miwa-company-content.js";
@@ -447,6 +448,11 @@ async function confirmProposal(index, button) {
       body:JSON.stringify({ officeCode:office.code, proposalId:proposal.id || null, proposal, contextSnapshot:snapshot })
     });
     presentConfirmationResult(result, snapshot);
+    announceWorkItemsChanged({
+      reason:"ai-proposal-confirmed",
+      workItemId:result?.workItem?.id || result?.localWorkItemId || "",
+      proposalId:proposal.id || ""
+    });
     button.textContent = "\u5df2\u6267\u884c";
   } catch (error) {
     button.disabled = false;

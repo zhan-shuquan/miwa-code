@@ -1,5 +1,6 @@
 import { aioneApi } from "../services/aione-api-client.js";
 import { getCollaborationData } from "../data/collaboration-store.js";
+import { announceWorkItemsChanged, computeWorkAttention } from "../services/work-attention-service.js?v=20260826-v1.9.30.2-work-attention";
 
 const STATUS_LABELS = Object.freeze({
   pending:"待处理", in_progress:"进行中", active:"进行中", blocked:"阻断", waiting:"待确认", completed:"已完成", done:"已完成"
@@ -42,14 +43,18 @@ function normalizeLocal(task, personId){
     relation:String(task.assigneeId||personId)===String(personId)?"mine":String(task.creatorId||"")===String(personId)?"created":"shared"
   };
 }
-function metrics(items){ return {
-  mine:items.filter(x=>x.relation==="mine" && x.status!=="completed").length,
-  pending:items.filter(x=>x.status==="pending").length,
-  active:items.filter(x=>["in_progress","active"].includes(x.status)).length,
-  waiting:items.filter(x=>x.status==="waiting").length,
-  completed:items.filter(x=>x.status==="completed").length,
-  ai:items.filter(x=>sourceLabel(x)==="美和AI").length
-}; }
+function metrics(items){
+  const attention=computeWorkAttention(items, identity().subjectId||"");
+  return {
+    mine:items.filter(x=>x.relation==="mine" && x.status!=="completed").length,
+    pending:items.filter(x=>x.status==="pending").length,
+    active:items.filter(x=>["in_progress","active"].includes(x.status)).length,
+    waiting:items.filter(x=>x.status==="waiting").length,
+    completed:items.filter(x=>x.status==="completed").length,
+    ai:items.filter(x=>sourceLabel(x)==="美和AI").length,
+    attention:attention.count
+  };
+}
 function routeMatches(item){ const filter=ROUTE_FILTER[routeId()]; if(!filter)return true; if(filter.relation)return item.relation===filter.relation; if(filter.status==="in_progress")return ["in_progress","active"].includes(item.status); return item.status===filter.status; }
 function searchMatches(item, query){ if(!query)return true; const blob=[item.title,item.description,item.workbenchCode,item.relatedObjectType,item.relatedObjectId,item.metadata?.sourcePage,sourceLabel(item)].join(" ").toLowerCase(); return blob.includes(query.toLowerCase()); }
 function filterMatches(item, value){ if(!value || value==="all")return true; if(value==="mine")return item.relation==="mine"; if(value==="created")return item.relation==="created" || (item.relation==="mine" && String(item.createdByPersonId||"")===String(identity().subjectId||"")); if(value==="ai")return sourceLabel(item)==="美和AI"; return true; }
@@ -159,7 +164,7 @@ export async function initMiwaWorkHome(){
     const rows=allItems.filter(routeMatches).filter(x=>searchMatches(x,search.value.trim())).filter(x=>filterMatches(x,filter.value));
     count.textContent=`${rows.length} 项`;
     list.innerHTML=rows.length?rows.map(itemHtml).join(""):`<div class="miwa-work-empty">当前条件下暂无工作事项。</div>`;
-    window.MIWAHeader?.configure?.({workCount:m.mine}); aside(allItems);
+    window.MIWAHeader?.setWorkCount?.(m.attention); aside(allItems);
     errorHost.innerHTML=mode==="local"?`<div class="miwa-work-error">正式数据库暂时未连接，当前显示本地预览工作记录；执行闭环只在正式AIONE Backend连接后可用。</div>`:"";
   }
   async function refresh(){ list.innerHTML=`<div class="miwa-work-loading">正在读取工作事项…</div>`; const loaded=await loadItems(); allItems=loaded.items; mode=loaded.mode; render(); }
@@ -173,16 +178,16 @@ export async function initMiwaWorkHome(){
   function closeDetail(){ dialog.close(); activeDetail=null; publishWorkContext(null); }
   function setForm(name,visible){ const form=detailBody.querySelector(`[data-work-${name}-form]`); if(form)form.hidden=!visible; }
   function workError(error){ alert(error?.message || "工作执行失败，请稍后重试。"); }
-  async function startWork(){ try{ await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/start`,{method:"POST",body:"{}"}); await reloadActiveDetail(); }catch(error){workError(error);} }
+  async function startWork(){ try{ await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/start`,{method:"POST",body:"{}"}); announceWorkItemsChanged({reason:"work-started",workItemId:activeDetail.workItem.id}); await reloadActiveDetail(); }catch(error){workError(error);} }
   async function addEvidence(form){
     const data=new FormData(form); const summary=String(data.get("summary")||"").trim(); const evidenceUri=String(data.get("evidenceUri")||"").trim();
-    try{ await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/evidence`,{method:"POST",body:JSON.stringify({summary,evidenceUri,evidenceType:evidenceUri?"link":"execution_note"})}); form.reset(); await reloadActiveDetail(); }catch(error){workError(error);} }
+    try{ await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/evidence`,{method:"POST",body:JSON.stringify({summary,evidenceUri,evidenceType:evidenceUri?"link":"execution_note"})}); announceWorkItemsChanged({reason:"work-evidence-added",workItemId:activeDetail.workItem.id}); form.reset(); await reloadActiveDetail(); }catch(error){workError(error);} }
   async function completeWork(form){
     const data=new FormData(form); const resultSummary=String(data.get("resultSummary")||"").trim(); const evidenceSummary=String(data.get("evidenceSummary")||"").trim(); const evidenceUri=String(data.get("evidenceUri")||"").trim();
-    try{ const result=await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/complete`,{method:"POST",body:JSON.stringify({resultSummary,evidenceSummary,evidenceUri})}); form.reset(); await reloadActiveDetail(); if(result.completionState==="waiting")alert("执行结果已提交，等待工作创建者确认。\n美和AI已经可以读取本次结果和证据进行复盘。"); }catch(error){workError(error);} }
+    try{ const result=await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/complete`,{method:"POST",body:JSON.stringify({resultSummary,evidenceSummary,evidenceUri})}); announceWorkItemsChanged({reason:"work-completion-submitted",workItemId:activeDetail.workItem.id,completionState:result.completionState||""}); form.reset(); await reloadActiveDetail(); if(result.completionState==="waiting")alert("执行结果已提交，等待工作创建者确认。\n美和AI已经可以读取本次结果和证据进行复盘。"); }catch(error){workError(error);} }
   async function approveWork(form){
     const data=new FormData(form); const reviewSummary=String(data.get("reviewSummary")||"").trim();
-    try{ await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/approve`,{method:"POST",body:JSON.stringify({reviewSummary})}); await reloadActiveDetail(); }catch(error){workError(error);} }
+    try{ await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/approve`,{method:"POST",body:JSON.stringify({reviewSummary})}); announceWorkItemsChanged({reason:"work-completion-approved",workItemId:activeDetail.workItem.id}); await reloadActiveDetail(); }catch(error){workError(error);} }
   function aiReview(){
     publishWorkContext(activeDetail); window.MIWAAI?.open?.("work-home-review");
     const prompt="复盘当前工作结果。请基于工作目标、原始Proposal来源、执行证据和结果事实判断：1）是否真正完成目标；2）有哪些遗留问题；3）是否应沉淀为规则、知识、Skill或自动化；4）是否需要创建下一轮工作。事实不足的地方标记待确认，不要编造。";

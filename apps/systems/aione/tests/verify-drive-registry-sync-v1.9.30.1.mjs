@@ -61,6 +61,10 @@ assert.ok(liveSearch.includes("syncMiwaManagedDriveFolders") && liveSearch.inclu
 assert.ok(routes.includes('router.post("/sync"') && routes.includes('router.get("/synced/:assetId/download"'), "sync control and secure synced download routes are required");
 assert.ok(service.includes("executeMiwaCorporateRetrievalWithDriveSync"), "deterministic AI retrieval must use live Drive sync");
 assert.ok(tools.includes("searchMiwaCorporateRecordsWithDriveSync") && tools.includes('"IMAGE"'), "tool search must understand synced image assets");
-assert.ok(deploy.includes("v1.9.30.1"), "production deployment must target V1.9.30.1");
+const deployVersion = deploy.match(/AIONE_IMAGE_TAG[^\n]*v1\.9\.(\d+)(?:\.(\d+))?/);
+assert.ok(deployVersion, "production deployment image tag missing");
+const deployMinor = Number(deployVersion[1]);
+const deployPatch = Number(deployVersion[2] || 0);
+assert.ok(deployMinor > 30 || (deployMinor === 30 && deployPatch >= 1), "production deployment must be V1.9.30.1 or newer");
 
 console.log("V1.9.30.1 Google Drive -> AIONE Registry sync validation passed.");
