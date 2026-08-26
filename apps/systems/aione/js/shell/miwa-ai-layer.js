@@ -375,3 +375,44 @@ export function initMiwaAILayer() {
 
 // 模块加载即安装入口桥：不依赖Header首次绑定或其他Shell模块初始化顺序。
 installGlobalEntryBridge();
+
+/* ============================================================
+   V1.9.22 AI COMPOSER AUTO RESIZE
+   ============================================================ */
+const AIONE_AI_COMPOSER_MIN_HEIGHT = 72;
+const AIONE_AI_COMPOSER_MAX_HEIGHT = 160;
+
+function resizeAioneAiComposerInput(input) {
+  if (!(input instanceof HTMLTextAreaElement)) return;
+
+  input.style.height = "auto";
+
+  const contentHeight = input.scrollHeight;
+  const nextHeight = Math.min(
+    Math.max(contentHeight, AIONE_AI_COMPOSER_MIN_HEIGHT),
+    AIONE_AI_COMPOSER_MAX_HEIGHT
+  );
+
+  input.style.height = `${nextHeight}px`;
+  input.style.overflowY =
+    contentHeight > AIONE_AI_COMPOSER_MAX_HEIGHT ? "auto" : "hidden";
+}
+
+document.addEventListener("input", (event) => {
+  const input = event.target;
+
+  if (input?.id === "ai-secretary-command-input") {
+    resizeAioneAiComposerInput(input);
+  }
+});
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest?.("#ai-secretary-send")) return;
+
+  setTimeout(() => {
+    const input = document.getElementById("ai-secretary-command-input");
+    if (input) resizeAioneAiComposerInput(input);
+  }, 0);
+});
+
+/* V1.9.22 AI COMPOSER AUTO RESIZE END */

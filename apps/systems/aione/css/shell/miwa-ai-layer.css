@@ -110,3 +110,27 @@ body.miwa-ai-open{overflow:hidden}
 /* V1.9.17 Context Router｜员工不选择AI人才/岗位/模型，能力按业务上下文自动匹配 */
 .miwa-ai-composer-auto{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:5px 8px;border:1px solid #dfe8e3;border-radius:8px;background:#f8faf9;color:#60736a;font-size:8px;font-weight:750;white-space:nowrap}
 .miwa-ai-composer-auto span:first-child{color:#176B4D;font-size:10px}
+
+/* ============================================================
+   V1.9.22 AI COMPOSER EXPAND
+   Larger writing area with controlled auto growth.
+   ============================================================ */
+.miwa-ai-composer textarea#ai-secretary-command-input{
+  width:100%;
+  height:72px;
+  min-height:72px;
+  max-height:160px;
+  padding:12px 52px 12px 14px;
+  box-sizing:border-box;
+  line-height:1.55;
+  resize:none;
+  overflow-y:hidden;
+}
+
+@media(max-width:520px){
+  .miwa-ai-composer textarea#ai-secretary-command-input{
+    min-height:68px;
+    height:68px;
+    max-height:150px;
+  }
+}

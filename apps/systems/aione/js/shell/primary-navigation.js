@@ -156,8 +156,28 @@ function renderBusinessSwitcher(context, routeId) {
     })
   );
 
+  if (select?.parentElement) {
+    select.parentElement.hidden = !isBusinessContext;
+  }
+
   if (label) {
-    label.textContent = isBusinessContext ? "切换事业" : "进入事业";
+    label.textContent = "";
+    label.hidden = true;
+  }
+
+  if (select) {
+    select.classList.toggle("sidebar-business-context-select", isBusinessContext);
+    select.setAttribute(
+      "aria-label",
+      isBusinessContext ? "切换当前事业" : "进入事业"
+    );
+
+    if (select.parentElement) {
+      select.parentElement.classList.toggle(
+        "sidebar-business-context-control",
+        isBusinessContext
+      );
+    }
   }
 
   if (select.dataset.bound !== "true") {
@@ -182,9 +202,17 @@ function renderSidebar() {
   const host = document.getElementById("sidebar-navigation-tree");
   if (!host) return;
 
-  if (title) title.textContent = context.title;
+  const isBusinessSidebar = context.type === "business";
+
+  if (title) {
+    title.textContent = context.title;
+    title.hidden = isBusinessSidebar;
+  }
+
   if (kicker) kicker.textContent = context.kicker;
+
   if (icon) {
+    icon.hidden = isBusinessSidebar;
     icon.dataset.icon = context.icon || "apps";
     icon.dataset.iconReady = "false";
   }

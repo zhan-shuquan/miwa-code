@@ -168,3 +168,141 @@
     );
   }
 }
+/* ============================================================
+   V1.9.22 SIDEBAR BUSINESS CONTEXT SELECTOR
+   Current business = one clear full-width context selector.
+   ============================================================ */
+
+.sidebar-business-context-control{
+  display:block;
+  width:100%;
+  padding:2px 10px 12px;
+  box-sizing:border-box;
+}
+
+.sidebar-business-context-select{
+  display:block;
+  width:100%;
+  min-width:0;
+  height:40px;
+
+  padding:0 38px 0 12px;
+
+  border:1.5px solid #176B4D;
+  border-radius:9px;
+
+  background-color:#FFFFFF;
+
+  /* thin MIWA green chevron */
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23176B4D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  background-size:15px 15px;
+
+  color:#0D4937;
+  font-size:13px;
+  font-weight:750;
+
+  appearance:none;
+  -webkit-appearance:none;
+
+  cursor:pointer;
+  box-sizing:border-box;
+
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+
+  transition:
+    border-color .16s ease,
+    box-shadow .16s ease,
+    background-color .16s ease;
+}
+
+.sidebar-business-context-select:hover{
+  background-color:#F7FBF9;
+  border-color:#0D4937;
+}
+
+.sidebar-business-context-select:focus{
+  outline:none;
+  border-color:#176B4D;
+  box-shadow:0 0 0 3px rgba(23,107,77,.12);
+}
+
+/* “当前事业”作为轻量上下文提示 */
+.sidebar-context-head__kicker{
+  font-size:9.5px;
+  font-weight:650;
+  color:#718078;
+}
+/* ============================================================
+   V1.9.22 SIDEBAR BUSINESS SELECTOR FINAL TUNE
+   ============================================================ */
+
+/* 事业执行空间不再显示重复事业图标和标题 */
+#sidebar-context-icon[hidden],
+#sidebar-context-title[hidden]{
+  display:none !important;
+}
+
+.sidebar-context-head__title:has(#sidebar-context-title[hidden]){
+  display:none !important;
+}
+
+/* 当前事业提示保持轻量 */
+.sidebar-context-head__kicker{
+  font-size:9.5px;
+  font-weight:650;
+  color:#718078;
+  margin-bottom:5px;
+}
+
+/* 尽量使用Sidebar全部可用宽度 */
+.sidebar-business-context-control{
+  display:block;
+  width:100%;
+  padding:0 6px 12px;
+  box-sizing:border-box;
+}
+
+/* 当前事业主体选择器 */
+.sidebar-business-context-select{
+  display:block;
+  width:100%;
+  max-width:none;
+  min-width:0;
+  height:40px;
+
+  padding:0 38px 0 12px;
+
+  border:1.5px solid #176B4D;
+  border-radius:9px;
+  background-color:#FFFFFF;
+
+  color:#0D4937;
+  font-size:13px;
+  font-weight:750;
+
+  appearance:none;
+  -webkit-appearance:none;
+
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23176B4D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  background-size:15px 15px;
+
+  cursor:pointer;
+  box-sizing:border-box;
+}
+
+.sidebar-business-context-select:hover{
+  background:#F7FBF9;
+  border-color:#0D4937;
+}
+
+.sidebar-business-context-select:focus{
+  outline:none;
+  border-color:#176B4D;
+  box-shadow:0 0 0 3px rgba(23,107,77,.12);
+}
