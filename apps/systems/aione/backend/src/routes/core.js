@@ -248,6 +248,28 @@ function createFactResourceRoutes(resourceName, def) {
   });
 }
 
+router.get("/work-home", async (req, res, next) => {
+  try {
+    const context = getRequestContext(req);
+    if (!context.personId) {
+      return res.status(401).json({ error:"authenticated_actor_required", message:"工作之家需要已认证的AIONE人员身份。" });
+    }
+    const limit = normalizeLimit(req.query.limit || 200);
+    const result = await pool.query(
+      `SELECT * FROM public.work_items
+       WHERE archived_at IS NULL AND (owner_person_id=$1 OR created_by_person_id=$1)
+       ORDER BY CASE status WHEN 'pending' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'waiting' THEN 3 WHEN 'blocked' THEN 4 WHEN 'completed' THEN 5 ELSE 6 END,
+                CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'normal' THEN 3 WHEN 'low' THEN 4 ELSE 5 END,
+                due_at NULLS LAST, created_at DESC
+       LIMIT $2`,
+      [context.personId, limit]
+    );
+    return res.json({ personId:context.personId, items:result.rows.map(snakeToCamel), limit });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 for (const [resourceName, def] of Object.entries(CORE_RESOURCES)) createCoreResourceRoutes(resourceName, def);
 for (const [resourceName, def] of Object.entries(IMMUTABLE_FACT_RESOURCES)) createFactResourceRoutes(resourceName, def);
 

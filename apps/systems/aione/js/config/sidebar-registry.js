@@ -70,7 +70,7 @@ function buildPlatformItems(rootId) {
   if (!root) return [];
   if (rootId === "company") return MIWA_COMPANY_NAVIGATION;
   const children = childrenFor(rootId);
-  const homeLabel = children.length ? "概览" : root.label;
+  const homeLabel = rootId === "work" ? "工作概览" : (children.length ? "概览" : root.label);
   return [
     { id: `${rootId}-home`, label: homeLabel, route: rootId, icon: PLATFORM_CONTEXT_META[rootId]?.icon || "apps", children: [] },
     ...children

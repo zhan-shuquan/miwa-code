@@ -19,6 +19,7 @@ import { initSelectionWorkbench } from "./pages/selection-workbench.js";
 import { initSamplingQueue, initSamplingTasks, initSamplingWorkbench } from "./pages/sampling-workbench.js";
 import { completeTaskForBusinessObject } from "./data/collaboration-store.js";
 import { initMiwaCalendar } from "./pages/miwa-calendar.js";
+import { initMiwaWorkHome } from "./pages/miwa-work-home.js?v=20260826-v1.9.29.1-work-home-restoration";
 import { initBusinessPage } from "./pages/business-page-template.js";
 import { initContentPage } from "./pages/content-page-template.js";
 import { initMiwaCompanyHome } from "./pages/miwa-company-home.js?v=20260826-v1.9.26-drive-proxy";
@@ -38,8 +39,9 @@ const BUSINESS_TEMPLATE_ROUTES = new Set([
   "channel-home",
   "business-home",
   "category-home", "product-home", "customer-home", "supplier-home", "talent-home", "ai-home", "ai-office", "shared-home",
-  "store-home", "application-home", "income-home", "expense-home", "cash-expense", "work", "analysis"
+  "store-home", "application-home", "income-home", "expense-home", "cash-expense", "analysis"
 ]);
+const WORK_HOME_ROUTES = new Set(["work","work-mine","work-pending","work-active","work-waiting","work-completed"]);
 const CONTENT_TEMPLATE_ROUTES = new Set(["knowledge-home"]);
 
 function getSelectionPage(hash = window.location.hash) {
@@ -227,6 +229,12 @@ async function renderCurrentRoute() {
   if (routeId === "calendar") {
     await loadComponents([["selection-main-host", ROUTE_REGISTRY.calendar.page]]);
     initMiwaCalendar();
+    return;
+  }
+
+  if (WORK_HOME_ROUTES.has(routeId)) {
+    await loadComponents([["selection-main-host", route.page || ROUTE_REGISTRY.work.page]]);
+    await initMiwaWorkHome();
     return;
   }
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-export AIONE_IMAGE_TAG="${AIONE_IMAGE_TAG:-v1.9.29}"
+export AIONE_IMAGE_TAG="${AIONE_IMAGE_TAG:-v1.9.29.1}"
 export AIONE_AI_MODE="live"
 export AIONE_AI_PROVIDER="${AIONE_AI_PROVIDER:-openai}"
 export AIONE_AI_MODEL="${AIONE_AI_MODEL:-gpt-5.6-sol}"
@@ -36,7 +36,7 @@ gcloud secrets add-iam-policy-binding "$OPENAI_API_KEY_SECRET" \
   --member="serviceAccount:${RUNTIME_SA_EMAIL}" \
   --role="roles/secretmanager.secretAccessor" >/dev/null
 
-say "Build V1.9.29 backend image for live 美和AI"
+say "Build V1.9.29.1 backend image for Work Home restoration + live 美和AI"
 bash "$SCRIPT_DIR/02_BUILD_IMAGE.sh"
 
 say "Deploy production 美和AI with live OpenAI provider"
