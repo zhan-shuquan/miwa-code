@@ -133,7 +133,7 @@ export const MIWA_COMPANY_PAGES = Object.freeze({
 
   "company-strategy": Object.freeze({ title:"经营与战略", eyebrow:"MANAGEMENT & STRATEGY", subtitle:"展示美和如何经营、如何形成闭环，以及长期准备去哪里。", kind:"group", status:"已有核心内容" }),
   "company-management-architecture": Object.freeze({
-    title:"美和集团AI经营总架构", eyebrow:"MIWA GROUP AI MANAGEMENT ARCHITECTURE", subtitle:"定义美和如何经营并持续形成经营闭环。美和原创与现代企业方法作为体系属性在副标题与正文中表达。", kind:"architecture", status:"当前结构已接入 · 新版原件待绑定",
+    title:"美和集团AI经营总架构", eyebrow:"MIWA GROUP AI MANAGEMENT ARCHITECTURE", subtitle:"定义美和如何经营并持续形成经营闭环。美和原创与现代企业方法作为体系属性在副标题与正文中表达。", kind:"architecture", status:"当前结构已接入 · 战略版原件由Google Drive自动同步",
     sources:[MODERN_CORPS_SOURCE, MODERN_CORPS_OVERVIEW_SOURCE, INTEL_SOURCE, DIGITAL_LOGISTICS_SOURCE]
   }),
   "company-development-strategy": Object.freeze({

@@ -1,6 +1,9 @@
 # MIWA AIONE Integrated Work Platform
 
-> **Current candidate: V1.9.30 WORK EXECUTION / EVIDENCE / RESULT / AI REVIEW LOOP CANDIDATE.**
+> **Current candidate: V1.9.30.1 DRIVE REGISTRY AUTO-SYNC + WORK EXECUTION LOOP CANDIDATE.**
+
+
+V1.9.30.1补齐Google Drive到AIONE资料索引的最后一公里：**美和AI在明确查找资料、图片、链接或原件时，先由Cloud Run Runtime Service Account扫描已确认的“经营架构”共享云盘目录，把匹配文件登记到既有knowledge_routes，再与AIONE固定Registry合并检索。** 第一阶段只覆盖正式确认的经营架构目录，不对整个共享云盘无规则扫描；文件本体仍只保存在Google Drive，未确认的正式版本号不会自动猜测。
 
 
 V1.9.30在V1.9.29.1工作之家正式恢复基础上继续向执行结果推进：**工作事项可从待处理进入进行中，持续记录执行说明和证据地址，提交结果后写入正式work_evidence / result_facts / business_events；工作详情会作为美和AI当前上下文，支持“复盘工作结果 / 检查执行证据 / 判断是否完成 / 下一轮建议”。** 新一轮正式工作仍需Proposal + Human Confirm。
@@ -63,6 +66,8 @@ V1.9.0的Google Cloud安全运行工程完整保留：
 
 主要文档：
 
+- `docs/BASELINE_V1.9.30.1_DRIVE_REGISTRY_SYNC_CANDIDATE.md`
+- `docs/VALIDATION_V1.9.30.1_DRIVE_REGISTRY_SYNC_CANDIDATE.md`
 - `docs/BASELINE_V1.9.30_WORK_EXECUTION_EVIDENCE_AI_REVIEW_CANDIDATE.md`
 - `docs/VALIDATION_V1.9.30_WORK_EXECUTION_EVIDENCE_AI_REVIEW_CANDIDATE.md`
 - `docs/BASELINE_V1.9.29_MIWA_AI_ARCHITECTURE_PROPOSAL_EXECUTION_CANDIDATE.md`

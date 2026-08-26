@@ -2,7 +2,7 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-export AIONE_IMAGE_TAG="${AIONE_IMAGE_TAG:-v1.9.30}"
+export AIONE_IMAGE_TAG="${AIONE_IMAGE_TAG:-v1.9.30.1}"
 export AIONE_AI_MODE="live"
 export AIONE_AI_PROVIDER="${AIONE_AI_PROVIDER:-openai}"
 export AIONE_AI_MODEL="${AIONE_AI_MODEL:-gpt-5.6-sol}"
@@ -36,7 +36,7 @@ gcloud secrets add-iam-policy-binding "$OPENAI_API_KEY_SECRET" \
   --member="serviceAccount:${RUNTIME_SA_EMAIL}" \
   --role="roles/secretmanager.secretAccessor" >/dev/null
 
-say "Build V1.9.30 backend image for Work execution evidence + live 美和AI"
+say "Build V1.9.30.1 backend image for Drive registry sync + Work execution + live 美和AI"
 bash "$SCRIPT_DIR/02_BUILD_IMAGE.sh"
 
 say "Deploy production 美和AI with live OpenAI provider"
@@ -46,4 +46,5 @@ bash "$SCRIPT_DIR/06_SMOKE_TEST.sh"
 
 echo
 echo "[AIONE] Live 美和AI deployment finished."
-echo "Test in production: 工作之家 → 打开工作 → 开始执行 → 提交结果 → 让美和AI复盘"
+echo "Test in production: 美和AI → 找美和集团AI经营总架构战略版图片链接 → 自动同步Drive资料；然后继续工作执行与AI复盘"
+echo "Regression path: 工作之家 → 打开工作 → 开始执行 → 提交结果 → 让美和AI复盘"

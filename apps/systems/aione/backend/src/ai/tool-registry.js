@@ -1,6 +1,6 @@
 /* AIONE Tool Layer｜AI秘书首批安全工具。写入工具只提出方案，不直接落库。 */
 import pool from "../../db.js";
-import { searchMiwaCorporateRecords } from "../integrations/miwa-corporate-search.js";
+import { searchMiwaCorporateRecordsWithDriveSync } from "../integrations/miwa-corporate-live-search.js";
 
 const tool = (name, description, parameters) => ({ type:"function", name, description, parameters, strict:true });
 export const AI_SECRETARY_TOOLS = Object.freeze([
@@ -12,7 +12,7 @@ export const AI_SECRETARY_TOOLS = Object.freeze([
   tool("get_backend_work_summary", "从AIONE正式数据库读取当前人员工作、时间、证据和结果汇总；数据库未迁移时会返回不可用。", { type:"object", properties:{}, required:[], additionalProperties:false }),
   tool("list_backend_open_work", "从AIONE正式数据库读取当前人员未完成工作事项；数据库未迁移时会返回不可用。", { type:"object", properties:{ limit:{type:"integer",minimum:1,maximum:50} }, required:["limit"], additionalProperties:false }),
   tool("search_knowledge_routes", "按关键词查找AIONE内部知识、规则、方法论、标准、制度、SOP和帮助路由。", { type:"object", properties:{ keyword:{type:"string",minLength:1,maxLength:80}, limit:{type:"integer",minimum:1,maximum:20} }, required:["keyword","limit"], additionalProperties:false }),
-  tool("search_corporate_content", "从AIONE美和之家正式索引查找集团内容页和企业资料。用于查找最新资料、PPT/PDF/DOCX/XLSX、经营架构、美和灵魂/准则/传承等。不要直接猜Google Drive文件。", { type:"object", properties:{ query:{type:"string",minLength:1,maxLength:160}, kind:{type:"string",enum:["all","page","asset"]}, fileType:{type:["string","null"],enum:["PDF","PPTX","DOCX","XLSX",null]}, limit:{type:"integer",minimum:1,maximum:20} }, required:["query","kind","fileType","limit"], additionalProperties:false }),
+  tool("search_corporate_content", "从AIONE美和之家正式索引查找集团内容页和企业资料。用于查找最新资料、图片/PPT/PDF/DOCX/XLSX、经营架构、美和灵魂/准则/传承等。不要直接猜Google Drive文件。", { type:"object", properties:{ query:{type:"string",minLength:1,maxLength:160}, kind:{type:"string",enum:["all","page","asset"]}, fileType:{type:["string","null"],enum:["PDF","PPTX","DOCX","XLSX","IMAGE",null]}, limit:{type:"integer",minimum:1,maximum:20} }, required:["query","kind","fileType","limit"], additionalProperties:false }),
   tool("propose_create_work_item", "仅提出创建工作事项的建议，不直接写入；必须由人类负责人确认后才能执行。", { type:"object", properties:{ title:{type:"string",minLength:1,maxLength:160}, description:{type:"string",maxLength:1200}, priority:{type:"string",enum:["normal","important","urgent"]}, dueAt:{type:["string","null"]}, reason:{type:"string",maxLength:500} }, required:["title","description","priority","dueAt","reason"], additionalProperties:false })
 ]);
 
@@ -59,7 +59,7 @@ export async function executeAISecretaryTool(name, args = {}, ctx = {}) {
     } catch (error) { return compactError(error); }
   }
   if (name === "search_corporate_content") {
-    const items = searchMiwaCorporateRecords(args.query, { requestContext:ctx.requestContext || {}, kind:args.kind || "all", type:args.fileType || "", limit:args.limit || 8 });
+    const items = await searchMiwaCorporateRecordsWithDriveSync(args.query, { requestContext:ctx.requestContext || {}, kind:args.kind || "all", type:args.fileType || "", limit:args.limit || 8 });
     return {
       available:true,
       count:items.length,

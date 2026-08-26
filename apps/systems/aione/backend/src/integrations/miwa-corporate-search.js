@@ -74,7 +74,7 @@ const PAGE_RECORDS = Object.freeze([
   Object.freeze({ id:"page:company-spirit", kind:"page", title:"美和灵魂", route:"company-spirit", version:"V1.9.28", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:CONTENT_SOURCE_LABEL, summary:"定义美和为什么存在、相信什么，以及长期坚持的核心信念。", aliases:["美和灵魂","灵魂","核心信念"] }),
   Object.freeze({ id:"page:company-principles", kind:"page", title:"美和准则", route:"company-principles", version:"V1.9.28", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:CONTENT_SOURCE_LABEL, summary:"明确美和在经营、管理、工作和判断中共同遵循的原则与行动标准。", aliases:["美和准则","准则","行动准则"] }),
   Object.freeze({ id:"page:company-heritage", kind:"page", title:"美和传承", route:"company-heritage", version:"V1.9.28", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:CONTENT_SOURCE_LABEL, summary:"沉淀并延续值得长期保留的理念、经验、方法、组织记忆和经营智慧。", aliases:["美和传承","传承","组织记忆"] }),
-  Object.freeze({ id:"page:company-management-architecture", kind:"page", title:"美和集团AI经营总架构", route:"company-management-architecture", version:"V1.9.29", recordStatus:"验证中｜新版原件待绑定", visibility:"internal", current:true, sourceLabel:STRATEGY_SOURCE_LABEL, summary:"定义美和如何经营并持续形成经营闭环；连接经营目标、业务流程、数据规则、人、AI与管理决策。", aliases:["美和集团AI经营总架构","AI经营总架构","经营总架构","经营架构","AI经营架构","美和经营架构","美和原创AI经营架构","美和集团经营架构","AI原创模式","433","四化三基石三属性"] }),
+  Object.freeze({ id:"page:company-management-architecture", kind:"page", title:"美和集团AI经营总架构", route:"company-management-architecture", version:"V1.9.30.1", recordStatus:"验证中｜原件由Drive自动同步", visibility:"internal", current:true, sourceLabel:STRATEGY_SOURCE_LABEL, summary:"定义美和如何经营并持续形成经营闭环；连接经营目标、业务流程、数据规则、人、AI与管理决策。", aliases:["美和集团AI经营总架构","AI经营总架构","经营总架构","经营架构","AI经营架构","美和经营架构","美和原创AI经营架构","美和集团经营架构","AI原创模式","433","四化三基石三属性"] }),
   Object.freeze({ id:"page:company-core-assets", kind:"page", title:"集团核心资料", route:"company-core-assets", version:"V1.9.28", recordStatus:"已接入", visibility:"internal", current:true, sourceLabel:"美和之家 → 企业资料", summary:"集团核心经营、组织、AI、战略与方法资料的统一入口。", aliases:["集团核心资料","核心资料","企业资料"] })
 ]);
 
@@ -101,6 +101,7 @@ function typeFromMime(mimeType = "") {
   if (value.includes("wordprocessing")) return "DOCX";
   if (value.includes("spreadsheet")) return "XLSX";
   if (value.includes("pdf")) return "PDF";
+  if (value.startsWith("image/")) return "IMAGE";
   return "FILE";
 }
 
@@ -166,30 +167,38 @@ function scoreRecord(record, rawQuery) {
     if (summary.includes(token)) score += 7;
     if (sourceName.includes(token)) score += 8;
   }
+  const wantsOriginalAsset = /(最新|正式|原件|文件|图片|图像|链接|地址|下载|png|jpe?g|pdf|pptx?|docx?|xlsx?)/i.test(String(rawQuery || ""));
+  if (record.kind === "asset" && wantsOriginalAsset) score += 80;
+  if (record.kind === "page" && /(原件|文件|图片|图像|链接|地址|下载|png|jpe?g)/i.test(String(rawQuery || ""))) score -= 35;
+  if (record.type === "IMAGE" && /(图片|图像|png|jpe?g)/i.test(String(rawQuery || ""))) score += 70;
   if (record.current) score += 8;
   return score;
 }
 
-export function searchMiwaCorporateRecords(query, options = {}) {
-  const requestContext = options.requestContext || {};
+export function searchMiwaCorporateRecordList(records, query, options = {}) {
   const kind = options.kind || "all";
   const type = String(options.type || "").trim().toUpperCase();
   const limit = Math.max(1, Math.min(Number(options.limit || 8), 20));
-  return listMiwaCorporateRecords(requestContext)
+  return records
     .filter((item) => kind === "all" || item.kind === kind)
     .filter((item) => !type || item.type === type)
     .map((item) => ({ item, score:scoreRecord(item, query) }))
     .filter(({ score }) => score > 0)
-    .sort((a, b) => b.score - a.score || Number(b.item.current) - Number(a.item.current) || a.item.title.localeCompare(b.item.title, "zh-CN"))
+    .sort((a, b) => b.score - a.score || Number(b.item.current) - Number(a.item.current) || String(b.item.modifiedTime || "").localeCompare(String(a.item.modifiedTime || "")) || a.item.title.localeCompare(b.item.title, "zh-CN"))
     .slice(0, limit)
     .map(({ item, score }) => ({ ...item, score }));
+}
+
+export function searchMiwaCorporateRecords(query, options = {}) {
+  const requestContext = options.requestContext || {};
+  return searchMiwaCorporateRecordList(listMiwaCorporateRecords(requestContext), query, options);
 }
 
 const SPECIFIC_TERMS = [
   "集团总架构","AI经营总架构","AI执行总架构","经营总架构","执行总架构","现代企业军团","军团总纲","编制总表","指挥关系图","战略粮草","经营闭环","ai人才","情报与决策","市场作战","数字后勤",
   "美和灵魂","美和准则","美和传承","经营架构","集团核心资料"
 ];
-const GENERAL_ASSET_WORD = /(资料|文件|原件|文档|pdf|pptx?|docx?|xlsx?|表格|报告)/i;
+const GENERAL_ASSET_WORD = /(资料|文件|原件|文档|图片|图像|链接|地址|png|jpe?g|webp|pdf|pptx?|docx?|xlsx?|表格|报告)/i;
 const GENERAL_ACTION_WORD = /(找|搜索|查|打开|查看|下载|给我|发我|在哪里|在哪|有哪些|列出|全部|所有|最新)/i;
 
 export function resolveMiwaCorporateIntent(objective = "") {
@@ -207,7 +216,7 @@ export function resolveMiwaCorporateIntent(objective = "") {
   const requestedAction = /下载/.test(text) ? "download" : /(打开|查看原件)/.test(text) ? "open" : /(有哪些|列出|全部|所有)/.test(text) ? "list" : "search";
   const resultMode = requestedAction === "list" ? "list" : relatedQuery ? "related" : "single";
   const kind = /美和灵魂|美和准则|美和传承/.test(text) ? "all" : /集团核心资料/.test(text) && requestedAction === "list" ? "asset" : "all";
-  const type = /pdf/i.test(text) ? "PDF" : /pptx?|幻灯|演示/i.test(text) ? "PPTX" : /docx?|word/i.test(text) ? "DOCX" : /xlsx?|excel|表格/i.test(text) ? "XLSX" : "";
+  const type = /png|jpe?g|webp|图片|图像/i.test(text) ? "IMAGE" : /pdf/i.test(text) ? "PDF" : /pptx?|幻灯|演示/i.test(text) ? "PPTX" : /docx?|word/i.test(text) ? "DOCX" : /xlsx?|excel|表格/i.test(text) ? "XLSX" : "";
   return Object.freeze({ requestedAction, resultMode, kind, type, query:text, currentOnly:/最新|当前|正式/.test(text) });
 }
 
@@ -216,13 +225,13 @@ function publicRecord(record) {
   return rest;
 }
 
-export function executeMiwaCorporateRetrieval(objective, requestContext = {}) {
+export function executeMiwaCorporateRetrievalAgainstRecords(objective, requestContext, records) {
   const intent = resolveMiwaCorporateIntent(objective);
   if (!intent) return null;
 
   let items;
   if (intent.requestedAction === "list" && /集团核心资料|核心资料/.test(intent.query)) {
-    items = listMiwaCorporateRecords(requestContext)
+    items = records
       .filter((item) => item.kind === "asset")
       .filter((item) => !intent.type || item.type === intent.type)
       .filter((item) => !intent.currentOnly || item.current)
@@ -230,7 +239,7 @@ export function executeMiwaCorporateRetrieval(objective, requestContext = {}) {
       .map(publicRecord);
   } else {
     const candidateLimit = intent.resultMode === "related" ? 5 : 8;
-    const candidates = searchMiwaCorporateRecords(intent.query, { requestContext, kind:intent.kind, type:intent.type, limit:candidateLimit })
+    const candidates = searchMiwaCorporateRecordList(records, intent.query, { requestContext, kind:intent.kind, type:intent.type, limit:candidateLimit })
       .filter((item) => !intent.currentOnly || item.current);
     items = (intent.resultMode === "single" ? candidates.slice(0, 1) : candidates.slice(0, 5)).map(publicRecord);
   }
@@ -249,9 +258,13 @@ export function executeMiwaCorporateRetrieval(objective, requestContext = {}) {
       `**《${first.title}》**`,
       `${first.type || "内容页"}｜${first.version || "当前"}｜${first.recordStatus || "状态待确认"}`,
       `来源：${first.sourceLabel || "美和之家"}`,
-      first.current ? "这是当前索引中的有效版本。" : "该记录不是当前版本，请谨慎使用。"
+      first.current ? "这是当前索引中的有效记录。" : "该记录不是当前版本，请谨慎使用。"
     ].join("\n");
   }
 
   return Object.freeze({ intent, items, answer });
+}
+
+export function executeMiwaCorporateRetrieval(objective, requestContext = {}) {
+  return executeMiwaCorporateRetrievalAgainstRecords(objective, requestContext, listMiwaCorporateRecords(requestContext));
 }

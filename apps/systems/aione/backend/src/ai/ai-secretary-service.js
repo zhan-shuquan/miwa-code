@@ -3,7 +3,7 @@ import pool from "../../db.js";
 import { getAIOffice } from "./office-registry.js";
 import { getModelProviderRuntimeStatus, runModelProvider } from "./model-provider-registry.js";
 import { stagePendingProposals, getPendingProposal, getLatestPendingProposal, clearPendingProposal, getPendingProposalRuntimeStatus } from "./pending-proposal-store.js";
-import { executeMiwaCorporateRetrieval } from "../integrations/miwa-corporate-search.js";
+import { executeMiwaCorporateRetrievalWithDriveSync } from "../integrations/miwa-corporate-live-search.js";
 
 function makeId(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`; }
 
@@ -124,7 +124,7 @@ export async function executeAISecretary({ objective, officeCode, contextSnapsho
 
     // V1.9.27: deterministic enterprise-content retrieval goes before the model.
     // The registry, not the LLM, decides which file is current and which Drive File ID is authoritative.
-    const corporateRetrieval = executeMiwaCorporateRetrieval(objective, requestContext || {});
+    const corporateRetrieval = await executeMiwaCorporateRetrievalWithDriveSync(objective, requestContext || {});
     if (corporateRetrieval) {
       const deterministic = {
         mode:"aione",
