@@ -12,7 +12,7 @@ import { initHeader } from "./shell/header.js";
 import { initPrimaryNavigation } from "./shell/primary-navigation.js";
 import { initPlatformContext } from "./shell/platform-context.js";
 import { initAside } from "./shell/aside.js";
-import { initMiwaAILayer } from "./shell/miwa-ai-layer.js?v=20260824-v1.9.17-ai-context-router";
+import { initMiwaAILayer } from "./shell/miwa-ai-layer.js?v=20260826-v1.9.28-ai-context-capabilities";
 import { initFooter } from "./shell/footer.js";
 import { initSystemSettings } from "./shell/system-settings.js";
 import { initSelectionWorkbench } from "./pages/selection-workbench.js";

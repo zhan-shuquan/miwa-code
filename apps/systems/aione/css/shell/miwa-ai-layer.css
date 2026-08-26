@@ -150,3 +150,17 @@ body.miwa-ai-open{overflow:hidden}
 .ai-secretary-asset-card__actions button.is-primary{border-color:#176B4D;background:#176B4D;color:#fff}
 .ai-secretary-asset-card__actions button.is-primary:hover{background:#0D4937}
 .ai-secretary-asset-card__actions button:disabled{opacity:.55;cursor:wait}
+
+
+/* ============================================================
+   V1.9.28 QUICK INTENTS + CONTINUITY
+   Structured common capabilities; not fixed FAQ sentences.
+   ============================================================ */
+.miwa-ai-composer-tools{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.miwa-ai-composer-tools::-webkit-scrollbar{display:none}
+.miwa-ai-quick-intents{display:flex;align-items:center;gap:5px;min-width:0;flex:0 1 auto}
+.miwa-ai-quick-intent{height:27px;display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;padding:0 7px;border:1px solid #dce7e1;border-radius:999px;background:#fff;color:#5d6f66;font-size:8px;cursor:pointer;white-space:nowrap}
+.miwa-ai-quick-intent span{color:#176B4D;font-weight:900}.miwa-ai-quick-intent b{font-weight:750}
+.miwa-ai-quick-intent:hover,.miwa-ai-quick-intent.is-active{border-color:#8dbba5;background:#E8F2ED;color:#0D4937}
+.miwa-ai-composer-context{flex:0 0 auto}
+@media(max-width:640px){.miwa-ai-composer-auto{display:none}.miwa-ai-quick-intents{max-width:calc(100vw - 150px)}}

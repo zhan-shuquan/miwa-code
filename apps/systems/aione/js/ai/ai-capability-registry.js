@@ -36,6 +36,18 @@ const ROUTE_CAPABILITIES = Object.freeze({
     capability("sampling.conclusion", "判断测样结论", "汇总测样证据并给出下一步建议", "基于当前测样证据给出结论建议；证据不足时明确待确认。"),
     capability("sampling.prepare_handoff", "准备后续交接", "整理进入下一业务环节需要的信息", "整理当前测样结果的交接信息、异常、责任与下一步。")
   ]),
+  company: Object.freeze([
+    capability("company.find_assets", "查找集团资料", "从正式索引查找当前版本与原件", "查找与当前主题相关的美和集团正式资料，优先返回当前有效版本。"),
+    capability("company.analyze_content", "分析当前内容", "基于当前页面正式内容分析逻辑与优化空间", "分析当前美和之家页面的正式内容，区分事实、结构问题、风险与可优化项。"),
+    capability("company.check_structure", "检查结构缺口", "检查闭环、责任、数据和方法资产缺口", "检查当前内容是否形成经营闭环，责任是否清楚，是否存在重复或缺失。"),
+    capability("company.next_actions", "生成下一步建议", "把集团内容转成少量可执行建设动作", "结合当前正式内容给出少量、优先级明确且可执行的下一步。")
+  ]),
+  "company-management-architecture": Object.freeze([
+    capability("company.architecture_analysis", "分析经营架构", "检查433、经营主线、闭环与人与AI责任关系", "基于当前经营架构页面的433、经营主线、三层闭环、四军体系和人与AI责任关系，分析还有什么值得优化。"),
+    capability("company.architecture_gaps", "检查闭环缺口", "识别经营目标到结果指标之间的断点", "检查当前经营架构从经营目标到持续优化是否存在断点、重复或责任不清。"),
+    capability("company.architecture_ai", "识别AI机会", "判断哪些环节适合规则、Skill、Agent或API", "按确定性规则、API、Skill、Agent、Computer Use的边界识别当前架构中的AI与自动化机会。"),
+    capability("company.architecture_next", "形成优化清单", "把分析收敛为优先级明确的少量优化项", "把经营架构优化收敛为少量高价值事项，区分立即做、运行后验证和长期升级。")
+  ]),
   "customer-home": Object.freeze([
     capability("customer.summary", "总结客户空间", "汇总客户分类、状态与当前重点", "总结当前客户上下文的重点事实和状态。"),
     capability("customer.followup", "识别待跟进客户", "寻找当前最需要行动的客户对象", "识别当前需要跟进的客户并说明依据。"),
@@ -95,6 +107,7 @@ export function getCapabilitiesForAIContext(context = {}) {
   const objectKey = workbenchId && objectType ? `${workbenchId}:${objectType}` : "";
   if (objectKey && OBJECT_CAPABILITIES[objectKey]) return OBJECT_CAPABILITIES[objectKey];
   if (ROUTE_CAPABILITIES[context?.routeId]) return ROUTE_CAPABILITIES[context.routeId];
+  if (String(context?.routeId || "").startsWith("company-") && ROUTE_CAPABILITIES.company) return ROUTE_CAPABILITIES.company;
   if (ROUTE_CAPABILITIES[workbenchId]) return ROUTE_CAPABILITIES[workbenchId];
   return DEFAULT_CAPABILITIES;
 }

@@ -9,14 +9,72 @@ import { getNotifications } from "../data/notification-store.js";
 import { aioneApi, aioneDownload } from "../services/aione-api-client.js";
 import { loadSelectionItems, getSelectionMetrics, getSelectionTypeCards, getSelectionFlowSteps } from "../data/selection-workbench-adapter.js";
 import { buildAIONEAIContext } from "./ai-context-router.js";
+import { MIWA_COMPANY_PAGES, MIWA_GROUP_CORE_ASSETS } from "../data/miwa-company-content.js";
 
-const HISTORY_LIMIT = 12;
+const HISTORY_LIMIT = 24;
+const PERSISTED_HISTORY_LIMIT = 36;
 let initialized = false;
 let office = null;
 let lastProposals = [];
+let activeQuickIntent = null;
+let historyRestored = false;
 
 function currentIdentity() { return window.AIONEPreviewIdentity || {}; }
 function text(value) { return String(value ?? "").trim(); }
+
+function historyKey() {
+  const identity = currentIdentity();
+  return `aione:miwa-ai:history:v1:${identity.subjectId || "anonymous"}`;
+}
+
+function readHistory() {
+  try {
+    const value = JSON.parse(localStorage.getItem(historyKey()) || "[]");
+    return Array.isArray(value) ? value.slice(-PERSISTED_HISTORY_LIMIT) : [];
+  } catch (_) { return []; }
+}
+
+function persistHistoryEntry(entry) {
+  try {
+    const history = readHistory();
+    history.push({ ...entry, at:new Date().toISOString() });
+    localStorage.setItem(historyKey(), JSON.stringify(history.slice(-PERSISTED_HISTORY_LIMIT)));
+  } catch (_) {}
+}
+
+function buildCompanyPageContext(routeId) {
+  if (!(routeId === "company" || String(routeId || "").startsWith("company-"))) return null;
+  const page = MIWA_COMPANY_PAGES[routeId] || null;
+  if (!page) return null;
+  const context = {
+    source:"aione_miwa_company_content",
+    routeId,
+    title:page.title,
+    subtitle:page.subtitle,
+    kind:page.kind,
+    status:page.status,
+    sections:(page.sections || []).map((item) => ({ title:item.title, text:item.text })),
+    sources:(page.sources || []).map((item) => ({ title:item.title, version:item.version, date:item.date, status:item.status })),
+    relatedAssets:MIWA_GROUP_CORE_ASSETS.filter((item) => item.contentRoute === routeId).slice(0,12).map((item) => ({
+      id:item.id, title:item.title, type:item.type, version:item.version, recordStatus:item.recordStatus, summary:item.summary
+    }))
+  };
+  if (routeId === "company-management-architecture") {
+    context.framework = {
+      expression:"433",
+      fourTransformations:["工作一体化","管理标准化","业务流程化","执行自动化"],
+      threeFoundations:["美和灵魂","美和准则","美和传承"],
+      threeAttributes:["普适","开放","共享"],
+      managementFlow:["经营目标","业务流程","业务对象","状态与数据","规则与责任","AI与自动化","人类负责人","结果指标","管理决策","持续优化"],
+      loopLevels:["操作闭环","业务闭环","经营闭环"],
+      executionForces:["指挥军","作战军","建设军","保障军"],
+      executionPrinciples:["战略未动·情报先行","作战未起·粮草先行","命令一出·执行到底","战果必留·复盘必做"],
+      operationLoop:["确定目标","侦察环境","形成方案","确认粮草","准备装备与兵力","宣传/销售打开市场","事业执行交付","记录战果","分析复盘","重新决策"],
+      aiHumanRule:"能规则化的规则化，能自动化的自动化，需要判断的交给AI，需要负责的留给人。"
+    };
+  }
+  return context;
+}
 
 function buildCurrentPageBusinessContext(route, aiContext) {
   if (aiContext?.object) {
@@ -32,6 +90,16 @@ function buildCurrentPageBusinessContext(route, aiContext) {
       data: aiContext.data
     };
   }
+  const companyPage = buildCompanyPageContext(route?.id);
+  if (companyPage) return {
+    contextType:"miwa_company_content_page",
+    source:"aione_miwa_company_content",
+    generatedAt:new Date().toISOString(),
+    business:aiContext?.business || null,
+    workbench:null,
+    state:null,
+    data:companyPage
+  };
   if (route?.id !== "selection") return aiContext ? {
     contextType: aiContext.page?.type || "aione_page",
     source: "aione_ai_context_router",
@@ -92,10 +160,12 @@ function buildSnapshot(options = {}) {
       aiContext,
       businessContext:buildCurrentPageBusinessContext(route, aiContext)
     },
-    aiRequest: options.capabilityCode ? {
-      capabilityCode: options.capabilityCode,
-      capabilityLabel: options.capabilityLabel || null,
-      routedBy: "aione_ai_context_router_v1"
+    aiRequest: (options.capabilityCode || activeQuickIntent?.code) ? {
+      capabilityCode: options.capabilityCode || activeQuickIntent?.code || null,
+      capabilityLabel: options.capabilityLabel || activeQuickIntent?.label || null,
+      quickIntentCode:activeQuickIntent?.code || null,
+      quickIntentPrompt:activeQuickIntent?.prompt || null,
+      routedBy: options.capabilityCode ? "aione_ai_context_router_v1" : "aione_ai_quick_intent_v1.9.28"
     } : null,
     nineElements: ["目标","人","物","事","平台","时间","钱","信息","结果"],
     work: { tasks, suggestions:(collaboration.suggestions || []).slice(0, 20) },
@@ -188,7 +258,7 @@ function renderMarkdownLite(host, content) {
   }
 }
 
-function appendMessage(role, content, meta = "") {
+function appendMessage(role, content, meta = "", options = {}) {
   const thread = document.getElementById("ai-secretary-thread");
   if (!thread) return;
   const item = document.createElement("article");
@@ -204,6 +274,20 @@ function appendMessage(role, content, meta = "") {
   thread.append(item);
   while (thread.children.length > HISTORY_LIMIT) thread.firstElementChild?.remove();
   thread.scrollTop = thread.scrollHeight;
+  if (options.persist !== false && content) persistHistoryEntry({ type:"message", role, content:String(content), meta:String(meta || "") });
+}
+
+function restoreHistory() {
+  if (historyRestored) return;
+  historyRestored = true;
+  const entries = readHistory();
+  if (!entries.length) return;
+  const welcome = document.querySelector("#ai-secretary-thread .miwa-ai-welcome");
+  welcome?.remove();
+  entries.forEach((entry) => {
+    if (entry.type === "message") appendMessage(entry.role || "assistant", entry.content || "", entry.meta || "", { persist:false });
+    if (entry.type === "assets") renderAssetResults(entry.items || [], entry.requestedAction || "search", { persist:false, autoAction:false });
+  });
 }
 
 function assetMeta(item = {}) {
@@ -224,7 +308,7 @@ async function downloadAssetResult(item, button = null) {
   }
 }
 
-function renderAssetResults(items = [], requestedAction = "search") {
+function renderAssetResults(items = [], requestedAction = "search", options = {}) {
   if (!Array.isArray(items) || !items.length) return;
   const thread = document.getElementById("ai-secretary-thread");
   if (!thread) return;
@@ -288,8 +372,9 @@ function renderAssetResults(items = [], requestedAction = "search") {
   thread.append(wrapper);
   while (thread.children.length > HISTORY_LIMIT) thread.firstElementChild?.remove();
   thread.scrollTop = thread.scrollHeight;
+  if (options.persist !== false) persistHistoryEntry({ type:"assets", items, requestedAction });
 
-  if (requestedAction === "download" && items.length === 1 && items[0]?.downloadPath) {
+  if (options.autoAction !== false && requestedAction === "download" && items.length === 1 && items[0]?.downloadPath) {
     const autoButton = wrapper.querySelector(".ai-secretary-asset-card__actions .is-primary");
     downloadAssetResult(items[0], autoButton);
   }
@@ -365,7 +450,7 @@ async function sendCommand(command, options = {}) {
   if (!value) return;
   const button = document.getElementById("ai-secretary-send");
   const input = document.getElementById("ai-secretary-command-input");
-  appendMessage("user", value);
+  appendMessage("user", value, activeQuickIntent?.label ? `能力：${activeQuickIntent.label}` : "");
   if (button) button.disabled = true;
   renderStatus("美和AI正在读取上下文并组织执行…", "working");
   try {
@@ -408,8 +493,15 @@ export function initAISecretaryClient() {
   if (initialized) return;
   initialized = true;
   syncOfficeIdentity();
+  restoreHistory();
   const input = document.getElementById("ai-secretary-command-input");
   const send = document.getElementById("ai-secretary-send");
+  window.addEventListener("aione:miwa-ai-quick-intent", (event) => {
+    const detail = event.detail || {};
+    activeQuickIntent = detail.code ? { code:detail.code, label:detail.label || detail.code, prompt:detail.prompt || null, placeholder:detail.placeholder || null } : null;
+    if (input && detail.placeholder) input.placeholder = detail.placeholder;
+    input?.focus();
+  });
   send?.addEventListener("click", () => sendCommand(input?.value || ""));
   input?.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {

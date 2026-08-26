@@ -71,11 +71,11 @@ const CORE_METADATA = Object.freeze({
 });
 
 const PAGE_RECORDS = Object.freeze([
-  Object.freeze({ id:"page:company-spirit", kind:"page", title:"美和灵魂", route:"company-spirit", version:"V1.9.27", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:CONTENT_SOURCE_LABEL, summary:"定义美和为什么存在、相信什么，以及长期坚持的核心信念。", aliases:["美和灵魂","灵魂","核心信念"] }),
-  Object.freeze({ id:"page:company-principles", kind:"page", title:"美和准则", route:"company-principles", version:"V1.9.27", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:CONTENT_SOURCE_LABEL, summary:"明确美和在经营、管理、工作和判断中共同遵循的原则与行动标准。", aliases:["美和准则","准则","行动准则"] }),
-  Object.freeze({ id:"page:company-heritage", kind:"page", title:"美和传承", route:"company-heritage", version:"V1.9.27", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:CONTENT_SOURCE_LABEL, summary:"沉淀并延续值得长期保留的理念、经验、方法、组织记忆和经营智慧。", aliases:["美和传承","传承","组织记忆"] }),
-  Object.freeze({ id:"page:company-management-architecture", kind:"page", title:"美和原创AI经营架构", route:"company-management-architecture", version:"V1.9.27", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:STRATEGY_SOURCE_LABEL, summary:"连接经营目标、业务流程、数据规则、人、AI与管理决策的美和原创经营体系。", aliases:["经营架构","AI经营架构","美和经营架构","433","四化三基石三属性"] }),
-  Object.freeze({ id:"page:company-core-assets", kind:"page", title:"集团核心资料", route:"company-core-assets", version:"V1.9.27", recordStatus:"已接入", visibility:"internal", current:true, sourceLabel:"美和之家 → 企业资料", summary:"集团核心经营、组织、AI、战略与方法资料的统一入口。", aliases:["集团核心资料","核心资料","企业资料"] })
+  Object.freeze({ id:"page:company-spirit", kind:"page", title:"美和灵魂", route:"company-spirit", version:"V1.9.28", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:CONTENT_SOURCE_LABEL, summary:"定义美和为什么存在、相信什么，以及长期坚持的核心信念。", aliases:["美和灵魂","灵魂","核心信念"] }),
+  Object.freeze({ id:"page:company-principles", kind:"page", title:"美和准则", route:"company-principles", version:"V1.9.28", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:CONTENT_SOURCE_LABEL, summary:"明确美和在经营、管理、工作和判断中共同遵循的原则与行动标准。", aliases:["美和准则","准则","行动准则"] }),
+  Object.freeze({ id:"page:company-heritage", kind:"page", title:"美和传承", route:"company-heritage", version:"V1.9.28", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:CONTENT_SOURCE_LABEL, summary:"沉淀并延续值得长期保留的理念、经验、方法、组织记忆和经营智慧。", aliases:["美和传承","传承","组织记忆"] }),
+  Object.freeze({ id:"page:company-management-architecture", kind:"page", title:"美和原创AI经营架构", route:"company-management-architecture", version:"V1.9.28", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:STRATEGY_SOURCE_LABEL, summary:"连接经营目标、业务流程、数据规则、人、AI与管理决策的美和原创经营体系。", aliases:["经营架构","AI经营架构","美和经营架构","433","四化三基石三属性"] }),
+  Object.freeze({ id:"page:company-core-assets", kind:"page", title:"集团核心资料", route:"company-core-assets", version:"V1.9.28", recordStatus:"已接入", visibility:"internal", current:true, sourceLabel:"美和之家 → 企业资料", summary:"集团核心经营、组织、AI、战略与方法资料的统一入口。", aliases:["集团核心资料","核心资料","企业资料"] })
 ]);
 
 function driveViewUrl(fileId) {
@@ -140,15 +140,18 @@ function scoreRecord(record, rawQuery) {
   const summary = normalize(record.summary);
   const sourceName = normalize(record.sourceName);
   const aliases = (record.aliases || []).map(normalize);
+  const queryCore = query.replace(/(请|帮我|把|一下|最新|当前|正式|给我|发我|打开|查看|下载|查找|搜索|找|关于|有哪些|相关|资料|文件|内容|文档|哪里|在哪|所有|全部|的)/g, "");
   let score = 0;
   if (title === query) score += 120;
   if (title && query.includes(title)) score += 90;
   if (query && title.includes(query)) score += 80;
+  if (queryCore.length >= 2 && title.includes(queryCore)) score += 88;
   for (const alias of aliases) {
     if (!alias) continue;
     if (alias === query) score += 110;
     else if (query.includes(alias)) score += 85;
     else if (alias.includes(query)) score += 65;
+    if (queryCore.length >= 2 && alias.includes(queryCore)) score += 82;
   }
   if (sourceName && query.includes(sourceName.replace(/v\d+[._-]?\d*/g, ""))) score += 50;
 
@@ -195,14 +198,17 @@ export function resolveMiwaCorporateIntent(objective = "") {
   const hasSpecific = SPECIFIC_TERMS.some((term) => normalized.includes(normalize(term)));
   const hasAction = GENERAL_ACTION_WORD.test(text);
   const hasGeneral = GENERAL_ASSET_WORD.test(text) && hasAction;
+  const relatedQuery = /(相关|关于).{0,24}(资料|文件|内容|文档)|有什么.{0,12}(资料|文件|内容)/i.test(text);
   // Mentioning a corporate concept is not enough: only explicit find/open/download/list/latest requests
-  // are intercepted deterministically. Normal discussion stays with the model/context layer.
-  if (!(hasSpecific && hasAction) && !hasGeneral) return null;
+  // or an explicit "what related documents" request are intercepted deterministically.
+  // "经营架构有什么可以优化" remains normal model analysis.
+  if (!(hasSpecific && hasAction) && !hasGeneral && !relatedQuery) return null;
 
   const requestedAction = /下载/.test(text) ? "download" : /(打开|查看原件)/.test(text) ? "open" : /(有哪些|列出|全部|所有)/.test(text) ? "list" : "search";
+  const resultMode = requestedAction === "list" ? "list" : relatedQuery ? "related" : "single";
   const kind = /美和灵魂|美和准则|美和传承/.test(text) ? "all" : /集团核心资料/.test(text) && requestedAction === "list" ? "asset" : "all";
   const type = /pdf/i.test(text) ? "PDF" : /pptx?|幻灯|演示/i.test(text) ? "PPTX" : /docx?|word/i.test(text) ? "DOCX" : /xlsx?|excel|表格/i.test(text) ? "XLSX" : "";
-  return Object.freeze({ requestedAction, kind, type, query:text, currentOnly:true });
+  return Object.freeze({ requestedAction, resultMode, kind, type, query:text, currentOnly:/最新|当前|正式/.test(text) });
 }
 
 function publicRecord(record) {
@@ -219,11 +225,14 @@ export function executeMiwaCorporateRetrieval(objective, requestContext = {}) {
     items = listMiwaCorporateRecords(requestContext)
       .filter((item) => item.kind === "asset")
       .filter((item) => !intent.type || item.type === intent.type)
+      .filter((item) => !intent.currentOnly || item.current)
       .slice(0, 20)
       .map(publicRecord);
   } else {
-    items = searchMiwaCorporateRecords(intent.query, { requestContext, kind:intent.kind, type:intent.type, limit:intent.requestedAction === "list" ? 20 : 6 })
-      .map(publicRecord);
+    const candidateLimit = intent.resultMode === "related" ? 5 : 8;
+    const candidates = searchMiwaCorporateRecords(intent.query, { requestContext, kind:intent.kind, type:intent.type, limit:candidateLimit })
+      .filter((item) => !intent.currentOnly || item.current);
+    items = (intent.resultMode === "single" ? candidates.slice(0, 1) : candidates.slice(0, 5)).map(publicRecord);
   }
 
   const first = items[0] || null;
@@ -232,6 +241,8 @@ export function executeMiwaCorporateRetrieval(objective, requestContext = {}) {
     answer = "没有在当前有权限的美和正式内容索引中找到匹配资料。请换一个资料名称或关键词；我不会从不确定的文件中自行猜测。";
   } else if (intent.requestedAction === "list") {
     answer = `已找到 ${items.length} 项当前可访问的美和集团核心资料。资料卡已按AIONE正式索引返回；版本、状态和原件入口以卡片为准。`;
+  } else if (intent.resultMode === "related") {
+    answer = `已找到 ${items.length} 项与当前问题最相关的美和集团资料，并按相关度与当前版本状态排序。`;
   } else {
     answer = [
       "已找到当前索引中最匹配的资料：",

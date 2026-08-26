@@ -17,7 +17,7 @@ const provider = read("backend/src/ai/openai-provider.js");
 const preview = read("backend/src/ai/preview-provider.js");
 const baseline = read("docs/BASELINE_V1.9.17_MIWA_AI_CONTEXT_ROUTER_CANDIDATE.md");
 
-must(config.includes("20260824-v1.9.17-ai-context-router") || (config.includes("20260824-v1.9.18-1688-source-api-bridge") || (config.includes("20260824-v1.9.19-1688-oauth-bridge") || config.includes("20260824-v1.9.20-1688-permanent-token-direct"))), "Asset version is not V1.9.17+ AI Context Router");
+must(config.includes("v1.9.17-ai-context-router") || config.includes("v1.9.18-1688-source-api-bridge") || config.includes("v1.9.19-1688-oauth-bridge") || config.includes("v1.9.20-1688-permanent-token-direct") || config.includes("v1.9.28-ai-context-capabilities"), "Asset version is not V1.9.17+ AI Context Router");
 
 const registryUrl = pathToFileURL(path.join(appRoot, "js/ai/ai-capability-registry.js")).href;
 const registry = await import(`${registryUrl}?v=1.9.17`);

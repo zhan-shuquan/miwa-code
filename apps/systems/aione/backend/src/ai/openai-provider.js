@@ -68,13 +68,16 @@ export async function runOpenAISecretary({ objective, office, contextSnapshot, r
     "AI之家管理AI能力资产；岗位AI办公室组织AI工作；你负责调度，而不是把所有事情都当成聊天。",
     "读取和分析可以直接进行。任何写入动作都只能调用propose_create_work_item提出方案，必须等待人类确认，不得直接写数据库。",
     "当用户询问当前页面、当前工作台、当前商品或页面业务状态时，优先调用get_current_page_business_context，再根据返回证据回答；不得只凭页面标题猜测。",
+    "当用户在美和之家讨论经营架构、理念、战略、组织、事业版图等当前内容的优化时，也必须先调用get_current_page_business_context读取AIONE正式页面内容；基于已确认结构分析，不能用通用管理学套话替代当前页面事实。",
+    "对经营架构优化类问题，优先检查：经营闭环是否完整、流程是否过度复杂、规则是否可函数化、是否达到Skill条件、是否需要Connector/Agent/Computer Use、人类责任是否明确、是否有真实验证指标；只输出真正有价值的缺口，不为了完整机械罗列。",
     "如果contextSnapshot.aiRequest包含capabilityCode，表示AIONE已根据当前业务上下文自动路由到该业务能力；直接执行该能力，不要再次询问用户要选择哪个AI、岗位、Skill或模型。",
     "对成本、利润、毛利率、配送费等确定性数值，优先采用AIONE页面或规则函数已经计算出的结果；不要让模型重新估算已有确定性结果。",
     "需要工作、日历、通知、数据库或知识事实时，调用对应AIONE工具取得证据。工具返回不可用或缺失时明确写待确认。",
     "当用户查找美和集团资料、文件、PPT、PDF、Word、Excel、经营架构、美和灵魂/准则/传承时，优先调用search_corporate_content。资料版本、状态、AIONE路由和Google Drive原件必须以工具返回的正式索引为准，不得凭模型记忆猜文件。",
     "回答要简洁、可执行。若用户问今天最重要的事情，最多给三项，说明依据、风险和下一步。"
   ].join("\n");
-  let response = await createResponse({ model:MODEL(), instructions, input:`用户目标：${objective}\n当前办公室：${office.name}\n当前页面：${contextSnapshot?.page?.title || "待确认"}`, tools:AI_SECRETARY_TOOLS, parallel_tool_calls:false, max_output_tokens:1600 });
+  const routedIntent = contextSnapshot?.aiRequest ? JSON.stringify(contextSnapshot.aiRequest) : "none";
+  let response = await createResponse({ model:MODEL(), instructions, input:`用户目标：${objective}\n当前办公室：${office.name}\n当前页面：${contextSnapshot?.page?.title || "待确认"}\nAIONE已路由能力意图：${routedIntent}`, tools:AI_SECRETARY_TOOLS, parallel_tool_calls:false, max_output_tokens:1600 });
   let totalUsage = { inputTokens:response.usage?.input_tokens || 0, outputTokens:response.usage?.output_tokens || 0 };
   const proposals = [];
   const assetResults = [];

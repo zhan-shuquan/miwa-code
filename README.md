@@ -1,6 +1,6 @@
 # 美和集团代码资产主仓库
 
-> Current AIONE candidate: `apps/systems/aione` **V1.9.20 1688 PERMANENT TOKEN DIRECT CANDIDATE**. V1.9.5 remains the Sidebar/Aside lock baseline, V1.9.6 the independent AI-layer architecture baseline, V1.9.13 the provider-neutral model baseline, V1.9.16 the Proposal Bridge baseline, V1.9.17 the unified AI Context Router baseline, V1.9.18 the 1688 source-data bridge baseline, V1.9.19 tested OAuth assumptions, and V1.9.20 corrects the real enterprise self-use path to AppKey + AppSecret + permanent authorized Access Token.
+> Current AIONE candidate: `apps/systems/aione` **V1.9.28 MIWA AI CONTEXT ANALYSIS / QUICK CAPABILITIES / PRECISE RETRIEVAL CANDIDATE**. `main` remains the current development baseline; V1.9.26 Shared Drive secure delivery and V1.9.27 deterministic corporate retrieval are inherited validated foundations.
 
 ## 仓库定位
 

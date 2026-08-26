@@ -4,8 +4,19 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/cloud-config.sh"
+# Explicit one-shot environment values (for example RUN_E live deployment) must override saved cloud-config.sh.
+_PRE_AIONE_AI_MODE="${AIONE_AI_MODE-}"
+_PRE_AIONE_AI_PROVIDER="${AIONE_AI_PROVIDER-}"
+_PRE_AIONE_AI_MODEL="${AIONE_AI_MODEL-}"
+_PRE_AIONE_IMAGE_TAG="${AIONE_IMAGE_TAG-}"
+_PRE_AIONE_OPENAI_API_KEY_SECRET="${AIONE_OPENAI_API_KEY_SECRET-}"
 [[ -f "$CONFIG_FILE" ]] && # shellcheck source=/dev/null
   source "$CONFIG_FILE"
+[[ -n "$_PRE_AIONE_AI_MODE" ]] && export AIONE_AI_MODE="$_PRE_AIONE_AI_MODE"
+[[ -n "$_PRE_AIONE_AI_PROVIDER" ]] && export AIONE_AI_PROVIDER="$_PRE_AIONE_AI_PROVIDER"
+[[ -n "$_PRE_AIONE_AI_MODEL" ]] && export AIONE_AI_MODEL="$_PRE_AIONE_AI_MODEL"
+[[ -n "$_PRE_AIONE_IMAGE_TAG" ]] && export AIONE_IMAGE_TAG="$_PRE_AIONE_IMAGE_TAG"
+[[ -n "$_PRE_AIONE_OPENAI_API_KEY_SECRET" ]] && export AIONE_OPENAI_API_KEY_SECRET="$_PRE_AIONE_OPENAI_API_KEY_SECRET"
 
 say(){ printf '\n[AIONE] %s\n' "$*"; }
 warn(){ printf '\n[AIONE][WARN] %s\n' "$*" >&2; }
@@ -33,6 +44,8 @@ RUNTIME_SA_EMAIL="${RUNTIME_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 DB_NAME="${AIONE_DB_NAME:-aione}"
 DB_USER="${AIONE_DB_USER:-aione_app}"
 AI_MODE="${AIONE_AI_MODE:-preview}"
+AI_PROVIDER="${AIONE_AI_PROVIDER:-openai}"
+AI_MODEL="${AIONE_AI_MODEL:-gpt-5.6-sol}"
 GOOGLE_CLIENT_ID="${AIONE_GOOGLE_CLIENT_ID:-49629089449-5lkfjfnadvq14f9uuid91chqgjjdihmi.apps.googleusercontent.com}"
 VERCEL_TEAM_SLUG="${AIONE_VERCEL_TEAM_SLUG:-info-64613987s-projects}"
 VERCEL_PROJECT_NAME="${AIONE_VERCEL_PROJECT_NAME:-miwa-aione-test}"
@@ -46,6 +59,25 @@ IMAGE_TAG="${AIONE_IMAGE_TAG:-v1.9.21}"
 service_json(){ gcloud run services describe "$SOURCE_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format=json 2>/dev/null || true; }
 
 SERVICE_JSON="$(service_json)"
+TARGET_SERVICE_JSON="$(gcloud run services describe "$RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format=json 2>/dev/null || true)"
+
+secret_ref_from_json(){
+  local json="$1" env_name="$2"
+  printf '%s' "$json" | jq -r --arg env "$env_name" '[.spec.template.spec.containers[0].env[]? | select(.name==$env) | .valueFrom.secretKeyRef.name][0] // empty' 2>/dev/null || true
+}
+
+OPENAI_API_KEY_SECRET="${AIONE_OPENAI_API_KEY_SECRET:-}"
+if [[ -z "$OPENAI_API_KEY_SECRET" ]]; then
+  OPENAI_API_KEY_SECRET="$(secret_ref_from_json "$TARGET_SERVICE_JSON" "OPENAI_API_KEY")"
+fi
+if [[ -z "$OPENAI_API_KEY_SECRET" ]]; then
+  OPENAI_API_KEY_SECRET="$(secret_ref_from_json "$SERVICE_JSON" "OPENAI_API_KEY")"
+fi
+if [[ -z "$OPENAI_API_KEY_SECRET" ]]; then
+  for candidate in aione-openai-api-key openai-api-key; do
+    if gcloud secrets describe "$candidate" --project="$PROJECT_ID" >/dev/null 2>&1; then OPENAI_API_KEY_SECRET="$candidate"; break; fi
+  done
+fi
 
 if [[ -z "${AIONE_SQL_INSTANCE:-}" ]]; then
   EXISTING_CONN="$(printf '%s' "$SERVICE_JSON" | jq -r '.spec.template.metadata.annotations["run.googleapis.com/cloudsql-instances"] // empty' 2>/dev/null || true)"
@@ -86,6 +118,12 @@ require_db_secret(){
   gcloud secrets describe "$DB_PASSWORD_SECRET" --project="$PROJECT_ID" >/dev/null 2>&1 || die "Secret not found: $DB_PASSWORD_SECRET"
 }
 
+require_ai_secret(){
+  [[ "$AI_MODE" == "live" || "$AI_MODE" == "openai" ]] || return 0
+  [[ -n "$OPENAI_API_KEY_SECRET" ]] || die "Live 美和AI requires an OpenAI Secret Manager secret. Set AIONE_OPENAI_API_KEY_SECRET or create 'aione-openai-api-key'."
+  gcloud secrets describe "$OPENAI_API_KEY_SECRET" --project="$PROJECT_ID" >/dev/null 2>&1 || die "OpenAI secret not found: $OPENAI_API_KEY_SECRET"
+}
+
 print_context(){
   cat <<CTX
 [AIONE] Active account        : $ACTIVE_ACCOUNT
@@ -101,6 +139,8 @@ print_context(){
 [AIONE] Runtime service acct  : $RUNTIME_SA_EMAIL
 [AIONE] Artifact image        : $IMAGE_URI
 [AIONE] AI mode for cloud test: $AI_MODE
+[AIONE] AI provider/model       : $AI_PROVIDER / $AI_MODEL
+[AIONE] OpenAI secret          : ${OPENAI_API_KEY_SECRET:-<not detected>}
 [AIONE] Vercel team/project    : $VERCEL_TEAM_SLUG / $VERCEL_PROJECT_NAME
 [AIONE] Vercel invoker SA     : $VERCEL_INVOKER_SA_EMAIL
 CTX

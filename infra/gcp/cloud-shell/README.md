@@ -109,3 +109,29 @@ cd ~/miwa-code/infra/gcp/cloud-shell
 ```
 
 The script prints the Cloud Run runtime service-account email. Add that account once to Shared Drive `美和集团（全球）` as **Viewer**. Then AIONE `下载原件` is delivered by the authenticated backend instead of a browser-direct Google download URL.
+
+## V1.9.28 | Enable live 美和AI context analysis
+
+V1.9.28 keeps deterministic Registry retrieval independent of the model, and adds a separate production path for real analysis of current AIONE content.
+
+After `main` contains V1.9.28, run:
+
+```bash
+cd ~/miwa-code
+# If Cloud Shell has old local changes, stash them before pulling.
+git stash push -u -m "cloud-shell-before-v1.9.28"
+git pull --ff-only origin main
+bash infra/gcp/cloud-shell/RUN_E_ENABLE_LIVE_MIWAAI.sh
+```
+
+`RUN_E_ENABLE_LIVE_MIWAAI.sh` sets the target image tag to V1.9.28 and deploys with:
+
+- `AIONE_AI_MODE=live`
+- `AIONE_AI_PROVIDER=openai`
+- `AIONE_AI_MODEL=gpt-5.6-sol`
+
+OpenAI credentials are never stored in the repository. The script first looks for an existing Secret Manager secret. If no secret exists and the shell is interactive, it prompts once with hidden input and creates/updates `aione-openai-api-key`. Do not paste API keys into source files, chat, `cloud-config.sh`, shell history or screenshots.
+
+Shared Drive membership for `aione-runtime@miwa-aione.iam.gserviceaccount.com` does not need to be repeated if it is already a Viewer of `美和集团（全球）`.
+
+After deployment, run the smoke test and then validate in production AIONE. A request with Cloud Run IAM but without an AIONE user Google token must continue to fail with `google_identity_invalid`; this is a required security boundary, not a defect.

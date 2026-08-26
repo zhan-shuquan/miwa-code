@@ -1,6 +1,8 @@
 # MIWA AIONE Integrated Work Platform
 
-> **Current candidate: V1.9.21 SUBDOMAIN SECURE API BRIDGE CANDIDATE.**
+> **Current candidate: V1.9.28 MIWA AI CONTEXT ANALYSIS / QUICK CAPABILITIES / PRECISE RETRIEVAL CANDIDATE.**
+
+V1.9.28在已经真实验证的“美和AI企业资料检索 → AIONE Registry → Shared Drive安全交付”基础上，新增三项员工真实使用能力：**明确资料对象只返回唯一最佳结果；普通业务问题读取当前AIONE页面正式内容后再进入真实模型分析；高频工作以结构化快捷能力标签呈现并按当前上下文变化。** 当前浏览器还可恢复近期AI消息与资料卡，但这只是会话连续性，不等于集团正式知识库。生产真实模型通过`infra/gcp/cloud-shell/RUN_E_ENABLE_LIVE_MIWAAI.sh`启用，API Key只进入Google Secret Manager。
 
 V1.9.17 remains the locked AI Context Router baseline inherited by this candidate.
 
@@ -58,6 +60,8 @@ V1.9.0的Google Cloud安全运行工程完整保留：
 
 主要文档：
 
+- `docs/BASELINE_V1.9.28_MIWA_AI_CONTEXT_CAPABILITIES_CANDIDATE.md`
+- `docs/VALIDATION_V1.9.28_MIWA_AI_CONTEXT_CAPABILITIES_CANDIDATE.md`
 - `docs/CLOUD_DATA_RUNTIME_V1.0.md`
 - `docs/DATA_MODEL_V1.0.md`
 - `docs/DATABASE_MIGRATION_V1.0.md`

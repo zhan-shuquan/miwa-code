@@ -17,8 +17,12 @@ export AIONE_DB_NAME="aione"
 export AIONE_DB_USER="aione_app"
 export AIONE_DB_PASSWORD_SECRET=""
 
-# Keep the first real Cloud Run deployment in deterministic Preview mode.
+# Keep infrastructure validation in Preview; RUN_E_ENABLE_LIVE_MIWAAI.sh switches production to live safely.
 export AIONE_AI_MODE="preview"
+export AIONE_AI_PROVIDER="openai"
+export AIONE_AI_MODEL="gpt-5.6-sol"
+# Secret Manager secret name only. Never place the API key itself here.
+export AIONE_OPENAI_API_KEY_SECRET=""
 
 # V1.9.21 production subdomain bridge (all values are non-secret identifiers).
 export AIONE_GOOGLE_CLIENT_ID="49629089449-5lkfjfnadvq14f9uuid91chqgjjdihmi.apps.googleusercontent.com"

@@ -1,7 +1,14 @@
-# V1.9.25｜美和之家 Google Drive 原件绑定 Candidate
+# V1.9.28｜美和AI上下文分析、快捷能力与精准检索 Candidate
 
+- 精确企业资料请求升级为唯一最佳结果；“有哪些/全部”返回列表，“相关资料”返回Top相关结果，正常业务讨论不被资料检索劫持。
+- 美和之家内容页正式进入美和AI业务上下文；经营架构页首批注入433、经营主线、三层闭环、四大军种、执行原则、十步经营闭环及人与AI责任边界。
+- OpenAI真实模型说明强化：经营架构/理念/战略/组织等优化问题必须先读取AIONE正式页面内容，再检查闭环、复杂度、规则函数化、Skill/Connector/Agent机会、人类责任与真实验证指标。
+- 新增结构化“AI快捷意图/常用能力”层；快捷标签按当前上下文动态展示，并在当前浏览器按实际使用频率排序，不把固定FAQ伪装成能力。
+- 新增美和AI当前浏览器会话连续性：刷新/重开AI层可恢复近期消息与资料卡；历史恢复禁止自动重复下载。聊天历史不等于企业知识。
+- 新增Cloud生产真实模型启用脚本`RUN_E_ENABLE_LIVE_MIWAAI.sh`；OpenAI Key只进入Google Secret Manager，不写入仓库或配置文件。
+- 继续继承V1.9.26 Shared Drive私有安全下载、V1.9.27企业资料Registry检索和AIONE用户身份边界。
 
-## V1.9.27 - MIWA AI corporate content retrieval V1
+# V1.9.27｜美和AI企业资料检索闭环 V1 Candidate
 
 - Added deterministic AIONE corporate Registry retrieval before model execution for enterprise file/content requests.
 - Added 美和AI asset result cards with AIONE content route, Google Drive original view and secure AIONE download.
@@ -10,7 +17,7 @@
 - Included V1.9.26.1 Cloud Run deployment hotfix: custom env-var delimiter and bash child-script invocation.
 - Kept internal assets behind authenticated AIONE person context.
 
-## V1.9.26 - MIWA Shared Drive secure download runtime
+# V1.9.26｜MIWA Shared Drive安全下载 Runtime Candidate
 
 - Replaces direct browser Google Drive download URLs with authenticated AIONE backend downloads.
 - Adds allow-listed backend Drive asset registry and ADC-based Google Drive streaming.
@@ -19,6 +26,8 @@
 - Streams binary responses through the Vercel WIF bridge and forwards content-disposition/content-length.
 - Adds one-time Shared Drive runtime identity check helper.
 
+
+# V1.9.25｜美和之家 Google Drive 原件绑定 Candidate
 
 - 建立 `miwa-google-drive-registry.js`，集中登记美和之家Google Drive镜像目录Folder ID与集团核心资料File ID。
 - 00-09现代企业军团核心资料已经迁移到 `美和之家｜AIONE内容源 / 08_企业资料 / 集团核心资料` 并完成真实Drive绑定。

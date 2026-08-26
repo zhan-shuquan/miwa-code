@@ -3,8 +3,9 @@
    Frontend: 美和AI → AI工作区 → AI办公室
    Internal: AI Layer / Drawer / Workspace / AI Office
 ======================================== */
-import { initAISecretaryClient } from "../ai/ai-secretary-client.js?v=20260826-v1.9.27-ai-corporate-retrieval";
+import { initAISecretaryClient } from "../ai/ai-secretary-client.js?v=20260826-v1.9.28-ai-context-capabilities";
 import { buildAIONEAIContext, routeAIONEAIContext } from "../ai/ai-context-router.js";
+import { getQuickIntentsForAIContext, recordQuickIntentUsage } from "../ai/ai-quick-intents.js";
 
 const ENTRY_SELECTOR = "#desktop-miwa-ai-entry,#mobile-miwa-ai-entry";
 // Legacy route-only suggestion tables were retired in V1.9.17.
@@ -26,6 +27,7 @@ const REQUIRED_LAYER_IDS = Object.freeze([
   "miwa-ai-suggestion-grid",
   "ai-secretary-runtime-status",
   "ai-secretary-thread",
+  "miwa-ai-quick-intents",
   "ai-secretary-command-input",
   "ai-secretary-send"
 ]);
@@ -69,6 +71,7 @@ const LAYER_BODY_TEMPLATE = `
       <span class="miwa-ai-composer-auto" title="能力由当前业务上下文自动匹配">
         <span aria-hidden="true">✦</span><span>能力自动匹配</span>
       </span>
+      <div class="miwa-ai-quick-intents" id="miwa-ai-quick-intents" aria-label="常用能力"></div>
       <span class="miwa-ai-composer-context" id="miwa-ai-composer-context">当前页面</span>
     </div>
     <div class="miwa-ai-composer">
@@ -144,6 +147,26 @@ function suggestionPrompt(capability, context) {
   return `${capability.prompt}\n\n当前对象：${subject}。请使用AIONE已经提供的当前业务上下文与系统计算结果；不确定的事实标记待确认，不要自行编造。`;
 }
 
+function renderQuickIntents(context) {
+  const host = document.getElementById("miwa-ai-quick-intents");
+  if (!host) return;
+  const items = getQuickIntentsForAIContext(context).slice(0, 5);
+  host.replaceChildren(...items.map((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "miwa-ai-quick-intent";
+    button.dataset.quickIntent = item.code;
+    button.innerHTML = `<span aria-hidden="true">${item.icon || "✦"}</span><b>${item.label}</b>`;
+    button.title = item.placeholder || item.label;
+    button.addEventListener("click", () => {
+      host.querySelectorAll(".miwa-ai-quick-intent").forEach((node) => node.classList.toggle("is-active", node === button));
+      recordQuickIntentUsage(item.code, context);
+      window.dispatchEvent(new CustomEvent("aione:miwa-ai-quick-intent", { detail:item }));
+    });
+    return button;
+  }));
+}
+
 function renderContext() {
   if (!layer()) return;
   const { context, capabilities } = routeAIONEAIContext(getCurrentContext());
@@ -156,6 +179,7 @@ function renderContext() {
   if (contextNode) contextNode.textContent = contextLabel;
   if (routeNode) routeNode.textContent = context.displayRoute || context.hash;
   if (composerContext) composerContext.textContent = context.object?.id || context.workbench?.label || context.title;
+  renderQuickIntents(context);
   const host = document.getElementById("miwa-ai-suggestion-grid");
   if (!host) return;
   host.replaceChildren(...capabilities.map((capability, index) => {
