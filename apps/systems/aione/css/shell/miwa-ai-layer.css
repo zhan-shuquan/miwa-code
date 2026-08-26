@@ -134,3 +134,19 @@ body.miwa-ai-open{overflow:hidden}
     max-height:150px;
   }
 }
+/* ============================================================
+   V1.9.27 CORPORATE ASSET RESULTS
+   Deterministic AIONE registry results inside 美和AI.
+   ============================================================ */
+.ai-secretary-message.ai-secretary-asset-results{max-width:100%;padding:10px;background:#f8faf9;border:1px solid #dfe8e3}
+.ai-secretary-asset-list{display:grid;gap:8px;margin-top:2px}
+.ai-secretary-asset-card{display:grid;gap:5px;padding:10px;border:1px solid #dce7e1;border-radius:9px;background:#fff}
+.ai-secretary-asset-card__title{color:#153d30;font-size:10.5px;line-height:1.5}
+.ai-secretary-asset-card__meta{color:#176B4D;font-size:8.5px;font-weight:800}
+.ai-secretary-asset-card__source{color:#7c8a83;font-size:8.5px;line-height:1.5}
+.ai-secretary-asset-card__actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:3px}
+.ai-secretary-asset-card__actions button{min-height:28px;padding:0 8px;border:1px solid #ccddd4;border-radius:7px;background:#fff;color:#315247;font-size:8.5px;font-weight:800;cursor:pointer}
+.ai-secretary-asset-card__actions button:hover{border-color:#9fc6b3;background:#f3f8f5;color:#176B4D}
+.ai-secretary-asset-card__actions button.is-primary{border-color:#176B4D;background:#176B4D;color:#fff}
+.ai-secretary-asset-card__actions button.is-primary:hover{background:#0D4937}
+.ai-secretary-asset-card__actions button:disabled{opacity:.55;cursor:wait}

@@ -3,7 +3,7 @@
    Frontend: 美和AI → AI工作区 → AI办公室
    Internal: AI Layer / Drawer / Workspace / AI Office
 ======================================== */
-import { initAISecretaryClient } from "../ai/ai-secretary-client.js?v=20260824-v1.9.17-ai-context-router";
+import { initAISecretaryClient } from "../ai/ai-secretary-client.js?v=20260826-v1.9.27-ai-corporate-retrieval";
 import { buildAIONEAIContext, routeAIONEAIContext } from "../ai/ai-context-router.js";
 
 const ENTRY_SELECTOR = "#desktop-miwa-ai-entry,#mobile-miwa-ai-entry";

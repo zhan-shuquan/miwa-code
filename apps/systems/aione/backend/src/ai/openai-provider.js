@@ -71,11 +71,13 @@ export async function runOpenAISecretary({ objective, office, contextSnapshot, r
     "如果contextSnapshot.aiRequest包含capabilityCode，表示AIONE已根据当前业务上下文自动路由到该业务能力；直接执行该能力，不要再次询问用户要选择哪个AI、岗位、Skill或模型。",
     "对成本、利润、毛利率、配送费等确定性数值，优先采用AIONE页面或规则函数已经计算出的结果；不要让模型重新估算已有确定性结果。",
     "需要工作、日历、通知、数据库或知识事实时，调用对应AIONE工具取得证据。工具返回不可用或缺失时明确写待确认。",
+    "当用户查找美和集团资料、文件、PPT、PDF、Word、Excel、经营架构、美和灵魂/准则/传承时，优先调用search_corporate_content。资料版本、状态、AIONE路由和Google Drive原件必须以工具返回的正式索引为准，不得凭模型记忆猜文件。",
     "回答要简洁、可执行。若用户问今天最重要的事情，最多给三项，说明依据、风险和下一步。"
   ].join("\n");
   let response = await createResponse({ model:MODEL(), instructions, input:`用户目标：${objective}\n当前办公室：${office.name}\n当前页面：${contextSnapshot?.page?.title || "待确认"}`, tools:AI_SECRETARY_TOOLS, parallel_tool_calls:false, max_output_tokens:1600 });
   let totalUsage = { inputTokens:response.usage?.input_tokens || 0, outputTokens:response.usage?.output_tokens || 0 };
   const proposals = [];
+  const assetResults = [];
   let toolCallCount = 0;
   for (let turn = 0; turn < 6; turn += 1) {
     const calls = functionCalls(response);
@@ -87,6 +89,11 @@ export async function runOpenAISecretary({ objective, office, contextSnapshot, r
       try { args = JSON.parse(call.arguments || "{}"); } catch (_) {}
       const result = await executeAISecretaryTool(call.name, args, { contextSnapshot, requestContext });
       if (result?.proposal) proposals.push(result.proposal);
+      if (call.name === "search_corporate_content" && Array.isArray(result?.items)) {
+        for (const item of result.items) {
+          if (!assetResults.some((existing) => existing.id === item.id)) assetResults.push(item);
+        }
+      }
       outputs.push({ type:"function_call_output", call_id:call.call_id, output:JSON.stringify(result) });
     }
     response = await createResponse({ model:MODEL(), previous_response_id:response.id, input:outputs, tools:AI_SECRETARY_TOOLS, parallel_tool_calls:false, max_output_tokens:1600 });
@@ -108,5 +115,5 @@ export async function runOpenAISecretary({ objective, office, contextSnapshot, r
       console.warn("[AIONE Proposal Bridge] failed to materialize a proposal:", error?.message || error);
     }
   }
-  return { mode:"openai", provider:"openai", providerDisplayName:"OpenAI", model:MODEL(), answer, proposals, responseId:response.id, toolCallCount, usage:totalUsage };
+  return { mode:"openai", provider:"openai", providerDisplayName:"OpenAI", model:MODEL(), answer, proposals, assetResults, requestedAssetAction:"search", responseId:response.id, toolCallCount, usage:totalUsage };
 }

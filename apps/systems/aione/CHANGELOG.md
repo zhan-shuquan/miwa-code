@@ -1,5 +1,15 @@
 # V1.9.25｜美和之家 Google Drive 原件绑定 Candidate
 
+
+## V1.9.27 - MIWA AI corporate content retrieval V1
+
+- Added deterministic AIONE corporate Registry retrieval before model execution for enterprise file/content requests.
+- Added 美和AI asset result cards with AIONE content route, Google Drive original view and secure AIONE download.
+- Added `search_corporate_content` tool for Live model retrieval with authoritative version/status/source metadata.
+- Added first six real acceptance prompts for group architecture, AI talent, command map, operating loop, core asset list and 美和灵魂.
+- Included V1.9.26.1 Cloud Run deployment hotfix: custom env-var delimiter and bash child-script invocation.
+- Kept internal assets behind authenticated AIONE person context.
+
 ## V1.9.26 - MIWA Shared Drive secure download runtime
 
 - Replaces direct browser Google Drive download URLs with authenticated AIONE backend downloads.

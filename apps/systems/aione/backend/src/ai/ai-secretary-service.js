@@ -3,6 +3,7 @@ import pool from "../../db.js";
 import { getAIOffice } from "./office-registry.js";
 import { getModelProviderRuntimeStatus, runModelProvider } from "./model-provider-registry.js";
 import { stagePendingProposals, getPendingProposal, getLatestPendingProposal, clearPendingProposal, getPendingProposalRuntimeStatus } from "./pending-proposal-store.js";
+import { executeMiwaCorporateRetrieval } from "../integrations/miwa-corporate-search.js";
 
 function makeId(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`; }
 
@@ -99,6 +100,26 @@ export async function executeAISecretary({ objective, officeCode, contextSnapsho
         await finishExecution(executionId, confirmed, "completed");
         return confirmed;
       }
+    }
+
+    // V1.9.27: deterministic enterprise-content retrieval goes before the model.
+    // The registry, not the LLM, decides which file is current and which Drive File ID is authoritative.
+    const corporateRetrieval = executeMiwaCorporateRetrieval(objective, requestContext || {});
+    if (corporateRetrieval) {
+      const deterministic = {
+        mode:"aione",
+        provider:"aione-corporate-registry",
+        providerDisplayName:"AIONE Corporate Registry",
+        model:null,
+        answer:corporateRetrieval.answer,
+        proposals:[],
+        assetResults:corporateRetrieval.items,
+        requestedAssetAction:corporateRetrieval.intent.requestedAction,
+        toolCallCount:1,
+        usage:{ inputTokens:0, outputTokens:0 }
+      };
+      await finishExecution(executionId, deterministic, "completed");
+      return { executionId, office, ...deterministic };
     }
 
     const result = await runModelProvider({ objective, office, contextSnapshot, requestContext, runtime });

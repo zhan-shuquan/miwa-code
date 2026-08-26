@@ -6,7 +6,7 @@ import { getRouteDefinition } from "../config/route-registry.js";
 import { resolveAIOfficeForIdentity } from "../config/ai-office-registry.js";
 import { getCollaborationData, addTask } from "../data/collaboration-store.js";
 import { getNotifications } from "../data/notification-store.js";
-import { aioneApi } from "../services/aione-api-client.js";
+import { aioneApi, aioneDownload } from "../services/aione-api-client.js";
 import { loadSelectionItems, getSelectionMetrics, getSelectionTypeCards, getSelectionFlowSteps } from "../data/selection-workbench-adapter.js";
 import { buildAIONEAIContext } from "./ai-context-router.js";
 
@@ -121,6 +121,10 @@ function renderRuntimeStatus(status = {}) {
     renderStatus("美和AI已就绪", "success");
     return;
   }
+  if (status.mode === "aione") {
+    renderStatus("美和AI已就绪｜企业资料检索", "success");
+    return;
+  }
   if (status.liveRequested && status.fallbackReason === "provider_not_configured") {
     renderStatus("美和AI待完成运行配置", "preview");
     return;
@@ -200,6 +204,95 @@ function appendMessage(role, content, meta = "") {
   thread.append(item);
   while (thread.children.length > HISTORY_LIMIT) thread.firstElementChild?.remove();
   thread.scrollTop = thread.scrollHeight;
+}
+
+function assetMeta(item = {}) {
+  return [item.type || (item.kind === "page" ? "AIONE内容" : "资料"), item.version, item.recordStatus].filter(Boolean).join("｜");
+}
+
+async function downloadAssetResult(item, button = null) {
+  if (!item?.downloadPath) return;
+  const originalText = button?.textContent || "下载原件";
+  if (button) { button.disabled = true; button.textContent = "下载中…"; }
+  try {
+    const result = await aioneDownload(item.downloadPath, { fileName:item.sourceName || item.title || "download" });
+    if (button) button.textContent = "已下载";
+    appendMessage("assistant", `原件已通过AIONE安全下载：${result.fileName}`, "共享云盘安全交付");
+  } catch (error) {
+    if (button) { button.disabled = false; button.textContent = originalText; }
+    appendMessage("assistant", `原件下载失败：${error.message}`, "未下载");
+  }
+}
+
+function renderAssetResults(items = [], requestedAction = "search") {
+  if (!Array.isArray(items) || !items.length) return;
+  const thread = document.getElementById("ai-secretary-thread");
+  if (!thread) return;
+
+  const wrapper = document.createElement("article");
+  wrapper.className = "ai-secretary-message is-assistant ai-secretary-asset-results";
+  const label = document.createElement("strong");
+  label.textContent = items.length > 1 ? `资料结果｜${items.length}项` : "资料结果";
+  const list = document.createElement("div");
+  list.className = "ai-secretary-asset-list";
+
+  items.forEach((item) => {
+    const card = document.createElement("section");
+    card.className = "ai-secretary-asset-card";
+
+    const title = document.createElement("b");
+    title.className = "ai-secretary-asset-card__title";
+    title.textContent = item.title || "未命名资料";
+
+    const meta = document.createElement("span");
+    meta.className = "ai-secretary-asset-card__meta";
+    meta.textContent = assetMeta(item);
+
+    const source = document.createElement("span");
+    source.className = "ai-secretary-asset-card__source";
+    source.textContent = item.sourceLabel ? `来源：${item.sourceLabel}` : "来源：美和之家";
+
+    const actions = document.createElement("div");
+    actions.className = "ai-secretary-asset-card__actions";
+
+    if (item.route) {
+      const contentButton = document.createElement("button");
+      contentButton.type = "button";
+      contentButton.textContent = "查看内容";
+      contentButton.addEventListener("click", () => { window.location.hash = `#/${item.route}`; });
+      actions.append(contentButton);
+    }
+
+    if (item.sourceUrl) {
+      const originalButton = document.createElement("button");
+      originalButton.type = "button";
+      originalButton.textContent = "查看原件 ↗";
+      originalButton.addEventListener("click", () => window.open(item.sourceUrl, "_blank", "noopener,noreferrer"));
+      actions.append(originalButton);
+    }
+
+    if (item.downloadable && item.downloadPath) {
+      const downloadButton = document.createElement("button");
+      downloadButton.type = "button";
+      downloadButton.className = "is-primary";
+      downloadButton.textContent = "下载原件";
+      downloadButton.addEventListener("click", () => downloadAssetResult(item, downloadButton));
+      actions.append(downloadButton);
+    }
+
+    card.append(title, meta, source, actions);
+    list.append(card);
+  });
+
+  wrapper.append(label, list);
+  thread.append(wrapper);
+  while (thread.children.length > HISTORY_LIMIT) thread.firstElementChild?.remove();
+  thread.scrollTop = thread.scrollHeight;
+
+  if (requestedAction === "download" && items.length === 1 && items[0]?.downloadPath) {
+    const autoButton = wrapper.querySelector(".ai-secretary-asset-card__actions .is-primary");
+    downloadAssetResult(items[0], autoButton);
+  }
 }
 
 function renderProposals(proposals = []) {
@@ -282,6 +375,7 @@ async function sendCommand(command, options = {}) {
       presentConfirmationResult(result.confirmationResult, snapshot);
     } else {
       appendMessage("assistant", result.answer || result.message || "美和AI已完成本轮分析。");
+      renderAssetResults(result.assetResults || [], result.requestedAssetAction || "search");
       renderProposals(result.proposals || []);
     }
     renderRuntimeStatus(result);
