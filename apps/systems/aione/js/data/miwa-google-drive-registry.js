@@ -55,7 +55,7 @@ export const MIWA_DRIVE_FOLDERS = Object.freeze({
 });
 
 const CORE_ASSET_ROWS = Object.freeze({
-  "army-architecture": ["1sRwEREfX3EZJFxUUMVyd51soLrfWebwa", "00_美和集团现代企业军团总架构_V0.1.pptx"],
+  "army-architecture": ["1sRwEREfX3EZJFxUUMVyd51soLrfWebwa", "00_美和集团AI执行总架构_V0.1.pptx"],
   "army-overview": ["1qMz_tnXQCEWmcOXYxCYNFRLhw3akTePw", "01_美和集团现代企业军团总纲_V0.1.docx"],
   "army-staffing": ["17F5AlhA38QJxCc-rloI8u-bAdqEEIUqa", "02_美和集团现代企业军团编制总表_V0.1.xlsx"],
   "command-map": ["1uS9H84s5p4Ftz2VF75Dm5ewV8qR57WIs", "03_美和集团现代企业军团作战指挥关系图_V0.1.pdf"],

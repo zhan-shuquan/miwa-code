@@ -13,7 +13,7 @@ const SHARED_DRIVE_NAME = "美和集团（全球）";
 const CORE_ASSET_FOLDER_ID = "19na53zaVPoZSQcKYLDaVxkfbIxiX51Ty";
 
 const ROWS = Object.freeze({
-  "army-architecture": ["1sRwEREfX3EZJFxUUMVyd51soLrfWebwa", "00_美和集团现代企业军团总架构_V0.1.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"],
+  "army-architecture": ["1sRwEREfX3EZJFxUUMVyd51soLrfWebwa", "00_美和集团AI执行总架构_V0.1.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"],
   "army-overview": ["1qMz_tnXQCEWmcOXYxCYNFRLhw3akTePw", "01_美和集团现代企业军团总纲_V0.1.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
   "army-staffing": ["17F5AlhA38QJxCc-rloI8u-bAdqEEIUqa", "02_美和集团现代企业军团编制总表_V0.1.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
   "command-map": ["1uS9H84s5p4Ftz2VF75Dm5ewV8qR57WIs", "03_美和集团现代企业军团作战指挥关系图_V0.1.pdf", "application/pdf"],

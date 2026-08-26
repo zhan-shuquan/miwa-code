@@ -13,10 +13,10 @@ const STRATEGY_SOURCE_LABEL = "美和之家 → 经营与战略";
 
 const CORE_METADATA = Object.freeze({
   "army-architecture": Object.freeze({
-    title:"美和集团现代企业军团总架构", type:"PPTX", version:"V0.1", recordStatus:"构想/验证中",
-    summary:"美和集团现代企业军团的总架构，覆盖最高统帅、指挥军、作战军、建设军、保障军与事业前线。",
+    title:"美和集团AI执行总架构", type:"PPTX", version:"V0.1", recordStatus:"构想/验证中",
+    summary:"美和原创现代企业AI军团执行体系，覆盖最高统帅、指挥军、作战军、建设军、保障军与事业前线。",
     route:"company-management-architecture",
-    aliases:["美和集团总架构","集团总架构","现代企业军团总架构","总架构","军团总架构"]
+    aliases:["美和集团AI执行总架构","AI执行总架构","执行总架构","美和集团总架构","集团总架构","现代企业军团总架构","美和集团现代企业军团总架构","总架构","军团总架构"]
   }),
   "army-overview": Object.freeze({
     title:"美和集团现代企业军团总纲", type:"DOCX", version:"V0.1", recordStatus:"构想/验证中",
@@ -74,7 +74,7 @@ const PAGE_RECORDS = Object.freeze([
   Object.freeze({ id:"page:company-spirit", kind:"page", title:"美和灵魂", route:"company-spirit", version:"V1.9.28", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:CONTENT_SOURCE_LABEL, summary:"定义美和为什么存在、相信什么，以及长期坚持的核心信念。", aliases:["美和灵魂","灵魂","核心信念"] }),
   Object.freeze({ id:"page:company-principles", kind:"page", title:"美和准则", route:"company-principles", version:"V1.9.28", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:CONTENT_SOURCE_LABEL, summary:"明确美和在经营、管理、工作和判断中共同遵循的原则与行动标准。", aliases:["美和准则","准则","行动准则"] }),
   Object.freeze({ id:"page:company-heritage", kind:"page", title:"美和传承", route:"company-heritage", version:"V1.9.28", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:CONTENT_SOURCE_LABEL, summary:"沉淀并延续值得长期保留的理念、经验、方法、组织记忆和经营智慧。", aliases:["美和传承","传承","组织记忆"] }),
-  Object.freeze({ id:"page:company-management-architecture", kind:"page", title:"美和原创AI经营架构", route:"company-management-architecture", version:"V1.9.28", recordStatus:"验证中", visibility:"internal", current:true, sourceLabel:STRATEGY_SOURCE_LABEL, summary:"连接经营目标、业务流程、数据规则、人、AI与管理决策的美和原创经营体系。", aliases:["经营架构","AI经营架构","美和经营架构","433","四化三基石三属性"] }),
+  Object.freeze({ id:"page:company-management-architecture", kind:"page", title:"美和集团AI经营总架构", route:"company-management-architecture", version:"V1.9.29", recordStatus:"验证中｜新版原件待绑定", visibility:"internal", current:true, sourceLabel:STRATEGY_SOURCE_LABEL, summary:"定义美和如何经营并持续形成经营闭环；连接经营目标、业务流程、数据规则、人、AI与管理决策。", aliases:["美和集团AI经营总架构","AI经营总架构","经营总架构","经营架构","AI经营架构","美和经营架构","美和原创AI经营架构","美和集团经营架构","AI原创模式","433","四化三基石三属性"] }),
   Object.freeze({ id:"page:company-core-assets", kind:"page", title:"集团核心资料", route:"company-core-assets", version:"V1.9.28", recordStatus:"已接入", visibility:"internal", current:true, sourceLabel:"美和之家 → 企业资料", summary:"集团核心经营、组织、AI、战略与方法资料的统一入口。", aliases:["集团核心资料","核心资料","企业资料"] })
 ]);
 
@@ -186,7 +186,7 @@ export function searchMiwaCorporateRecords(query, options = {}) {
 }
 
 const SPECIFIC_TERMS = [
-  "集团总架构","现代企业军团","军团总纲","编制总表","指挥关系图","战略粮草","经营闭环","ai人才","情报与决策","市场作战","数字后勤",
+  "集团总架构","AI经营总架构","AI执行总架构","经营总架构","执行总架构","现代企业军团","军团总纲","编制总表","指挥关系图","战略粮草","经营闭环","ai人才","情报与决策","市场作战","数字后勤",
   "美和灵魂","美和准则","美和传承","经营架构","集团核心资料"
 ];
 const GENERAL_ASSET_WORD = /(资料|文件|原件|文档|pdf|pptx?|docx?|xlsx?|表格|报告)/i;

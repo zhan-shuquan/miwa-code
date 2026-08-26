@@ -62,11 +62,13 @@ function buildCompanyPageContext(routeId) {
   if (routeId === "company-management-architecture") {
     context.framework = {
       expression:"433",
+      officialNames:{ management:"美和集团AI经营总架构", execution:"美和集团AI执行总架构" },
       fourTransformations:["工作一体化","管理标准化","业务流程化","执行自动化"],
       threeFoundations:["美和灵魂","美和准则","美和传承"],
       threeAttributes:["普适","开放","共享"],
       managementFlow:["经营目标","业务流程","业务对象","状态与数据","规则与责任","AI与自动化","人类负责人","结果指标","管理决策","持续优化"],
       loopLevels:["操作闭环","业务闭环","经营闭环"],
+      executionArchitecture:"美和集团AI执行总架构｜美和原创现代企业AI军团执行体系",
       executionForces:["指挥军","作战军","建设军","保障军"],
       executionPrinciples:["战略未动·情报先行","作战未起·粮草先行","命令一出·执行到底","战果必留·复盘必做"],
       operationLoop:["确定目标","侦察环境","形成方案","确认粮草","准备装备与兵力","宣传/销售打开市场","事业执行交付","记录战果","分析复盘","重新决策"],
@@ -167,6 +169,13 @@ function buildSnapshot(options = {}) {
       quickIntentPrompt:activeQuickIntent?.prompt || null,
       routedBy: options.capabilityCode ? "aione_ai_context_router_v1" : "aione_ai_quick_intent_v1.9.28"
     } : null,
+    conversationContext: readHistory().slice(-12).map((entry) => ({
+      type:entry.type || "message",
+      role:entry.role || null,
+      content:entry.type === "message" ? String(entry.content || "").slice(0,5000) : null,
+      assets:entry.type === "assets" ? (entry.items || []).slice(0,6).map((item) => ({ id:item.id, title:item.title, type:item.type, version:item.version })) : null,
+      at:entry.at || null
+    })),
     nineElements: ["目标","人","物","事","平台","时间","钱","信息","结果"],
     work: { tasks, suggestions:(collaboration.suggestions || []).slice(0, 20) },
     calendar: { events },

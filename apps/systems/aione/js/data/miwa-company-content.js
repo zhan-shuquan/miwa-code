@@ -29,7 +29,7 @@ export const MIWA_COMPANY_NAVIGATION = Object.freeze([
     child("company-heritage", "美和传承", "company-heritage", "沉淀值得长期保留的理念、经验、方法与组织记忆。")
   ]),
   group("company-strategy", "经营与战略", "company-strategy", "analysis", "我们怎么经营、准备去哪里", [
-    child("company-management-architecture", "经营架构", "company-management-architecture", "展示美和原创AI经营架构与经营闭环。"),
+    child("company-management-architecture", "经营架构", "company-management-architecture", "展示美和集团AI经营总架构、经营闭环与其下的AI执行总架构。"),
     child("company-development-strategy", "发展战略", "company-development-strategy", "说明集团长期发展的战略方向。"),
     child("company-development-plan", "发展规划", "company-development-plan", "承载3年、5年、10年发展规划。")
   ]),
@@ -67,7 +67,7 @@ export const MIWA_COMPANY_NAVIGATION = Object.freeze([
 export const MIWA_COMPANY_SUBTITLE = "美和集团内部的集团认知、战略方向、事业版图和组织发展的统一入口。";
 export const MIWA_OVERVIEW_SUBTITLE = "一页理解美和集团的身份、理念、经营体系、事业版图、发展方向与成长历程。";
 
-const MODERN_CORPS_SOURCE = source("美和集团现代企业军团总架构", "V0.1", "2026-08-13");
+const MODERN_CORPS_SOURCE = source("美和集团AI执行总架构", "V0.1", "2026-08-13");
 const MODERN_CORPS_OVERVIEW_SOURCE = source("美和集团现代企业军团总纲", "V0.1", "2026-08-13");
 const AI_TALENT_SOURCE = source("美和集团AI人才军团体系", "V0.1", "2026-08-13");
 const INTEL_SOURCE = source("美和集团情报与决策体系", "V0.1", "2026-08-13");
@@ -133,7 +133,7 @@ export const MIWA_COMPANY_PAGES = Object.freeze({
 
   "company-strategy": Object.freeze({ title:"经营与战略", eyebrow:"MANAGEMENT & STRATEGY", subtitle:"展示美和如何经营、如何形成闭环，以及长期准备去哪里。", kind:"group", status:"已有核心内容" }),
   "company-management-architecture": Object.freeze({
-    title:"美和原创AI经营架构", eyebrow:"MIWA ORIGINAL AI MANAGEMENT ARCHITECTURE", subtitle:"以真实经营为基础，连接经营目标、业务流程、数据规则、人、AI与管理决策的美和原创经营体系。", kind:"architecture", status:"真实内容已接入",
+    title:"美和集团AI经营总架构", eyebrow:"MIWA GROUP AI MANAGEMENT ARCHITECTURE", subtitle:"定义美和如何经营并持续形成经营闭环。美和原创与现代企业方法作为体系属性在副标题与正文中表达。", kind:"architecture", status:"当前结构已接入 · 新版原件待绑定",
     sources:[MODERN_CORPS_SOURCE, MODERN_CORPS_OVERVIEW_SOURCE, INTEL_SOURCE, DIGITAL_LOGISTICS_SOURCE]
   }),
   "company-development-strategy": Object.freeze({
@@ -223,11 +223,11 @@ const driveAssetFields = (assetId) => {
 
 export const MIWA_GROUP_CORE_ASSETS = Object.freeze([
   {
-    id:"army-architecture", title:"美和集团现代企业军团总架构", type:"PPTX", version:"V0.1", visibility:"内部",
+    id:"army-architecture", title:"美和集团AI执行总架构", type:"PPTX", version:"V0.1", visibility:"内部",
     status:"资料已确认 · Google Drive原件已绑定", recordStatus:"构想/验证中", sourceDate:"2026-08-13", scope:"core",
-    fileName:"00_美和集团现代企业军团总架构_V0.1.pptx",
+    fileName:"00_美和集团AI执行总架构_V0.1.pptx",
     ...driveAssetFields("army-architecture"),
-    summary:"AI时代企业执行与作战指挥总架构：最高统帅、四大军种、情报与粮草、AI人才、数字后勤、事业军团和标准作战闭环。",
+    summary:"美和原创现代企业AI军团执行体系：以最高统帅、指挥军、作战军、建设军、保障军协同推动经营目标落地。",
     contentRoute:"company-management-architecture"
   },
   {

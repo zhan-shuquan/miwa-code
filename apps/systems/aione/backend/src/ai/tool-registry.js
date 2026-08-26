@@ -75,7 +75,14 @@ export async function executeAISecretaryTool(name, args = {}, ctx = {}) {
     } catch (error) { return compactError(error); }
   }
   if (name === "propose_create_work_item") {
-    return { available:true, proposal:{ type:"create_work_item", label:"创建工作事项", summary:`${args.title}｜${args.reason}`, payload:{ title:args.title, description:args.description, priority:args.priority, dueAt:args.dueAt, reason:args.reason } } };
+    const page = data?.page || {};
+    const businessContext = page?.businessContext || {};
+    const objectType = businessContext?.objectType || (businessContext?.data?.opportunity?.id ? "product_opportunity" : null);
+    const objectId = businessContext?.objectId || businessContext?.data?.opportunity?.id || null;
+    return { available:true, proposal:{ type:"create_work_item", label:"创建工作事项", summary:`${args.title}｜${args.reason}`, payload:{
+      title:args.title, description:args.description, priority:args.priority, dueAt:args.dueAt, reason:args.reason,
+      context:{ routeId:page?.routeId || null, pageTitle:page?.title || null, pageHash:page?.hash || null, objectType, objectId }
+    } } };
   }
   return { available:false, reason:"unknown_tool" };
 }

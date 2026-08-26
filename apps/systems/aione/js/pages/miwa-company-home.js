@@ -115,7 +115,7 @@ function overviewHtml() {
 
       <section class="miwa-company-section miwa-company-section--architecture miwa-company-print-page" id="company-architecture-section">
         <div class="miwa-company-section__head">
-          <div><span class="miwa-company-eyebrow">MIWA ORIGINAL AI MANAGEMENT ARCHITECTURE</span><h2>美和原创AI经营架构</h2><p>以真实经营为基础，连接经营目标、业务流程、数据规则、人、AI与管理决策的美和原创经营体系。</p></div>
+          <div><span class="miwa-company-eyebrow">MIWA ORIGINAL AI MANAGEMENT ARCHITECTURE</span><h2>美和集团AI经营总架构</h2><p>以真实经营为基础，连接经营目标、业务流程、数据规则、人、AI与管理决策的美和原创经营体系。</p></div>
           <span class="miwa-company-section__number">03 / 433</span>
         </div>
         <div class="miwa-company-architecture-board">
@@ -134,7 +134,7 @@ function overviewHtml() {
           <article><b>03</b><strong>命令一出 · 执行到底</strong><span>任务找到正确的人或AI，权责与异常升级清楚。</span></article>
           <article><b>04</b><strong>战果必留 · 复盘必做</strong><span>结果、数据、证据和经验重新进入下一轮经营。</span></article>
         </div>
-        <a class="miwa-company-inline-link screen-only" href="#/company-management-architecture">查看完整经营架构 →</a>
+        <a class="miwa-company-inline-link screen-only" href="#/company-management-architecture">查看AI经营总架构 →</a>
       </section>
 
       <section class="miwa-company-section miwa-company-print-page" id="company-business-section">
@@ -249,7 +249,7 @@ function architectureHtml(page, routeId) {
         <span class="miwa-company-eyebrow">STRATEGIC MOTHER ARCHITECTURE</span>
         <h2>433｜美和经营方法的稳定表达</h2>
         <div class="miwa-company-architecture-board miwa-company-architecture-board--detail">
-          <div class="miwa-company-architecture-center"><strong>美和原创AI经营架构</strong><span>真实经营 → 标准 → AI/自动化 → 决策 → 持续优化</span></div>
+          <div class="miwa-company-architecture-center"><strong>美和集团AI经营总架构</strong><span>真实经营 → 标准 → AI/自动化 → 决策 → 持续优化</span></div>
           <div class="miwa-company-architecture-groups">
             <article><strong>四化</strong><ul><li>工作一体化</li><li>管理标准化</li><li>业务流程化</li><li>执行自动化</li></ul></article>
             <article><strong>三基石</strong><ul><li>美和灵魂</li><li>美和准则</li><li>美和传承</li></ul></article>
@@ -262,8 +262,8 @@ function architectureHtml(page, routeId) {
 
       <section class="miwa-company-content-sheet miwa-company-print-page">
         <span class="miwa-company-eyebrow">EXECUTION SYSTEM</span>
-        <h2>现代企业军团｜把战略转化为执行结果</h2>
-        <p>现代企业军团不是新的母架构，而是美和原创经营架构之下的集团级执行体系。它借鉴统一指挥、情报、后勤、训练、作战、监察与复盘等组织逻辑，强化责任边界和协同关系。</p>
+        <h2>美和集团AI执行总架构｜军团执行体系</h2>
+        <p>AI执行总架构不是新的经营母架构，而是美和集团AI经营总架构之下的集团级军团执行体系。它以统一指挥、情报、后勤、训练、作战、监察与复盘等组织逻辑，强化责任边界、AI协同和结果落地。</p>
         <div class="miwa-company-force-grid">${forces.map(([name,units,mission]) => `<article><span>${esc(name)}</span><h3>${esc(mission)}</h3><p>${esc(units)}</p></article>`).join("")}</div>
       </section>
 
@@ -508,7 +508,7 @@ function dispatchAside(page, routeId) {
   const items = routeId === "company" ? [
     { label:"当前阶段", value:"全员正式启用准备期" },
     { label:"内容状态", value:"V1.9.26 Shared Drive安全下载" },
-    { label:"经营架构", value:"查看美和原创AI经营架构", route:"company-management-architecture" },
+    { label:"经营架构", value:"查看美和集团AI经营总架构", route:"company-management-architecture" },
     { label:"企业资料", value:"查看集团核心资料", route:"company-core-assets" }
   ] : [
     { label:"所属目录", value:group?.label || "美和之家", route:group?.route || "company" },

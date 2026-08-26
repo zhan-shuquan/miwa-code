@@ -1,8 +1,8 @@
 # MIWA AIONE Integrated Work Platform
 
-> **Current candidate: V1.9.28 MIWA AI CONTEXT ANALYSIS / QUICK CAPABILITIES / PRECISE RETRIEVAL CANDIDATE.**
+> **Current candidate: V1.9.29 MIWA AI ARCHITECTURE NAMING / ANALYSIS-TO-PROPOSAL EXECUTION CANDIDATE.**
 
-V1.9.28在已经真实验证的“美和AI企业资料检索 → AIONE Registry → Shared Drive安全交付”基础上，新增三项员工真实使用能力：**明确资料对象只返回唯一最佳结果；普通业务问题读取当前AIONE页面正式内容后再进入真实模型分析；高频工作以结构化快捷能力标签呈现并按当前上下文变化。** 当前浏览器还可恢复近期AI消息与资料卡，但这只是会话连续性，不等于集团正式知识库。生产真实模型通过`infra/gcp/cloud-shell/RUN_E_ENABLE_LIVE_MIWAAI.sh`启用，API Key只进入Google Secret Manager。
+V1.9.29在V1.9.28真实上下文分析基础上完成两项收口：**正式区分“美和集团AI经营总架构”与“美和集团AI执行总架构”，旧“现代企业军团总架构”作为执行总架构历史别名保留；美和AI把编号优化清单继续转换为多个待确认工作事项Proposal，逐项由人类确认后写入工作之家。** Google Drive原件仍通过共享云盘安全交付；当前经营总架构新版原件尚待绑定，不以旧基石版冒充新版。
 
 V1.9.17 remains the locked AI Context Router baseline inherited by this candidate.
 
@@ -60,7 +60,9 @@ V1.9.0的Google Cloud安全运行工程完整保留：
 
 主要文档：
 
+- `docs/BASELINE_V1.9.29_MIWA_AI_ARCHITECTURE_PROPOSAL_EXECUTION_CANDIDATE.md`
 - `docs/BASELINE_V1.9.28_MIWA_AI_CONTEXT_CAPABILITIES_CANDIDATE.md`
+- `docs/VALIDATION_V1.9.29_MIWA_AI_ARCHITECTURE_PROPOSAL_EXECUTION_CANDIDATE.md`
 - `docs/VALIDATION_V1.9.28_MIWA_AI_CONTEXT_CAPABILITIES_CANDIDATE.md`
 - `docs/CLOUD_DATA_RUNTIME_V1.0.md`
 - `docs/DATA_MODEL_V1.0.md`

@@ -1,11 +1,11 @@
 {
-  "manifestVersion": "1.2",
-  "aioneVersion": "1.9.26",
+  "manifestVersion": "1.3",
+  "aioneVersion": "1.9.29",
   "status": "google_drive_secure_proxy",
   "documents": [
     {
       "order": 0,
-      "file": "00_美和集团现代企业军团总架构_V0.1.pptx",
+      "file": "00_美和集团AI执行总架构_V0.1.pptx",
       "type": "PPTX",
       "version": "V0.1",
       "recordStatus": "构想/验证中",
@@ -15,7 +15,13 @@
       "viewUrl": "https://drive.google.com/open?id=1sRwEREfX3EZJFxUUMVyd51soLrfWebwa",
       "bound": true,
       "downloadPath": "/api/v1/drive-assets/army-architecture/download",
-      "downloadMode": "aione-secure-proxy"
+      "downloadMode": "aione-secure-proxy",
+      "formalTitle": "美和集团AI执行总架构",
+      "historicalAliases": [
+        "美和集团现代企业军团总架构",
+        "现代企业军团总架构",
+        "军团总架构"
+      ]
     },
     {
       "order": 1,
