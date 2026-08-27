@@ -1,7 +1,7 @@
 # MIWA AIONE Integrated Work Platform
 
-> **Current candidate: V1.9.32 WORK HOME V2 FIRST UPGRADE CANDIDATE.**
-V1.9.32完成工作之家V2.0第一次前台升级：统一Sidebar、出版物式工作概览、美和工作9问、今日工作首版排序与简化工作卡；既有执行/证据/验收/AI复盘/提醒同步完整继承，不新建第二套工作事实。
+> **Current candidate: V1.9.33 WORK HOME V2 STRUCTURE UPGRADE CANDIDATE.**
+V1.9.33把工作之家从“个人任务页”提升为集团级统一工作入口：Sidebar收敛为工作概览、今日工作、全部工作、我的关注、事业工作、等待与阻塞、待验收、工作记录；全部工作统一使用卡片/列表、搜索、筛选、排序；新增公司内部可见读取与关注机制，并严格保持“看得到 ≠ 要处理 ≠ 能操作”“透明 ≠ 推送”。工作概览不再只是出版物风格，而是真正继承美和数字出版物母版，形成《美和工作手册》8章。既有执行/证据/验收/AI复盘/Header提醒闭环完整继承，不新建第二套工作事实。
 
 
 

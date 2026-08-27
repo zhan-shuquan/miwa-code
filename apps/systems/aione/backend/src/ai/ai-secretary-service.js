@@ -7,6 +7,14 @@ import { executeMiwaCorporateRetrievalWithDriveSync } from "../integrations/miwa
 
 function makeId(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`; }
 
+const CROSSBORDER_WORK_ROUTES = new Set(["selection","sampling","procurement","design","publishing","operations","orders","inventory","service"]);
+function inferBusinessCodeFromRoute(routeId = "") {
+  const route = String(routeId || "").replace(/^#\/?/, "").split(/[/?]/)[0];
+  if (route.startsWith("wholesale-")) return "wholesale";
+  if (CROSSBORDER_WORK_ROUTES.has(route)) return "crossborder";
+  return null;
+}
+
 const HUMAN_CONFIRM_RE = /^(?:\u786e\u8ba4|\u786e\u8ba4\u521b\u5efa|\u786e\u8ba4\u6267\u884c|\u540c\u610f\u521b\u5efa|\u540c\u610f\u6267\u884c|\u53ef\u4ee5\u521b\u5efa|\u53ef\u4ee5\u6267\u884c|\u5c31\u8fd9\u6837\u521b\u5efa|\u5c31\u8fd9\u6837\u6267\u884c|\u521b\u5efa\u5427|\u6267\u884c\u5427)[\s!！.。]*$/;
 
 function isExplicitHumanConfirmation(value = "") {
@@ -198,7 +206,7 @@ export async function confirmAISecretaryProposal({ proposal, proposalId = null, 
     const context = payload.context || {};
     const relatedObjectType = context.objectType || (context.routeId ? "aione_route" : null);
     const relatedObjectId = context.objectId || context.routeId || null;
-    const metadata = { aiProposalId:resolvedProposalId, aiOfficeCode:officeCode, sourceRoute:context.routeId || null, sourcePage:context.pageTitle || null, sourceHash:context.pageHash || null };
+    const metadata = { aiProposalId:resolvedProposalId, aiOfficeCode:officeCode, sourceRoute:context.routeId || null, sourcePage:context.pageTitle || null, sourceHash:context.pageHash || null, businessCode:inferBusinessCodeFromRoute(context.routeId), visibility:"company" };
     const result = await pool.query("INSERT INTO public.work_items (id,title,work_type,status,priority,owner_person_id,workbench_code,related_object_type,related_object_id,goal_summary,description,platform_code,money_status,expected_result,due_at,metadata,source_system,created_by_person_id,updated_by_person_id) VALUES ($1,$2,'ai_assigned','pending',$3,$4,$5,$6,$7,$8,$9,'aione','pending',$10,$11,$12::jsonb,'aione-ai-secretary',$4,$4) RETURNING *", [id,title,dbPriority,requestContext.personId,context.routeId || null,relatedObjectType,relatedObjectId,payload.reason || "AI秘书确认创建",payload.description || "",payload.reason || "待形成",payload.dueAt || null,JSON.stringify(metadata)]);
     try { await pool.query("INSERT INTO public.business_events (id,event_type,object_type,object_id,actor_kind,actor_person_id,actor_ai_ref,happened_at,payload,source_system) VALUES ($1,'work.created','work_item',$2,'human',$3,'ai-secretary',NOW(),$4::jsonb,'aione-ai-secretary')", [makeId("evt"),id,requestContext.personId,JSON.stringify({ officeCode, confirmedByHuman:true, proposalId:resolvedProposalId, sourceRoute:context.routeId || null, relatedObjectType, relatedObjectId })]); } catch (_) {}
     return finalize({ persisted:true, workItem:result.rows[0], message:`已由你确认并创建工作事项：${title}` });

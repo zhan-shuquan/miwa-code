@@ -6,7 +6,7 @@
 import { ROUTE_REGISTRY } from "./route-registry.js";
 import { BUSINESS_SPACES, getBusinessSpaceForRoute, getWorkbenchForRoute } from "./business-navigation.js";
 import { MIWA_COMPANY_NAVIGATION } from "../data/miwa-company-content.js";
-import { MIWA_BUSINESS_NAVIGATION } from "../data/miwa-business-home-content.js";
+import { MIWA_BUSINESS_NAVIGATION, MIWA_BUSINESSES } from "../data/miwa-business-home-content.js";
 
 const PLATFORM_CONTEXT_META = Object.freeze({
   company: { icon: "knowledge", type: "content" },
@@ -66,13 +66,30 @@ function childrenFor(parentId) {
     .map((route) => ({ id: route.id, label: route.label, route: route.id, icon: "" }));
 }
 
+function buildWorkItems() {
+  const businessChildren = MIWA_BUSINESSES.map((item) => ({
+    id:`work-business-${item.id}`, label:item.name, route:`work-business-${item.id}`
+  }));
+  return [
+    { id:"work-home", label:"工作概览", route:"work", icon:"work", children:[] },
+    { id:"work-today", label:"今日工作", route:"work-today", icon:"calendar", children:[] },
+    { id:"work-all", label:"全部工作", route:"work-all", icon:"apps", children:[] },
+    { id:"work-following", label:"我的关注", route:"work-following", icon:"notification", children:[] },
+    { id:"work-business-group", label:"事业工作", route:"work-business-crossborder", icon:"apps", children:businessChildren },
+    { id:"work-blocked", label:"等待与阻塞", route:"work-blocked", icon:"notification", children:[] },
+    { id:"work-review", label:"待验收", route:"work-review", icon:"file", children:[] },
+    { id:"work-records", label:"工作记录", route:"work-records", icon:"knowledge", children:[] }
+  ];
+}
+
 function buildPlatformItems(rootId) {
   const root = ROUTE_REGISTRY[rootId];
   if (!root) return [];
   if (rootId === "company") return MIWA_COMPANY_NAVIGATION;
   if (rootId === "business-home") return MIWA_BUSINESS_NAVIGATION;
+  if (rootId === "work") return buildWorkItems();
   const children = childrenFor(rootId);
-  const homeLabel = rootId === "work" ? "工作概览" : (children.length ? "概览" : root.label);
+  const homeLabel = children.length ? "概览" : root.label;
   return [
     { id: `${rootId}-home`, label: homeLabel, route: rootId, icon: PLATFORM_CONTEXT_META[rootId]?.icon || "apps", children: [] },
     ...children
@@ -98,7 +115,7 @@ export function resolveSidebarContext(routeId, currentPath, currentBusinessSpace
   const rootId = resolvePlatformRoot(routeId);
   const root = ROUTE_REGISTRY[rootId] || ROUTE_REGISTRY[routeId];
   const meta = PLATFORM_CONTEXT_META[rootId] || { icon: "apps", type: "content" };
-  const publicationActions = (rootId === "company" || rootId === "business-home")
+  const publicationActions = (rootId === "company" || rootId === "business-home" || (rootId === "work" && routeId === "work"))
     ? [
         { id:"publication-print", label:"打印", icon:"file", event:"aione:publication:print" },
         { id:"publication-pdf", label:"导出PDF", icon:"file", event:"aione:publication:pdf" }

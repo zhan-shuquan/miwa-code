@@ -58,15 +58,33 @@ function snakeToCamel(row) {
   return out;
 }
 
-function workAccess(row, context) {
+function workVisibility(row) {
+  const metadata = row?.metadata && typeof row.metadata === "object" ? row.metadata : {};
+  if (metadata.sensitive === true || String(metadata.sensitive || "").toLowerCase() === "true") return "sensitive";
+  return String(metadata.visibility || metadata.visibilityScope || "company").toLowerCase();
+}
+
+function isCompanyVisibleWork(row) {
+  return !["private", "restricted", "sensitive"].includes(workVisibility(row));
+}
+
+function workAccess(row, context, participantRoles = []) {
   const personId = String(context?.personId || "");
   const ownerId = String(row?.owner_person_id || "");
   const creatorId = String(row?.created_by_person_id || "");
+  const roles = Array.isArray(participantRoles) ? participantRoles.filter(Boolean) : [];
+  const isParticipant = roles.length > 0;
+  const isFollowing = roles.includes("observer");
+  const related = Boolean(personId && (personId === ownerId || personId === creatorId || isParticipant));
   return {
-    canRead: Boolean(personId && (personId === ownerId || personId === creatorId)),
+    canRead: Boolean(personId && (related || isCompanyVisibleWork(row))),
     canExecute: Boolean(personId && personId === ownerId),
     canReview: Boolean(personId && personId === creatorId),
-    ownerIsCreator: Boolean(ownerId && creatorId && ownerId === creatorId)
+    ownerIsCreator: Boolean(ownerId && creatorId && ownerId === creatorId),
+    isParticipant,
+    isFollowing,
+    participantRoles: roles,
+    visibility: workVisibility(row)
   };
 }
 
@@ -74,7 +92,11 @@ async function loadAccessibleWork(client, workItemId, context) {
   const result = await client.query("SELECT * FROM public.work_items WHERE id=$1 AND archived_at IS NULL", [workItemId]);
   if (!result.rowCount) return { row:null, access:null };
   const row = result.rows[0];
-  const access = workAccess(row, context);
+  const participantResult = context?.personId ? await client.query(
+    "SELECT participant_role FROM public.work_item_participants WHERE work_item_id=$1 AND person_id=$2 AND left_at IS NULL",
+    [workItemId, context.personId]
+  ) : { rows:[] };
+  const access = workAccess(row, context, participantResult.rows.map((item) => item.participant_role));
   return { row, access };
 }
 
@@ -283,19 +305,80 @@ router.get("/work-home", async (req, res, next) => {
       return res.status(401).json({ error:"authenticated_actor_required", message:"工作之家需要已认证的AIONE人员身份。" });
     }
     const limit = normalizeLimit(req.query.limit || 200);
+    const scope = ["related", "all", "following"].includes(String(req.query.scope || "related")) ? String(req.query.scope || "related") : "related";
+    const values = [context.personId];
+    const relatedSql = `(w.owner_person_id=$1 OR w.created_by_person_id=$1 OR EXISTS (SELECT 1 FROM public.work_item_participants wp WHERE wp.work_item_id=w.id AND wp.person_id=$1 AND wp.left_at IS NULL AND wp.participant_role <> 'observer'))`;
+    const companyVisibleSql = `(COALESCE(w.metadata->>'visibility', w.metadata->>'visibilityScope', 'company') NOT IN ('private','restricted','sensitive') AND COALESCE(w.metadata->>'sensitive','false') <> 'true')`;
+    const followingSql = `EXISTS (SELECT 1 FROM public.work_item_participants wf WHERE wf.work_item_id=w.id AND wf.person_id=$1 AND wf.participant_role='observer' AND wf.left_at IS NULL)`;
+    const scopeSql = scope === "all" ? `(${relatedSql} OR ${companyVisibleSql})` : scope === "following" ? followingSql : relatedSql;
+    values.push(limit);
     const result = await pool.query(
-      `SELECT * FROM public.work_items
-       WHERE archived_at IS NULL AND (owner_person_id=$1 OR created_by_person_id=$1)
-       ORDER BY CASE status WHEN 'pending' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'waiting' THEN 3 WHEN 'blocked' THEN 4 WHEN 'completed' THEN 5 ELSE 6 END,
-                CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'normal' THEN 3 WHEN 'low' THEN 4 ELSE 5 END,
-                due_at NULLS LAST, created_at DESC
+      `SELECT w.*,
+              ${followingSql} AS is_following,
+              EXISTS (SELECT 1 FROM public.work_item_participants wx WHERE wx.work_item_id=w.id AND wx.person_id=$1 AND wx.left_at IS NULL) AS is_participant,
+              COALESCE((SELECT wx.participant_role FROM public.work_item_participants wx WHERE wx.work_item_id=w.id AND wx.person_id=$1 AND wx.left_at IS NULL ORDER BY CASE wx.participant_role WHEN 'owner' THEN 1 WHEN 'assignee' THEN 2 WHEN 'reviewer' THEN 3 WHEN 'collaborator' THEN 4 WHEN 'observer' THEN 5 ELSE 6 END LIMIT 1),'') AS participant_role
+       FROM public.work_items w
+       WHERE w.archived_at IS NULL AND ${scopeSql}
+       ORDER BY CASE w.status WHEN 'pending' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'waiting' THEN 3 WHEN 'blocked' THEN 4 WHEN 'completed' THEN 5 ELSE 6 END,
+                CASE w.priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'normal' THEN 3 WHEN 'low' THEN 4 ELSE 5 END,
+                w.due_at NULLS LAST, w.updated_at DESC
        LIMIT $2`,
-      [context.personId, limit]
+      values
     );
-    return res.json({ personId:context.personId, items:result.rows.map(snakeToCamel), limit });
+    return res.json({ personId:context.personId, scope, items:result.rows.map(snakeToCamel), limit });
   } catch (error) {
     return next(error);
   }
+});
+
+router.post("/work-home/:id/follow", requireWriteActor, async (req, res, next) => {
+  try {
+    const context = req.aioneContext || getRequestContext(req);
+    const output = await withTransaction(async (client) => {
+      const { row, access } = await loadAccessibleWork(client, req.params.id, context);
+      if (!row) return { notFound:true };
+      if (!access.canRead) return { forbidden:true };
+      const existing = await client.query(
+        "SELECT id FROM public.work_item_participants WHERE work_item_id=$1 AND person_id=$2 AND participant_role='observer' LIMIT 1",
+        [row.id, context.personId]
+      );
+      let participantId = existing.rows[0]?.id || null;
+      if (participantId) {
+        await client.query("UPDATE public.work_item_participants SET left_at=NULL WHERE id=$1", [participantId]);
+      } else {
+        participantId = makeId("wip");
+        await client.query(
+          "INSERT INTO public.work_item_participants (id,work_item_id,person_id,assignment_id,participant_role,metadata) VALUES ($1,$2,$3,$4,'observer',$5::jsonb)",
+          [participantId,row.id,context.personId,context.assignmentId || null,JSON.stringify({ source:"work-home-follow" })]
+        );
+      }
+      await recordBusinessEvent(client, { eventType:"work.followed", objectType:"work_item", objectId:row.id, context, payload:{ participantId } });
+      return { row, participantId };
+    });
+    if (output.notFound) return res.status(404).json({ error:"not_found" });
+    if (output.forbidden) return workPermissionDenied(res, "当前人员无权关注此工作事项。");
+    return res.json({ workItem:snakeToCamel(output.row), following:true, participantId:output.participantId });
+  } catch (error) { next(error); }
+});
+
+router.delete("/work-home/:id/follow", requireWriteActor, async (req, res, next) => {
+  try {
+    const context = req.aioneContext || getRequestContext(req);
+    const output = await withTransaction(async (client) => {
+      const { row, access } = await loadAccessibleWork(client, req.params.id, context);
+      if (!row) return { notFound:true };
+      if (!access.canRead) return { forbidden:true };
+      await client.query(
+        "UPDATE public.work_item_participants SET left_at=NOW() WHERE work_item_id=$1 AND person_id=$2 AND participant_role='observer' AND left_at IS NULL",
+        [row.id, context.personId]
+      );
+      await recordBusinessEvent(client, { eventType:"work.unfollowed", objectType:"work_item", objectId:row.id, context, payload:{} });
+      return { row };
+    });
+    if (output.notFound) return res.status(404).json({ error:"not_found" });
+    if (output.forbidden) return workPermissionDenied(res, "当前人员无权操作此工作事项。");
+    return res.json({ workItem:snakeToCamel(output.row), following:false });
+  } catch (error) { next(error); }
 });
 
 router.get("/work-home/:id/execution", async (req, res, next) => {
@@ -313,7 +396,11 @@ router.get("/work-home/:id/execution", async (req, res, next) => {
       workItem: snakeToCamel(row),
       evidence: evidence.rows.map(snakeToCamel),
       results: results.rows.map(snakeToCamel),
+      following: access.isFollowing,
+      visibility: access.visibility,
+      participantRoles: access.participantRoles,
       permissions: {
+        canRead: access.canRead,
         canStart: access.canExecute && row.status === "pending",
         canAddEvidence: access.canExecute && ["pending","in_progress","blocked","waiting"].includes(row.status),
         canSubmitCompletion: access.canExecute && ["in_progress","blocked"].includes(row.status),
