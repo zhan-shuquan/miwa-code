@@ -299,7 +299,7 @@ function createFactResourceRoutes(resourceName, def) {
 }
 
 router.get("/work-home/capabilities", (req, res) => {
-  return res.json({ workHomeVersion:"V1.9.34", features:{ companyVisibility:true, following:true, participantFacts:true, employeeWorkSummary:true } });
+  return res.json({ workHomeVersion:"V1.9.36", features:{ companyVisibility:true, following:true, likes:true, likedScope:true, participantFacts:true, employeeWorkSummary:true, timeFilter:true, moneySummary:true, workSessionSummary:true } });
 });
 
 router.get("/work-home/people-summary", async (req, res, next) => {
@@ -372,16 +372,21 @@ router.get("/work-home", async (req, res, next) => {
       return res.status(401).json({ error:"authenticated_actor_required", message:"工作之家需要已认证的AIONE人员身份。" });
     }
     const limit = normalizeLimit(req.query.limit || 200);
-    const scope = ["related", "all", "following"].includes(String(req.query.scope || "related")) ? String(req.query.scope || "related") : "related";
+    const scope = ["related", "all", "following", "liked"].includes(String(req.query.scope || "related")) ? String(req.query.scope || "related") : "related";
     const values = [context.personId];
     const relatedSql = `(w.owner_person_id=$1 OR w.created_by_person_id=$1 OR EXISTS (SELECT 1 FROM public.work_item_participants wp WHERE wp.work_item_id=w.id AND wp.person_id=$1 AND wp.left_at IS NULL AND wp.participant_role <> 'observer'))`;
     const companyVisibleSql = `(COALESCE(w.metadata->>'visibility', w.metadata->>'visibilityScope', 'company') NOT IN ('private','restricted','sensitive') AND COALESCE(w.metadata->>'sensitive','false') <> 'true')`;
     const followingSql = `EXISTS (SELECT 1 FROM public.work_item_participants wf WHERE wf.work_item_id=w.id AND wf.person_id=$1 AND wf.participant_role='observer' AND wf.left_at IS NULL)`;
-    const scopeSql = scope === "all" ? `(${relatedSql} OR ${companyVisibleSql})` : scope === "following" ? followingSql : relatedSql;
+    const likedSql = `EXISTS (SELECT 1 FROM public.object_reactions wr WHERE wr.object_type='work_item' AND wr.object_id=w.id AND wr.person_id=$1 AND wr.reaction_type='like' AND wr.removed_at IS NULL)`;
+    const scopeSql = scope === "all" ? `(${relatedSql} OR ${companyVisibleSql})` : scope === "following" ? followingSql : scope === "liked" ? likedSql : relatedSql;
     values.push(limit);
     const result = await pool.query(
       `SELECT w.*,
               ${followingSql} AS is_following,
+              ${likedSql} AS is_liked,
+              (SELECT COUNT(*)::int FROM public.object_reactions wl WHERE wl.object_type='work_item' AND wl.object_id=w.id AND wl.reaction_type='like' AND wl.removed_at IS NULL) AS like_count,
+              COALESCE((SELECT jsonb_agg(jsonb_build_object('direction',mx.direction,'moneyType',mx.money_type,'currency',mx.currency,'amount',mx.amount) ORDER BY mx.amount DESC) FROM (SELECT direction,money_type,currency,SUM(amount)::numeric AS amount FROM public.money_events me WHERE me.work_item_id=w.id AND me.status <> 'cancelled' GROUP BY direction,money_type,currency) mx),'[]'::jsonb) AS money_summary,
+              COALESCE((SELECT SUM(ws.active_seconds)::bigint FROM public.work_sessions ws WHERE ws.work_item_id=w.id),0)::bigint AS active_seconds,
               EXISTS (SELECT 1 FROM public.work_item_participants wx WHERE wx.work_item_id=w.id AND wx.person_id=$1 AND wx.left_at IS NULL) AS is_participant,
               COALESCE((SELECT wx.participant_role FROM public.work_item_participants wx WHERE wx.work_item_id=w.id AND wx.person_id=$1 AND wx.left_at IS NULL ORDER BY CASE wx.participant_role WHEN 'owner' THEN 1 WHEN 'assignee' THEN 2 WHEN 'reviewer' THEN 3 WHEN 'collaborator' THEN 4 WHEN 'observer' THEN 5 ELSE 6 END LIMIT 1),'') AS participant_role,
               COALESCE((SELECT jsonb_agg(jsonb_build_object('personId',wp.person_id,'role',wp.participant_role) ORDER BY wp.joined_at) FROM public.work_item_participants wp WHERE wp.work_item_id=w.id AND wp.left_at IS NULL AND wp.participant_role <> 'observer'),'[]'::jsonb) AS participants
@@ -449,6 +454,58 @@ router.delete("/work-home/:id/follow", requireWriteActor, async (req, res, next)
   } catch (error) { next(error); }
 });
 
+router.post("/work-home/:id/like", requireWriteActor, async (req, res, next) => {
+  try {
+    const context = req.aioneContext || getRequestContext(req);
+    const output = await withTransaction(async (client) => {
+      const { row, access } = await loadAccessibleWork(client, req.params.id, context);
+      if (!row) return { notFound:true };
+      if (!access.canRead) return { forbidden:true };
+      const existing = await client.query(
+        "SELECT id FROM public.object_reactions WHERE object_type='work_item' AND object_id=$1 AND person_id=$2 AND reaction_type='like' LIMIT 1",
+        [row.id, context.personId]
+      );
+      let reactionId = existing.rows[0]?.id || null;
+      if (reactionId) {
+        await client.query("UPDATE public.object_reactions SET removed_at=NULL, metadata=metadata || $2::jsonb WHERE id=$1", [reactionId, JSON.stringify({ source:"work-home-like" })]);
+      } else {
+        reactionId = makeId("rxn");
+        await client.query(
+          "INSERT INTO public.object_reactions (id,object_type,object_id,person_id,reaction_type,metadata) VALUES ($1,'work_item',$2,$3,'like',$4::jsonb)",
+          [reactionId,row.id,context.personId,JSON.stringify({ source:"work-home-like" })]
+        );
+      }
+      const count = await client.query("SELECT COUNT(*)::int AS count FROM public.object_reactions WHERE object_type='work_item' AND object_id=$1 AND reaction_type='like' AND removed_at IS NULL", [row.id]);
+      await recordBusinessEvent(client, { eventType:"work.liked", objectType:"work_item", objectId:row.id, context, payload:{ reactionId } });
+      return { row, reactionId, likeCount:Number(count.rows[0]?.count || 0) };
+    });
+    if (output.notFound) return res.status(404).json({ error:"not_found" });
+    if (output.forbidden) return workPermissionDenied(res, "当前人员无权点赞此工作事项。");
+    return res.json({ workItem:snakeToCamel(output.row), liked:true, reactionId:output.reactionId, likeCount:output.likeCount });
+  } catch (error) { next(error); }
+});
+
+router.delete("/work-home/:id/like", requireWriteActor, async (req, res, next) => {
+  try {
+    const context = req.aioneContext || getRequestContext(req);
+    const output = await withTransaction(async (client) => {
+      const { row, access } = await loadAccessibleWork(client, req.params.id, context);
+      if (!row) return { notFound:true };
+      if (!access.canRead) return { forbidden:true };
+      await client.query(
+        "UPDATE public.object_reactions SET removed_at=NOW() WHERE object_type='work_item' AND object_id=$1 AND person_id=$2 AND reaction_type='like' AND removed_at IS NULL",
+        [row.id, context.personId]
+      );
+      const count = await client.query("SELECT COUNT(*)::int AS count FROM public.object_reactions WHERE object_type='work_item' AND object_id=$1 AND reaction_type='like' AND removed_at IS NULL", [row.id]);
+      await recordBusinessEvent(client, { eventType:"work.unliked", objectType:"work_item", objectId:row.id, context, payload:{} });
+      return { row, likeCount:Number(count.rows[0]?.count || 0) };
+    });
+    if (output.notFound) return res.status(404).json({ error:"not_found" });
+    if (output.forbidden) return workPermissionDenied(res, "当前人员无权操作此工作事项。");
+    return res.json({ workItem:snakeToCamel(output.row), liked:false, likeCount:output.likeCount });
+  } catch (error) { next(error); }
+});
+
 router.get("/work-home/:id/execution", async (req, res, next) => {
   try {
     const context = getRequestContext(req);
@@ -456,15 +513,22 @@ router.get("/work-home/:id/execution", async (req, res, next) => {
     const { row, access } = await loadAccessibleWork(pool, req.params.id, context);
     if (!row) return res.status(404).json({ error:"not_found" });
     if (!access.canRead) return workPermissionDenied(res, "当前人员无权查看此工作事项。");
-    const [evidence, results] = await Promise.all([
+    const [evidence, results, reaction, money, sessions] = await Promise.all([
       pool.query("SELECT * FROM public.work_evidence WHERE work_item_id=$1 ORDER BY happened_at DESC, created_at DESC LIMIT 100", [row.id]),
-      pool.query("SELECT * FROM public.result_facts WHERE work_item_id=$1 ORDER BY observed_at DESC, created_at DESC LIMIT 50", [row.id])
+      pool.query("SELECT * FROM public.result_facts WHERE work_item_id=$1 ORDER BY observed_at DESC, created_at DESC LIMIT 50", [row.id]),
+      pool.query("SELECT EXISTS (SELECT 1 FROM public.object_reactions WHERE object_type='work_item' AND object_id=$1 AND person_id=$2 AND reaction_type='like' AND removed_at IS NULL) AS liked, (SELECT COUNT(*)::int FROM public.object_reactions WHERE object_type='work_item' AND object_id=$1 AND reaction_type='like' AND removed_at IS NULL) AS like_count", [row.id, context.personId]),
+      pool.query("SELECT direction,money_type,currency,SUM(amount)::numeric AS amount FROM public.money_events WHERE work_item_id=$1 AND status <> 'cancelled' GROUP BY direction,money_type,currency ORDER BY amount DESC", [row.id]),
+      pool.query("SELECT COALESCE(SUM(active_seconds),0)::bigint AS active_seconds FROM public.work_sessions WHERE work_item_id=$1", [row.id])
     ]);
     return res.json({
       workItem: snakeToCamel(row),
       evidence: evidence.rows.map(snakeToCamel),
       results: results.rows.map(snakeToCamel),
       following: access.isFollowing,
+      liked: Boolean(reaction.rows[0]?.liked),
+      likeCount: Number(reaction.rows[0]?.like_count || 0),
+      moneySummary: money.rows.map(snakeToCamel),
+      activeSeconds: Number(sessions.rows[0]?.active_seconds || 0),
       visibility: access.visibility,
       participantRoles: access.participantRoles,
       permissions: {

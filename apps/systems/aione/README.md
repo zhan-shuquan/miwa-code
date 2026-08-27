@@ -1,9 +1,9 @@
 # MIWA AIONE Integrated Work Platform
 
-> **Current candidate: V1.9.35 WORK HOME UNIFIED BROWSER + CONTRIBUTIONS CANDIDATE.**
-V1.9.35以用户确认的V1.9.34为唯一基线，把工作之家继续收敛为“一份Work Item、一个统一浏览器、多个高价值入口”。Header“工作之家”默认进入今日工作；Sidebar锁定为工作概览、今日工作、全部工作、我的关注、我的建议、我的创新、事业工作、等待中、异常处理、待验收、工作记录。全部工作保留完整搜索/高频筛选/更多筛选/排序/重置/卡片列表/3·4·6列密度，其他入口只改变预设查询和必要控制项。工作记录的人员汇总支持卡片/列表并优先读取统一用户目录头像，工作明细直接复用Work Item Browser。美和之家“经营与战略”新增建议中心、创新中心；个人侧“我的建议/我的创新”只建立入口和闭环说明，正式投稿、点赞以及关注Backend本版不新增、不伪造成功。
+> **Current candidate: V1.9.36 WORK HOME BROWSER EXPERIENCE LOCK CANDIDATE.**
+V1.9.36以用户确认的V1.9.35为唯一基线，对工作事项一览做今天最后一次体验收口：搜索、高频筛选、一级时间筛选、更多筛选、重置、排序、卡片/列表、2·3·4列与刷新统一为一套Work Item Browser；卡片按Main实际容器宽度自动降列，不再出现6列窄卡。工作记录的工作明细直接复用同一浏览器。Backend新增点赞真实数据与“我的点赞”二级查询，关注继续使用observer订阅关系；work-home同时返回money_events财务摘要与work_sessions已记录操作时间，只有真实数据存在时才展示。
 
-V1.9.34仍作为本候选唯一工程基线；V1.9.30执行/证据/验收/AI复盘与V1.9.30.2 Header提醒闭环完整继承。
+V1.9.35仍作为本候选唯一工程基线；V1.9.30执行/证据/验收/AI复盘、V1.9.30.2 Header提醒、V1.9.31.5数字出版、V1.9.35 Sidebar/建议创新入口完整继承。
 
 
 

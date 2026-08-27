@@ -31,7 +31,7 @@ async function main() {
   const requiredExisting = ["people", "external_identities", "product_opportunities", "activity_logs"];
   const stageTables = [
     "schema_migrations", "organizations", "businesses", "positions", "assignments",
-    "object_registry", "object_relations", "work_items", "work_item_participants",
+    "object_registry", "object_relations", "work_items", "work_item_participants", "object_reactions",
     "work_sessions", "work_evidence", "money_events", "result_facts", "business_events",
     "knowledge_routes", "ai_executions", "ai_talents", "ai_offices", "ai_assignments"
   ];
