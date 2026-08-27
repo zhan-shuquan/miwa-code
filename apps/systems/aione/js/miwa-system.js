@@ -19,7 +19,7 @@ import { initSelectionWorkbench } from "./pages/selection-workbench.js";
 import { initSamplingQueue, initSamplingTasks, initSamplingWorkbench } from "./pages/sampling-workbench.js";
 import { completeTaskForBusinessObject } from "./data/collaboration-store.js";
 import { initMiwaCalendar } from "./pages/miwa-calendar.js";
-import { initMiwaWorkHome } from "./pages/miwa-work-home.js?v=20260827-v1.9.33-work-home-v2-structure-upgrade";
+import { initMiwaWorkHome } from "./pages/miwa-work-home.js?v=20260827-v1.9.34-work-home-context-records-upgrade";
 import { initBusinessPage } from "./pages/business-page-template.js";
 import { initContentPage } from "./pages/content-page-template.js";
 import { initMiwaCompanyHome } from "./pages/miwa-company-home-book.js?v=20260827-v1.9.31.5-digital-publication";

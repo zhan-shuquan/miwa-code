@@ -1111,3 +1111,12 @@
 - Business Home overview upgraded to strategic book/A4-landscape content layout.
 - Content-reading visual language separated from business-execution UI.
 - Existing V1.9.31 routes, content and business entry behavior preserved.
+
+## V1.9.34｜工作之家场景减法 + 工作记录人员事实｜2026-08-27
+- 继续执行“后台复杂、前台简单”：今日工作与我的关注共用同一轻量工作事项一览；完整筛选、排序、事业/团队/项目控制只在全部工作等大量管理场景出现。
+- 《美和工作手册》从方法论手册扩展为场景数字手册，新增PART 02并按Sidebar顺序说明今日工作、全部工作、我的关注、事业工作、等待与阻塞、待验收、工作记录的具体用法，加入三步操作演示和直接页面入口。
+- 帮助中心新增工作手册聚合条目，正式正文仍以工作概览为唯一来源，落实“一份知识，多处调用”。
+- 工作记录升级为工作事实层：支持本周/本月/本年、人员汇总/工作明细；按头像展示工作、负责、参与、闭环及主要事业/项目/流程。
+- 新增 `GET /api/v1/work-home/people-summary?range=week|month|year`，为人才之家后续“工作贡献”提供可复用事实接口；关注者observer不计入工作贡献，接口明确`performanceScore=false`。
+- 新增 `GET /api/v1/work-home/capabilities` Backend版本探针；关注404时明确提示前后端部署版本不一致，不把本地收藏伪装成正式数据库关注。
+- 原Proposal → Human Confirm → Work Item、执行证据、提交结果、验收、AI复盘、Header提醒、数字出版物母版全部继续回归通过。

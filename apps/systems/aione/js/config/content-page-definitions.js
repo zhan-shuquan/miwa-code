@@ -61,6 +61,7 @@ export const CONTENT_PAGE_DEFINITIONS = Object.freeze({
     ],
     seedObjects: [
       HELP_CENTER_ARTICLES.AIONE_GLOBAL_NAVIGATION_CONTEXT_V1,
+      HELP_CENTER_ARTICLES.WORK_HOME_MANUAL_V2,
       { id: "KNOW-MIWA-METHODOLOGY", title: "美和方法论", type: "方法论", status: "验证中", version: "持续演进", owner: "待确认", summary: "指导美和经营、系统建设、AI应用、标准制定、组织与业务设计的最高方法论体系。", linkType: "internal", url: "" },
       { id: "KNOW-MIWA-9", title: "美和9要素", type: "方法论", status: "阶段性锁定", version: "V1", owner: "待确认", summary: "目标、人、物、事、平台、时间、钱、信息、结果；用于业务流程与各种管理的完整性检查。", linkType: "internal", url: "" },
       { id: "KNOW-PPC-PEOPLE", title: "PPC｜人的关系框架", type: "方法论", status: "待整理", version: "—", owner: "待确认", summary: "说明客户之家、人才之家与外部People关系系统在“人”这一上层概念中的关系与边界。", linkType: "internal", url: "" },

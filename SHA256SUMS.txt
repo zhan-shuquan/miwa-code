@@ -3,7 +3,7 @@ ffabc68d9ce97919f692c13c024ea9dd42d588459eebdce5f80d3629d59d88ea  ./.editorconfi
 fa3dd4fd12f0077d4b3734ee0a4233ded8873bae14be22cc554c7f53d5b22308  ./.gitattributes
 1a37561bbd5474eb4b7411d00a22280a06188ddb736eb8407f873c6df8ac0c9d  ./.gitignore
 6e61d296a67f7587c3b4781fec53dbeaa4c456f767214935382183c4da812d01  ./Dockerfile
-2a60a92bd147f44b160199543fa3feb2e288afcf6e49726c498924e629340c9c  ./README.md
+e4f6e5afa08da3928e9f26126645a8043f63f9c63ef1a8bfa75135926b5998c5  ./README.md
 c47db8390eb78d1666121bcd35c052cb268037f28496a038c6c9807f0a3e4cfa  ./SETUP_NODE_LTS.cmd
 fddd55b54257bcb9e126d37a595ecf00742a5ca45ad7bf5b2fa5206ccc5a49f7  ./SETUP_NODE_LTS.ps1
 6d4b2f519cabb4c6e91a525babae0a46224d1846b745ed7d7c9eb18650e29fab  ./START_AI_SECRETARY_PREVIEW.cmd
@@ -14,6 +14,7 @@ fddd55b54257bcb9e126d37a595ecf00742a5ca45ad7bf5b2fa5206ccc5a49f7  ./SETUP_NODE_L
 06f43af5b21ff96af3d89b8c11f53e608209a3f9a5acc73402afe36aad95e84a  ./START_MIWA_AI_RUNTIME_AND_VERIFY.ps1
 3439593c797cf0e8a04719d93c362d714cc7d5371e0d2f97927d7a2641d2fc27  ./V1.9.32_WORK_HOME_V2_FIRST_UPGRADE_WINDOWS_GUIDE.txt
 abaf1a62ef2af20fa58e1d2fe22b0c39d8c03e29892c73e4f20307806c62a227  ./V1.9.33_WORK_HOME_V2_STRUCTURE_UPGRADE_WINDOWS_GUIDE.txt
+23ebeb715735773f3e61aaec31e77d24a30af1ac67fe80539acf68c0e7ca22c6  ./V1.9.34_WORK_HOME_CONTEXT_RECORDS_UPGRADE_WINDOWS_GUIDE.txt
 5e466b0c20f33cdb46ed1ceb7cf1eb0eecd92b475c333a1adef4d638cc825c65  ./VERIFY_MIWA_AI_REAL_MODEL.cmd
 8dcd7108482bae4f813f6a7adc074d935a0bd531c113449a3009a0db3920d566  ./VERIFY_MIWA_AI_REAL_MODEL.ps1
 78de5bbaa4c8c6b8f015d1bf3a4c288a2bc997f3734fee4db18a4cbf1d3e067e  ./VERIFY_MIWA_AI_RUNTIME.ps1
@@ -24,8 +25,8 @@ ae1ab80244a6204b98d508bb0d120fa784a0d1bdf3f18b0e15f53fb897e65905  ./adapters/pla
 152caea59ba928cd581827acd0eb2f1f00b33c62e84ba955f1bcf3e86a9b0cd9  ./apps/commerce/.gitkeep
 5a9d48d8314672b2c8e19c0d811a7cb16985173f4ddb009b9c23854d397b553f  ./apps/services/.gitkeep
 7a9b588bd6957716053b840ef96551d155296262370998986e7a5064e784028e  ./apps/systems/.gitkeep
-89b959109e2923723b45e246c024c6498e09889b0c156ce714d446c6aa7c0765  ./apps/systems/aione/CHANGELOG.md
-5baa5dc5587a113431d9b857e7657f7d35f43d9af8453241c83a60f9ffd4bf9c  ./apps/systems/aione/README.md
+69749b6cd4a15f278e429574753d7b029b59671828a0d3e1ea1286e3d4ff6569  ./apps/systems/aione/CHANGELOG.md
+c6ea01dcc908e8ccd69c96d8aa17c7890ef3a02f2c62a3d0a0da50095d6a7c89  ./apps/systems/aione/README.md
 ac576cc3394ff1d8801b0707f70639dd100d8010ef67a6de7dfbb71ae8f36884  ./apps/systems/aione/api/aione-bridge.js
 9765a666d22fd2dc9bb064efdea77732743ad5c494f4b2eb6f27928092de8085  ./apps/systems/aione/assets/brand/miwa-commerce-logo.png
 c7b9f6c8855c9c0efbcabe14ffd9b86b290e5f270253d2fcd57fe4c53d8cc990  ./apps/systems/aione/assets/brand/miwa-company-logo-preview.png
@@ -61,7 +62,7 @@ bbf95a36f8d457a9926617a536b5d34f4c35a888c732305086783dafc3432976  ./apps/systems
 05652c21e2bec3256e27814ca8017bdaf468e6b2af2aadff5213fe8d622d203b  ./apps/systems/aione/backend/src/integrations/miwa-drive-file-classifier.js
 b8e233df656a0d8323b449d61ef2edaaf56cc42b9581a549cad475a783723e16  ./apps/systems/aione/backend/src/integrations/miwa-drive-registry-sync.js
 45ff2117c616048368bc890f1ab6e2b5ab762ef6c7ad0fee140b6cdda834e2e9  ./apps/systems/aione/backend/src/routes/ai-secretary.js
-1f2869334543b0bd132cef24a88daf0d909f8505e9d5323b09e1ed6a9e1e376b  ./apps/systems/aione/backend/src/routes/core.js
+f4a5bdbbde432593693f19b84e91445511d683dc0d4cd84c5e18441b442728fe  ./apps/systems/aione/backend/src/routes/core.js
 f2abf455703918ee162c8490cb8d341246bd109ad068276ba1f06406a7372622  ./apps/systems/aione/backend/src/routes/drive-assets.js
 d7673eeedbddfed99cfa5c8fd62b79356551d072a4caa57ccf299d23b0c7b0a2  ./apps/systems/aione/backend/src/routes/integrations-1688.js
 7bc09d4374cd1b6880ea75fdc3708dac9dcc54f535d3239de379f5869bb07c65  ./apps/systems/aione/backend/src/routes/legacy-product-opportunities.js
@@ -160,6 +161,7 @@ b8e9ae548b2eeb815c53d91a175c379e3e26d8ec5c7a8bb5910299b000a523c9  ./apps/systems
 2c8439a8ad4258ffb2a749b31763f879f0769c8f5ff913f987a60026854a4ac8  ./apps/systems/aione/docs/BASELINE_V1.9.31_BUSINESS_HOME_CANDIDATE.md
 8348e1750cc0c93cba3ca40c2dc601f8612fe6cf5d30eac96608153bafa304e5  ./apps/systems/aione/docs/BASELINE_V1.9.32_WORK_HOME_V2_FIRST_UPGRADE_CANDIDATE.md
 3e4e378cc04ed47be0d5103848d4cae8f030361adf9c63c415f20977d3cce3e8  ./apps/systems/aione/docs/BASELINE_V1.9.33_WORK_HOME_V2_STRUCTURE_UPGRADE_CANDIDATE.md
+3802f2a31bbeec1e66bdf3dc97a438556ce9779522834b86c32d399cdf5f32e8  ./apps/systems/aione/docs/BASELINE_V1.9.34_WORK_HOME_CONTEXT_RECORDS_UPGRADE_CANDIDATE.md
 082d9a1ae3d3002fc6d3b25cac031432eb3d635f6cdcfa7a1bbd3e6771f9cb44  ./apps/systems/aione/docs/BASELINE_V1.9.3_HEADER_CORE_HOMES_SHARED_RESOURCES_CANDIDATE.md
 223fff78551ee4cc9984a844d0de653bd86c89510825551b2a4d754e9d0c2063  ./apps/systems/aione/docs/BASELINE_V1.9.4_SMART_HEADER_LOCK_CANDIDATE.md
 a6a0a2c0cb76d1abdd1e844f354ce4950bc7257185b8250f2f77350f3b129f5f  ./apps/systems/aione/docs/BASELINE_V1.9.5_SIDEBAR_ASIDE_LOCK_CANDIDATE.md
@@ -215,6 +217,7 @@ e7b1216c5843698309e5fe1474d1266d2099ee5132e820bec08e2f2e65e5fc27  ./apps/systems
 1481ee6afd7d872d8f921d8e290d3d2990fa08a44750ae322652125a2999998a  ./apps/systems/aione/docs/VALIDATION_V1.9.31.2_CONTENT_PUBLICATION_MASTER_CANDIDATE.md
 a8da3ad343c004675f5320420274bff335d93094868a53efb1a181f9cf58bffa  ./apps/systems/aione/docs/VALIDATION_V1.9.32_WORK_HOME_V2_FIRST_UPGRADE_CANDIDATE.md
 671f3c05ab2d93143777dc518ce7be5616035a54c30a43e9c0a0dd43366a5568  ./apps/systems/aione/docs/VALIDATION_V1.9.33_WORK_HOME_V2_STRUCTURE_UPGRADE_CANDIDATE.md
+0ad48c4c5ce3ab80b4525b6958160527a9417a946c5e3de7f98009c8fda3fb6b  ./apps/systems/aione/docs/VALIDATION_V1.9.34_WORK_HOME_CONTEXT_RECORDS_UPGRADE_CANDIDATE.md
 6fed9b13808df0c255b12f0683217bddcb88fd85b98f663240c4d4a18c0ea39c  ./apps/systems/aione/docs/VALIDATION_V1.9.3_HEADER_CORE_HOMES_SHARED_RESOURCES_CANDIDATE.md
 e988b513d99c5b43d4c3f9101c728c2115cf8e12a7b438799d5887f57db90946  ./apps/systems/aione/docs/VALIDATION_V1.9.4_SMART_HEADER_LOCK_CANDIDATE.md
 d1ede20173c34705c5c35566a0a609101bd8ed9e09f9434d362951cc36bf54c2  ./apps/systems/aione/docs/VALIDATION_V1.9.5_SIDEBAR_ASIDE_LOCK_CANDIDATE.md
@@ -247,7 +250,7 @@ f9c05923f2f076e1240169c125d770a3635e7e52f190dd062a6ea04b4750bbf0  ./apps/systems
 fffeafdd28b3495fd95c71093af46e5e1e31956bc3f4f7e937719a20a8e97056  ./apps/systems/aione/js/config/business-navigation.js
 c05815383489c618fa75d47800546b0fac5057e0c0e6b54967e1c77ed83f197c  ./apps/systems/aione/js/config/business-page-definitions-extra.js
 c37e59f99070c1cc649b06ccd0460b9dcceb0d1a778eaaaa1aab0f04212fe9be  ./apps/systems/aione/js/config/business-page-definitions.js
-c035ae9983227133013db5bf10db1a45ba88c72e466ee3bbbe270853046409ac  ./apps/systems/aione/js/config/content-page-definitions.js
+56a8f8c199c99f0dab6b70ecfcaee88aea7c1d04496dcae299ce525817e098e0  ./apps/systems/aione/js/config/content-page-definitions.js
 4cb33bff13ffe3911fa2c62b839fd0338b7eba776e3344854fa505a50b92db6a  ./apps/systems/aione/js/config/field-registry.js
 2cb7ca88619434c0c577234997b855fceeee76cb301693f77eb4cd306f7df302  ./apps/systems/aione/js/config/miwa-nine-elements.js
 c24a23f265d52c0333f21e2339ae34a478fcbd9a0057e1a078b336a89f58474e  ./apps/systems/aione/js/config/preview-identities.js
@@ -262,7 +265,7 @@ c24a23f265d52c0333f21e2339ae34a478fcbd9a0057e1a078b336a89f58474e  ./apps/systems
 94b5be37f85fdee16393f751d5521fb5c2f043823fd4e7add7d33e78e7f9b256  ./apps/systems/aione/js/data/business-object-store.js
 c5e0c4421b1f68a04bc5d6194a24dde2ea448afc08c2f6c34f763052802379dc  ./apps/systems/aione/js/data/collaboration-store.js
 4c7cedbfbe51d743e91770f756cab69d8408b80449382212219e8e49100f29e4  ./apps/systems/aione/js/data/content-object-store.js
-fa6888cbe83792239dfb9533b6a7b2f334d8d06e47ac3444650ea30870c0f318  ./apps/systems/aione/js/data/help-center-articles.js
+bc60df58e00ef5c491df6f400a493f3cccdb279252e1ec33c13908b9f1fa0b1c  ./apps/systems/aione/js/data/help-center-articles.js
 b2ceb71b18438916c4985e9c7b4129b3e4dd10093c8b20a665c503a95dc83525  ./apps/systems/aione/js/data/miwa-business-home-content.js
 a0e37066409199d33f9cc7a5e0f3e2437ea183df7817c38693eb341ffb762da3  ./apps/systems/aione/js/data/miwa-company-content.js
 fee629e545df1b8c032a2681875c45bdc95f766ea0fe748000c30785210a7d3b  ./apps/systems/aione/js/data/miwa-google-drive-registry.js
@@ -272,7 +275,7 @@ c98839f9f371a9758b9a3641e0144b619979210f25e7714ee06d1ee224d79356  ./apps/systems
 01e8d48c17faa4eade61d8c36f30ea845acab6cc51cc2a44fd9892759bb71a91  ./apps/systems/aione/js/data/selection-workbench-adapter.js
 1ec4e0afa72e0388249b891383a4a6a8f716b58b28e257c18df87b05d965f053  ./apps/systems/aione/js/fields/field-standard.js
 1c33932146d1db2b66597820d35d81570abb9528a359090b73160fcbe56a33a6  ./apps/systems/aione/js/fields/field-types.js
-4ca2453427437374078b1856405a7b879404b2571b3427ed8c4ecc50c7cd3089  ./apps/systems/aione/js/miwa-system.js
+15edcae381f258d187805329b8694bba443fafc4f61f725503459806b5d45be6  ./apps/systems/aione/js/miwa-system.js
 62cf257146d6271de4fadf8c43635f587574d0aaf1356fc0969d1458bef05fc7  ./apps/systems/aione/js/pages/business-page-template.js
 a60e6b37a118d097cb52451172f574ce11713e2fbfdefe94f67a8795452eb529  ./apps/systems/aione/js/pages/content-page-template.js
 2e9afa890f5e9b7b86e8915b00d4b79e5b636cc0e35a38c06375c68dce227834  ./apps/systems/aione/js/pages/miwa-business-home-book.js
@@ -280,7 +283,7 @@ fa62f20d63a9140da384555b4e570de2677e310cdb768fc7361b4d730930b14d  ./apps/systems
 9f981d445d7837893d36f0be891fa493f7182598e85984572e0f12acc7bc2173  ./apps/systems/aione/js/pages/miwa-calendar.js
 7422bf197c6ee09cd1d40a8353788e461abd7dfbfed94f804c7cf5f9ef1758a0  ./apps/systems/aione/js/pages/miwa-company-home-book.js
 b1e6152ef0aced2afe4a58b4bbb5261b99994fadb2ad2c7f68456487d6f2b7c6  ./apps/systems/aione/js/pages/miwa-company-home.js
-de5659d3c7483f13042b19303bb93255edf1b2cbbfe80f27c5ee439c78a85780  ./apps/systems/aione/js/pages/miwa-work-home.js
+7fe2ee869602fe189c571fe16ff19264738500f4b01f11c0beb42d1755215798  ./apps/systems/aione/js/pages/miwa-work-home.js
 29ec7ec2562f97421509e1d2de67ef9d5c8ad95e40b201cb95529e919941f227  ./apps/systems/aione/js/pages/notification-detail.js
 1a05539a721ad87744cbda65a24333cab3decb7bd0c0ef8ec23aa02b4a72b9a2  ./apps/systems/aione/js/pages/notifications.js
 7a890c5f3daa1ea9dc62e4e68268b8e15d8a4d0d439cf1af5430fa88d657dada  ./apps/systems/aione/js/pages/sampling-workbench.js
@@ -323,7 +326,7 @@ b2ea658e7b545ba546436128950705c4358854694a0633c2653cd5e393089775  ./apps/systems
 ac045e139d06a279c5ab8cd83d3d2b0b5858c5d2bca7fd06aa409b3d58ef08c3  ./apps/systems/aione/pages/selection-workbench/record-detail/index.html
 1cefc2cfcc48fe9828a3d059f38cf336d9787ed12dda4fd7abdac91453ed6209  ./apps/systems/aione/pages/selection-workbench/record-preview.html
 7b76fe4b17a3d7cb16600cf21e6d0bca906d599773f6f0f9c5fbc7dfd3a92a0c  ./apps/systems/aione/pages/selection-workbench/tasks.html
-c3b716b341d1cd89d39cbd717249b00a84ebf884daefed4988c983cc6d9016a5  ./apps/systems/aione/pages/work-home/template.html
+035dc42c1574bf02ffce95a8c93568a76b1cf168ecc20ecba7ff4752f1df0c69  ./apps/systems/aione/pages/work-home/template.html
 a31bb6074de88cfa9f4169f99e9e9d17f70398bc16514799fb96530a59470f63  ./apps/systems/aione/recovery/README.md
 8e658aef561fa550da047621d884f7dd3163d207d974a95c9c43499704527e8d  ./apps/systems/aione/recovery/RECOVERY_SOURCE.md
 f8de8063f20d416d9fd9cbaf1f2f6cba072a7f13df80a60ef335712a2b024cf0  ./apps/systems/aione/recovery/components.mixed.recovered.css
@@ -389,6 +392,7 @@ a4f0a513f705dbf6df83e6eb6be0443cecdcb4054d9bc6ec78d735e0bddaa799  ./apps/systems
 32600bc936a81712eb75a797aec4fb4b94b566bba2e30ebec1e5167fbfa474bb  ./apps/systems/aione/tests/verify-work-home-v1.9.29.1.mjs
 925a683ec66d3cb2af90b096b97a3015a44037b3569fa12e0c37d7c6de0c6f5d  ./apps/systems/aione/tests/verify-work-home-v1.9.32.mjs
 34df8622c979076cc46ccbe98c06fac63ecdcdf55d46de8be0ff189417938d14  ./apps/systems/aione/tests/verify-work-home-v1.9.33.mjs
+0673a64090af538335a42e177b1aae8f5eec4c4db491c4ee2d24bc89de992e7d  ./apps/systems/aione/tests/verify-work-home-v1.9.34.mjs
 0410fdc3c4384923a219342c95b17f917e699103cefa4ee22f09d03698ebd486  ./apps/systems/aione/tools/export-field-catalog.mjs
 018a39d9723c5ef38a904327e47554ff049927867ac2cee4834beca8c3d2060e  ./apps/systems/aione/vercel.json
 31e6f3e90beb750fa642905c18834997411f567e750900ccc0982057a26fa4c8  ./automation/.gitkeep

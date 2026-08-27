@@ -298,6 +298,73 @@ function createFactResourceRoutes(resourceName, def) {
   });
 }
 
+router.get("/work-home/capabilities", (req, res) => {
+  return res.json({ workHomeVersion:"V1.9.34", features:{ companyVisibility:true, following:true, participantFacts:true, employeeWorkSummary:true } });
+});
+
+router.get("/work-home/people-summary", async (req, res, next) => {
+  try {
+    const context = getRequestContext(req);
+    if (!context.personId) {
+      return res.status(401).json({ error:"authenticated_actor_required", message:"人员工作汇总需要已认证的AIONE人员身份。" });
+    }
+    const range = ["week", "month", "year"].includes(String(req.query.range || "month")) ? String(req.query.range || "month") : "month";
+    const relatedSql = `(w.owner_person_id=$1 OR w.created_by_person_id=$1 OR EXISTS (SELECT 1 FROM public.work_item_participants wr WHERE wr.work_item_id=w.id AND wr.person_id=$1 AND wr.left_at IS NULL AND wr.participant_role <> 'observer'))`;
+    const companyVisibleSql = `(COALESCE(w.metadata->>'visibility', w.metadata->>'visibilityScope', 'company') NOT IN ('private','restricted','sensitive') AND COALESCE(w.metadata->>'sensitive','false') <> 'true')`;
+    const startSql = range === "week"
+      ? `(date_trunc('week', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo') AT TIME ZONE 'Asia/Tokyo')`
+      : range === "year"
+        ? `(date_trunc('year', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo') AT TIME ZONE 'Asia/Tokyo')`
+        : `(date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo') AT TIME ZONE 'Asia/Tokyo')`;
+    const result = await pool.query(
+      `WITH visible_work AS (
+         SELECT w.*,
+                COALESCE(w.completed_at, w.updated_at, w.started_at, w.created_at) AS record_at
+         FROM public.work_items w
+         WHERE w.archived_at IS NULL
+           AND (${relatedSql} OR ${companyVisibleSql})
+           AND COALESCE(w.completed_at, w.updated_at, w.started_at, w.created_at) >= ${startSql}
+       ), contributor_fact AS (
+         SELECT vw.id AS work_item_id, vw.owner_person_id AS person_id, 'owner'::text AS contribution_role
+         FROM visible_work vw
+         WHERE vw.owner_person_id IS NOT NULL
+         UNION ALL
+         SELECT vw.id AS work_item_id, wp.person_id,
+                CASE WHEN wp.participant_role='owner' THEN 'owner' ELSE 'participant' END AS contribution_role
+         FROM visible_work vw
+         JOIN public.work_item_participants wp ON wp.work_item_id=vw.id
+         WHERE wp.left_at IS NULL AND wp.participant_role <> 'observer'
+           AND wp.person_id IS DISTINCT FROM vw.owner_person_id
+       )
+       SELECT cf.person_id,
+              COUNT(DISTINCT cf.work_item_id)::int AS total_count,
+              COUNT(DISTINCT cf.work_item_id) FILTER (WHERE cf.contribution_role='owner')::int AS responsible_count,
+              COUNT(DISTINCT cf.work_item_id) FILTER (WHERE cf.contribution_role='participant')::int AS participated_count,
+              COUNT(DISTINCT cf.work_item_id) FILTER (WHERE vw.status IN ('completed','done','cancelled','archived'))::int AS closed_count,
+              COALESCE(jsonb_agg(DISTINCT COALESCE(vw.metadata->>'businessName', vw.metadata->>'businessCode', vw.metadata->>'businessId')) FILTER (WHERE COALESCE(vw.metadata->>'businessName', vw.metadata->>'businessCode', vw.metadata->>'businessId') IS NOT NULL), '[]'::jsonb) AS businesses,
+              COALESCE(jsonb_agg(DISTINCT COALESCE(vw.metadata->>'projectName', vw.metadata->>'projectCode')) FILTER (WHERE COALESCE(vw.metadata->>'projectName', vw.metadata->>'projectCode') IS NOT NULL), '[]'::jsonb) AS projects,
+              COALESCE(jsonb_agg(DISTINCT vw.workbench_code) FILTER (WHERE vw.workbench_code IS NOT NULL AND vw.workbench_code <> ''), '[]'::jsonb) AS workbenches,
+              MAX(vw.record_at) AS last_work_at
+       FROM contributor_fact cf
+       JOIN visible_work vw ON vw.id=cf.work_item_id
+       WHERE cf.person_id IS NOT NULL
+       GROUP BY cf.person_id
+       ORDER BY total_count DESC, closed_count DESC, last_work_at DESC`,
+      [context.personId]
+    );
+    return res.json({
+      range,
+      timeZone:"Asia/Tokyo",
+      factLayer:true,
+      performanceScore:false,
+      people:result.rows.map(snakeToCamel)
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// legacy validation: owner_person_id=$1 OR created_by_person_id=$1
 router.get("/work-home", async (req, res, next) => {
   try {
     const context = getRequestContext(req);
@@ -316,7 +383,8 @@ router.get("/work-home", async (req, res, next) => {
       `SELECT w.*,
               ${followingSql} AS is_following,
               EXISTS (SELECT 1 FROM public.work_item_participants wx WHERE wx.work_item_id=w.id AND wx.person_id=$1 AND wx.left_at IS NULL) AS is_participant,
-              COALESCE((SELECT wx.participant_role FROM public.work_item_participants wx WHERE wx.work_item_id=w.id AND wx.person_id=$1 AND wx.left_at IS NULL ORDER BY CASE wx.participant_role WHEN 'owner' THEN 1 WHEN 'assignee' THEN 2 WHEN 'reviewer' THEN 3 WHEN 'collaborator' THEN 4 WHEN 'observer' THEN 5 ELSE 6 END LIMIT 1),'') AS participant_role
+              COALESCE((SELECT wx.participant_role FROM public.work_item_participants wx WHERE wx.work_item_id=w.id AND wx.person_id=$1 AND wx.left_at IS NULL ORDER BY CASE wx.participant_role WHEN 'owner' THEN 1 WHEN 'assignee' THEN 2 WHEN 'reviewer' THEN 3 WHEN 'collaborator' THEN 4 WHEN 'observer' THEN 5 ELSE 6 END LIMIT 1),'') AS participant_role,
+              COALESCE((SELECT jsonb_agg(jsonb_build_object('personId',wp.person_id,'role',wp.participant_role) ORDER BY wp.joined_at) FROM public.work_item_participants wp WHERE wp.work_item_id=w.id AND wp.left_at IS NULL AND wp.participant_role <> 'observer'),'[]'::jsonb) AS participants
        FROM public.work_items w
        WHERE w.archived_at IS NULL AND ${scopeSql}
        ORDER BY CASE w.status WHEN 'pending' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'waiting' THEN 3 WHEN 'blocked' THEN 4 WHEN 'completed' THEN 5 ELSE 6 END,

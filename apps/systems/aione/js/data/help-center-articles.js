@@ -1,6 +1,19 @@
 /* Auto-synced formal Help Center articles. Keep body aligned with docs source. */
 
 export const HELP_CENTER_ARTICLES = Object.freeze({
+
+  WORK_HOME_MANUAL_V2: Object.freeze({
+    id: "KNOW-WORK-HOME-MANUAL-V2",
+    title: "美和工作手册｜工作之家 V2.0",
+    type: "帮助中心",
+    status: "验证中",
+    version: "V2.0",
+    owner: "AIONE平台架构",
+    summary: "工作之家的场景数字手册：方法说明、美和工作9问、Sidebar逐页使用指南、简单操作演示与工作记录说明。正式内容入口为工作之家 → 工作概览。",
+    linkType: "internal",
+    url: "#/work",
+    body: "# 美和工作手册｜工作之家 V2.0\n\n正式内容不在帮助中心重复维护。\n\n**唯一正式入口：工作之家 → 工作概览。**\n\n帮助中心负责聚合、检索和调用；页面概览负责在业务现场解释为什么、怎么用、下一步去哪里。"
+  }),
   AIONE_GLOBAL_NAVIGATION_CONTEXT_V1: Object.freeze({
     id: "KNOW-AIONE-NAV-CONTEXT-V1",
     title: "AIONE全局导航与页面上下文逻辑说明",
