@@ -2,210 +2,77 @@ import { aioneApi } from "../services/aione-api-client.js";
 import { getCollaborationData } from "../data/collaboration-store.js";
 import { announceWorkItemsChanged, computeWorkAttention } from "../services/work-attention-service.js?v=20260826-v1.9.30.2-work-attention";
 
-const STATUS_LABELS = Object.freeze({
-  pending:"待处理", in_progress:"进行中", active:"进行中", blocked:"阻断", waiting:"待确认", completed:"已完成", done:"已完成"
+/* Work Home V2.0 First Upgrade | V1.9.32
+   核心：后台复杂，前台简单；不改变已验证的工作执行/证据/验收闭环。 */
+const STATUS_LABELS=Object.freeze({draft:"待整理",pending:"待开始",in_progress:"进行中",active:"进行中",blocked:"有问题",waiting:"待验收",completed:"已完成",done:"已完成",cancelled:"已取消",archived:"已归档"});
+const PRIORITY_LABELS=Object.freeze({low:"低",normal:"普通",high:"重要",important:"重要",urgent:"紧急"});
+const ROUTE_FILTER=Object.freeze({
+  "work-mine":{relation:"mine"},"work-all":{all:true},"work-blocked":{attention:true},"work-review":{status:"waiting"},"work-records":{records:true},
+  "work-pending":{status:"pending"},"work-active":{status:"in_progress"},"work-waiting":{status:"waiting"},"work-completed":{status:"completed"}
 });
-const PRIORITY_LABELS = Object.freeze({ low:"低", normal:"普通", high:"重要", important:"重要", urgent:"紧急" });
-const ROUTE_FILTER = Object.freeze({
-  "work-mine": { relation:"mine" },
-  "work-pending": { status:"pending" },
-  "work-active": { status:"in_progress" },
-  "work-waiting": { status:"waiting" },
-  "work-completed": { status:"completed" }
-});
+const ROUTE_TITLES=Object.freeze({work:"工作概览","work-today":"今日工作","work-mine":"我的工作","work-all":"全部工作","work-blocked":"等待与阻塞","work-review":"待验收","work-records":"工作记录","work-pending":"待开始","work-active":"进行中","work-waiting":"待验收","work-completed":"工作记录"});
+const STATUS_FILTERS=[["all","全部"],["pending","待开始"],["in_progress","进行中"],["blocked","有问题"],["waiting","待验收"],["completed","已完成"]];
 
-function esc(value="") { return String(value ?? "").replace(/[&<>"']/g,(ch)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch])); }
-function routeId(){ return String(window.location.hash || "#/work").replace(/^#\/?/,"").split(/[/?]/)[0] || "work"; }
-function dateText(value){ if(!value)return "—"; const d=new Date(value); return Number.isNaN(d.getTime())?String(value):d.toLocaleString("zh-CN",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}); }
-function identity(){ return window.AIONEPreviewIdentity || {}; }
-function statusLabel(value){ return STATUS_LABELS[String(value||"").toLowerCase()] || value || "待确认"; }
-function priorityLabel(value){ return PRIORITY_LABELS[String(value||"").toLowerCase()] || value || "普通"; }
-function sourceLabel(item){ if(item.sourceSystem === "aione-ai-secretary" || item.metadata?.aiProposalId) return "美和AI"; if(item.sourceSystem === "aione-web") return "AIONE"; return item.sourceSystem || "AIONE"; }
-function ownerLabel(item){ const me=identity(); if(String(item.ownerPersonId||"")===String(me.subjectId||""))return me.displayName||"当前用户"; return item.ownerName||item.ownerPersonId||"待确认"; }
-function sourceHref(item){ const value=item.metadata?.sourceHash || ""; return String(value).startsWith("#/") ? value : ""; }
-function normalizeRemote(item, personId){
-  const ownerId=String(item.ownerPersonId||""); const creatorId=String(item.createdByPersonId||"");
-  return {
-    ...item,
-    relation: ownerId===String(personId)?"mine":creatorId===String(personId)?"created":"shared",
-    status: String(item.status||"pending"),
-    priority: String(item.priority||"normal"),
-    sourceSystem: item.sourceSystem || "aione",
-    metadata: item.metadata && typeof item.metadata === "object" ? item.metadata : {},
-    createdAt:item.createdAt||"", updatedAt:item.updatedAt||item.createdAt||""
-  };
-}
-function normalizeLocal(task, personId){
-  return {
-    id:task.id,title:task.title,description:task.description||"",status:task.status==="done"?"completed":task.status==="active"?"in_progress":"pending",
-    priority:task.priority||"normal",ownerPersonId:task.assigneeId||personId,createdByPersonId:task.creatorId||personId,workbenchCode:task.workbench||"",relatedObjectId:task.businessObjectId||"",
-    sourceSystem:task.source||"local-preview",createdAt:task.createdAt||"",updatedAt:task.completedAt||task.createdAt||"",dueAt:task.dueDate||"",metadata:{sourceHash:task.route||""},
-    relation:String(task.assigneeId||personId)===String(personId)?"mine":String(task.creatorId||"")===String(personId)?"created":"shared"
-  };
-}
-function metrics(items){
-  const attention=computeWorkAttention(items, identity().subjectId||"");
-  return {
-    mine:items.filter(x=>x.relation==="mine" && x.status!=="completed").length,
-    pending:items.filter(x=>x.status==="pending").length,
-    active:items.filter(x=>["in_progress","active"].includes(x.status)).length,
-    waiting:items.filter(x=>x.status==="waiting").length,
-    completed:items.filter(x=>x.status==="completed").length,
-    ai:items.filter(x=>sourceLabel(x)==="美和AI").length,
-    attention:attention.count
-  };
-}
-function routeMatches(item){ const filter=ROUTE_FILTER[routeId()]; if(!filter)return true; if(filter.relation)return item.relation===filter.relation; if(filter.status==="in_progress")return ["in_progress","active"].includes(item.status); return item.status===filter.status; }
-function searchMatches(item, query){ if(!query)return true; const blob=[item.title,item.description,item.workbenchCode,item.relatedObjectType,item.relatedObjectId,item.metadata?.sourcePage,sourceLabel(item)].join(" ").toLowerCase(); return blob.includes(query.toLowerCase()); }
-function filterMatches(item, value){ if(!value || value==="all")return true; if(value==="mine")return item.relation==="mine"; if(value==="created")return item.relation==="created" || (item.relation==="mine" && String(item.createdByPersonId||"")===String(identity().subjectId||"")); if(value==="ai")return sourceLabel(item)==="美和AI"; return true; }
-function itemHtml(item){
-  const status=statusLabel(item.status), source=sourceLabel(item), href=sourceHref(item), context=item.metadata?.sourcePage || item.workbenchCode || item.relatedObjectId || "工作之家";
-  const statusClass=item.status==="completed"?" is-done":item.status==="blocked"?" is-alert":"";
-  const sourceNode=href?`<a class="miwa-work-source-link" href="${esc(href)}">${esc(context)}</a>`:esc(context);
-  return `<article class="miwa-work-item" data-work-item-id="${esc(item.id)}">
-    <div class="miwa-work-item__title"><strong>${esc(item.title||"未命名工作")}</strong><small>上下文：${sourceNode}${item.metadata?.aiProposalId?` ｜ Proposal ${esc(item.metadata.aiProposalId)}`:""}</small></div>
-    <span class="miwa-work-pill">${esc(ownerLabel(item))}</span>
-    <span class="miwa-work-pill${source==="美和AI"?" is-ai":""}">${esc(source)}</span>
-    <span class="miwa-work-pill${statusClass}">${esc(status)}</span>
-    <span class="miwa-work-pill">${esc(priorityLabel(item.priority))}</span>
-    <span class="miwa-work-date">截止 ${esc(dateText(item.dueAt))}</span>
-    <button class="miwa-work-open" type="button" data-work-open="${esc(item.id)}">打开</button>
-  </article>`;
-}
-function aside(items){
-  const aiCount=items.filter(x=>sourceLabel(x)==="美和AI").length;
-  window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"standard",kicker:"当前上下文",title:"工作之家",text:"统一承接已确认工作事项；工作状态、执行证据和结果在同一工作事实中持续沉淀。",items:[{label:"当前可见",value:`${items.length}项`},{label:"美和AI创建",value:`${aiCount}项`},{label:"数据原则",value:"一份工作事实，多处调用"}]}}));
-}
-async function loadItems(){
-  const personId=identity().subjectId||"";
-  try{
-    const result=await aioneApi("/api/v1/work-home?limit=200");
-    return {items:(result.items||[]).map(x=>normalizeRemote(x,result.personId||personId)), mode:"database"};
-  }catch(error){
-    const local=getCollaborationData();
-    return {items:(local.tasks||[]).map(x=>normalizeLocal(x,personId)), mode:"local", error};
-  }
-}
-function evidenceTypeLabel(value){ return ({completion:"完成证据",review:"确认记录",ai_review:"美和AI复盘",execution_note:"执行记录",link:"证据链接",file:"文件证据"})[value] || value || "执行记录"; }
-function safeHref(value){ try{ const url=new URL(String(value||""), window.location.href); return ["http:","https:"].includes(url.protocol)?url.href:""; }catch(_){ return ""; } }
-function publishWorkContext(detail=null){
-  window.AIONEWorkExecutionContext = detail ? {
-    generatedAt:new Date().toISOString(),
-    workItem:detail.workItem,
-    evidence:detail.evidence || [],
-    results:detail.results || [],
-    permissions:detail.permissions || {}
-  } : null;
-  window.dispatchEvent(new CustomEvent("aione:work-detail-context-change", { detail:window.AIONEWorkExecutionContext }));
-}
-function evidenceHtml(items=[]){
-  if(!items.length)return `<div class="miwa-work-detail-empty">还没有执行证据。开始执行后，可持续记录说明、链接、文件位置和关键结果。</div>`;
-  return items.map((item)=>`<article class="miwa-work-evidence"><div><strong>${esc(evidenceTypeLabel(item.evidenceType))}</strong><span>${esc(dateText(item.happenedAt||item.createdAt))}</span></div><p>${esc(item.summary||"—")}</p>${safeHref(item.evidenceUri)?`<a href="${esc(safeHref(item.evidenceUri))}" target="_blank" rel="noopener">打开证据 ↗</a>`:""}</article>`).join("");
-}
-function resultsHtml(items=[]){
-  if(!items.length)return `<div class="miwa-work-detail-empty">尚未形成结果事实。</div>`;
-  return items.map((item)=>`<article class="miwa-work-result"><div><strong>${esc(item.resultType||"工作结果")}</strong><span>${esc(item.status||"observed")}</span></div><p>${esc(item.textValue||item.numericValue||"—")}</p></article>`).join("");
-}
-function detailHtml(detail){
-  const item=detail.workItem||{}, permissions=detail.permissions||{};
-  const context=item.metadata?.sourcePage || item.workbenchCode || item.relatedObjectId || "工作之家";
-  return `<div class="miwa-work-detail-head">
-      <div><span>WORK EXECUTION</span><h2>${esc(item.title||"工作事项")}</h2><p>${esc(item.description||item.goalSummary||"暂无补充说明")}</p></div>
-      <button type="button" class="miwa-work-detail-close" data-work-detail-close aria-label="关闭">×</button>
-    </div>
-    <div class="miwa-work-detail-meta">
-      <span>状态 <b>${esc(statusLabel(item.status))}</b></span><span>优先级 <b>${esc(priorityLabel(item.priority))}</b></span><span>负责人 <b>${esc(ownerLabel(item))}</b></span><span>来源 <b>${esc(sourceLabel(item))}</b></span><span>上下文 <b>${esc(context)}</b></span>
-    </div>
-    <div class="miwa-work-detail-timeline"><span class="${["in_progress","waiting","completed"].includes(item.status)?"is-done":"is-current"}">待处理</span><span class="${["waiting","completed"].includes(item.status)?"is-done":item.status==="in_progress"?"is-current":""}">进行中</span><span class="${item.status==="completed"?"is-done":item.status==="waiting"?"is-current":""}">结果确认</span><span class="${item.status==="completed"?"is-current":""}">完成</span></div>
-    <div class="miwa-work-detail-grid">
-      <section><h3>执行证据</h3><div class="miwa-work-evidence-list">${evidenceHtml(detail.evidence)}</div></section>
-      <section><h3>结果事实</h3><div class="miwa-work-result-list">${resultsHtml(detail.results)}</div>${item.resultSummary?`<div class="miwa-work-result-summary"><b>当前结果</b><p>${esc(item.resultSummary)}</p></div>`:""}</section>
-    </div>
-    <div class="miwa-work-detail-actions">
-      ${permissions.canStart?`<button class="primary" type="button" data-work-action="start">开始执行</button>`:""}
-      ${permissions.canAddEvidence?`<button type="button" data-work-toggle="evidence">添加执行记录</button>`:""}
-      ${permissions.canSubmitCompletion?`<button type="button" data-work-toggle="complete">提交完成</button>`:""}
-      ${permissions.canApproveCompletion?`<button class="primary" type="button" data-work-toggle="approve">确认完成</button>`:""}
-      ${permissions.canAIReview?`<button type="button" data-work-action="ai-review">让美和AI复盘</button>`:""}
-    </div>
-    <form class="miwa-work-detail-form" data-work-evidence-form hidden>
-      <label>执行说明<textarea name="summary" rows="3" placeholder="记录做了什么、发生了什么、下一步是什么"></textarea></label>
-      <label>证据链接 / 文件地址（可选）<input name="evidenceUri" placeholder="Google Drive、AIONE页面或其他可追溯地址"></label>
-      <div><button type="button" data-work-form-cancel="evidence">取消</button><button class="primary" type="submit">保存执行记录</button></div>
-    </form>
-    <form class="miwa-work-detail-form" data-work-complete-form hidden>
-      <label>执行结果<textarea name="resultSummary" rows="4" required placeholder="明确说明完成了什么、结果是否达到目标、还有什么遗留问题"></textarea></label>
-      <label>完成证据说明（可选）<textarea name="evidenceSummary" rows="2" placeholder="说明关键证据"></textarea></label>
-      <label>证据链接 / 文件地址（可选）<input name="evidenceUri" placeholder="Google Drive、AIONE页面或其他可追溯地址"></label>
-      <div><button type="button" data-work-form-cancel="complete">取消</button><button class="primary" type="submit">提交结果</button></div>
-    </form>
-    <form class="miwa-work-detail-form" data-work-approve-form hidden>
-      <label>确认意见<textarea name="reviewSummary" rows="3">确认执行结果，工作完成。</textarea></label>
-      <div><button type="button" data-work-form-cancel="approve">取消</button><button class="primary" type="submit">确认完成</button></div>
-    </form>`;
-}
+function esc(v=""){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function routeId(){return String(window.location.hash||"#/work").replace(/^#\/?/,"").split(/[/?]/)[0]||"work";}
+function identity(){return window.AIONEPreviewIdentity||{};}
+function dateObject(v){if(!v)return null;const d=new Date(v);return Number.isNaN(d.getTime())?null:d;}
+function dateText(v){const d=dateObject(v);return d?d.toLocaleString("zh-CN",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}):"—";}
+function dayKey(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+function statusLabel(v){return STATUS_LABELS[String(v||"").toLowerCase()]||v||"待确认";}
+function priorityLabel(v){return PRIORITY_LABELS[String(v||"").toLowerCase()]||v||"普通";}
+function sourceLabel(item){if(item.sourceSystem==="aione-ai-secretary"||item.metadata?.aiProposalId)return "美和AI";if(item.sourceSystem==="aione-web")return "AIONE";return item.sourceSystem||"AIONE";}
+function ownerLabel(item){const me=identity();if(String(item.ownerPersonId||"")===String(me.subjectId||""))return me.displayName||"当前用户";return item.ownerName||item.ownerPersonId||"待确认";}
+function sourceHref(item){const v=item.metadata?.sourceHash||"";return String(v).startsWith("#/")?v:"";}
+function relationLabel(item){const me=String(identity().subjectId||"");if(String(item.ownerPersonId||"")===me)return "我负责";if(String(item.createdByPersonId||"")===me)return "我创建";return "可查看";}
+function normalizeRemote(item,personId){const owner=String(item.ownerPersonId||""),creator=String(item.createdByPersonId||"");return {...item,relation:owner===String(personId)?"mine":creator===String(personId)?"created":"shared",status:String(item.status||"pending").toLowerCase(),priority:String(item.priority||"normal").toLowerCase(),sourceSystem:item.sourceSystem||"aione",metadata:item.metadata&&typeof item.metadata==="object"?item.metadata:{},createdAt:item.createdAt||"",updatedAt:item.updatedAt||item.createdAt||""};}
+function normalizeLocal(t,personId){return {id:t.id,title:t.title,description:t.description||"",goalSummary:t.goalSummary||"",expectedResult:t.expectedResult||"",status:t.status==="done"?"completed":t.status==="active"?"in_progress":String(t.status||"pending"),priority:t.priority||"normal",ownerPersonId:t.assigneeId||personId,createdByPersonId:t.creatorId||personId,workbenchCode:t.workbench||"",relatedObjectId:t.businessObjectId||"",sourceSystem:t.source||"local-preview",createdAt:t.createdAt||"",updatedAt:t.completedAt||t.createdAt||"",dueAt:t.dueDate||"",metadata:{sourceHash:t.route||"",...(t.metadata||{})},relation:String(t.assigneeId||personId)===String(personId)?"mine":String(t.creatorId||"")===String(personId)?"created":"shared"};}
+function isCompleted(item){return ["completed","done","cancelled","archived"].includes(String(item.status||"").toLowerCase());}
+function isOverdue(item){const d=dateObject(item.dueAt);return !isCompleted(item)&&d&&d.getTime()<Date.now();}
+function isDueToday(item){const d=dateObject(item.dueAt);return Boolean(d&&dayKey(d)===dayKey(new Date()));}
+function hasWaitingSignal(item){return Boolean(item.metadata?.waitingReason||item.metadata?.nextReviewAt||item.metadata?.executionState==="waiting");}
+function todayScore(item){if(isCompleted(item))return -9999;const p={urgent:500,high:360,important:360,normal:220,low:100}[item.priority]||180;const s={blocked:260,waiting:180,in_progress:120,active:120,pending:80,draft:40}[item.status]||40;let due=0;if(isOverdue(item))due=360;else if(isDueToday(item))due=240;else{const d=dateObject(item.dueAt);if(d){const days=(d.getTime()-Date.now())/86400000;if(days<=2)due=150;else if(days<=5)due=80;}}return p+s+due+(item.relation==="mine"?60:0);}
+function todayIds(items){return new Set([...items].filter(x=>!isCompleted(x)).sort((a,b)=>todayScore(b)-todayScore(a)).slice(0,12).map(x=>String(x.id)));}
+function metrics(items){const a=computeWorkAttention(items,identity().subjectId||"");return {mine:items.filter(x=>x.relation==="mine"&&!isCompleted(x)).length,active:items.filter(x=>["in_progress","active"].includes(x.status)).length,blocked:items.filter(x=>x.status==="blocked").length,review:items.filter(x=>x.status==="waiting").length,overdue:items.filter(isOverdue).length,completed:items.filter(x=>x.status==="completed").length,ai:items.filter(x=>sourceLabel(x)==="美和AI").length,attention:a.count,today:todayIds(items).size};}
+function routeMatches(item,allItems){const id=routeId();if(id==="work-today")return todayIds(allItems).has(String(item.id));const f=ROUTE_FILTER[id];if(!f||f.all)return true;if(f.relation)return item.relation===f.relation;if(f.attention)return item.status==="blocked"||hasWaitingSignal(item);if(f.records)return ["completed","cancelled","archived"].includes(item.status);if(f.status==="in_progress")return ["in_progress","active"].includes(item.status);return item.status===f.status;}
+function searchMatches(item,q){if(!q)return true;return [item.title,item.description,item.goalSummary,item.expectedResult,item.workbenchCode,item.relatedObjectType,item.relatedObjectId,item.metadata?.sourcePage,item.metadata?.nextAction,item.metadata?.workReason,sourceLabel(item)].join(" ").toLowerCase().includes(q.toLowerCase());}
+function relationMatches(item,v){if(!v||v==="all")return true;if(v==="mine")return item.relation==="mine";if(v==="created")return String(item.createdByPersonId||"")===String(identity().subjectId||"");if(v==="ai")return sourceLabel(item)==="美和AI";return true;}
+function workReason(item){if(isOverdue(item))return "已超过截止时间，建议优先处理";if(item.status==="blocked")return item.metadata?.blockReason||item.metadata?.waitingReason||"当前工作存在阻塞，需要先解除问题";if(item.priority==="urgent")return "紧急工作，建议立即确认下一步";if(isDueToday(item))return "今天到期，需要在计划时间内推进";if(["in_progress","active"].includes(item.status))return "工作已经开始，建议保持连续推进";if(item.status==="waiting")return "执行结果已提交，等待验收确认";return item.metadata?.workReason||item.goalSummary||item.description||"当前计划工作";}
+function nextAction(item){return item.metadata?.nextAction||item.nextAction||(item.status==="pending"?"开始处理，并记录第一步结果":item.status==="blocked"?"确认阻塞原因，选择解决路径后继续推进":item.status==="waiting"?"检查执行结果与证据，决定是否验收":["in_progress","active"].includes(item.status)?"继续推进当前执行，并记录最新进展":item.status==="completed"?"查看闭环结果与执行证据":"确认下一步行动");}
+function acceptanceCriteria(item){return item.metadata?.acceptanceCriteria||item.acceptanceCriteria||item.expectedResult||"待补充：明确怎样才算真正完成";}
+function contextLabel(item){return item.metadata?.sourcePage||item.workbenchCode||item.relatedObjectId||"工作之家";}
+function estimatedText(item){const n=Number(item.metadata?.estimatedMinutes||item.estimatedMinutes||0);return Number.isFinite(n)&&n>0?`预计 ${n}分钟`:"";}
+function itemHtml(item){const href=sourceHref(item),context=contextLabel(item),source=sourceLabel(item),sourceNode=href?`<a class="miwa-work-source-link" href="${esc(href)}">${esc(context)}</a>`:esc(context),risk=isOverdue(item)||item.status==="blocked"||item.priority==="urgent"?" is-risk":"",est=estimatedText(item);return `<article class="miwa-work-item${risk}" data-work-item-id="${esc(item.id)}"><div class="miwa-work-item__top"><span class="miwa-work-relation">${esc(relationLabel(item))}</span><span class="miwa-work-status">${esc(statusLabel(item.status))}</span><span class="miwa-work-priority">${esc(priorityLabel(item.priority))}</span></div><div class="miwa-work-item__title"><strong>${esc(item.title||"未命名工作")}</strong><p>${esc(workReason(item))}</p></div><div class="miwa-work-next"><span>下一步</span><strong>${esc(nextAction(item))}</strong></div><div class="miwa-work-item__footer"><small>${sourceNode} · ${esc(ownerLabel(item))}${item.dueAt?` · 截止 ${esc(dateText(item.dueAt))}`:""}${est?` · ${esc(est)}`:""}${source==="美和AI"?" · 美和AI整理":""}</small><button class="miwa-work-primary" type="button" data-work-open="${esc(item.id)}">${item.status==="waiting"?"验收":"处理"}</button></div></article>`;}
+function statusChipsHtml(){return `<div class="miwa-work-status-chips" data-work-status-chips>${STATUS_FILTERS.map(([v,l])=>`<button type="button" class="${v==="all"?"is-active":""}" data-status-value="${v}">${l}</button>`).join("")}</div>`;}
+function routeNote(id){if(id==="work-all")return "V2.0第一阶段先完成统一前台。当前正式接口仍只返回与你有关系的工作；公司级透明读取将在敏感事项与操作权限规则接入后升级，仍坚持一份工作事实。";if(id==="work-today")return "首版依据现有优先级、截止时间、状态与本人关系自动排序；工作量、人员产能和AI产能将在后续数据层接入后加入队列计算。";if(id==="work-blocked")return "这里只聚合真正需要重新关注的等待信号与阻塞工作；待验收单独进入“待验收”，避免状态混用。";if(id==="work-review")return "执行完成不等于闭环。这里集中处理已提交结果、等待确认的工作。";if(id==="work-records")return "已完成和已取消工作进入历史记录，保留执行证据与结果事实。";return "状态作为Main内筛选，不再占用Sidebar。打开工作后继续沿用同一工作ID的执行、证据、结果与美和AI复盘闭环。";}
+function aside(items){const m=metrics(items),id=routeId();window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"standard",kicker:"工作之家 V2.0",title:ROUTE_TITLES[id]||"工作之家",text:id==="work"?"工作概览先让所有人理解工作如何进入、推进和闭环，再进入日常执行。":"后台保持结构化，前台只突出当前最需要理解和处理的信息。",items:[{label:"当前可见",value:`${items.length}项`},{label:"需要关注",value:`${m.attention}项`},{label:"待验收",value:`${m.review}项`},{label:"原则",value:"看得到 ≠ 要处理 ≠ 能操作"}]}}));}
+async function loadItems(){const personId=identity().subjectId||"";try{const r=await aioneApi("/api/v1/work-home?limit=200");return {items:(r.items||[]).map(x=>normalizeRemote(x,r.personId||personId)),mode:"database"};}catch(error){const local=getCollaborationData();return {items:(local.tasks||[]).map(x=>normalizeLocal(x,personId)),mode:"local",error};}}
+function evidenceTypeLabel(v){return ({completion:"完成证据",review:"确认记录",ai_review:"美和AI复盘",execution_note:"执行记录",link:"证据链接",file:"文件证据"})[v]||v||"执行记录";}
+function safeHref(v){try{const u=new URL(String(v||""),window.location.href);return ["http:","https:"].includes(u.protocol)?u.href:"";}catch(_){return "";}}
+function publishWorkContext(detail=null){window.AIONEWorkExecutionContext=detail?{generatedAt:new Date().toISOString(),workItem:detail.workItem,evidence:detail.evidence||[],results:detail.results||[],permissions:detail.permissions||{}}:null;window.dispatchEvent(new CustomEvent("aione:work-detail-context-change",{detail:window.AIONEWorkExecutionContext}));}
+function evidenceHtml(items=[]){if(!items.length)return `<div class="miwa-work-detail-empty">还没有执行证据。开始执行后，可持续记录说明、链接、文件位置和关键结果。</div>`;return items.map(i=>`<article class="miwa-work-evidence"><div><strong>${esc(evidenceTypeLabel(i.evidenceType))}</strong><span>${esc(dateText(i.happenedAt||i.createdAt))}</span></div><p>${esc(i.summary||"—")}</p>${safeHref(i.evidenceUri)?`<a href="${esc(safeHref(i.evidenceUri))}" target="_blank" rel="noopener">打开证据 ↗</a>`:""}</article>`).join("");}
+function resultsHtml(items=[]){if(!items.length)return `<div class="miwa-work-detail-empty">尚未形成结果事实。</div>`;return items.map(i=>`<article class="miwa-work-result"><div><strong>${esc(i.resultType||"工作结果")}</strong><span>${esc(i.status||"observed")}</span></div><p>${esc(i.textValue||i.numericValue||"—")}</p></article>`).join("");}
+function workNineHtml(item){const where=[item.businessId,item.workbenchCode||item.metadata?.sourcePage].filter(Boolean).join(" · ")||"待补充业务归属",related=[item.relatedObjectType,item.relatedObjectId].filter(Boolean).join(" · ")||"待补充关联对象",qs=[["01","要做什么？",item.title||"待补充工作标题"],["02","为什么要做？",item.metadata?.workReason||item.goalSummary||item.description||"待补充工作原因"],["03","属于哪里？",where],["04","和什么有关？",related],["05","谁来负责？",ownerLabel(item)],["06","现在到哪一步？",statusLabel(item.status)],["07","应该先做还是后做？",`${priorityLabel(item.priority)}${isOverdue(item)?" · 已超期":""}`],["08","下一步做什么？",nextAction(item)],["09","怎样才算真正完成？",acceptanceCriteria(item)]];return `<section class="miwa-work-nine"><div class="miwa-work-nine__head"><div><span>MIWA WORK 9 QUESTIONS</span><h3>美和工作9问</h3></div><p>用9个问题确认工作是否已经清楚到可执行、可推进、可验收、可闭环。</p></div><div class="miwa-work-nine__grid">${qs.map(([n,q,a])=>`<article><span>${n}</span><h4>${esc(q)}</h4><p>${esc(a)}</p></article>`).join("")}</div></section>`;}
+function detailHtml(detail){const item=detail.workItem||{},p=detail.permissions||{};return `<div class="miwa-work-detail-head"><div><span>WORK EXECUTION</span><h2>${esc(item.title||"工作事项")}</h2><p>${esc(item.description||item.goalSummary||"暂无补充说明")}</p></div><button type="button" class="miwa-work-detail-close" data-work-detail-close aria-label="关闭">×</button></div><div class="miwa-work-detail-meta"><span>状态 <b>${esc(statusLabel(item.status))}</b></span><span>优先级 <b>${esc(priorityLabel(item.priority))}</b></span><span>负责人 <b>${esc(ownerLabel(item))}</b></span><span>来源 <b>${esc(sourceLabel(item))}</b></span><span>上下文 <b>${esc(contextLabel(item))}</b></span></div><div class="miwa-work-detail-timeline"><span class="${["in_progress","waiting","completed"].includes(item.status)?"is-done":"is-current"}">待开始</span><span class="${["waiting","completed"].includes(item.status)?"is-done":item.status==="in_progress"?"is-current":""}">执行中</span><span class="${item.status==="completed"?"is-done":item.status==="waiting"?"is-current":""}">待验收</span><span class="${item.status==="completed"?"is-current":""}">已闭环</span></div>${workNineHtml(item)}<div class="miwa-work-detail-grid"><section><h3>执行证据</h3><div class="miwa-work-evidence-list">${evidenceHtml(detail.evidence)}</div></section><section><h3>结果事实</h3><div class="miwa-work-result-list">${resultsHtml(detail.results)}</div>${item.resultSummary?`<div class="miwa-work-result-summary"><b>当前结果</b><p>${esc(item.resultSummary)}</p></div>`:""}</section></div><div class="miwa-work-detail-actions">${p.canStart?`<button class="primary" type="button" data-work-action="start">开始执行</button>`:""}${p.canAddEvidence?`<button type="button" data-work-toggle="evidence">添加执行记录</button>`:""}${p.canSubmitCompletion?`<button type="button" data-work-toggle="complete">提交完成</button>`:""}${p.canApproveCompletion?`<button class="primary" type="button" data-work-toggle="approve">确认完成</button>`:""}${p.canAIReview?`<button type="button" data-work-action="ai-review">让美和AI复盘</button>`:""}</div><form class="miwa-work-detail-form" data-work-evidence-form hidden><label>执行说明<textarea name="summary" rows="3" placeholder="记录做了什么、发生了什么、下一步是什么"></textarea></label><label>证据链接 / 文件地址（可选）<input name="evidenceUri" placeholder="Google Drive、AIONE页面或其他可追溯地址"></label><div><button type="button" data-work-form-cancel="evidence">取消</button><button class="primary" type="submit">保存执行记录</button></div></form><form class="miwa-work-detail-form" data-work-complete-form hidden><label>执行结果<textarea name="resultSummary" rows="4" required placeholder="明确说明完成了什么、结果是否达到目标、还有什么遗留问题"></textarea></label><label>完成证据说明（可选）<textarea name="evidenceSummary" rows="2"></textarea></label><label>证据链接 / 文件地址（可选）<input name="evidenceUri"></label><div><button type="button" data-work-form-cancel="complete">取消</button><button class="primary" type="submit">提交结果</button></div></form><form class="miwa-work-detail-form" data-work-approve-form hidden><label>确认意见<textarea name="reviewSummary" rows="3">确认执行结果，工作完成。</textarea></label><div><button type="button" data-work-form-cancel="approve">取消</button><button class="primary" type="submit">确认完成</button></div></form>`;}
+function overviewHtml(items,mode){const m=metrics(items),flow=["发现工作","美和AI整理","明确负责人","判断优先级","明确下一步","执行推进","等待 / 阻塞","验收","闭环"],nine=[["01","要做什么？","工作内容"],["02","为什么要做？","工作原因与价值"],["03","属于哪里？","事业、工作台、流程"],["04","和什么有关？","商品、订单、客户等对象"],["05","谁来负责？","最终负责人和执行者"],["06","现在到哪一步？","当前工作状态"],["07","应该先做还是后做？","优先级"],["08","下一步做什么？","Next Action"],["09","怎样才算真正完成？","验收标准与闭环"]];return `<section class="miwa-work-manual"><header class="miwa-work-manual-cover"><div><span>MIWA WORK HOME · V2.0</span><h1>工作之家</h1><h2>让每一件工作都知道：为什么做、谁负责、下一步是什么、怎样真正完成。</h2><p>工作之家不是任务仓库，而是AIONE统一的工作执行中枢。后台负责结构、状态、证据和AI整理，前台只让人清楚地知道公司在做什么、跟自己有什么关系、现在应该推进什么。</p></div><aside><strong>后台复杂<br>前台简单</strong><small>一份工作事实 · 多处调用</small></aside></header><section class="miwa-work-manual-section"><div class="miwa-work-manual-section__head"><span>01</span><div><small>WHY</small><h2>为什么需要工作之家</h2><p>工作越来越多以后，真正需要解决的是不遗漏、不混乱、有优先级、可推进、可验收、可闭环。</p></div></div><div class="miwa-work-editorial-grid cols-3"><article><b>不遗漏</b><h3>所有需要行动的事情进入同一工作事实</h3><p>工作台、AI、人工和后续外部系统都不再各自维护一套任务。</p></article><article><b>不混乱</b><h3>状态、优先级、责任和可见范围分别管理</h3><p>看得到不等于要处理，也不等于可以修改。</p></article><article><b>能闭环</b><h3>完成不等于闭环</h3><p>执行结果、证据、验收和业务状态同步后，工作才真正结束。</p></article></div></section><section class="miwa-work-manual-section"><div class="miwa-work-manual-section__head"><span>02</span><div><small>FLOW</small><h2>一件工作如何流动</h2><p>员工不负责维护复杂系统；美和AI持续整理，人负责判断、执行和最终结果。</p></div></div><div class="miwa-work-flow">${flow.map((l,i)=>`<span><b>${String(i+1).padStart(2,"0")}</b>${esc(l)}</span>`).join("")}</div></section><section class="miwa-work-manual-section"><div class="miwa-work-manual-section__head"><span>03</span><div><small>MIWA METHOD</small><h2>美和工作9问</h2><p>美和业务9要素用来理解业务；美和工作9问用来把工作整理到可执行、可推进、可验收、可闭环。</p></div></div><div class="miwa-work-editorial-grid cols-3 work-nine">${nine.map(([n,q,a])=>`<article><b>${n}</b><h3>${esc(q)}</h3><p>${esc(a)}</p></article>`).join("")}</div></section><section class="miwa-work-manual-section"><div class="miwa-work-manual-section__head"><span>04</span><div><small>PEOPLE × AI × TIME</small><h2>人、美和AI与美和日历怎么协同</h2><p>工作之家负责“做什么、谁负责、下一步和闭环”；美和日历负责把需要时间安排的工作投影成“什么时候做”。</p></div></div><div class="miwa-work-editorial-grid cols-2"><article class="is-feature"><b>人 × 美和AI</b><h3>人负责目标、判断与结果；AI负责持续整理和推进</h3><p>AI可以分类、去重、建议优先级、发现阻塞、生成下一步和辅助验收；关键规则、重大异常和最终质量仍有人类负责人。</p></article><article class="is-feature"><b>工作之家 × 美和日历</b><h3>一份工作事实，两种理解方式</h3><p>Work Item管“做什么”；Calendar Projection管“什么时候做”。日历不再创建第二套任务。</p><a href="#/calendar">进入美和日历 →</a></article></div></section><section class="miwa-work-manual-section is-dynamic"><div class="miwa-work-manual-section__head"><span>05</span><div><small>LIVE WORK</small><h2>当前工作全景</h2><p>${mode==="database"?"读取正式工作事实。":"正式数据库暂未连接，当前使用本地预览数据。"} V2.0第一阶段仍遵守现有读取权限，公司级透明视图将在敏感事项规则接入后升级。</p></div></div><div class="miwa-work-overview-kpis"><div><span>当前可见</span><strong>${items.length}</strong></div><div><span>我的活跃工作</span><strong>${m.mine}</strong></div><div><span>进行中</span><strong>${m.active}</strong></div><div class="${m.overdue?"is-risk":""}"><span>超期</span><strong>${m.overdue}</strong></div><div class="${m.blocked?"is-risk":""}"><span>阻塞</span><strong>${m.blocked}</strong></div><div><span>待验收</span><strong>${m.review}</strong></div></div><div class="miwa-work-live-summary"><strong>美和AI工作摘要（第一阶段规则生成）</strong><p>当前可见 ${items.length} 项工作，其中 ${m.active} 项正在推进，${m.blocked} 项阻塞，${m.review} 项等待验收，${m.overdue} 项已经超过截止时间。今日执行入口会优先把需要本人关注的工作排到前面。</p><a href="#/work-today">查看今日工作 →</a></div></section></section>`;}
+function listShellHtml(){const id=routeId(),showStatus=["work-mine","work-all","work-pending","work-active","work-completed"].includes(id);return `<section class="miwa-work-home"><header class="miwa-work-hero"><div class="miwa-work-hero__eyebrow">MIWA GROUP WORK · V2.0</div><div class="miwa-work-hero__row"><div><h1>${esc(ROUTE_TITLES[id]||"工作之家")}</h1><p>${esc(routeNote(id))}</p></div><a href="#/work" class="miwa-work-guide-link">查看工作手册</a></div></header><div class="miwa-work-kpis" data-work-kpis></div>${showStatus?statusChipsHtml():""}<div class="miwa-work-toolbar"><input class="miwa-work-search" data-work-search placeholder="搜索工作名称、下一步、业务对象…"><select class="miwa-work-filter" data-work-filter><option value="all">全部关系</option><option value="mine">我负责</option><option value="created">我创建</option><option value="ai">美和AI创建</option></select><button class="miwa-work-refresh" type="button" data-work-refresh>刷新</button></div><section class="miwa-work-panel"><div class="miwa-work-panel__head"><div><h2>${id==="work-today"?"现在先做":"工作事项"}</h2><p>${id==="work-today"?"第一屏只把当前最值得处理的工作排在前面；处理完一项，再继续下一项。":"前台突出原因、下一步和一个主操作；复杂字段进入工作详情。"}</p></div><span class="miwa-work-count" data-work-count></span></div><div data-work-error></div><div class="miwa-work-list" data-work-list><div class="miwa-work-loading">正在读取工作事项…</div></div></section><dialog class="miwa-work-detail" data-work-detail><div class="miwa-work-detail-body" data-work-detail-body></div></dialog></section>`;}
 
 export async function initMiwaWorkHome(){
-  const host=document.getElementById("miwa-work-home-entry"); if(!host)return false;
-  publishWorkContext(null);
-  host.innerHTML=`<section class="miwa-work-home">
-    <header class="miwa-work-hero"><div class="miwa-work-hero__mark">工</div><div><div class="miwa-work-hero__eyebrow">MIWA GROUP WORK</div><h1>工作之家</h1><p>统一接收、查看、执行和复盘当前登录人的工作事项。工作状态、执行证据、结果事实和美和AI复盘围绕同一工作ID持续沉淀。</p></div></header>
-    <div class="miwa-work-kpis" data-work-kpis></div>
-    <div class="miwa-work-toolbar"><input class="miwa-work-search" data-work-search placeholder="搜索工作名称、来源、业务上下文…"><select class="miwa-work-filter" data-work-filter><option value="all">全部工作</option><option value="mine">我的工作</option><option value="created">我创建的</option><option value="ai">美和AI创建</option></select><button class="miwa-work-refresh" type="button" data-work-refresh>刷新</button></div>
-    <section class="miwa-work-panel"><div class="miwa-work-panel__head"><div><h2 data-work-section-title>工作事项</h2><p>只显示当前用户有关系的正式工作事项；点击“打开”进入执行、证据和结果闭环。</p></div><span class="miwa-work-count" data-work-count></span></div><div data-work-error></div><div class="miwa-work-list" data-work-list><div class="miwa-work-loading">正在读取工作事项…</div></div></section>
-    <dialog class="miwa-work-detail" data-work-detail><div class="miwa-work-detail-body" data-work-detail-body></div></dialog>
-  </section>`;
-  let allItems=[]; let mode="database"; let activeDetail=null;
-  const list=host.querySelector("[data-work-list]"), kpis=host.querySelector("[data-work-kpis]"), count=host.querySelector("[data-work-count]"), search=host.querySelector("[data-work-search]"), filter=host.querySelector("[data-work-filter]"), errorHost=host.querySelector("[data-work-error]"), sectionTitle=host.querySelector("[data-work-section-title]"), dialog=host.querySelector("[data-work-detail]"), detailBody=host.querySelector("[data-work-detail-body]");
-  const titles={work:"全部工作", "work-mine":"我的工作", "work-pending":"待处理", "work-active":"进行中", "work-waiting":"待确认", "work-completed":"已完成"};
-  if(sectionTitle)sectionTitle.textContent=titles[routeId()]||"工作事项";
-  function render(){
-    const m=metrics(allItems); kpis.innerHTML=[["我的工作",m.mine],["待处理",m.pending],["进行中",m.active],["待确认",m.waiting],["已完成",m.completed],["AI创建",m.ai]].map(([label,value])=>`<div class="miwa-work-kpi"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join("");
-    const rows=allItems.filter(routeMatches).filter(x=>searchMatches(x,search.value.trim())).filter(x=>filterMatches(x,filter.value));
-    count.textContent=`${rows.length} 项`;
-    list.innerHTML=rows.length?rows.map(itemHtml).join(""):`<div class="miwa-work-empty">当前条件下暂无工作事项。</div>`;
-    window.MIWAHeader?.setWorkCount?.(m.attention); aside(allItems);
-    errorHost.innerHTML=mode==="local"?`<div class="miwa-work-error">正式数据库暂时未连接，当前显示本地预览工作记录；执行闭环只在正式AIONE Backend连接后可用。</div>`:"";
-  }
-  async function refresh(){ list.innerHTML=`<div class="miwa-work-loading">正在读取工作事项…</div>`; const loaded=await loadItems(); allItems=loaded.items; mode=loaded.mode; render(); }
-  async function loadDetail(id){
-    if(mode!=="database") throw new Error("正式执行闭环需要连接AIONE Backend。");
-    const detail=await aioneApi(`/api/v1/work-home/${encodeURIComponent(id)}/execution`);
-    activeDetail=detail; publishWorkContext(detail); detailBody.innerHTML=detailHtml(detail); bindDetailActions();
-    if(!dialog.open)dialog.showModal();
-  }
-  async function reloadActiveDetail(){ if(activeDetail?.workItem?.id) await loadDetail(activeDetail.workItem.id); await refresh(); }
-  function closeDetail(){ dialog.close(); activeDetail=null; publishWorkContext(null); }
-  function setForm(name,visible){ const form=detailBody.querySelector(`[data-work-${name}-form]`); if(form)form.hidden=!visible; }
-  function workError(error){ alert(error?.message || "工作执行失败，请稍后重试。"); }
-  async function startWork(){ try{ await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/start`,{method:"POST",body:"{}"}); announceWorkItemsChanged({reason:"work-started",workItemId:activeDetail.workItem.id}); await reloadActiveDetail(); }catch(error){workError(error);} }
-  async function addEvidence(form){
-    const data=new FormData(form); const summary=String(data.get("summary")||"").trim(); const evidenceUri=String(data.get("evidenceUri")||"").trim();
-    try{ await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/evidence`,{method:"POST",body:JSON.stringify({summary,evidenceUri,evidenceType:evidenceUri?"link":"execution_note"})}); announceWorkItemsChanged({reason:"work-evidence-added",workItemId:activeDetail.workItem.id}); form.reset(); await reloadActiveDetail(); }catch(error){workError(error);} }
-  async function completeWork(form){
-    const data=new FormData(form); const resultSummary=String(data.get("resultSummary")||"").trim(); const evidenceSummary=String(data.get("evidenceSummary")||"").trim(); const evidenceUri=String(data.get("evidenceUri")||"").trim();
-    try{ const result=await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/complete`,{method:"POST",body:JSON.stringify({resultSummary,evidenceSummary,evidenceUri})}); announceWorkItemsChanged({reason:"work-completion-submitted",workItemId:activeDetail.workItem.id,completionState:result.completionState||""}); form.reset(); await reloadActiveDetail(); if(result.completionState==="waiting")alert("执行结果已提交，等待工作创建者确认。\n美和AI已经可以读取本次结果和证据进行复盘。"); }catch(error){workError(error);} }
-  async function approveWork(form){
-    const data=new FormData(form); const reviewSummary=String(data.get("reviewSummary")||"").trim();
-    try{ await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/approve`,{method:"POST",body:JSON.stringify({reviewSummary})}); announceWorkItemsChanged({reason:"work-completion-approved",workItemId:activeDetail.workItem.id}); await reloadActiveDetail(); }catch(error){workError(error);} }
-  function aiReview(){
-    publishWorkContext(activeDetail); window.MIWAAI?.open?.("work-home-review");
-    const prompt="复盘当前工作结果。请基于工作目标、原始Proposal来源、执行证据和结果事实判断：1）是否真正完成目标；2）有哪些遗留问题；3）是否应沉淀为规则、知识、Skill或自动化；4）是否需要创建下一轮工作。事实不足的地方标记待确认，不要编造。";
-    window.setTimeout(()=>window.AIONEAISecretary?.sendCommand?.(prompt,{capabilityCode:"work.execution_review",capabilityLabel:"复盘工作结果"}),120);
-  }
-  function bindDetailActions(){
-    detailBody.querySelector("[data-work-detail-close]")?.addEventListener("click",closeDetail);
-    detailBody.querySelector('[data-work-action="start"]')?.addEventListener("click",startWork);
-    detailBody.querySelector('[data-work-action="ai-review"]')?.addEventListener("click",aiReview);
-    detailBody.querySelectorAll("[data-work-toggle]").forEach((button)=>button.addEventListener("click",()=>setForm(button.dataset.workToggle,true)));
-    detailBody.querySelectorAll("[data-work-form-cancel]").forEach((button)=>button.addEventListener("click",()=>setForm(button.dataset.workFormCancel,false)));
-    detailBody.querySelector("[data-work-evidence-form]")?.addEventListener("submit",(event)=>{event.preventDefault();addEvidence(event.currentTarget);});
-    detailBody.querySelector("[data-work-complete-form]")?.addEventListener("submit",(event)=>{event.preventDefault();completeWork(event.currentTarget);});
-    detailBody.querySelector("[data-work-approve-form]")?.addEventListener("submit",(event)=>{event.preventDefault();approveWork(event.currentTarget);});
-  }
-  search.addEventListener("input",render); filter.addEventListener("change",render); host.querySelector("[data-work-refresh]")?.addEventListener("click",refresh);
-  list.addEventListener("click",(event)=>{ const button=event.target.closest("[data-work-open]"); if(!button)return; loadDetail(button.dataset.workOpen).catch(workError); });
-  dialog.addEventListener("close",()=>{ activeDetail=null; publishWorkContext(null); });
-  dialog.addEventListener("click",(event)=>{ if(event.target===dialog)closeDetail(); });
-  await refresh(); return true;
+  const host=document.getElementById("miwa-work-home-entry");if(!host)return false;publishWorkContext(null);let allItems=[],mode="database",activeDetail=null,selectedStatus="all";const id=routeId();host.innerHTML=id==="work"?`<section class="miwa-work-home"><div class="miwa-work-loading">正在读取工作全景…</div></section>`:listShellHtml();
+  let list=host.querySelector("[data-work-list]"),kpis=host.querySelector("[data-work-kpis]"),count=host.querySelector("[data-work-count]"),search=host.querySelector("[data-work-search]"),relationFilter=host.querySelector("[data-work-filter]"),errorHost=host.querySelector("[data-work-error]"),dialog=host.querySelector("[data-work-detail]"),detailBody=host.querySelector("[data-work-detail-body]");
+  function rows(){const q=search?.value?.trim()||"",rel=relationFilter?.value||"all";let r=allItems.filter(x=>routeMatches(x,allItems)).filter(x=>searchMatches(x,q)).filter(x=>relationMatches(x,rel)).filter(x=>selectedStatus==="all"||(selectedStatus==="in_progress"?["in_progress","active"].includes(x.status):x.status===selectedStatus));return r.sort((a,b)=>todayScore(b)-todayScore(a));}
+  function renderList(){const m=metrics(allItems);if(kpis)kpis.innerHTML=[["今日建议",m.today,""],["我的工作",m.mine,""],["进行中",m.active,""],["超期",m.overdue,m.overdue?"is-risk":""],["阻塞",m.blocked,m.blocked?"is-risk":""],["待验收",m.review,""]].map(([l,v,c])=>`<div class="miwa-work-kpi ${c}"><span>${l}</span><strong>${v}</strong></div>`).join("");const r=rows();if(count)count.textContent=`${r.length} 项`;if(list)list.innerHTML=r.length?r.map(itemHtml).join(""):`<div class="miwa-work-empty">当前条件下暂无工作事项。</div>`;window.MIWAHeader?.setWorkCount?.(m.attention);aside(allItems);if(errorHost)errorHost.innerHTML=mode==="local"?`<div class="miwa-work-error">正式数据库暂时未连接，当前显示本地预览工作记录；执行闭环只在正式AIONE Backend连接后可用。</div>`:"";}
+  async function refresh(){if(list)list.innerHTML=`<div class="miwa-work-loading">正在读取工作事项…</div>`;const loaded=await loadItems();allItems=loaded.items;mode=loaded.mode;if(id==="work"){host.innerHTML=overviewHtml(allItems,mode);window.MIWAHeader?.setWorkCount?.(metrics(allItems).attention);aside(allItems);return;}renderList();}
+  async function loadDetail(workId){if(mode!=="database")throw new Error("正式执行闭环需要连接AIONE Backend。");const d=await aioneApi(`/api/v1/work-home/${encodeURIComponent(workId)}/execution`);activeDetail=d;publishWorkContext(d);detailBody.innerHTML=detailHtml(d);bindDetailActions();if(!dialog.open)dialog.showModal();}
+  async function reloadActiveDetail(){if(activeDetail?.workItem?.id)await loadDetail(activeDetail.workItem.id);await refresh();}
+  function closeDetail(){dialog.close();activeDetail=null;publishWorkContext(null);}
+  function setForm(name,visible){const f=detailBody.querySelector(`[data-work-${name}-form]`);if(f)f.hidden=!visible;}
+  function workError(e){alert(e?.message||"工作执行失败，请稍后重试。");}
+  async function startWork(){try{await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/start`,{method:"POST",body:"{}"});announceWorkItemsChanged({reason:"work-started",workItemId:activeDetail.workItem.id});await reloadActiveDetail();}catch(e){workError(e);}}
+  async function addEvidence(form){const d=new FormData(form),summary=String(d.get("summary")||"").trim(),evidenceUri=String(d.get("evidenceUri")||"").trim();try{await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/evidence`,{method:"POST",body:JSON.stringify({summary,evidenceUri,evidenceType:evidenceUri?"link":"execution_note"})});announceWorkItemsChanged({reason:"work-evidence-added",workItemId:activeDetail.workItem.id});form.reset();await reloadActiveDetail();}catch(e){workError(e);}}
+  async function completeWork(form){const d=new FormData(form),resultSummary=String(d.get("resultSummary")||"").trim(),evidenceSummary=String(d.get("evidenceSummary")||"").trim(),evidenceUri=String(d.get("evidenceUri")||"").trim();try{const r=await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/complete`,{method:"POST",body:JSON.stringify({resultSummary,evidenceSummary,evidenceUri})});announceWorkItemsChanged({reason:"work-completion-submitted",workItemId:activeDetail.workItem.id,completionState:r.completionState||""});form.reset();await reloadActiveDetail();if(r.completionState==="waiting")alert("执行结果已提交，等待工作创建者确认。\n美和AI已经可以读取本次结果和证据进行复盘。");}catch(e){workError(e);}}
+  async function approveWork(form){const d=new FormData(form),reviewSummary=String(d.get("reviewSummary")||"").trim();try{await aioneApi(`/api/v1/work-home/${encodeURIComponent(activeDetail.workItem.id)}/approve`,{method:"POST",body:JSON.stringify({reviewSummary})});announceWorkItemsChanged({reason:"work-completion-approved",workItemId:activeDetail.workItem.id});await reloadActiveDetail();}catch(e){workError(e);}}
+  function aiReview(){publishWorkContext(activeDetail);window.MIWAAI?.open?.("work-home-review");const prompt="复盘当前工作结果。请基于工作目标、美和工作9问、原始Proposal来源、执行证据和结果事实判断：1）是否真正完成目标；2）有哪些遗留问题；3）是否应沉淀为规则、知识、Skill或自动化；4）是否需要创建下一轮工作。事实不足的地方标记待确认，不要编造。";window.setTimeout(()=>window.AIONEAISecretary?.sendCommand?.(prompt,{capabilityCode:"work.execution_review",capabilityLabel:"复盘工作结果"}),120);}
+  function bindDetailActions(){detailBody.querySelector("[data-work-detail-close]")?.addEventListener("click",closeDetail);detailBody.querySelector('[data-work-action="start"]')?.addEventListener("click",startWork);detailBody.querySelector('[data-work-action="ai-review"]')?.addEventListener("click",aiReview);detailBody.querySelectorAll("[data-work-toggle]").forEach(b=>b.addEventListener("click",()=>setForm(b.dataset.workToggle,true)));detailBody.querySelectorAll("[data-work-form-cancel]").forEach(b=>b.addEventListener("click",()=>setForm(b.dataset.workFormCancel,false)));detailBody.querySelector("[data-work-evidence-form]")?.addEventListener("submit",e=>{e.preventDefault();addEvidence(e.currentTarget);});detailBody.querySelector("[data-work-complete-form]")?.addEventListener("submit",e=>{e.preventDefault();completeWork(e.currentTarget);});detailBody.querySelector("[data-work-approve-form]")?.addEventListener("submit",e=>{e.preventDefault();approveWork(e.currentTarget);});}
+  search?.addEventListener("input",renderList);relationFilter?.addEventListener("change",renderList);host.querySelector("[data-work-refresh]")?.addEventListener("click",refresh);host.querySelector("[data-work-status-chips]")?.addEventListener("click",e=>{const b=e.target.closest("[data-status-value]");if(!b)return;selectedStatus=b.dataset.statusValue||"all";host.querySelectorAll("[data-status-value]").forEach(x=>x.classList.toggle("is-active",x===b));renderList();});list?.addEventListener("click",e=>{const b=e.target.closest("[data-work-open]");if(b)loadDetail(b.dataset.workOpen).catch(workError);});dialog?.addEventListener("close",()=>{activeDetail=null;publishWorkContext(null);});dialog?.addEventListener("click",e=>{if(e.target===dialog)closeDetail();});await refresh();return true;
 }

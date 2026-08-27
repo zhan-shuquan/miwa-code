@@ -62,7 +62,7 @@ function resolvePlatformRoot(routeId) {
 
 function childrenFor(parentId) {
   return Object.values(ROUTE_REGISTRY)
-    .filter((route) => route.parent === parentId)
+    .filter((route) => route.parent === parentId && route.nav !== false)
     .map((route) => ({ id: route.id, label: route.label, route: route.id, icon: "" }));
 }
 

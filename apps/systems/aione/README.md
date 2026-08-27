@@ -1,6 +1,8 @@
 # MIWA AIONE Integrated Work Platform
 
-> **Current candidate: V1.9.30.2 WORK HOME ATTENTION REALTIME SYNC CANDIDATE.**
+> **Current candidate: V1.9.32 WORK HOME V2 FIRST UPGRADE CANDIDATE.**
+V1.9.32完成工作之家V2.0第一次前台升级：统一Sidebar、出版物式工作概览、美和工作9问、今日工作首版排序与简化工作卡；既有执行/证据/验收/AI复盘/提醒同步完整继承，不新建第二套工作事实。
+
 
 
 V1.9.30.2收敛工作之家Header红色数字的真实业务语义：**只提示当前需要本人处理的工作（待处理、待确认、超期、阻断/异常），普通进行中与已完成不进入提醒。** Proposal人工确认、工作状态变化后立即同步；浏览器重新获得焦点/重新可见时自动同步，并以60秒轻量轮询作为多人协作兜底。继续读取同一份work_items事实，不新增重复统计表。

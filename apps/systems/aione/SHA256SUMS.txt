@@ -1,5 +1,5 @@
-518d4f0146e2deab9a400e7b12727b8ce0aad689175468daedf1f48545f32a91  ./CHANGELOG.md
-3b947608b29d482cf016c604805a35b55263353948ee19550e781c3d8a910403  ./README.md
+0e885ef51c20dae10d71b8933b6d3f58ed4ad1260364d1d2a3545eeccb933a3f  ./CHANGELOG.md
+147a397e4972c2dbf67624539701b3c7fefe75f929a4ce08c272d441be7a782e  ./README.md
 ac576cc3394ff1d8801b0707f70639dd100d8010ef67a6de7dfbb71ae8f36884  ./api/aione-bridge.js
 9765a666d22fd2dc9bb064efdea77732743ad5c494f4b2eb6f27928092de8085  ./assets/brand/miwa-commerce-logo.png
 c7b9f6c8855c9c0efbcabe14ffd9b86b290e5f270253d2fcd57fe4c53d8cc990  ./assets/brand/miwa-company-logo-preview.png
@@ -55,7 +55,7 @@ a6df2fffaaebdbeb214e967866f3b2894cbe7b1e3ebbab56548b5072996ea669  ./components/s
 6dab30bc65e8d366beca3c4eb2d6a5d09357cacae9ed6ae426410694c9bcd9f2  ./css/components/README.md
 fed19e93356c555b680a5e46c62b9e780c7bbd699d48251fe9fd726933ccd22b  ./css/components/ai-talent-card.css
 07e20eddf6e452b06de46b6de03102ae3c01877fbe82eace2cd956bd5961510b  ./css/components/level2-components.css
-3e6d614a223e1b498d7f1a0546a2b8d77ec02fabe6349ee5fca3714a97362592  ./css/components/miwa-publication-master.css
+3f1d081f0b511b24c26203860b885e60c2f075d03738c97a1b6fb3b564563d22  ./css/components/miwa-publication-master.css
 1a009f0398de661e842c24b02057c81550bedb736d20d6b307e3796ee3cf7c77  ./css/components/preview-auth.css
 40512814a71bdf026821d534ae2687fc6999cac3943b60ce95eb4e3dbacf6aae  ./css/foundation/base.css
 f62489e89b3285d11a48627798ac79b7bc1d15c5930d77c025e0af48643d985c  ./css/foundation/tokens.css
@@ -65,7 +65,7 @@ c722966d5c2722d548d331a0baf72143fbf960e9ad23e960d4217e98ecc28618  ./css/pages/co
 935598c15aeca033a46d005cb282a9d5330fe8ee8f1f48197dece14db6fd2693  ./css/pages/core-work-pages.css
 307aedf0889f9fc5a8b3a837ea6223d6351ea47bbf9e939ab38cba1d561be895  ./css/pages/layout-recovery.css
 d2e666ec814b173459ebe2ba31f94b4a8161e602a6eb5da065777a2cb3976f19  ./css/pages/miwa-business-home.css
-360cde782831d4490a3463cc7085eab9ad13745a4b42054178e8fbe0366cbae1  ./css/pages/miwa-company-home.css
+3be6947b9529804f6b769f73164ed0e771ca8f5ca0c168251cbcdc1c9d27ec63  ./css/pages/miwa-company-home.css
 274e7e5a436d50f0c755c4b0f0508ab342ee58b4ea678ddaf36c76f18d49d81b  ./css/pages/notifications.css
 9f9d7a2c33e3132ad20395eade658a40ecc9a5236eb192173c970aa6effc65c5  ./css/pages/route-pages.css
 263ad8604e75e65e62e7e723606f7594a883148b8175ad2a28d94cd79be5f8ef  ./css/pages/selection-guidance.css
@@ -132,6 +132,7 @@ ac74aa7a18c440da04fdaee99972f7abe8eb54ce5cf033d94a682cda9744b433  ./docs/BASELIN
 2bd47e636106132c5828e1edcddda32dab0fd3a1d433521ef55beb31d082c726  ./docs/BASELINE_V1.9.31.1_BUSINESS_HOME_STRATEGIC_BOOK_CANDIDATE.md
 b8e9ae548b2eeb815c53d91a175c379e3e26d8ec5c7a8bb5910299b000a523c9  ./docs/BASELINE_V1.9.31.2_CONTENT_PUBLICATION_MASTER_CANDIDATE.md
 2c8439a8ad4258ffb2a749b31763f879f0769c8f5ff913f987a60026854a4ac8  ./docs/BASELINE_V1.9.31_BUSINESS_HOME_CANDIDATE.md
+8348e1750cc0c93cba3ca40c2dc601f8612fe6cf5d30eac96608153bafa304e5  ./docs/BASELINE_V1.9.32_WORK_HOME_V2_FIRST_UPGRADE_CANDIDATE.md
 082d9a1ae3d3002fc6d3b25cac031432eb3d635f6cdcfa7a1bbd3e6771f9cb44  ./docs/BASELINE_V1.9.3_HEADER_CORE_HOMES_SHARED_RESOURCES_CANDIDATE.md
 223fff78551ee4cc9984a844d0de653bd86c89510825551b2a4d754e9d0c2063  ./docs/BASELINE_V1.9.4_SMART_HEADER_LOCK_CANDIDATE.md
 a6a0a2c0cb76d1abdd1e844f354ce4950bc7257185b8250f2f77350f3b129f5f  ./docs/BASELINE_V1.9.5_SIDEBAR_ASIDE_LOCK_CANDIDATE.md
@@ -153,6 +154,7 @@ ff367093eac73ae1f48689fc6fe82040b693eae73116b2014217b229afdc2554  ./docs/GLOBAL_
 fbf63feb24dcd9cdacb8907d0cfb76eb5aaf81110e91317432c309f833186642  ./docs/HEADER_SIDEBAR_V1.0.10_MERGE.md
 fbf63feb24dcd9cdacb8907d0cfb76eb5aaf81110e91317432c309f833186642  ./docs/HEADER_SIDEBAR_V1.0.9_MERGE.md
 07df2fe2882719d7471deb5bbe52a45c1f61a669f64d550f03378358a3897f21  ./docs/HEADER_V1.0.11_GLOBAL_INFO_RESTORED.md
+db3815df1057a4018f372e7b9ea2f8bc4190463ad51efa3f6fbff6d738e1c7ca  ./docs/MIWA_DIGITAL_PUBLICATION_DESIGN_SYSTEM_V1.0.md
 5ea0226a2eba74914893ddfc3fad3417dce810f691a2e0282bb11f3f8f94760b  ./docs/PREVIEW_AUTH_V0.1.md
 8b5745b79dbc7d6ca8c34f987cd93eba3811017c3b852a53f2cb5e591f9746d6  ./docs/PREVIEW_AUTH_V0.2.md
 585796ca2a26f946ba93506376fa31f4aa57662f5583ae4a3ac471ad81131873  ./docs/PREVIEW_AUTH_V0.3.md
@@ -184,13 +186,14 @@ c23fa2a51542f6a5ef07c678c8301e5a0224e6b3855de6bcdab248a5c49ab19b  ./docs/VALIDAT
 0a9bf7c5b814e89f9985438e2f9c8c392070e0d300a3a7cb07471be68985d551  ./docs/VALIDATION_V1.9.30.2_WORK_HOME_ATTENTION_SYNC_CANDIDATE.md
 e7b1216c5843698309e5fe1474d1266d2099ee5132e820bec08e2f2e65e5fc27  ./docs/VALIDATION_V1.9.30_WORK_EXECUTION_EVIDENCE_AI_REVIEW_CANDIDATE.md
 1481ee6afd7d872d8f921d8e290d3d2990fa08a44750ae322652125a2999998a  ./docs/VALIDATION_V1.9.31.2_CONTENT_PUBLICATION_MASTER_CANDIDATE.md
+a8da3ad343c004675f5320420274bff335d93094868a53efb1a181f9cf58bffa  ./docs/VALIDATION_V1.9.32_WORK_HOME_V2_FIRST_UPGRADE_CANDIDATE.md
 6fed9b13808df0c255b12f0683217bddcb88fd85b98f663240c4d4a18c0ea39c  ./docs/VALIDATION_V1.9.3_HEADER_CORE_HOMES_SHARED_RESOURCES_CANDIDATE.md
 e988b513d99c5b43d4c3f9101c728c2115cf8e12a7b438799d5887f57db90946  ./docs/VALIDATION_V1.9.4_SMART_HEADER_LOCK_CANDIDATE.md
 d1ede20173c34705c5c35566a0a609101bd8ed9e09f9434d362951cc36bf54c2  ./docs/VALIDATION_V1.9.5_SIDEBAR_ASIDE_LOCK_CANDIDATE.md
 01bfa48aae03d5dc89e728243c38971c18ebb2a8525961dab3abfd32832cd55e  ./docs/VALIDATION_V1.9.5_SIDEBAR_ASIDE_LOCK_CANDIDATE.txt
 3ca47021e4c9cddbc77e31b4b1796ced32917b3f2c35cfd3a6767e1a386eaa38  ./docs/VALIDATION_V1.9.6_MIWA_AI_LAYER_CANDIDATE.md
 af3e266a7821e4e7997f9b1a73927878644361bef1ee0bf138b95161cbd9f347  ./docs/WINDOWS_NODE_SETUP_V1.0.md
-3168741bf9023bf37db13329e80a571b5d0677ad1fb74427cc7228e606cc94d1  ./index.html
+263913bff89a23542c7d9898ba3f5796d8be92ef89b92863b199c69130271b61  ./index.html
 2e5bbccda358a0a2d9101da7a2c4def376c2ac7e1e183d010bb6fe46e3f2d266  ./js/ai/ai-capability-registry.js
 1501f392a92c3c52f3d830f92c0f9a7f0f5770e7f2a7e09a1fa7ae354fd372ac  ./js/ai/ai-context-router.js
 8c19bf360527bbfb3ae657a8b1e6a7573eea005b381eb15a40b282b45405b0fe  ./js/ai/ai-quick-intents.js
@@ -204,7 +207,7 @@ ee2723b67c3a2f6c82134455b0541671e9ba5d449bfd3a26c5f26de2159d1c5e  ./js/component
 ccf98c7d6897d0657a16bf2cf3dc86ca6300446c8b3e26f86387293792bc1edc  ./js/components/horizontal-rail.js
 db6d4d3e8f233ab56850b31d9d657d671bf4df0bde46888fa92a2b81c8b32c30  ./js/components/level2-block.js
 1c5bee883396ed159826e4363afa6d3778b0fbe32f2e0b4ff1aec6d1ecc3a70f  ./js/components/miwa-nine-elements.js
-4a8a5284050e57920728daf1f031c79940321bff40ba764603cf36bdfdce3a62  ./js/components/miwa-publication-master.js
+f378c82bf895f6ee20f74fe0cb0ee2410d35773c1f4bfe036d047f5bb5dbb0b7  ./js/components/miwa-publication-master.js
 64133829044ce3996eafb49757efe0fc53bda4aa0d35c3dae8dd804e46afd01f  ./js/components/object-presenter.js
 f9c05923f2f076e1240169c125d770a3635e7e52f190dd062a6ea04b4750bbf0  ./js/components/object-view-controller.js
 22572c677d48d154af455524736ca26fa2d5260594e9ee2da07612a45135c566  ./js/components/page-header.js
@@ -220,9 +223,10 @@ c035ae9983227133013db5bf10db1a45ba88c72e466ee3bbbe270853046409ac  ./js/config/co
 4cb33bff13ffe3911fa2c62b839fd0338b7eba776e3344854fa505a50b92db6a  ./js/config/field-registry.js
 2cb7ca88619434c0c577234997b855fceeee76cb301693f77eb4cd306f7df302  ./js/config/miwa-nine-elements.js
 c24a23f265d52c0333f21e2339ae34a478fcbd9a0057e1a078b336a89f58474e  ./js/config/preview-identities.js
-02161c612d298a33f65885691b70811f7245e366acaf0ce81cf32c8a8de214b7  ./js/config/route-registry.js
+c57a0c2a59e9010bb3f85e8708ad5cfe424257d064629d27720a20ad13bd2833  ./js/config/route-registry.js
 2cd0a67c78d381141e0f6f0261fd7d87c62d5d5abfbf5d8e02ba752ab6009e4d  ./js/config/semantic-icons.js
-5a7a6a4bbce82512b875fbd098996417af132f0d53d8b7a596547a00bfd1b45c  ./js/config/sidebar-registry.js
+a2120ed578b33356d0dc8d87d4df22036362e92b3f4fac4d1e49714e57690204  ./js/config/sidebar-registry.js
+5a7a6a4bbce82512b875fbd098996417af132f0d53d8b7a596547a00bfd1b45c  ./js/config/sidebar-registry.js.bak
 7517216bbcb1616e8c45d3179942adfbdbec0a48560fa72a55a310289d949eac  ./js/config/system-config.js
 34d95b6f0057949eefa4a70485ba2a07a74fe5da08db11217eb6fd4e8dececb3  ./js/core/component-loader.js
 42d86fbd8bbbf9f4f5b2bd29736f7753a08205b75e39a67f42ef95e50228e3f4  ./js/data/ai-talents.js
@@ -240,14 +244,15 @@ c98839f9f371a9758b9a3641e0144b619979210f25e7714ee06d1ee224d79356  ./js/data/sele
 01e8d48c17faa4eade61d8c36f30ea845acab6cc51cc2a44fd9892759bb71a91  ./js/data/selection-workbench-adapter.js
 1ec4e0afa72e0388249b891383a4a6a8f716b58b28e257c18df87b05d965f053  ./js/fields/field-standard.js
 1c33932146d1db2b66597820d35d81570abb9528a359090b73160fcbe56a33a6  ./js/fields/field-types.js
-af01a489d639edfe91eb277c31878169eb60be4a6a0cc4f74a9d52eb7b32f3b8  ./js/miwa-system.js
+3a21c5537d8654d0721f8bde6a22ecc91661426bd5a54078ac92573ee7c6b72e  ./js/miwa-system.js
 62cf257146d6271de4fadf8c43635f587574d0aaf1356fc0969d1458bef05fc7  ./js/pages/business-page-template.js
 a60e6b37a118d097cb52451172f574ce11713e2fbfdefe94f67a8795452eb529  ./js/pages/content-page-template.js
-19ac0a9004de804f37a01a3085081534776ab978f13fb6e28d347ea9d5cba5c4  ./js/pages/miwa-business-home-book.js
+2e9afa890f5e9b7b86e8915b00d4b79e5b636cc0e35a38c06375c68dce227834  ./js/pages/miwa-business-home-book.js
 fa62f20d63a9140da384555b4e570de2677e310cdb768fc7361b4d730930b14d  ./js/pages/miwa-business-home.js
 9f981d445d7837893d36f0be891fa493f7182598e85984572e0f12acc7bc2173  ./js/pages/miwa-calendar.js
+7422bf197c6ee09cd1d40a8353788e461abd7dfbfed94f804c7cf5f9ef1758a0  ./js/pages/miwa-company-home-book.js
 b1e6152ef0aced2afe4a58b4bbb5261b99994fadb2ad2c7f68456487d6f2b7c6  ./js/pages/miwa-company-home.js
-bb1d2b07a32f5ce39047a1e8ff6048c25e6881954250bb5db0ba3fb7e26899c2  ./js/pages/miwa-work-home.js
+35897ea4d0aeec42ca8f6b4a81adb3f980debd86aad3939f76c645bfac087585  ./js/pages/miwa-work-home.js
 29ec7ec2562f97421509e1d2de67ef9d5c8ad95e40b201cb95529e919941f227  ./js/pages/notification-detail.js
 1a05539a721ad87744cbda65a24333cab3decb7bd0c0ef8ec23aa02b4a72b9a2  ./js/pages/notifications.js
 7a890c5f3daa1ea9dc62e4e68268b8e15d8a4d0d439cf1af5430fa88d657dada  ./js/pages/sampling-workbench.js
@@ -260,7 +265,8 @@ fdfce2bc2128dafbb631a748db947a67569c3b1ec196a4dd23779f9f73ddfe72  ./js/services/
 c2232162ca07a33c2fa696d3ddf5b0c35ca9f73344b1ef79a7df6f6fd7e19520  ./js/shell/header.js
 cfe55f1301ac67c8588e5cc50fbe3089577f5beb359696eba7d86be242877528  ./js/shell/miwa-ai-layer.js
 2462a4d7cda536cd330544e84dd328d2344b46512004e010c56c0a5c972b2d8d  ./js/shell/platform-context.js
-438902121fded94773eea730830ad1a8432f1b97a628d972fd2993c0fb514689  ./js/shell/primary-navigation.js
+8b8bd7f0d6fa239781c6873875dc4316ed715943c48341281b10504bb77bb71c  ./js/shell/primary-navigation.js
+438902121fded94773eea730830ad1a8432f1b97a628d972fd2993c0fb514689  ./js/shell/primary-navigation.js.bak
 c79ef45fd5cf4385fb037d4c7d617bd5970d78d8f5eab717584d9d02dcf54850  ./js/shell/system-settings.js
 d8057c1770cd8d3551eb2fc10df87f6736c9fde89ef85661986eb960b77f3c8d  ./js/templates/level2-empty-base.js
 8302d3a1e1f8b8dccfd8a40d4a80c5ab385464b9c3b919a11b988ccd1716fc40  ./js/templates/template-registry.js
@@ -289,7 +295,7 @@ b2ea658e7b545ba546436128950705c4358854694a0633c2653cd5e393089775  ./pages/select
 ac045e139d06a279c5ab8cd83d3d2b0b5858c5d2bca7fd06aa409b3d58ef08c3  ./pages/selection-workbench/record-detail/index.html
 1cefc2cfcc48fe9828a3d059f38cf336d9787ed12dda4fd7abdac91453ed6209  ./pages/selection-workbench/record-preview.html
 7b76fe4b17a3d7cb16600cf21e6d0bca906d599773f6f0f9c5fbc7dfd3a92a0c  ./pages/selection-workbench/tasks.html
-7a6af4c615b41bae6ec35ea49ea9d528d532c349e6533dab51ebbb9076b12346  ./pages/work-home/template.html
+a158b3bededa10d2adad5460376810c6a12136b4b22b994ba98195642286af71  ./pages/work-home/template.html
 a31bb6074de88cfa9f4169f99e9e9d17f70398bc16514799fb96530a59470f63  ./recovery/README.md
 8e658aef561fa550da047621d884f7dd3163d207d974a95c9c43499704527e8d  ./recovery/RECOVERY_SOURCE.md
 f8de8063f20d416d9fd9cbaf1f2f6cba072a7f13df80a60ef335712a2b024cf0  ./recovery/components.mixed.recovered.css
@@ -320,6 +326,8 @@ ae44f760683bd40cdb6ee0b6701f5c81fa378159fa8c38305c7e0336c052f2da  ./tests/verify
 84f915cbe269eb457a182a54afd117acf5498e6811cb08fba02f1c53cd162d09  ./tests/verify-content-digital-book-v1.9.31.3.mjs
 d707c4591168eb6784511b214072a63378df0ad4bddd76f6380b574d0d9f96aa  ./tests/verify-content-publication-master-v1.9.31.2.mjs
 f8d50dea7c0b8d94ab08aa754f5bcfc515f4d662a1338ad726833aebcee232a3  ./tests/verify-database-backend-v1.7.mjs
+e3189c0475361db93792e3caa16692399f67d6c705d354e0ce364010ff31696a  ./tests/verify-digital-publication-v1.9.31.4.mjs
+d4d323e53ca40fb684e55c80610dcb28d1c693a040f45ab718e15a0b3f1624d1  ./tests/verify-digital-publication-v1.9.31.5.mjs
 5e30cdabb7aace9853b6b880fc0f7b70cce29cf50a621ec19980ae47a70f35ef  ./tests/verify-drive-registry-sync-v1.9.30.1.mjs
 123fc9e1d08f102b33ea0bae08daaf386926a8de678193c70b0fa6187d29e6ea  ./tests/verify-field-standardization-v1.6.mjs
 e3524171499aa8a28d894504957eea0c3f70046db59ba7a4a5d069b0839a7855  ./tests/verify-global-header-context-v1.9.4.mjs
@@ -351,5 +359,6 @@ a5449f83f9089b2f10b7f23c1847a2d83aac8753e2fe18e2752cb09a0bd92da7  ./tests/verify
 a4f0a513f705dbf6df83e6eb6be0443cecdcb4054d9bc6ec78d735e0bddaa799  ./tests/verify-work-attention-v1.9.30.2.mjs
 2bbb5e4e46c7bcca988fb0e2ffd2d3b0626608a9ce0a5417cf3d9e7eaba81fe7  ./tests/verify-work-execution-loop-v1.9.30.mjs
 32600bc936a81712eb75a797aec4fb4b94b566bba2e30ebec1e5167fbfa474bb  ./tests/verify-work-home-v1.9.29.1.mjs
+925a683ec66d3cb2af90b096b97a3015a44037b3569fa12e0c37d7c6de0c6f5d  ./tests/verify-work-home-v1.9.32.mjs
 0410fdc3c4384923a219342c95b17f917e699103cefa4ee22f09d03698ebd486  ./tools/export-field-catalog.mjs
 018a39d9723c5ef38a904327e47554ff049927867ac2cee4834beca8c3d2060e  ./vercel.json
