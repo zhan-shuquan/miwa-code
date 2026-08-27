@@ -1,5 +1,5 @@
 /* ========================================
-   MIWA Business Home | Digital Book Overview V1.9.31.3
+   MIWA Business Home | Digital Book Overview V1.9.31.4
    Screen: portrait A4 two-page spreads. Print: portrait A4 single pages.
    Information model: space=book, group=chapter, child=section, content=page.
 ======================================== */
@@ -10,14 +10,16 @@ import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260824-v1.9
 import {
   bindPublicationActions,
   configurePublicationAside,
+  publicationBackCover,
   publicationChapterSummary,
   publicationCover,
+  publicationCoverSpread,
   publicationPage,
   publicationSingle,
   publicationSpread,
   setPublicationPageMode,
   validatePublicationPages
-} from "../components/miwa-publication-master.js?v=20260826-v1.9.31.3";
+} from "../components/miwa-publication-master.js?v=20260827-v1.9.31.4";
 import { initMiwaBusinessHome as initLegacyBusinessHome } from "./miwa-business-home.js?v=20260826-v1.9.31-business-home";
 import {
   MIWA_BUSINESS_HOME_SUBTITLE,
@@ -186,8 +188,17 @@ function overviewHtml() {
     visualHtml: `<span class="miwa-business-book-cover-icon" data-icon="shared" aria-hidden="true"></span>`
   });
 
+  const backCover = publicationBackCover({
+    title: "关于《美和集团事业手册》",
+    summary: "本册用于帮助美和集团成员快速理解集团事业构成、真实经营阶段、事业之间的关系，以及集团共享能力如何支持各事业持续经营。",
+    contents: ["集团事业", "事业管理", "事业发展", "经营连接"],
+    audiences: ["集团成员", "事业负责人", "新入职员工", "管理人员"],
+    bookLabel: "事业之家",
+    visualHtml: `<span class="miwa-business-book-cover-icon" data-icon="shared" aria-hidden="true"></span>`
+  });
+
   return `<article class="miwa-business-publication miwa-business-book miwa-publication-book" data-publication-book="business-home">
-    ${publicationSingle(cover)}
+    ${publicationCoverSpread(cover, backCover)}
     ${publicationSpread(overviewPage2(), overviewPage3(), "overview")}
     ${publicationSpread(overviewPage4(), overviewPage5(), "chapter-01-a")}
     ${publicationSpread(overviewPage6(), overviewPage7(), "chapter-01-b")}

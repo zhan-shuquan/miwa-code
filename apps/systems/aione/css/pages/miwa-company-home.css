@@ -691,3 +691,12 @@
   .miwa-company-execution-principles,.miwa-company-force-grid,.miwa-company-operation-loop{break-inside:avoid;page-break-inside:avoid}
   .miwa-company-execution-principles article,.miwa-company-force-grid article,.miwa-company-operation-loop article{break-inside:avoid;page-break-inside:avoid}
 }
+
+/* V1.9.31.4 | 美和之家数字出版概览 */
+.miwa-company-publication-book{width:100%}
+.miwa-company-book-two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.miwa-company-book-two article,.miwa-company-book-three article,.miwa-company-book-toc,.miwa-company-book-two--stack article{padding:17px 15px;border:1px solid #DDE6E1;background:#FFF}.miwa-company-book-two article>span,.miwa-company-book-three article>span{color:#C83A32;font-size:8px;font-weight:900;letter-spacing:.1em}.miwa-company-book-two h3,.miwa-company-book-three h3,.miwa-company-book-toc h3{margin:7px 0;color:#0D4937;font-size:14px}.miwa-company-book-two p,.miwa-company-book-three p,.miwa-company-book-toc p{margin:0;color:#596860;font-size:9px;line-height:1.7}
+.miwa-company-book-three{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.miwa-company-book-three article{min-height:180px}
+.miwa-company-book-toc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.miwa-company-book-toc{display:grid;grid-template-columns:30px 1fr;gap:8px;padding:10px 11px}.miwa-company-book-toc>span{color:#C83A32;font-size:8px;font-weight:900}.miwa-company-book-toc h3{margin:0 0 3px;font-size:10px}.miwa-company-book-toc p{font-size:7.5px;line-height:1.45}.miwa-company-book-toc small{display:block;margin-top:4px;color:#8B9791;font-size:6.5px}
+.miwa-company-book-flow{display:grid;grid-template-columns:1fr 1fr;gap:8px}.miwa-company-book-flow span{display:grid;grid-template-columns:28px 1fr;align-items:center;min-height:40px;padding:8px 10px;background:#F7F9F7;border-bottom:1px solid #DCE5E0;color:#344D43;font-size:8.5px;font-weight:800}.miwa-company-book-flow b{color:#C83A32;font-size:7px}
+.miwa-company-book-two--stack{grid-template-columns:1fr;gap:12px}.miwa-company-book-two--stack article{min-height:125px}
+@container miwa-book-stage (max-width:520px){.miwa-company-book-three,.miwa-company-book-two,.miwa-company-book-toc-grid,.miwa-company-book-flow{grid-template-columns:1fr}}

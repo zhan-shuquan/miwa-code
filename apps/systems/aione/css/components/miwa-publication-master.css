@@ -308,3 +308,58 @@
   .miwa-publication-cover__footer{left:15mm!important;right:15mm!important;bottom:9mm!important}
   .miwa-publication-summary-next{left:15mm!important;right:15mm!important;bottom:20mm!important}
 }
+
+/* =========================================================
+   V1.9.31.4 | MIWA Digital Publication Design System V1.0
+   Adaptive rule: prefer a readable spread, never shrink pages merely to keep two pages.
+   ========================================================= */
+.miwa-publication-book{container-type:inline-size;container-name:miwa-book-stage}
+.miwa-publication-cover-spread{align-items:stretch}
+.miwa-publication-page--back-cover{border:0;background:#F7F7F3;color:var(--miwa-publication-green-deep);box-shadow:0 14px 38px rgba(13,73,55,.10)}
+.miwa-publication-page--back-cover::before{content:"";position:absolute;right:0;top:0;bottom:0;width:8px;background:var(--miwa-publication-red)}
+.miwa-publication-back__brand{display:flex;justify-content:space-between;gap:18px;color:var(--miwa-publication-green);font-size:8px;font-weight:900;letter-spacing:.1em}
+.miwa-publication-back__brand b{font-weight:800;letter-spacing:.14em}
+.miwa-publication-back__body{margin-top:60px;max-width:86%}
+.miwa-publication-back__kicker{display:block;margin-bottom:14px;color:var(--miwa-publication-red);font-size:8px;font-weight:900;letter-spacing:.12em}
+.miwa-publication-page--back-cover h2{margin:0 0 20px;font-size:32px;color:var(--miwa-publication-green-deep)}
+.miwa-publication-page--back-cover p{margin:0;color:#55665E;font-size:10.5px;line-height:1.9}
+.miwa-publication-back__section{margin-top:30px;padding-top:16px;border-top:1px solid #DCE5E0}
+.miwa-publication-back__section>strong{display:block;margin-bottom:11px;color:var(--miwa-publication-green);font-size:9px}
+.miwa-publication-back__section ol{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.miwa-publication-back__section li{display:grid;grid-template-columns:26px 1fr;gap:8px;color:#45564E;font-size:9px}
+.miwa-publication-back__section li span{color:var(--miwa-publication-red);font-weight:900}
+.miwa-publication-back__audience{display:flex;flex-wrap:wrap;gap:6px}.miwa-publication-back__audience span{padding:5px 8px;background:#FFF;border:1px solid #DCE5E0;font-size:8px}
+.miwa-publication-back__visual{position:absolute;right:36px;bottom:76px;color:rgba(23,107,77,.18);font-size:16px;font-weight:950;letter-spacing:.15em}
+.miwa-publication-back__visual img{max-width:92px;max-height:92px;object-fit:contain}
+
+/* Real content-space adaptation. */
+@container miwa-book-stage (max-width:900px){
+  .miwa-publication-spread{display:block}
+  .miwa-publication-spread::after{display:none}
+  .miwa-publication-page{width:min(100%,620px);max-width:620px;margin:0 auto 18px}
+  .miwa-publication-page[data-page-side="left"],.miwa-publication-page[data-page-side="right"]{padding-left:38px;padding-right:38px}
+}
+@container miwa-book-stage (min-width:901px){
+  .miwa-publication-spread{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media print{
+  .miwa-publication-cover-spread{display:block!important}
+  .miwa-publication-page--back-cover{break-before:page!important;page-break-before:always!important}
+}
+
+/* Medium desktop: protect book readability first; collapse Aside into compact publication tools. */
+@media (min-width:1100px) and (max-width:1499px){
+  .app-body[data-page-mode="publication"]{--desktop-aside:0px!important}
+  .app-body[data-page-mode="publication"] .desktop-aside-host{display:none!important}
+  body[data-page-mode="publication"] .miwa-publication-mobile-tools{
+    position:fixed;z-index:80;right:16px;bottom:24px;display:flex;gap:6px;padding:6px;
+    border:1px solid #DDE6E1;border-radius:10px;background:rgba(255,255,255,.97);
+    box-shadow:0 8px 24px rgba(13,73,55,.12)
+  }
+  body[data-page-mode="publication"] .miwa-publication-mobile-tools button{
+    min-height:32px;padding:6px 9px;border:1px solid var(--miwa-publication-green);border-radius:7px;
+    background:#FFF;color:var(--miwa-publication-green);font:inherit;font-size:8.5px;font-weight:850
+  }
+  body[data-page-mode="publication"] .miwa-publication-mobile-tools .is-primary{background:var(--miwa-publication-green);color:#FFF}
+}

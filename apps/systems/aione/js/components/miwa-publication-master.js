@@ -1,5 +1,5 @@
 /* =========================================================
-   AIONE Digital Publication Master V1.1 | V1.9.31.3
+   AIONE Digital Publication Master V1.2 | V1.9.31.4
    Scope: content / recognition pages only.
    Model: space = book, level-1 directory = chapter, level-2 = section,
    content = page, odd chapter remainder = chapter summary.
@@ -8,6 +8,7 @@
 
 const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
 const MOBILE_TOOLS_ID = "miwa-publication-mobile-tools";
+let movedBackCovers = [];
 let eventsBound = false;
 
 export const MIWA_PUBLICATION_META = Object.freeze({
@@ -47,7 +48,27 @@ export function publicationToolbar() {
   return "";
 }
 
+function preparePrintOrder() {
+  movedBackCovers = [];
+  document.querySelectorAll("[data-publication-book]").forEach((book) => {
+    const back = book.querySelector("[data-publication-back-cover]");
+    if (!back) return;
+    movedBackCovers.push({ back, parent:back.parentNode, next:back.nextSibling });
+    book.append(back);
+  });
+}
+
+function restoreScreenOrder() {
+  movedBackCovers.forEach(({ back, parent, next }) => {
+    if (!parent) return;
+    if (next && next.parentNode === parent) parent.insertBefore(back, next);
+    else parent.append(back);
+  });
+  movedBackCovers = [];
+}
+
 function startPrint() {
+  preparePrintOrder();
   window.requestAnimationFrame(() => window.print());
 }
 
@@ -56,6 +77,7 @@ function bindGlobalPublicationEvents() {
   eventsBound = true;
   window.addEventListener("aione:publication:print", startPrint);
   window.addEventListener("aione:publication:pdf", startPrint);
+  window.addEventListener("afterprint", restoreScreenOrder);
 }
 
 export function bindPublicationActions(root = document) {
@@ -124,6 +146,35 @@ export function publicationCover({
     </div>
     <div class="miwa-publication-cover__footer"><span>${esc(MIWA_PUBLICATION_META.platform)}｜${esc(bookLabel)}</span><b>${esc(version)}｜${esc(date)}</b></div>
   </section>`;
+}
+
+export function publicationBackCover({
+  title = "关于本册",
+  summary = "",
+  contents = [],
+  audiences = [],
+  bookLabel = "内容资料",
+  version = MIWA_PUBLICATION_META.version,
+  date = "2026.08",
+  visualHtml = ""
+} = {}) {
+  const toc = contents.slice(0, 6).map((item, index) => `<li><span>${String(index + 1).padStart(2,"0")}</span>${esc(item)}</li>`).join("");
+  const audience = audiences.slice(0, 5).map((item) => `<span>${esc(item)}</span>`).join("");
+  return `<section class="miwa-publication-page miwa-publication-page--back-cover" data-book-page data-publication-back-cover data-page-side="single">
+    <div class="miwa-publication-back__brand"><span>${esc(MIWA_PUBLICATION_META.series)}</span><b>MIWA GROUP</b></div>
+    <div class="miwa-publication-back__body">
+      <span class="miwa-publication-back__kicker">ABOUT THIS BOOK</span><h2>${esc(title)}</h2>
+      ${summary ? `<p>${esc(summary)}</p>` : ""}
+      ${toc ? `<div class="miwa-publication-back__section"><strong>本册主要内容</strong><ol>${toc}</ol></div>` : ""}
+      ${audience ? `<div class="miwa-publication-back__section"><strong>适用对象</strong><div class="miwa-publication-back__audience">${audience}</div></div>` : ""}
+    </div>
+    <div class="miwa-publication-back__visual">${visualHtml || `<span>MIWA</span>`}</div>
+    <div class="miwa-publication-cover__footer"><span>${esc(MIWA_PUBLICATION_META.platform)}｜${esc(bookLabel)}</span><b>${esc(version)}｜${esc(date)}</b></div>
+  </section>`;
+}
+
+export function publicationCoverSpread(frontCover, backCover) {
+  return `<div class="miwa-publication-spread miwa-publication-cover-spread" data-publication-cover-spread>${frontCover}${backCover}</div>`;
 }
 
 export function publicationPage({
