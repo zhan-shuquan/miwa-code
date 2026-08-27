@@ -1,5 +1,5 @@
 /* =========================================================
-   AIONE Digital Publication Master V1.2 | V1.9.31.4
+   AIONE Digital Publication Master V1.3 | V1.9.31.5
    Scope: content / recognition pages only.
    Model: space = book, level-1 directory = chapter, level-2 = section,
    content = page, odd chapter remainder = chapter summary.

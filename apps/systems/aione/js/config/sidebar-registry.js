@@ -98,6 +98,12 @@ export function resolveSidebarContext(routeId, currentPath, currentBusinessSpace
   const rootId = resolvePlatformRoot(routeId);
   const root = ROUTE_REGISTRY[rootId] || ROUTE_REGISTRY[routeId];
   const meta = PLATFORM_CONTEXT_META[rootId] || { icon: "apps", type: "content" };
+  const publicationActions = (rootId === "company" || rootId === "business-home")
+    ? [
+        { id:"publication-print", label:"打印", icon:"file", event:"aione:publication:print" },
+        { id:"publication-pdf", label:"导出PDF", icon:"file", event:"aione:publication:pdf" }
+      ]
+    : [];
   return {
     type: meta.type,
     kicker: TYPE_LABELS[meta.type] || "当前空间",
@@ -105,6 +111,6 @@ export function resolveSidebarContext(routeId, currentPath, currentBusinessSpace
     icon: meta.icon,
     items: buildPlatformItems(rootId),
     activeWorkbenchId: null,
-    quickActions: []
+    quickActions: publicationActions
   };
 }

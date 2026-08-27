@@ -244,10 +244,15 @@ function bindDesktopAccordion() {
 
     const quick = event.target.closest("[data-sidebar-quick-action]");
     if (quick) {
+      const action = quick.dataset.sidebarQuickAction || "";
+      if (action.startsWith("aione:publication:")) {
+        window.dispatchEvent(new CustomEvent(action));
+        return;
+      }
       const mainHost = document.getElementById("selection-main-host");
       mainHost?.dispatchEvent(new CustomEvent("aione:sidebar-quick-action", {
         bubbles: false,
-        detail: { action: quick.dataset.sidebarQuickAction, route: getCurrentRoute() }
+        detail: { action, route: getCurrentRoute() }
       }));
     }
   });
