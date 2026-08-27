@@ -4,12 +4,14 @@
     <span class="mobile-brand-name">AIONE</span>
   </a>
 
-  <section class="mobile-business-context" data-context-stage="business" aria-label="事业之家">
-  <a class="mobile-business-context__button" href="#/business-home" data-header-route="business-home" aria-label="打开事业之家">
-    <span>事业之家</span>
-    <span class="miwa-semantic-icon" data-icon="apps" aria-hidden="true"></span>
-  </a>
-</section>
+  <section class="mobile-business-context" data-context-stage="business" aria-label="当前事业组件">
+    <div class="mobile-business-context__shell">
+      <a class="mobile-business-context__home" href="#/business-home" data-header-route="business-home" aria-label="打开事业之家">事业之家</a>
+      <span class="mobile-business-context__divider" aria-hidden="true"></span>
+      <button class="mobile-business-context__switch" id="mobile-business-entry" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="mobile-business-menu"><strong id="mobile-business-name">跨境</strong><span class="miwa-semantic-icon" data-icon="chevronDown" aria-hidden="true"></span></button>
+      <div class="mobile-business-menu" id="mobile-business-menu" role="menu" hidden><div class="miwa-business-menu__title">切换事业</div><div class="miwa-business-menu__list" id="mobile-business-menu-list"></div></div>
+    </div>
+  </section>
 
   <section class="mobile-user-identity" data-context-stage="person" aria-label="用户登录区">
     <button class="mobile-user-identity__button" id="mobile-employee-entry" type="button" aria-haspopup="dialog" aria-expanded="false">

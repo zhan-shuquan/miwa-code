@@ -15,12 +15,14 @@
         </a>
       </section>
 
-      <section class="miwa-business-context" data-context-stage="business" aria-label="事业之家">
-  <a class="miwa-business-context__button" href="#/business-home" data-header-route="business-home" aria-label="打开事业之家">
-    <span class="miwa-business-context__copy"><small>事业</small><strong>事业之家</strong></span>
-    <span class="miwa-semantic-icon miwa-chevron" data-icon="apps" aria-hidden="true"></span>
-  </a>
-</section>
+      <section class="miwa-business-context" data-context-stage="business" aria-label="当前事业组件">
+        <div class="miwa-business-context__shell">
+          <a class="miwa-business-context__home" href="#/business-home" data-header-route="business-home" aria-label="打开当前事业的事业之家"><span class="miwa-semantic-icon" data-icon="apps" aria-hidden="true"></span><strong>事业之家</strong></a>
+          <span class="miwa-business-context__divider" aria-hidden="true"></span>
+          <button class="miwa-business-context__switch" id="desktop-business-entry" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="desktop-business-menu"><strong id="desktop-business-name">美和跨境</strong><span class="miwa-semantic-icon miwa-chevron" data-icon="chevronDown" aria-hidden="true"></span></button>
+          <div class="miwa-business-menu" id="desktop-business-menu" role="menu" hidden><div class="miwa-business-menu__title">切换事业</div><div class="miwa-business-menu__list" id="desktop-business-menu-list"></div></div>
+        </div>
+      </section>
 
       <section class="miwa-user-identity" data-context-stage="person" aria-label="当前用户">
         <button class="miwa-user-identity__button" id="desktop-employee-entry" type="button" aria-haspopup="dialog" aria-expanded="false">

@@ -306,3 +306,11 @@
   border-color:#176B4D;
   box-shadow:0 0 0 3px rgba(23,107,77,.12);
 }
+/* V1.9.38｜工作之家高频创建入口；事业上下文统一回到Header */
+.sidebar-context-head[hidden]{display:none!important}
+.sidebar-primary-action{flex:0 0 auto;padding:10px 10px 2px;background:#fff}
+.sidebar-primary-action[hidden]{display:none!important}
+.sidebar-primary-action__button{width:100%;min-height:38px;display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #176B4D;border-radius:9px;background:#176B4D;color:#fff;font:inherit;font-size:11px;font-weight:850;text-align:left;cursor:pointer;box-shadow:0 4px 12px rgba(23,107,77,.10)}
+.sidebar-primary-action__button:hover{background:#0D4937;border-color:#0D4937}
+.sidebar-primary-action__icon{width:18px;height:18px;display:inline-flex;color:#fff}
+#sidebar-business-switcher{display:none!important}

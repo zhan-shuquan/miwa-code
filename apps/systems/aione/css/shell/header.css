@@ -1721,3 +1721,24 @@ button.miwa-nav-item{border:0;background:transparent;font:inherit;cursor:pointer
     text-overflow:clip;
   }
 }
+/* =========================================================
+   V1.9.38｜事业上下文最终收口：事业之家 │ 当前事业 ▼
+   ========================================================= */
+.miwa-business-context{min-width:170px;max-width:194px}
+.miwa-business-context__shell{position:relative;min-height:48px;display:grid;grid-template-columns:auto 1px minmax(0,1fr);align-items:center;border:1px solid #D9E5DF;border-radius:12px;background:#fff;overflow:visible;transition:border-color .16s ease,box-shadow .16s ease}
+.miwa-business-context__shell:hover{border-color:#BFD4CA;box-shadow:0 0 0 3px rgba(23,107,77,.05)}
+.miwa-business-context__home,.miwa-business-context__switch{min-height:46px;display:flex;align-items:center;gap:5px;border:0;background:transparent;color:#17382D;font:inherit;font-size:10.5px;font-weight:850;text-decoration:none;cursor:pointer;white-space:nowrap}
+.miwa-business-context__home{padding:0 8px 0 9px;border-radius:11px 0 0 11px}
+.miwa-business-context__home .miwa-semantic-icon{width:14px;height:14px;color:#176B4D}
+.miwa-business-context__switch{min-width:0;justify-content:space-between;padding:0 8px;border-radius:0 11px 11px 0;color:#0D4937}
+.miwa-business-context__switch strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.miwa-business-context__home:hover,.miwa-business-context__switch:hover,.miwa-business-context__switch[aria-expanded="true"]{background:#F5F9F7}
+.miwa-business-context__divider{width:1px;height:24px;background:#DCE5E0}
+.miwa-business-context__switch .miwa-chevron{width:12px;height:12px;flex:0 0 12px;color:#5E776B}
+.miwa-business-context__shell>.miwa-business-menu{top:calc(100% + 8px);left:auto;right:0}
+.mobile-business-context{max-width:150px}
+.mobile-business-context__shell{position:relative;height:38px;display:grid;grid-template-columns:auto 1px minmax(0,1fr);align-items:center;border:1px solid #D9E5DF;border-radius:10px;background:#fff}
+.mobile-business-context__home,.mobile-business-context__switch{height:36px;border:0;background:transparent;color:#17382D;font:inherit;font-size:9px;font-weight:800;text-decoration:none;display:flex;align-items:center;gap:3px;white-space:nowrap}
+.mobile-business-context__home{padding:0 6px}.mobile-business-context__switch{min-width:0;padding:0 5px}.mobile-business-context__switch strong{overflow:hidden;text-overflow:ellipsis}.mobile-business-context__divider{width:1px;height:20px;background:#DCE5E0}.mobile-business-context__switch .miwa-semantic-icon{width:10px;height:10px}
+@media(max-width:1460px){.miwa-business-context{min-width:150px;max-width:168px}.miwa-business-context__home,.miwa-business-context__switch{font-size:9.5px}.miwa-business-context__home{padding-inline:7px}}
+@media(max-width:1260px){.miwa-business-context{min-width:136px;max-width:148px}.miwa-business-context__home .miwa-semantic-icon{display:none}.miwa-business-context__home,.miwa-business-context__switch{font-size:9px;padding-inline:6px}}

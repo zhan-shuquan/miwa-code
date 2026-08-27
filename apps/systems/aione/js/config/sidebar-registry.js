@@ -83,9 +83,6 @@ function buildWorkItems() {
     { id:"work-innovations", label:"我的创新", route:"work-innovations", icon:"brand", subtitle:"记录和跟踪值得验证的新方法、新产品、新模式或新能力。", children:[] },
     { id:"work-business-group", label:"事业工作", route:"work-business-crossborder", icon:"apps", subtitle:"按事业快速查看工作进展，进入当前最关心的经营现场。", children:businessChildren },
     { id:"work-team", label:"团队工作", route:"work-team", icon:"people", subtitle:"从团队和成员视角查看工作分布、当前重点与推进情况。", children:[] },
-    { id:"work-waiting", label:"等待中", route:"work-waiting", icon:"calendar", subtitle:"查看正常等待外部结果、回复或下一检查时间的工作。", children:[] },
-    { id:"work-blocked", label:"异常处理", route:"work-blocked", icon:"notification", subtitle:"集中处理真正阻止工作继续推进的问题和异常。", children:[] },
-    { id:"work-review", label:"待验收", route:"work-review", icon:"file", subtitle:"确认已经提交结果的工作是否达到闭环标准。", children:[] },
     { id:"work-records", label:"工作记录", route:"work-records", icon:"knowledge", subtitle:"按时间回看已经发生并形成结果的真实工作事实。", children:[] }
   ];
 }
@@ -116,6 +113,7 @@ export function resolveSidebarContext(routeId, currentPath, currentBusinessSpace
       icon: "work",
       items: space.workbenches,
       activeWorkbenchId: workbench.id,
+      primaryAction: null,
       quickActions: workbench.quickActions || []
     };
   }
@@ -136,6 +134,7 @@ export function resolveSidebarContext(routeId, currentPath, currentBusinessSpace
     icon: meta.icon,
     items: buildPlatformItems(rootId),
     activeWorkbenchId: null,
+    primaryAction: rootId === "work" ? { id:"work-create", label:"创建工作", icon:"work", event:"aione:work:create" } : null,
     quickActions: publicationActions
   };
 }

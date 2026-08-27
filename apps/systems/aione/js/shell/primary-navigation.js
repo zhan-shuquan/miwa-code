@@ -126,70 +126,25 @@ function renderQuickActions(context) {
   });
 }
 
-function renderBusinessSwitcher(context, routeId) {
+function renderBusinessSwitcher() {
   const host = document.getElementById("sidebar-business-switcher");
+  if (host) host.hidden = true;
   const select = document.getElementById("sidebar-business-select");
-  const label = document.getElementById("sidebar-business-switcher-label");
-
-  if (!host || !select) return;
-
-  const isBusinessContext = context?.type === "business";
-  const isBusinessHome =
-    routeId === "business-home" ||
-    String(routeId || "").startsWith("business-");
-
-  const shouldShow = isBusinessContext || isBusinessHome;
-  host.hidden = !shouldShow;
-
-  if (!shouldShow) return;
-
-  const currentId = getCurrentBusinessSpaceId();
-  const options = getBusinessSpaceOptions();
-
-  select.replaceChildren(
-    ...options.map((space) => {
-      const option = document.createElement("option");
-      option.value = space.id;
-      option.textContent = space.label;
-      option.selected = space.id === currentId;
-      return option;
-    })
-  );
-
-  if (select?.parentElement) {
-    select.parentElement.hidden = !isBusinessContext;
-  }
-
-  if (label) {
-    label.textContent = "";
-    label.hidden = true;
-  }
-
-  if (select) {
-    select.classList.toggle("sidebar-business-context-select", isBusinessContext);
-    select.setAttribute(
-      "aria-label",
-      isBusinessContext ? "切换当前事业" : "进入事业"
-    );
-
-    if (select.parentElement) {
-      select.parentElement.classList.toggle(
-        "sidebar-business-context-control",
-        isBusinessContext
-      );
-    }
-  }
-
-  if (select.dataset.bound !== "true") {
-    select.dataset.bound = "true";
-    select.addEventListener("change", () => {
-      if (!select.value) return;
-      setCurrentBusinessSpace(select.value, {
-        navigate: true,
-        reason: "sidebar-business-switcher"
-      });
-    });
-  }
+  if (select?.parentElement) select.parentElement.hidden = true;
+}
+function renderPrimaryAction(context) {
+  const host = document.getElementById("sidebar-primary-action");
+  if (!host) return;
+  const action = context?.primaryAction;
+  host.hidden = !action;
+  host.replaceChildren();
+  if (!action) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "sidebar-primary-action__button";
+  button.dataset.sidebarPrimaryAction = action.event || action.id;
+  button.append(createIcon(action.icon || "work", "sidebar-primary-action__icon"), Object.assign(document.createElement("span"), { textContent:`＋ ${action.label}` }));
+  host.append(button);
 }
 function renderSidebar() {
   const routeId = getCurrentRoute();
@@ -203,6 +158,8 @@ function renderSidebar() {
   if (!host) return;
 
   const isBusinessSidebar = context.type === "business";
+  const contextHead = document.querySelector(".sidebar-context-head");
+  if (contextHead) contextHead.hidden = isBusinessSidebar;
 
   if (title) {
     title.textContent = context.title;
@@ -222,6 +179,7 @@ function renderSidebar() {
     ? context.items.map((entry) => createAccordionItem(entry, context, routeId, currentPath))
     : context.items.map((entry) => createFlatItem(entry, routeId, currentPath));
   host.replaceChildren(...nodes);
+  renderPrimaryAction(context);
   renderQuickActions(context);
   renderSemanticIcons(document);
 }
@@ -239,6 +197,24 @@ function bindDesktopAccordion() {
         if (other !== group) setGroupExpanded(other, false);
       });
       setGroupExpanded(group, nextExpanded);
+      return;
+    }
+
+    const primary = event.target.closest("[data-sidebar-primary-action]");
+    if (primary) {
+      const action = primary.dataset.sidebarPrimaryAction || "";
+      if (action === "aione:work:create") {
+        window.MIWAAI?.open?.("work-create");
+        window.setTimeout(() => {
+          const input = document.getElementById("ai-secretary-command-input");
+          if (!input) return;
+          if (!input.value.trim()) input.value = "我要创建/交代一项工作：";
+          input.focus();
+          input.setSelectionRange?.(input.value.length, input.value.length);
+        }, 80);
+        return;
+      }
+      window.dispatchEvent(new CustomEvent(action, { detail:{ route:getCurrentRoute() } }));
       return;
     }
 
