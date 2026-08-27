@@ -1,10 +1,9 @@
 # MIWA AIONE Integrated Work Platform
 
-> **Current candidate: V1.9.36 WORK HOME BROWSER EXPERIENCE LOCK CANDIDATE.**
-V1.9.36以用户确认的V1.9.35为唯一基线，对工作事项一览做今天最后一次体验收口：搜索、高频筛选、一级时间筛选、更多筛选、重置、排序、卡片/列表、2·3·4列与刷新统一为一套Work Item Browser；卡片按Main实际容器宽度自动降列，不再出现6列窄卡。工作记录的工作明细直接复用同一浏览器。Backend新增点赞真实数据与“我的点赞”二级查询，关注继续使用observer订阅关系；work-home同时返回money_events财务摘要与work_sessions已记录操作时间，只有真实数据存在时才展示。
+> **Current candidate: V1.9.37 WORK HOME STRUCTURE FINALIZATION CANDIDATE.**
+V1.9.37以已部署并完成1–6项真实浏览器验收的V1.9.36为唯一运行基线，对工作之家做最后一次结构收口：新增“团队工作”作为成员/团队工作观察入口；“工作记录”回归历史事实账本；今日工作、全部工作、事业工作、团队工作明确不同使用意图和副标题；“查看工作手册”直接深链到对应章节主标题；显示控制收口为“列表 + 卡片2/3/4/6列下拉 + 刷新”，并记忆个人最近选择、按Main宽度自动保护可读性。
 
-V1.9.35仍作为本候选唯一工程基线；V1.9.30执行/证据/验收/AI复盘、V1.9.30.2 Header提醒、V1.9.31.5数字出版、V1.9.35 Sidebar/建议创新入口完整继承。
-
+本版不新增数据库迁移，不修改Backend Schema；V1.9.36 Cloud Run Backend、0060 object_reactions、点赞/关注、money_events、work_sessions以及Proposal→执行→证据→提交→验收→AI复盘闭环全部原样继承。工作与人才之家的进一步关系不在本版展开，留待人才之家正式开发时单独设计。
 
 
 V1.9.30.2收敛工作之家Header红色数字的真实业务语义：**只提示当前需要本人处理的工作（待处理、待确认、超期、阻断/异常），普通进行中与已完成不进入提醒。** Proposal人工确认、工作状态变化后立即同步；浏览器重新获得焦点/重新可见时自动同步，并以60秒轻量轮询作为多人协作兜底。继续读取同一份work_items事实，不新增重复统计表。

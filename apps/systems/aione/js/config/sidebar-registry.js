@@ -72,20 +72,21 @@ function buildWorkItems() {
   const businessChildren = preferredBusinessIds
     .map((id) => MIWA_BUSINESSES.find((item) => item.id === id))
     .filter(Boolean)
-    .map((item) => ({ id:`work-business-${item.id}`, label:item.name, route:`work-business-${item.id}` }));
-  businessChildren.push({ id:"work-business-more", label:"更多事业", route:"work-business-more" });
+    .map((item) => ({ id:`work-business-${item.id}`, label:item.name, route:`work-business-${item.id}`, subtitle:`按${item.name}快速查看工作进展，进入当前事业经营现场。` }));
+  businessChildren.push({ id:"work-business-more", label:"更多事业", route:"work-business-more", subtitle:"查看其他事业工作，仍然读取同一份Work Item。" });
   return [
-    { id:"work-home", label:"工作概览", route:"work", icon:"work", children:[] },
-    { id:"work-today", label:"今日工作", route:"work-today", icon:"calendar", children:[] },
-    { id:"work-all", label:"全部工作", route:"work-all", icon:"apps", children:[] },
-    { id:"work-following", label:"我的关注", route:"work-following", icon:"notification", children:[] },
-    { id:"work-suggestions", label:"我的建议", route:"work-suggestions", icon:"file", children:[] },
-    { id:"work-innovations", label:"我的创新", route:"work-innovations", icon:"brand", children:[] },
-    { id:"work-business-group", label:"事业工作", route:"work-business-crossborder", icon:"apps", children:businessChildren },
-    { id:"work-waiting", label:"等待中", route:"work-waiting", icon:"calendar", children:[] },
-    { id:"work-blocked", label:"异常处理", route:"work-blocked", icon:"notification", children:[] },
-    { id:"work-review", label:"待验收", route:"work-review", icon:"file", children:[] },
-    { id:"work-records", label:"工作记录", route:"work-records", icon:"knowledge", children:[] }
+    { id:"work-home", label:"工作概览", route:"work", icon:"work", subtitle:"理解工作之家为什么存在、怎样运行以及每个章节怎么使用。", children:[] },
+    { id:"work-today", label:"今日工作", route:"work-today", icon:"calendar", subtitle:"聚焦今天最值得推进的工作，按优先顺序开始处理。", children:[] },
+    { id:"work-all", label:"全部工作", route:"work-all", icon:"apps", subtitle:"查看当前可见的全部工作，快速搜索、筛选和处理。", children:[] },
+    { id:"work-following", label:"我的关注", route:"work-following", icon:"notification", subtitle:"持续跟踪你主动关注的重要工作动态，不改变负责人和权限。", children:[] },
+    { id:"work-suggestions", label:"我的建议", route:"work-suggestions", icon:"file", subtitle:"记录和跟踪我提出的业务改善建议。", children:[] },
+    { id:"work-innovations", label:"我的创新", route:"work-innovations", icon:"brand", subtitle:"记录和跟踪值得验证的新方法、新产品、新模式或新能力。", children:[] },
+    { id:"work-business-group", label:"事业工作", route:"work-business-crossborder", icon:"apps", subtitle:"按事业快速查看工作进展，进入当前最关心的经营现场。", children:businessChildren },
+    { id:"work-team", label:"团队工作", route:"work-team", icon:"people", subtitle:"从团队和成员视角查看工作分布、当前重点与推进情况。", children:[] },
+    { id:"work-waiting", label:"等待中", route:"work-waiting", icon:"calendar", subtitle:"查看正常等待外部结果、回复或下一检查时间的工作。", children:[] },
+    { id:"work-blocked", label:"异常处理", route:"work-blocked", icon:"notification", subtitle:"集中处理真正阻止工作继续推进的问题和异常。", children:[] },
+    { id:"work-review", label:"待验收", route:"work-review", icon:"file", subtitle:"确认已经提交结果的工作是否达到闭环标准。", children:[] },
+    { id:"work-records", label:"工作记录", route:"work-records", icon:"knowledge", subtitle:"按时间回看已经发生并形成结果的真实工作事实。", children:[] }
   ];
 }
 

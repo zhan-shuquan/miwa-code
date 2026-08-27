@@ -79,6 +79,7 @@ export const ROUTE_REGISTRY = Object.freeze({
   "work-business-consulting": route("work-business-consulting", "美和商务咨询", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-business-brand": route("work-business-brand", "美和品牌", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-business-more": route("work-business-more", "更多事业", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
+  "work-team": route("work-team", "团队工作", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-waiting": route("work-waiting", "等待中", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   // V1.9.32 legacy validation token: "work-blocked": route("work-blocked", "等待与阻塞"
   "work-blocked": route("work-blocked", "异常处理", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),

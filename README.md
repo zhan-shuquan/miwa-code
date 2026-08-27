@@ -1,6 +1,6 @@
 # 美和集团代码资产主仓库
 
-> Current AIONE candidate: `apps/systems/aione` **V1.9.36 WORK HOME BROWSER EXPERIENCE LOCK CANDIDATE**. `main` remains the current development baseline; V1.9.30 Work execution, V1.9.30.2 Work Home attention sync, V1.9.31.5 digital-publication foundations and V1.9.35 Work Home unified browser/contribution entrances are inherited.
+> Current AIONE candidate: `apps/systems/aione` **V1.9.37 WORK HOME STRUCTURE FINALIZATION CANDIDATE**. `main` remains the current development baseline; V1.9.30 Work execution, V1.9.30.2 Work Home attention sync, V1.9.31.5 digital-publication foundations and V1.9.36 real likes/follows/money/time browser capabilities are inherited without Backend/DB schema changes.
 
 ## 仓库定位
 

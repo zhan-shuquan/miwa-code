@@ -187,10 +187,12 @@ export function publicationPage({
   bookLabel = "内容资料",
   version = MIWA_PUBLICATION_META.version,
   side = "auto",
-  className = ""
+  className = "",
+  manualSection = ""
 } = {}) {
   const resolvedSide = side === "auto" ? (Number(pageNumber) % 2 === 0 ? "left" : "right") : side;
-  return `<section class="miwa-publication-page miwa-publication-page--content ${className}" data-book-page data-page-number="${pageNumber}" data-page-side="${esc(resolvedSide)}">
+  const manualAttrs = manualSection ? ` id="manual-${esc(manualSection)}" data-manual-section="${esc(manualSection)}"` : "";
+  return `<section class="miwa-publication-page miwa-publication-page--content ${className}" data-book-page data-page-number="${pageNumber}" data-page-side="${esc(resolvedSide)}"${manualAttrs}>
     <div class="miwa-publication-page__topline"><span>${esc(section)}</span><b>${String(pageNumber).padStart(2, "0")}</b></div>
     ${title ? `<h2>${esc(title)}</h2>` : ""}
     ${lead ? `<p class="miwa-publication-page__lead">${esc(lead)}</p>` : ""}
