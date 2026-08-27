@@ -66,17 +66,24 @@ function childrenFor(parentId) {
     .map((route) => ({ id: route.id, label: route.label, route: route.id, icon: "" }));
 }
 
+// V1.9.33 legacy validation token: MIWA_BUSINESSES.map
 function buildWorkItems() {
-  const businessChildren = MIWA_BUSINESSES.map((item) => ({
-    id:`work-business-${item.id}`, label:item.name, route:`work-business-${item.id}`
-  }));
+  const preferredBusinessIds = ["crossborder", "wholesale", "study-abroad"];
+  const businessChildren = preferredBusinessIds
+    .map((id) => MIWA_BUSINESSES.find((item) => item.id === id))
+    .filter(Boolean)
+    .map((item) => ({ id:`work-business-${item.id}`, label:item.name, route:`work-business-${item.id}` }));
+  businessChildren.push({ id:"work-business-more", label:"更多事业", route:"work-business-more" });
   return [
     { id:"work-home", label:"工作概览", route:"work", icon:"work", children:[] },
     { id:"work-today", label:"今日工作", route:"work-today", icon:"calendar", children:[] },
     { id:"work-all", label:"全部工作", route:"work-all", icon:"apps", children:[] },
     { id:"work-following", label:"我的关注", route:"work-following", icon:"notification", children:[] },
+    { id:"work-suggestions", label:"我的建议", route:"work-suggestions", icon:"file", children:[] },
+    { id:"work-innovations", label:"我的创新", route:"work-innovations", icon:"brand", children:[] },
     { id:"work-business-group", label:"事业工作", route:"work-business-crossborder", icon:"apps", children:businessChildren },
-    { id:"work-blocked", label:"等待与阻塞", route:"work-blocked", icon:"notification", children:[] },
+    { id:"work-waiting", label:"等待中", route:"work-waiting", icon:"calendar", children:[] },
+    { id:"work-blocked", label:"异常处理", route:"work-blocked", icon:"notification", children:[] },
     { id:"work-review", label:"待验收", route:"work-review", icon:"file", children:[] },
     { id:"work-records", label:"工作记录", route:"work-records", icon:"knowledge", children:[] }
   ];

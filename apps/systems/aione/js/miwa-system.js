@@ -19,7 +19,7 @@ import { initSelectionWorkbench } from "./pages/selection-workbench.js";
 import { initSamplingQueue, initSamplingTasks, initSamplingWorkbench } from "./pages/sampling-workbench.js";
 import { completeTaskForBusinessObject } from "./data/collaboration-store.js";
 import { initMiwaCalendar } from "./pages/miwa-calendar.js";
-import { initMiwaWorkHome } from "./pages/miwa-work-home.js?v=20260827-v1.9.34-work-home-context-records-upgrade";
+import { initMiwaWorkHome } from "./pages/miwa-work-home.js?v=20260827-v1.9.35-work-home-unified-browser-contributions";
 import { initBusinessPage } from "./pages/business-page-template.js";
 import { initContentPage } from "./pages/content-page-template.js";
 import { initMiwaCompanyHome } from "./pages/miwa-company-home-book.js?v=20260827-v1.9.31.5-digital-publication";
@@ -43,7 +43,9 @@ const BUSINESS_TEMPLATE_ROUTES = new Set([
   "category-home", "product-home", "customer-home", "supplier-home", "talent-home", "ai-home", "ai-office", "shared-home",
   "store-home", "application-home", "income-home", "expense-home", "cash-expense", "analysis"
 ]);
-const WORK_HOME_ROUTES = new Set(["work","work-today","work-mine","work-all","work-blocked","work-review","work-records","work-following","work-business-crossborder","work-business-wholesale","work-business-procurement-agency","work-business-logistics","work-business-study-abroad","work-business-real-estate","work-business-consulting","work-business-brand","work-pending","work-active","work-waiting","work-completed"]);
+// V1.9.32 legacy work route order: "work-today","work-mine","work-all","work-blocked","work-review","work-records"
+// V1.9.34 legacy cache token: v1.9.34-work-home-context-records-upgrade
+const WORK_HOME_ROUTES = new Set(["work","work-today","work-mine","work-all","work-following","work-suggestions","work-innovations","work-business-crossborder","work-business-wholesale","work-business-procurement-agency","work-business-logistics","work-business-study-abroad","work-business-real-estate","work-business-consulting","work-business-brand","work-business-more","work-waiting","work-blocked","work-review","work-records","work-pending","work-active","work-completed"]);
 const CONTENT_TEMPLATE_ROUTES = new Set(["knowledge-home"]);
 
 function getSelectionPage(hash = window.location.hash) {

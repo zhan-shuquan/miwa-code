@@ -31,7 +31,9 @@ export const MIWA_COMPANY_NAVIGATION = Object.freeze([
   group("company-strategy", "经营与战略", "company-strategy", "analysis", "我们怎么经营、准备去哪里", [
     child("company-management-architecture", "经营架构", "company-management-architecture", "展示美和集团AI经营总架构、经营闭环与其下的AI执行总架构。"),
     child("company-development-strategy", "发展战略", "company-development-strategy", "说明集团长期发展的战略方向。"),
-    child("company-development-plan", "发展规划", "company-development-plan", "承载3年、5年、10年发展规划。")
+    child("company-development-plan", "发展规划", "company-development-plan", "承载3年、5年、10年发展规划。"),
+    child("company-suggestion-center", "建议中心", "company-suggestion-center", "汇总集团成员提出的改善建议，完成分诊、受理、责任分派、执行验证与结果回写。"),
+    child("company-innovation-center", "创新中心", "company-innovation-center", "汇总面向集团未来发展的创新想法，完成概念评估、真实业务验证、项目化执行与成果沉淀。")
   ]),
   group("company-global", "事业与全球", "company-global", "shared", "我们在哪里经营、有哪些事业", [
     child("company-business-map", "事业版图", "company-business-map", "展示集团当前与未来事业组合。"),
@@ -146,6 +148,22 @@ export const MIWA_COMPANY_PAGES = Object.freeze({
     sources:[MODERN_CORPS_OVERVIEW_SOURCE, AI_TALENT_SOURCE]
   }),
   "company-development-plan": Object.freeze({ title:"发展规划", eyebrow:"3Y · 5Y · 10Y", subtitle:"承载美和集团3年、5年、10年发展规划，并以正式确认内容持续更新。", kind:"roadmap", status:"正式目标待确认" }),
+  "company-suggestion-center": Object.freeze({
+    title:"建议中心", eyebrow:"GROUP SUGGESTION CENTER", subtitle:"集团成员改善建议的统一归口：先接住问题，再分派责任，最后形成真实处理结果。", kind:"article", status:"结构已确认 · 数据闭环待接入",
+    sections:[
+      {title:"中心职责",text:"建议中心属于美和之家“经营与战略”。个人从工作之家“我的建议”提出和跟踪；集团在这里统一汇总、分诊、指定受理责任人，并确保每条建议最终获得采用、暂不采用或继续验证的明确结论。"},
+      {title:"处理闭环",text:"提出建议 → AI辅助整理与查重 → 业务负责人评估 → 受理/不采用 → 必要时转Work Item或Project → 执行与验证 → 结果回写 → 成熟规则、SOP和方法进入知识之家。"},
+      {title:"责任原则",text:"建议提交人负责提出真实问题与改善想法；建议中心负责“不遗漏”；实际业务负责人负责判断和推进。点赞是群体信号，关注是后续动态订阅，都不替代正式决策。"}
+    ]
+  }),
+  "company-innovation-center": Object.freeze({
+    title:"创新中心", eyebrow:"GROUP INNOVATION CENTER", subtitle:"面向美和集团未来发展的创新统一归口，不局限于AI创新。", kind:"article", status:"结构已确认 · 数据闭环待接入",
+    sections:[
+      {title:"创新范围",text:"创新可以来自经营模式、商品、品牌、供应链、流程、制度、服务、技术、AI等任何领域。创新中心不归AI之家，因为AI只是创新工具之一。"},
+      {title:"验证闭环",text:"创新想法 → 概念评估 → 明确创新负责人和业务验证负责人 → 转Project/Work Item进行真实业务验证 → 成功则正式采用，失败也保留验证事实 → 成熟成果进入知识之家并回写人才贡献。"},
+      {title:"集团治理",text:"创新中心属于美和之家“经营与战略”，负责让值得验证的新想法有人接、有人试、有人追结果；最终是否扩大采用必须以真实证据和经营价值为依据。"}
+    ]
+  }),
 
   "company-global": Object.freeze({ title:"事业与全球", eyebrow:"BUSINESS & GLOBAL", subtitle:"展示美和集团在哪里经营、有哪些事业，以及未来如何形成跨区域协同。", kind:"group", status:"已有真实基础" }),
   "company-business-map": Object.freeze({
