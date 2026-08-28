@@ -82,12 +82,13 @@ export const CORE_RESOURCES = Object.freeze({
     required: ["title", "workType"],
     writable: {
       title: "title", workType: "work_type", status: "status", priority: "priority", businessId: "business_id",
-      ownerPersonId: "owner_person_id", ownerAssignmentId: "owner_assignment_id", workbenchCode: "workbench_code",
+      ownerPersonId: "owner_person_id", ownerAssignmentId: "owner_assignment_id", responsiblePersonId: "responsible_person_id",
+      assignedByPersonId: "assigned_by_person_id", verifierPersonId: "verifier_person_id", workbenchCode: "workbench_code",
       relatedObjectType: "related_object_type", relatedObjectId: "related_object_id", goalSummary: "goal_summary",
       description: "description", platformCode: "platform_code", moneyStatus: "money_status", expectedResult: "expected_result",
       resultSummary: "result_summary", dueAt: "due_at", startedAt: "started_at", completedAt: "completed_at", metadata: "metadata"
     },
-    filters: { ownerPersonId: "owner_person_id", businessId: "business_id", status: "status", priority: "priority", workType: "work_type", relatedObjectType: "related_object_type", relatedObjectId: "related_object_id" },
+    filters: { ownerPersonId: "owner_person_id", responsiblePersonId: "responsible_person_id", assignedByPersonId: "assigned_by_person_id", verifierPersonId: "verifier_person_id", businessId: "business_id", status: "status", priority: "priority", workType: "work_type", relatedObjectType: "related_object_type", relatedObjectId: "related_object_id" },
     defaultSort: "created_at DESC"
   }
 });

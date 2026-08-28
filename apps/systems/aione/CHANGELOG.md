@@ -1175,3 +1175,10 @@
 - 新增 `GET /api/v1/work-home/people-summary?range=week|month|year`，为人才之家后续“工作贡献”提供可复用事实接口；关注者observer不计入工作贡献，接口明确`performanceScore=false`。
 - 新增 `GET /api/v1/work-home/capabilities` Backend版本探针；关注404时明确提示前后端部署版本不一致，不把本地收藏伪装成正式数据库关注。
 - 原Proposal → Human Confirm → Work Item、执行证据、提交结果、验收、AI复盘、Header提醒、数字出版物母版全部继续回归通过。
+## V1.9.40｜工作之家负责人事实源 + 批量安排工作｜2026-08-28
+
+- P0：正式分离创建人、安排人、唯一负责人、参与人和验收人；`owner_person_id` 仅作为兼容镜像，前台统一读取 `responsible_person_id`。
+- “我的工作”和“我安排的”只改变当前用户视角，继续读取同一个 `work_id`；执行权归负责人，验收权归验收人。
+- 美和工作9问改为读取同一条Work结构化事实；`work-mine`、`aione_route` 等内部代码通过业务语义映射后展示。
+- P1：新增极简CSV工作种子导入、Work Seed持久化、Proposal预览和人工批量批准派发；负责人无法确定的Proposal保持“待确认”，不进入正式Work。
+- 预留低风险Proposal的AI秘书授权标记，当前版本不自动批准。

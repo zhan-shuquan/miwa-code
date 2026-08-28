@@ -13,7 +13,7 @@ export const AI_SECRETARY_TOOLS = Object.freeze([
   tool("list_backend_open_work", "从AIONE正式数据库读取当前人员未完成工作事项；数据库未迁移时会返回不可用。", { type:"object", properties:{ limit:{type:"integer",minimum:1,maximum:50} }, required:["limit"], additionalProperties:false }),
   tool("search_knowledge_routes", "按关键词查找AIONE内部知识、规则、方法论、标准、制度、SOP和帮助路由。", { type:"object", properties:{ keyword:{type:"string",minLength:1,maxLength:80}, limit:{type:"integer",minimum:1,maximum:20} }, required:["keyword","limit"], additionalProperties:false }),
   tool("search_corporate_content", "从AIONE美和之家正式索引查找集团内容页和企业资料。用于查找最新资料、图片/PPT/PDF/DOCX/XLSX、经营架构、美和灵魂/准则/传承等。不要直接猜Google Drive文件。", { type:"object", properties:{ query:{type:"string",minLength:1,maxLength:160}, kind:{type:"string",enum:["all","page","asset"]}, fileType:{type:["string","null"],enum:["PDF","PPTX","DOCX","XLSX","IMAGE",null]}, limit:{type:"integer",minimum:1,maximum:20} }, required:["query","kind","fileType","limit"], additionalProperties:false }),
-  tool("propose_create_work_item", "仅提出创建工作事项的建议，不直接写入；必须由人类负责人确认后才能执行。", { type:"object", properties:{ title:{type:"string",minLength:1,maxLength:160}, description:{type:"string",maxLength:1200}, priority:{type:"string",enum:["normal","important","urgent"]}, dueAt:{type:["string","null"]}, reason:{type:"string",maxLength:500} }, required:["title","description","priority","dueAt","reason"], additionalProperties:false })
+  tool("propose_create_work_item", "仅提出创建工作事项的建议，不直接写入；必须明确区分创建人、安排人、负责人和验收人，并由人类确认后执行。", { type:"object", properties:{ title:{type:"string",minLength:1,maxLength:160}, description:{type:"string",maxLength:1200}, priority:{type:"string",enum:["normal","important","urgent"]}, dueAt:{type:["string","null"]}, reason:{type:"string",maxLength:500}, responsiblePersonId:{type:["string","null"]}, assignedByPersonId:{type:["string","null"]}, verifierPersonId:{type:["string","null"]} }, required:["title","description","priority","dueAt","reason","responsiblePersonId","assignedByPersonId","verifierPersonId"], additionalProperties:false })
 ]);
 
 function snapshot(ctx) { return ctx.contextSnapshot || {}; }
@@ -81,6 +81,7 @@ export async function executeAISecretaryTool(name, args = {}, ctx = {}) {
     const objectId = businessContext?.objectId || businessContext?.data?.opportunity?.id || null;
     return { available:true, proposal:{ type:"create_work_item", label:"创建工作事项", summary:`${args.title}｜${args.reason}`, payload:{
       title:args.title, description:args.description, priority:args.priority, dueAt:args.dueAt, reason:args.reason,
+      responsiblePersonId:args.responsiblePersonId, assignedByPersonId:args.assignedByPersonId, verifierPersonId:args.verifierPersonId,
       context:{ routeId:page?.routeId || null, pageTitle:page?.title || null, pageHash:page?.hash || null, objectType, objectId }
     } } };
   }

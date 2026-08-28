@@ -70,17 +70,22 @@ function isCompanyVisibleWork(row) {
 
 function workAccess(row, context, participantRoles = []) {
   const personId = String(context?.personId || "");
-  const ownerId = String(row?.owner_person_id || "");
+  const responsibleId = String(row?.responsible_person_id || row?.owner_person_id || "");
   const creatorId = String(row?.created_by_person_id || "");
+  const assignedById = String(row?.assigned_by_person_id || creatorId || "");
+  const verifierId = String(row?.verifier_person_id || assignedById || creatorId || "");
   const roles = Array.isArray(participantRoles) ? participantRoles.filter(Boolean) : [];
   const isParticipant = roles.length > 0;
   const isFollowing = roles.includes("observer");
-  const related = Boolean(personId && (personId === ownerId || personId === creatorId || isParticipant));
+  const related = Boolean(personId && (personId === responsibleId || personId === creatorId || personId === assignedById || personId === verifierId || isParticipant));
   return {
     canRead: Boolean(personId && (related || isCompanyVisibleWork(row))),
-    canExecute: Boolean(personId && personId === ownerId),
-    canReview: Boolean(personId && personId === creatorId),
-    ownerIsCreator: Boolean(ownerId && creatorId && ownerId === creatorId),
+    canExecute: Boolean(personId && personId === responsibleId),
+    canReview: Boolean(personId && personId === verifierId),
+    ownerIsCreator: Boolean(responsibleId && verifierId && responsibleId === verifierId),
+    responsiblePersonId: responsibleId,
+    assignedByPersonId: assignedById,
+    verifierPersonId: verifierId,
     isParticipant,
     isFollowing,
     participantRoles: roles,
@@ -106,6 +111,50 @@ function workPermissionDenied(res, message = "当前人员无权执行此工作�
 
 function cleanText(value, maxLength = 4000) {
   return String(value ?? "").trim().slice(0, maxLength);
+}
+
+function parseSeedDueAt(value) {
+  const text = cleanText(value, 80);
+  if (!text) return null;
+  const now = new Date();
+  const atEndOfDay = (date) => { const d = new Date(date); d.setHours(18, 0, 0, 0); return d.toISOString(); };
+  if (/^(今天|今日)$/.test(text)) return atEndOfDay(now);
+  if (/^(明天|明日)$/.test(text)) { const d = new Date(now); d.setDate(d.getDate() + 1); return atEndOfDay(d); }
+  if (/本周|这周/.test(text)) { const d = new Date(now); d.setDate(d.getDate() + Math.max(0, 5 - d.getDay())); return atEndOfDay(d); }
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function inferSeedFacts(row, actorId) {
+  const workRequest = cleanText(row.workRequest ?? row["工作安排"], 1200);
+  const responsibleInput = cleanText(row.responsible ?? row["负责人"], 160);
+  const responsiblePersonId = cleanText(row.responsiblePersonId, 160) || null;
+  const timeRequirement = cleanText(row.timeRequirement ?? row["时间要求"], 80);
+  const relatedMaterial = cleanText(row.relatedMaterial ?? row["关联资料"], 1200);
+  const notes = cleanText(row.notes ?? row["备注"], 1200);
+  const urgent = /紧急|立即|马上|尽快/.test(`${workRequest} ${timeRequirement}`);
+  const procurement = /补货|采购|供应商|1688|阿里巴巴/.test(`${workRequest} ${relatedMaterial}`);
+  const operations = /广告|运营|店铺|楽天|Rakuten/i.test(`${workRequest} ${relatedMaterial}`);
+  const workbenchCode = procurement ? "procurement" : operations ? "operations" : "work-home";
+  const relatedObjectType = /https?:\/\//i.test(relatedMaterial) ? "external_link" : relatedMaterial ? "business_reference" : null;
+  const dueAt = parseSeedDueAt(timeRequirement);
+  const status = responsiblePersonId ? "waiting_confirmation" : "needs_confirmation";
+  const nextAction = procurement ? "核对商品、数量、供应商与交付要求" : operations ? "读取关联业务数据并确认异常范围" : "确认执行范围并开始第一步";
+  const expectedResult = notes || `完成“${workRequest}”，提交可追溯结果与必要证据。`;
+  return {
+    workRequest, responsibleInput, responsiblePersonId, timeRequirement, relatedMaterial, notes,
+    title:workRequest, priority:urgent ? "urgent" : "normal", dueAt, workbenchCode, relatedObjectType,
+    relatedObjectId:relatedMaterial || null, status, riskLevel:responsiblePersonId ? "low" : "medium",
+    confidence:responsiblePersonId ? 0.92 : 0.58,
+    facts:{
+      what:workRequest, why:notes || "由管理者批量安排，业务目的待在执行中进一步验证。",
+      where:procurement ? "美和跨境 / 采购工作台" : operations ? "美和跨境 / 运营推广工作台" : "集团 / AIONE / 工作之家",
+      related:relatedMaterial || "待补充关联对象", responsiblePersonId, responsibleInput,
+      status:"待开始", priority:urgent ? "紧急" : "普通", dueAt, nextAction, acceptanceCriteria:expectedResult,
+      createdBy:actorId, assignedBy:actorId, verifier:actorId
+    },
+    expectedResult
+  };
 }
 
 function createCoreResourceRoutes(resourceName, def) {
@@ -153,6 +202,14 @@ function createCoreResourceRoutes(resourceName, def) {
         placeholders.push(`$${values.length}`);
       }
 
+      if (def.table === "work_items") {
+        const responsible = req.body.responsiblePersonId || req.body.ownerPersonId || null;
+        if (responsible && !columns.includes("responsible_person_id")) { columns.push("responsible_person_id"); values.push(responsible); placeholders.push(`$${values.length}`); }
+        if (responsible && !columns.includes("owner_person_id")) { columns.push("owner_person_id"); values.push(responsible); placeholders.push(`$${values.length}`); }
+        if (!columns.includes("assigned_by_person_id")) { columns.push("assigned_by_person_id"); values.push(context.personId); placeholders.push(`$${values.length}`); }
+        if (!columns.includes("verifier_person_id")) { columns.push("verifier_person_id"); values.push(context.personId); placeholders.push(`$${values.length}`); }
+      }
+
       if (["organizations","businesses","positions","assignments","work_items"].includes(def.table)) {
         columns.push("created_by_person_id", "updated_by_person_id", "source_system");
         values.push(context.personId, context.personId, context.sourceSystem);
@@ -187,6 +244,14 @@ function createCoreResourceRoutes(resourceName, def) {
       for (const [key, column] of entries) {
         values.push(req.body[key]);
         updates.push(`${column} = $${values.length}`);
+      }
+      if (def.table === "work_items" && Object.prototype.hasOwnProperty.call(req.body || {}, "responsiblePersonId") && !Object.prototype.hasOwnProperty.call(req.body || {}, "ownerPersonId")) {
+        values.push(req.body.responsiblePersonId);
+        updates.push(`owner_person_id = $${values.length}`);
+      }
+      if (def.table === "work_items" && Object.prototype.hasOwnProperty.call(req.body || {}, "ownerPersonId") && !Object.prototype.hasOwnProperty.call(req.body || {}, "responsiblePersonId")) {
+        values.push(req.body.ownerPersonId);
+        updates.push(`responsible_person_id = $${values.length}`);
       }
       if (["organizations","businesses","positions","assignments","work_items"].includes(def.table)) {
         values.push(context.personId);
@@ -299,7 +364,79 @@ function createFactResourceRoutes(resourceName, def) {
 }
 
 router.get("/work-home/capabilities", (req, res) => {
-  return res.json({ workHomeVersion:"V1.9.36", features:{ companyVisibility:true, following:true, likes:true, likedScope:true, participantFacts:true, employeeWorkSummary:true, timeFilter:true, moneySummary:true, workSessionSummary:true } });
+  return res.json({ workHomeVersion:"V1.9.40", features:{ companyVisibility:true, following:true, likes:true, likedScope:true, participantFacts:true, employeeWorkSummary:true, timeFilter:true, moneySummary:true, workSessionSummary:true, explicitWorkRoles:true, batchWorkSeeds:true, batchProposalApproval:true, aiAutoApprovalReserved:true } });
+});
+
+router.post("/work-home/batch/seeds", requireWriteActor, async (req, res, next) => {
+  const rows = Array.isArray(req.body?.rows) ? req.body.rows.slice(0, 500) : [];
+  if (!rows.length) return badRequest(res, "请至少导入一条工作安排。 ");
+  const invalid = rows.findIndex((row) => !cleanText(row?.workRequest ?? row?.["工作安排"], 1200));
+  if (invalid >= 0) return badRequest(res, `第 ${invalid + 1} 行缺少必填字段“工作安排”。`);
+  try {
+    const context = req.aioneContext || getRequestContext(req);
+    const batchId = makeId("wbt");
+    const proposals = await withTransaction(async (client) => {
+      const output = [];
+      for (const row of rows) {
+        const facts = inferSeedFacts(row || {}, context.personId);
+        const seedId = makeId("wsd");
+        const proposalId = makeId("wpr");
+        await client.query(
+          `INSERT INTO public.work_seeds (id,batch_id,work_request,responsible_input,responsible_person_id,time_requirement,related_material,notes,status,raw_payload,created_by_person_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'proposal_created',$9::jsonb,$10)`,
+          [seedId,batchId,facts.workRequest,facts.responsibleInput||null,facts.responsiblePersonId,facts.timeRequirement||null,facts.relatedMaterial||null,facts.notes||null,JSON.stringify(row||{}),context.personId]
+        );
+        const created = await client.query(
+          `INSERT INTO public.work_proposals (id,seed_id,batch_id,status,title,priority,responsible_person_id,assigned_by_person_id,verifier_person_id,workbench_code,related_object_type,related_object_id,goal_summary,description,expected_result,due_at,risk_level,ai_confidence,structured_facts,ai_auto_approval_eligible,created_by_person_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::jsonb,FALSE,$8) RETURNING *`,
+          [proposalId,seedId,batchId,facts.status,facts.title,facts.priority,facts.responsiblePersonId,context.personId,facts.workbenchCode,facts.relatedObjectType,facts.relatedObjectId,facts.facts.why,facts.notes||facts.workRequest,facts.expectedResult,facts.dueAt,facts.riskLevel,facts.confidence,JSON.stringify(facts.facts)]
+        );
+        output.push(snakeToCamel(created.rows[0]));
+      }
+      await recordBusinessEvent(client,{eventType:"work_seed.batch_imported",objectType:"work_seed_batch",objectId:batchId,context,payload:{rowCount:rows.length,proposalCount:output.length}});
+      return output;
+    });
+    return res.status(201).json({ batchId, proposals, counts:{ total:proposals.length, ready:proposals.filter((p)=>p.status==="waiting_confirmation").length, needsConfirmation:proposals.filter((p)=>p.status==="needs_confirmation").length } });
+  } catch (error) { return next(error); }
+});
+
+router.get("/work-home/batch/:batchId/proposals", async (req, res, next) => {
+  try {
+    const context = getRequestContext(req);
+    if (!context.personId) return res.status(401).json({error:"authenticated_actor_required"});
+    const result = await pool.query("SELECT * FROM public.work_proposals WHERE batch_id=$1 AND created_by_person_id=$2 ORDER BY created_at",[req.params.batchId,context.personId]);
+    return res.json({batchId:req.params.batchId,proposals:result.rows.map(snakeToCamel)});
+  } catch (error) { return next(error); }
+});
+
+router.post("/work-home/batch/:batchId/approve", requireWriteActor, async (req, res, next) => {
+  const requestedIds = Array.isArray(req.body?.proposalIds) ? new Set(req.body.proposalIds.map(String)) : null;
+  try {
+    const context = req.aioneContext || getRequestContext(req);
+    const result = await withTransaction(async (client) => {
+      const locked = await client.query("SELECT * FROM public.work_proposals WHERE batch_id=$1 AND created_by_person_id=$2 AND status='waiting_confirmation' ORDER BY created_at FOR UPDATE",[req.params.batchId,context.personId]);
+      const selected = locked.rows.filter((row)=>!requestedIds || requestedIds.has(String(row.id)));
+      if (!selected.length) return {created:[]};
+      const created = [];
+      for (const proposal of selected) {
+        if (!proposal.responsible_person_id) continue;
+        const workId = makeId("wrk");
+        const metadata = {...(proposal.structured_facts||{}),workProposalId:proposal.id,workSeedId:proposal.seed_id,batchId:proposal.batch_id,visibility:"company",assignedByPersonId:proposal.assigned_by_person_id,verifierPersonId:proposal.verifier_person_id};
+        const work = await client.query(
+          `INSERT INTO public.work_items (id,title,work_type,status,priority,owner_person_id,responsible_person_id,assigned_by_person_id,verifier_person_id,workbench_code,related_object_type,related_object_id,goal_summary,description,expected_result,due_at,metadata,source_system,created_by_person_id,updated_by_person_id)
+           VALUES ($1,$2,$3,'pending',$4,$5,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::jsonb,'aione-work-batch',$6,$6) RETURNING *`,
+          [workId,proposal.title,proposal.work_type,proposal.priority,proposal.responsible_person_id,proposal.assigned_by_person_id,proposal.verifier_person_id,proposal.workbench_code,proposal.related_object_type,proposal.related_object_id,proposal.goal_summary,proposal.description,proposal.expected_result,proposal.due_at,JSON.stringify(metadata)]
+        );
+        await client.query("INSERT INTO public.work_item_participants (id,work_item_id,person_id,participant_role,metadata) VALUES ($1,$2,$3,'owner',$4::jsonb) ON CONFLICT (work_item_id,person_id,participant_role) DO UPDATE SET left_at=NULL",[makeId("wip"),workId,proposal.responsible_person_id,JSON.stringify({source:"batch-proposal"})]);
+        if (proposal.verifier_person_id && proposal.verifier_person_id !== proposal.responsible_person_id) await client.query("INSERT INTO public.work_item_participants (id,work_item_id,person_id,participant_role,metadata) VALUES ($1,$2,$3,'reviewer',$4::jsonb) ON CONFLICT (work_item_id,person_id,participant_role) DO UPDATE SET left_at=NULL",[makeId("wip"),workId,proposal.verifier_person_id,JSON.stringify({source:"batch-proposal"})]);
+        await client.query("UPDATE public.work_proposals SET status='approved',approved_work_id=$2,approved_by_person_id=$3,approved_at=NOW(),updated_at=NOW() WHERE id=$1",[proposal.id,workId,context.personId]);
+        await recordBusinessEvent(client,{eventType:"work.created_from_proposal",objectType:"work_item",objectId:workId,context,payload:{proposalId:proposal.id,seedId:proposal.seed_id,batchId:proposal.batch_id,responsiblePersonId:proposal.responsible_person_id,assignedByPersonId:proposal.assigned_by_person_id}});
+        created.push(snakeToCamel(work.rows[0]));
+      }
+      return {created};
+    });
+    return res.json({batchId:req.params.batchId,createdCount:result.created.length,workItems:result.created});
+  } catch (error) { return next(error); }
 });
 
 router.get("/work-home/people-summary", async (req, res, next) => {
@@ -309,7 +446,7 @@ router.get("/work-home/people-summary", async (req, res, next) => {
       return res.status(401).json({ error:"authenticated_actor_required", message:"人员工作汇总需要已认证的AIONE人员身份。" });
     }
     const range = ["week", "month", "year"].includes(String(req.query.range || "month")) ? String(req.query.range || "month") : "month";
-    const relatedSql = `(w.owner_person_id=$1 OR w.created_by_person_id=$1 OR EXISTS (SELECT 1 FROM public.work_item_participants wr WHERE wr.work_item_id=w.id AND wr.person_id=$1 AND wr.left_at IS NULL AND wr.participant_role <> 'observer'))`;
+    const relatedSql = `(COALESCE(w.responsible_person_id,w.owner_person_id)=$1 OR w.created_by_person_id=$1 OR w.assigned_by_person_id=$1 OR w.verifier_person_id=$1 OR EXISTS (SELECT 1 FROM public.work_item_participants wr WHERE wr.work_item_id=w.id AND wr.person_id=$1 AND wr.left_at IS NULL AND wr.participant_role <> 'observer'))`;
     const companyVisibleSql = `(COALESCE(w.metadata->>'visibility', w.metadata->>'visibilityScope', 'company') NOT IN ('private','restricted','sensitive') AND COALESCE(w.metadata->>'sensitive','false') <> 'true')`;
     const startSql = range === "week"
       ? `(date_trunc('week', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo') AT TIME ZONE 'Asia/Tokyo')`
@@ -325,16 +462,16 @@ router.get("/work-home/people-summary", async (req, res, next) => {
            AND (${relatedSql} OR ${companyVisibleSql})
            AND COALESCE(w.completed_at, w.updated_at, w.started_at, w.created_at) >= ${startSql}
        ), contributor_fact AS (
-         SELECT vw.id AS work_item_id, vw.owner_person_id AS person_id, 'owner'::text AS contribution_role
+         SELECT vw.id AS work_item_id, COALESCE(vw.responsible_person_id,vw.owner_person_id) AS person_id, 'owner'::text AS contribution_role
          FROM visible_work vw
-         WHERE vw.owner_person_id IS NOT NULL
+         WHERE COALESCE(vw.responsible_person_id,vw.owner_person_id) IS NOT NULL
          UNION ALL
          SELECT vw.id AS work_item_id, wp.person_id,
                 CASE WHEN wp.participant_role='owner' THEN 'owner' ELSE 'participant' END AS contribution_role
          FROM visible_work vw
          JOIN public.work_item_participants wp ON wp.work_item_id=vw.id
          WHERE wp.left_at IS NULL AND wp.participant_role <> 'observer'
-           AND wp.person_id IS DISTINCT FROM vw.owner_person_id
+           AND wp.person_id IS DISTINCT FROM COALESCE(vw.responsible_person_id,vw.owner_person_id)
        )
        SELECT cf.person_id,
               COUNT(DISTINCT cf.work_item_id)::int AS total_count,
@@ -374,7 +511,7 @@ router.get("/work-home", async (req, res, next) => {
     const limit = normalizeLimit(req.query.limit || 200);
     const scope = ["related", "all", "following", "liked"].includes(String(req.query.scope || "related")) ? String(req.query.scope || "related") : "related";
     const values = [context.personId];
-    const relatedSql = `(w.owner_person_id=$1 OR w.created_by_person_id=$1 OR EXISTS (SELECT 1 FROM public.work_item_participants wp WHERE wp.work_item_id=w.id AND wp.person_id=$1 AND wp.left_at IS NULL AND wp.participant_role <> 'observer'))`;
+    const relatedSql = `(COALESCE(w.responsible_person_id,w.owner_person_id)=$1 OR w.created_by_person_id=$1 OR w.assigned_by_person_id=$1 OR w.verifier_person_id=$1 OR EXISTS (SELECT 1 FROM public.work_item_participants wp WHERE wp.work_item_id=w.id AND wp.person_id=$1 AND wp.left_at IS NULL AND wp.participant_role <> 'observer'))`;
     const companyVisibleSql = `(COALESCE(w.metadata->>'visibility', w.metadata->>'visibilityScope', 'company') NOT IN ('private','restricted','sensitive') AND COALESCE(w.metadata->>'sensitive','false') <> 'true')`;
     const followingSql = `EXISTS (SELECT 1 FROM public.work_item_participants wf WHERE wf.work_item_id=w.id AND wf.person_id=$1 AND wf.participant_role='observer' AND wf.left_at IS NULL)`;
     const likedSql = `EXISTS (SELECT 1 FROM public.object_reactions wr WHERE wr.object_type='work_item' AND wr.object_id=w.id AND wr.person_id=$1 AND wr.reaction_type='like' AND wr.removed_at IS NULL)`;
@@ -704,7 +841,7 @@ router.get("/people/:personId/work-summary", async (req, res, next) => {
   try {
     const values = [req.params.personId];
     const timeWhere = ["person_id = $1"];
-    const workWhere = ["owner_person_id = $1", "archived_at IS NULL"];
+    const workWhere = ["COALESCE(responsible_person_id,owner_person_id) = $1", "archived_at IS NULL"];
     if (req.query.from) {
       values.push(req.query.from);
       timeWhere.push(`work_date >= $${values.length}::date`);

@@ -77,6 +77,8 @@ function buildWorkItems() {
   return [
     { id:"work-home", label:"工作概览", route:"work", icon:"work", subtitle:"理解工作之家为什么存在、怎样运行以及每个章节怎么使用。", children:[] },
     { id:"work-mine", label:"我的工作", route:"work-mine", icon:"work", subtitle:"连续管理当前用户过去未完、当前应办和未来安排的工作。", children:[] },
+    { id:"work-assigned", label:"我安排的", route:"work-assigned", icon:"work", subtitle:"查看由当前用户安排给他人的工作；与负责人读取同一个Work Item。", children:[] },
+    { id:"work-batch", label:"批量安排工作", route:"work-batch", icon:"file", subtitle:"导入极简工作种子，预览AI补全结果并批量批准派发。", children:[] },
     { id:"work-following", label:"我的关注", route:"work-following", icon:"notification", subtitle:"集中查看你主动关注的重要对象；当前先接入工作事项，后续对象复用同一关注能力。", children:[] },
     { id:"work-suggestions", label:"我的建议", route:"work-suggestions", icon:"file", subtitle:"记录和跟踪我提出的业务改善建议。", children:[] },
     { id:"work-innovations", label:"我的创新", route:"work-innovations", icon:"brand", subtitle:"记录和跟踪值得验证的新方法、新产品、新模式或新能力。", children:[] },

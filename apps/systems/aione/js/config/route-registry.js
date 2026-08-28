@@ -66,6 +66,8 @@ export const ROUTE_REGISTRY = Object.freeze({
   "company-website": route("company-website", "美和集团官网", "platform", { status: "active", page: "./pages/company-home/template.html", parent: "company-external" }),
   work: route("work", "工作之家", "platform", { status: "active", page: "./pages/work-home/template.html" }),
   "work-mine": route("work-mine", "我的工作", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
+  "work-assigned": route("work-assigned", "我安排的", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
+  "work-batch": route("work-batch", "批量安排工作", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-today": route("work-today", "今日工作", "platform", { status: "legacy", page: "./pages/work-home/template.html", parent: "work", nav:false }),
   "work-all": route("work-all", "全部工作", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-following": route("work-following", "我的关注", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
