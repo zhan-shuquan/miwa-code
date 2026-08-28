@@ -48,6 +48,7 @@ function setGroupExpanded(group, expanded) {
 function createAccordionItem(entry, context, routeId, currentPath) {
   const group = document.createElement("div");
   group.className = "sidebar-tree-group";
+  if (entry.sectionGapBefore) group.classList.add("has-section-gap");
   group.dataset.sidebarTreeGroup = entry.id;
 
   const row = document.createElement("div");
@@ -96,6 +97,7 @@ function createAccordionItem(entry, context, routeId, currentPath) {
 function createFlatItem(entry, routeId, currentPath) {
   const link = document.createElement("a");
   link.className = "sidebar-flat-link";
+  if (entry.sectionGapBefore) link.classList.add("has-section-gap");
   link.href = `#/${entry.route}`;
   link.dataset.navRoute = entry.route;
   const icon = entry.icon ? createIcon(entry.icon) : document.createElement("span");
@@ -166,7 +168,10 @@ function renderSidebar() {
     title.hidden = isBusinessSidebar;
   }
 
-  if (kicker) kicker.textContent = context.kicker;
+  if (kicker) {
+    kicker.textContent = context.kicker;
+    kicker.hidden = true; // V1.9.39: Sidebar目录已能表达上下文，不重复显示“当前空间”等标签。
+  }
 
   if (icon) {
     icon.hidden = isBusinessSidebar;

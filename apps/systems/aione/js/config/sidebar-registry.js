@@ -76,14 +76,15 @@ function buildWorkItems() {
   businessChildren.push({ id:"work-business-more", label:"更多事业", route:"work-business-more", subtitle:"查看其他事业工作，仍然读取同一份Work Item。" });
   return [
     { id:"work-home", label:"工作概览", route:"work", icon:"work", subtitle:"理解工作之家为什么存在、怎样运行以及每个章节怎么使用。", children:[] },
-    { id:"work-today", label:"今日工作", route:"work-today", icon:"calendar", subtitle:"聚焦今天最值得推进的工作，按优先顺序开始处理。", children:[] },
-    { id:"work-all", label:"全部工作", route:"work-all", icon:"apps", subtitle:"查看当前可见的全部工作，快速搜索、筛选和处理。", children:[] },
-    { id:"work-following", label:"我的关注", route:"work-following", icon:"notification", subtitle:"持续跟踪你主动关注的重要工作动态，不改变负责人和权限。", children:[] },
+    { id:"work-mine", label:"我的工作", route:"work-mine", icon:"work", subtitle:"连续管理当前用户过去未完、当前应办和未来安排的工作。", children:[] },
+    { id:"work-following", label:"我的关注", route:"work-following", icon:"notification", subtitle:"集中查看你主动关注的重要对象；当前先接入工作事项，后续对象复用同一关注能力。", children:[] },
     { id:"work-suggestions", label:"我的建议", route:"work-suggestions", icon:"file", subtitle:"记录和跟踪我提出的业务改善建议。", children:[] },
     { id:"work-innovations", label:"我的创新", route:"work-innovations", icon:"brand", subtitle:"记录和跟踪值得验证的新方法、新产品、新模式或新能力。", children:[] },
+    { id:"work-summaries", label:"我的总结", route:"work-summaries", icon:"knowledge", subtitle:"查看本人主动形成并确认的有价值工作总结。", children:[] },
+    { id:"work-all", label:"全部工作", route:"work-all", icon:"apps", subtitle:"查看当前可见的全部工作，快速搜索、筛选和处理。", children:[], sectionGapBefore:true },
     { id:"work-business-group", label:"事业工作", route:"work-business-crossborder", icon:"apps", subtitle:"按事业快速查看工作进展，进入当前最关心的经营现场。", children:businessChildren },
-    { id:"work-team", label:"团队工作", route:"work-team", icon:"people", subtitle:"从团队和成员视角查看工作分布、当前重点与推进情况。", children:[] },
-    { id:"work-records", label:"工作记录", route:"work-records", icon:"knowledge", subtitle:"按时间回看已经发生并形成结果的真实工作事实。", children:[] }
+    { id:"work-team", label:"团队工作", route:"work-team", icon:"people", subtitle:"从团队和成员视角查看同一份Work Item，不建立第二套工作数据。", children:[] },
+    { id:"work-records", label:"工作记录", route:"work-records", icon:"knowledge", subtitle:"回看所有闭环工作的真实事实；有总结的记录同时关联总结资料。", children:[], sectionGapBefore:true }
   ];
 }
 
@@ -134,7 +135,7 @@ export function resolveSidebarContext(routeId, currentPath, currentBusinessSpace
     icon: meta.icon,
     items: buildPlatformItems(rootId),
     activeWorkbenchId: null,
-    primaryAction: rootId === "work" ? { id:"work-create", label:"创建工作", icon:"work", event:"aione:work:create" } : null,
+    primaryAction: null,
     quickActions: publicationActions
   };
 }

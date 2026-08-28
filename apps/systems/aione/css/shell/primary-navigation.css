@@ -314,3 +314,7 @@
 .sidebar-primary-action__button:hover{background:#0D4937;border-color:#0D4937}
 .sidebar-primary-action__icon{width:18px;height:18px;display:inline-flex;color:#fff}
 #sidebar-business-switcher{display:none!important}
+
+/* V1.9.39｜工作之家章节分组：只用留白，不增加多余分组标题 */
+.sidebar-tree-group.has-section-gap{margin-top:10px}
+.sidebar-flat-link.has-section-gap{margin-top:10px}

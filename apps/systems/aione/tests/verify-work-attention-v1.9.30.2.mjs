@@ -49,7 +49,7 @@ assert.ok(header.includes('setWorkCount(count)'), "Header must expose a dedicate
 assert.ok(workHome.includes('computeWorkAttention') && workHome.includes('m.attention'), "Work Home badge must use attention count, not all open work");
 assert.ok(workHome.includes('work-started') && workHome.includes('work-completion-submitted') && workHome.includes('work-completion-approved'), "work status changes must announce immediately");
 assert.ok(aiClient.includes('ai-proposal-confirmed') && aiClient.includes('announceWorkItemsChanged'), "AI proposal confirmation must trigger immediate work badge refresh");
-assert.ok(index.includes('v1.9.30.2-work-attention') || index.includes('v1.9.37-work-home-structure-finalization') || index.includes('v1.9.38-work-home-final-closure'), "browser bootstrap cache must preserve Work Attention or use a newer validated bootstrap marker");
+assert.ok(index.includes('v1.9.30.2-work-attention') || index.includes('v1.9.37-work-home-structure-finalization') || index.includes('v1.9.38-work-home-final-closure') || index.includes('v1.9.39-work-home-real-use-baseline'), "browser bootstrap cache must preserve Work Attention or use a newer validated bootstrap marker");
 assert.ok(deploy.includes('v1.9.30.2'), "deployment image tag must target V1.9.30.2");
 
 console.log("V1.9.30.2 Work Home attention realtime sync validation passed.");
