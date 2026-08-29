@@ -230,7 +230,7 @@ function bindDesktopAccordion() {
         window.dispatchEvent(new CustomEvent(action));
         return;
       }
-      const mainHost = document.getElementById("selection-main-host");
+      const mainHost = document.getElementById("app-main-host");
       mainHost?.dispatchEvent(new CustomEvent("aione:sidebar-quick-action", {
         bubbles: false,
         detail: { action, route: getCurrentRoute() }

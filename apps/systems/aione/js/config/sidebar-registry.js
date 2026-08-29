@@ -12,21 +12,16 @@ const PLATFORM_CONTEXT_META = Object.freeze({
   company: { icon: "knowledge", type: "content" },
   work: { icon: "work", type: "content" },
   calendar: { icon: "calendar", type: "content" },
-  "category-home": { icon: "category", type: "content" },
   "business-home": { icon: "apps", type: "content" },
   "channel-home": { icon: "store", type: "content" },
   "finance-home": { icon: "income", type: "content" },
+  "relations-home": { icon: "customer", type: "content" },
   "product-home": { icon: "product", type: "content" },
-  "customer-home": { icon: "customer", type: "content" },
-  "supplier-home": { icon: "supplier", type: "content" },
   "talent-home": { icon: "talent", type: "content" },
-  "income-home": { icon: "income", type: "content" },
-  "expense-home": { icon: "expense", type: "content" },
   "ai-home": { icon: "ai", type: "content" },
   "ai-office": { icon: "ai", type: "content" },
   analysis: { icon: "analysis", type: "content" },
   "knowledge-home": { icon: "knowledge", type: "content" },
-  "store-home": { icon: "store", type: "content" },
   "shared-home": { icon: "apps", type: "tools" },
   "application-home": { icon: "apps", type: "tools" },
   notifications: { icon: "notification", type: "system" },
@@ -96,7 +91,9 @@ function buildPlatformItems(rootId) {
   if (rootId === "company") return MIWA_COMPANY_NAVIGATION;
   if (rootId === "business-home") return MIWA_BUSINESS_NAVIGATION;
   if (rootId === "work") return buildWorkItems();
-  const children = childrenFor(rootId);
+  const children = childrenFor(rootId).map((item) => rootId === "finance-home" && item.id === "expense-home"
+    ? { ...item, children: childrenFor(item.id) }
+    : item);
   const homeLabel = children.length ? "概览" : root.label;
   return [
     { id: `${rootId}-home`, label: homeLabel, route: rootId, icon: PLATFORM_CONTEXT_META[rootId]?.icon || "apps", children: [] },

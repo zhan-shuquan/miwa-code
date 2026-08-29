@@ -17,7 +17,7 @@ const context = read("js/shell/platform-context.js");
 const primaryNav = read("js/shell/primary-navigation.js");
 
 // Global Shell keeps one active mounting point for each global region.
-for (const id of ["desktop-header-host", "sidebar-host", "selection-main-host", "aside-host", "desktop-footer-host"]) {
+for (const id of ["desktop-header-host", "sidebar-host", "app-main-host", "aside-host", "desktop-footer-host"]) {
   must((index.match(new RegExp(`id="${id}"`, "g")) || []).length === 1, `${id}不是唯一挂载点`);
 }
 must((systemConfig.match(/desktop-header-host/g) || []).length === 1, "桌面Header组件配置不是单一来源");

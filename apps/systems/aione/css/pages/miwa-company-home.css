@@ -525,7 +525,7 @@
   #mobile-topbar-host,#mobile-info-host,#desktop-header-host,#sidebar-host,#aside-host,#desktop-footer-host,#mobile-bottom-host,#mobile-drawer-host,#miwa-ai-layer-host,#global-settings-host,.screen-only{display:none!important}
   .app-body,.app-body.has-aside{display:block!important}
   .app-main{padding:0!important}
-  #selection-main-host,.miwa-company-publication{width:100%!important;max-width:none!important;margin:0!important}
+  #app-main-host,.miwa-company-publication{width:100%!important;max-width:none!important;margin:0!important}
   .miwa-company-level2-base{display:block!important}
   .miwa-company-cover,.miwa-company-section,.miwa-company-content-sheet,.miwa-company-page-hero,.miwa-company-closing{border:0!important;border-radius:0!important;box-shadow:none!important;margin:0!important}
   .miwa-company-cover{min-height:250mm;padding:18mm 10mm;break-after:page;page-break-after:always}

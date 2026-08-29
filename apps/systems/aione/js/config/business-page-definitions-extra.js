@@ -37,19 +37,19 @@ export const EXTRA_BUSINESS_PAGE_DEFINITIONS = Object.freeze({
     auxiliary:[
       {title:"档案完整性",text:"提示缺少岗位、责任、账号、权限或必要人事资料的内部人才。"},
       {title:"成长与贡献",text:"真实工作、标准建设、业务结果与AI协作贡献逐步形成可追溯履历。"},
-      {title:"PPC｜人",text:"客户之家与人才之家都属于PPC“人”的对象体系；方法论说明统一进入知识之家。",route:"knowledge-home"}
+      {title:"PPC｜人",text:"客户中心与人才之家都属于PPC“人”的对象体系；客户中心归属往来之家，方法论说明统一进入知识之家。",route:"knowledge-home"}
     ],
     ai:{title:"AI秘书｜人才辅助",text:"可协助整理人才档案、责任变化、工作履历与待确认资料；关键人事判断由负责人承担。"}, seedObjects:[]
   },
   "supplier-home": {
-    routeId:"supplier-home", title:"供应商之家", icon:"供",
-    description:"统一管理美和集团长期合作供应商主档、联系人、供应范围、报价/成本、交期、质量、合同与合作表现；采购工作台负责采购流程，供应商之家负责供应商这个长期对象。",
+    routeId:"supplier-home", title:"供应商中心", icon:"供",
+    description:"作为往来之家下的供应商中心，统一管理美和集团长期合作供应商主档、联系人、供应范围、报价/成本、交期、质量、合同与合作表现；采购工作台负责采购流程，供应商中心负责供应商这个长期对象。",
     overviewLabel:"供应商概览", createLabel:"新建供应商", objectName:"供应商", objectPlural:"供应商资料", typeDictionaryKey:"supplierTypes",
     typeDescriptions:{"商品供应商":"提供商品、原材料或包装等有形资源的供应商。","服务供应商":"提供设计、系统、顾问等服务的供应商。","物流供应商":"提供运输、仓储、面单、配送等物流服务的供应商。","其他供应商":"真实业务出现后按规则补充。"},
     flow:{status:"validating",label:"验证中",steps:["供应商建档","联系人/供应范围","报价与条件","采购合作","交期/质量记录","合作评价","变更/归档"]},
     metrics:[{label:"供应商总数",source:"objects"},{label:"合作中",state:"合作中"},{label:"待验证",state:"待验证"},{label:"交期异常",state:"交期异常"},{label:"质量异常",state:"质量异常"}],
     fieldSchemaId:"supplier-home", cardFields:["type","owner","scope","leadTime","quality","result"], listFields:["name","type","region","owner","state","scope","leadTime","quality","cost","result"],
-    auxiliary:[{title:"采购工作台",text:"采购工作台处理询价、下单、到货与异常；供应商资料只维护一份并被采购流程引用。",route:"procurement"},{title:"商品之家",text:"商品可关联一个或多个供应商，并保留真实供应关系和历史。",route:"product-home"},{title:"ERP",text:"应付、成本、付款等资源事实由ERP/财务能力关联，不在供应商之家重复记账。",route:"erp-home"}],
+    auxiliary:[{title:"采购工作台",text:"采购工作台处理询价、下单、到货与异常；供应商资料只维护一份并被采购流程引用。",route:"procurement"},{title:"商品之家",text:"商品可关联一个或多个供应商，并保留真实供应关系和历史。",route:"product-home"},{title:"ERP",text:"应付、成本、付款等资源事实由ERP/财务能力关联，不在供应商中心重复记账。",route:"erp-home"}],
     ai:{title:"AI秘书｜供应商辅助",text:"可协助整理报价、交期、质量与合作记录，识别集中采购和供应风险；关键供应商判断由负责人承担。"}, seedObjects:[]
   },
   "category-home": {

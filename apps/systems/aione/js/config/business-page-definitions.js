@@ -46,9 +46,9 @@ const commonObjectToolbar = Object.freeze({
 export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
   "customer-home": {
     routeId: "customer-home",
-    title: "客户之家",
+    title: "客户中心",
     icon: "客",
-    description: "统一管理客户资料、分类、关系、商机、交易与持续维护。",
+    description: "作为往来之家下的客户中心，统一管理客户资料、分类、关系、商机、交易与持续维护。",
     overviewLabel: "客户概览",
     createLabel: "新建客户",
     objectName: "客户",
@@ -97,9 +97,9 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
 
   "store-home": {
     routeId: "store-home",
-    title: "店铺之家",
+    title: "店铺中心",
     icon: "店",
-    description: "统一管理美和各店铺的资料、账号、平台连接、经营状态与常用入口。",
+    description: "作为渠道之家下的店铺中心，统一管理美和各店铺的资料、账号、平台连接、经营状态与常用入口。",
     overviewLabel: "店铺概览",
     createLabel: "新建店铺",
     objectName: "店铺",
@@ -189,9 +189,9 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
 
   "expense-home": {
     routeId: "expense-home",
-    title: "支出之家",
+    title: "支出中心",
     icon: "支",
-    description: "统一汇总美和集团所有可统计支出；业务产生的数据自动归集，没有来源的数据再补录。",
+    description: "作为财务之家下的支出中心，统一汇总美和集团所有可统计支出；业务产生的数据自动归集，没有来源的数据再补录。",
     overviewLabel: "支出概览",
     createLabel: "新建支出",
     objectName: "支出",
@@ -238,9 +238,9 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
 
   "income-home": {
     routeId: "income-home",
-    title: "收入之家",
+    title: "收入中心",
     icon: "收",
-    description: "统一汇总各事业真实业务产生的收入事实；已有业务数据不重复录入。",
+    description: "作为财务之家下的收入中心，统一汇总各事业真实业务产生的收入事实；已有业务数据不重复录入。",
     overviewLabel: "收入概览",
     createLabel: "新建收入记录",
     objectName: "收入",
@@ -299,7 +299,7 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
     flow: {
       status: "validating",
       label: "验证中",
-      steps: ["取得数据", "导入/手工补录", "AI识别分类", "美和9要素补全", "人工确认异常", "汇入支出之家"]
+      steps: ["取得数据", "导入/手工补录", "AI识别分类", "美和9要素补全", "人工确认异常", "汇入支出中心"]
     },
     metrics: [
       { key: "total", label: "本月现金支出", sum: "amount", format: "money" },
@@ -316,7 +316,7 @@ export const BUSINESS_PAGE_DEFINITIONS = Object.freeze({
     auxiliary: [
       { title: "导入优先", text: "Money软件或已有表格能提供的数据不重新录入。" },
       { title: "AI分类", text: "AI先根据摘要、对象和历史记录给出分类建议，人只确认异常。" },
-      { title: "统一归集", text: "确认后的现金支出自动进入支出之家，不形成第二本账。", route: "expense-home" }
+      { title: "统一归集", text: "确认后的现金支出自动进入支出中心，不形成第二本账。", route: "expense-home" }
     ],
     ai: {
       title: "AI财务参谋｜现金支出",

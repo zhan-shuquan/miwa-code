@@ -303,7 +303,7 @@ export async function initSelectionWorkbench() {
   });
 
   window.addEventListener("aione:global-settings-updated",()=>{items=loadSelectionItems();workspace.nodes.importButton.disabled=!getObjectPolicies().importAllowed;workspace.nodes.exportButton.disabled=!getObjectPolicies().exportAllowed;renderAll();});
-  const shellMainHost=document.getElementById("selection-main-host");
+  const shellMainHost=document.getElementById("app-main-host");
   if(shellMainHost){
     if(shellMainHost._aioneSidebarQuickActionHandler)shellMainHost.removeEventListener("aione:sidebar-quick-action",shellMainHost._aioneSidebarQuickActionHandler);
     const quickActionHandler=(event)=>{

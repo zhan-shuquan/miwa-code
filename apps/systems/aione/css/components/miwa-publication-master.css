@@ -226,7 +226,7 @@
   body[data-page-mode="publication"] .app-shell,
   body[data-page-mode="publication"] .app-body,
   body[data-page-mode="publication"] .app-main,
-  body[data-page-mode="publication"] #selection-main-host{height:auto!important;min-height:0!important;overflow:visible!important;touch-action:pan-y!important}
+  body[data-page-mode="publication"] #app-main-host{height:auto!important;min-height:0!important;overflow:visible!important;touch-action:pan-y!important}
   .miwa-publication-book{width:100%;max-width:none;padding:0 12px 74px;overflow:visible}
   .miwa-publication-single,.miwa-publication-spread{display:block;margin-bottom:16px}
   .miwa-publication-spread::after{display:none}
@@ -276,7 +276,7 @@
   @page{size:A4 portrait;margin:0}
   #desktop-header-host,#mobile-topbar-host,#mobile-info-host,#sidebar-host,#aside-host,#desktop-footer-host,#mobile-bottom-host,#mobile-drawer-host,#miwa-ai-layer-host,#global-settings-host,#miwa-publication-mobile-tools,[data-no-print]{display:none!important}
 
-  html,body,#app,.app-shell,.app-body,.app-main,.page-host,#selection-main-host{width:auto!important;max-width:none!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;overflow:visible!important;background:#FFF!important}
+  html,body,#app,.app-shell,.app-body,.app-main,.page-host,#app-main-host{width:auto!important;max-width:none!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;overflow:visible!important;background:#FFF!important}
   .app-body{display:block!important}
   .miwa-publication-book,.miwa-publication-single,.miwa-publication-spread{display:block!important;width:auto!important;max-width:none!important;margin:0!important;padding:0!important}
   .miwa-publication-spread::after{display:none!important}

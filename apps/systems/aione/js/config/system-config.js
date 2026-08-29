@@ -12,7 +12,7 @@ export const systemConfig = Object.freeze({
     ["mobile-info-host", versionedComponent("./components/shell/header/mobile-info.html")],
     ["desktop-header-host", versionedComponent("./components/shell/header/desktop-header.html")],
     ["sidebar-host", versionedComponent("./components/shell/primary-navigation/sidebar.html")],
-    ["selection-main-host", versionedComponent("./pages/selection-workbench/home.html")],
+    ["app-main-host", versionedComponent("./pages/selection-workbench/home.html")],
     ["aside-host", versionedComponent("./components/shell/aside/aside.html")],
     ["desktop-footer-host", versionedComponent("./components/shell/footer/footer.html")],
     ["mobile-bottom-host", versionedComponent("./components/shell/primary-navigation/mobile-bottom.html")],
