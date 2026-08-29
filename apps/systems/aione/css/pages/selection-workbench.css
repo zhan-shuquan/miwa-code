@@ -37,3 +37,26 @@
 .miwa-selection-publication-book .miwa-publication-cover__visual img,.miwa-selection-publication-book .miwa-publication-back__visual img{width:100%;height:100%;object-fit:cover;border-radius:12px}
 @media(max-width:1100px){.selection-secondary-head{grid-template-columns:1fr}.selection-secondary-head__actions{justify-content:flex-start}.selection-secondary-head__balance{display:none}.selection-mine-toolbar{grid-template-columns:1fr 1fr}.selection-mine-search{grid-column:1/-1}}
 @media(max-width:680px){.selection-secondary-card{padding:14px 12px}.selection-secondary-head__actions{gap:8px;overflow-x:auto;padding-bottom:3px}.selection-start-action{width:86px;height:86px;flex:0 0 86px}.selection-mine-toolbar{grid-template-columns:1fr}.selection-mine-search{grid-column:auto}.selection-selection-stats{overflow-x:auto;flex-wrap:nowrap;padding-bottom:3px}.selection-stat-chip{flex:0 0 auto}}
+
+/* ========================================
+   Selection Object Workspace V3｜对象能力恢复 + 可读性验收
+   商品机会一览 / 我的选品：同一对象、同一字段、同一工具栏、同一互动能力。
+======================================== */
+[data-workspace-id="selection-opportunity-list-v3"] .miwa-level2-block__head,
+[data-workspace-id="selection-mine-object-v3"] .miwa-level2-block__head{margin-bottom:10px}
+.miwa-level2-block__head.is-visually-removed{display:none!important}
+.selection-secondary-head__title-block{min-width:0}.selection-secondary-head__title-block>p{margin:5px 0 0;color:#7B8983;font-size:12.5px;line-height:1.55}
+.selection-selection-stats--workspace{margin:2px 0 12px}
+.selection-stat-chip{min-height:34px;font-size:12px}.selection-stat-chip strong{font-size:14px}.selection-stat-chip--money{border-color:#D7E4DE;background:#F5F8F6;cursor:default}.selection-stat-chip--money strong{font-size:13px}
+.miwa-selection-list-product{min-width:280px;gap:11px}.miwa-selection-list-thumb{width:44px;height:44px;flex-basis:44px;font-size:12px}.miwa-selection-list-product strong{font-size:14px;line-height:1.35}.miwa-selection-list-product small{font-size:11.5px;line-height:1.4}
+.miwa-selection-list-interactions{min-width:300px}
+.miwa-object-interactions{display:flex;align-items:center;gap:4px;flex-wrap:nowrap}.miwa-object-interactions button{display:inline-flex;align-items:center;gap:3px;min-height:30px;padding:0 7px;border:1px solid transparent;border-radius:7px;background:transparent;color:#176B4D;font-size:12px;font-weight:750;white-space:nowrap}.miwa-object-interactions button:hover{border-color:#C9DBD2;background:#E8F2ED}.miwa-object-interactions button span{font-size:11.5px}
+[data-workspace-id^="selection-"] .miwa-object-card footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #EDF2EF;padding-top:10px}
+[data-workspace-id^="selection-"] .miwa-object-card footer button{min-height:30px;padding:0 4px;color:#176B4D;font-size:12px}
+[data-workspace-id^="selection-"] .miwa-object-list-wrap{overflow:auto}
+[data-workspace-id^="selection-"] .miwa-object-table{min-width:1180px}
+[data-workspace-id^="selection-"] .miwa-workspace-pagination{font-size:12px}
+[data-workspace-id^="selection-"] [data-workspace-reset]{color:#C83A32}
+@media(max-width:1100px){.miwa-selection-list-interactions{min-width:260px}.miwa-object-interactions button span{display:none}}
+[data-workspace-id="selection-opportunity-list-v3"] .miwa-level2-count,
+[data-workspace-id="selection-mine-object-v3"] .miwa-level2-count{display:none}

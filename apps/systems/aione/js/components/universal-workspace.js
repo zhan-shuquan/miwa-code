@@ -13,11 +13,24 @@ function readPreference(pageId) {
   try { return JSON.parse(window.localStorage.getItem(`${PREF_PREFIX}${pageId}`) || "{}"); } catch (_) { return {}; }
 }
 function writePreference(pageId, state) {
-  try { window.localStorage.setItem(`${PREF_PREFIX}${pageId}`, JSON.stringify({ view: state.view, cardColumns: state.cardColumns, sort: state.sort })); } catch (_) {}
+  try { window.localStorage.setItem(`${PREF_PREFIX}${pageId}`, JSON.stringify({ view: state.view, cardColumns: state.cardColumns, sort: state.sort, group: state.group })); } catch (_) {}
 }
 function normalizeOptions(items = []) {
   return (Array.isArray(items) ? items : []).map((item) => typeof item === "string" ? { value: item, label: item } : item).filter(Boolean);
 }
+
+function normalizeGroupOptions(options = []) {
+  return (Array.isArray(options) ? options : []).map((item, index) => {
+    if (typeof item === "string") return { value:item, label:item, field:item };
+    return {
+      value: String(item?.value || item?.field || `group${index + 1}`),
+      label: item?.label || "分组",
+      field: item?.field || "",
+      getter: typeof item?.getter === "function" ? item.getter : null
+    };
+  }).filter((item) => item.value);
+}
+
 function normalizeFilters(options = {}) {
   if (Array.isArray(options.filters) && options.filters.length) {
     return options.filters.map((filter, index) => ({
@@ -61,11 +74,15 @@ export function createUniversalWorkspace(parent, options = {}) {
   const configuredDefaultSort = sortOptions.some((item) => item.value === options.defaultSort) ? options.defaultSort : sortOptions[0].value;
   const defaultSort = sortOptions.some((item) => item.value === pref.sort) ? pref.sort : configuredDefaultSort;
   const filterDefs = normalizeFilters(options);
+  const groupOptions = normalizeGroupOptions(options.groupOptions || []);
+  const allowedGroupValues = new Set(groupOptions.map((item) => item.value));
+  const configuredDefaultGroup = allowedGroupValues.has(options.defaultGroup) ? options.defaultGroup : "";
+  const defaultGroup = allowedGroupValues.has(pref.group) ? pref.group : configuredDefaultGroup;
   const paginationEnabled = Boolean(options.pagination || options.pageSize);
   const pageSize = Math.max(1, Number(options.pageSize || options.pagination?.pageSize || 12));
 
   const filterState = Object.fromEntries(filterDefs.map((filter) => [filter.key, filter.value || ""]));
-  const state = { query: "", filter: filterState.filter || "", filters: filterState, sort: defaultSort, view: defaultView, cardColumns: defaultColumns, status: "ready", page: 1, pageSize };
+  const state = { query: "", filter: filterState.filter || "", filters: filterState, sort: defaultSort, group: defaultGroup, view: defaultView, cardColumns: defaultColumns, status: "ready", page: 1, pageSize };
   const section = document.createElement("section");
   section.className = "miwa-level2-block miwa-universal-workspace";
   section.dataset.workspaceId = pageId;
@@ -79,6 +96,7 @@ export function createUniversalWorkspace(parent, options = {}) {
       <div class="miwa-workspace-filter-group" data-workspace-filter-group>
         ${filterDefs.map((filter) => `<select data-workspace-filter-key="${esc(filter.key)}" aria-label="${esc(filter.label)}"><option value="">${esc(filter.allLabel)}</option>${filter.options.map((item) => `<option value="${esc(item.value)}">${esc(item.label)}</option>`).join("")}</select>`).join("")}
       </div>
+      ${groupOptions.length ? `<select data-workspace-group aria-label="分组"><option value="">不分组</option>${groupOptions.map((item) => `<option value="${esc(item.value)}">按${esc(item.label)}分组</option>`).join("")}</select>` : ""}
       <select data-workspace-sort aria-label="排序">${sortOptions.map((item) => `<option value="${esc(item.value)}">${esc(item.label)}</option>`).join("")}</select>
       <button type="button" data-workspace-import ${options.allowImport === false ? "disabled" : ""}>导入</button>
       <input type="file" data-workspace-import-file accept="${esc(options.importAccept || ".xlsx,.csv")}" hidden>
@@ -107,6 +125,7 @@ export function createUniversalWorkspace(parent, options = {}) {
     search: section.querySelector("[data-workspace-search]"),
     filter: filterNodes.get("filter") || filterNodes.values().next().value || null,
     filters: filterNodes,
+    group: section.querySelector("[data-workspace-group]"),
     sort: section.querySelector("[data-workspace-sort]"),
     importButton: section.querySelector("[data-workspace-import]"),
     importFile: section.querySelector("[data-workspace-import-file]"),
@@ -125,7 +144,7 @@ export function createUniversalWorkspace(parent, options = {}) {
 
   function persist() { writePreference(pageId, state); }
   function emit(reason) { options.onStateChange?.({ ...state, filters: { ...state.filters } }, reason); }
-  function hasQueryState() { return Boolean(state.query || Object.values(state.filters).some(Boolean) || state.sort !== configuredDefaultSort); }
+  function hasQueryState() { return Boolean(state.query || Object.values(state.filters).some(Boolean) || state.group !== configuredDefaultGroup || state.sort !== configuredDefaultSort); }
   function sync() {
     section.querySelectorAll("[data-workspace-view]").forEach((button) => {
       const active = button.dataset.workspaceView === state.view;
@@ -141,6 +160,7 @@ export function createUniversalWorkspace(parent, options = {}) {
       button.classList.toggle("is-active", active); button.setAttribute("aria-pressed", active ? "true" : "false");
     });
     const cardHost = viewHosts.get("card"); if (cardHost) cardHost.dataset.columns = String(state.cardColumns);
+    if (nodes.group) nodes.group.value = state.group;
     if (nodes.sort) nodes.sort.value = state.sort;
     filterNodes.forEach((node, key) => { node.value = state.filters[key] || ""; });
     if (nodes.resetButton) nodes.resetButton.hidden = !hasQueryState();
@@ -152,6 +172,7 @@ export function createUniversalWorkspace(parent, options = {}) {
     if (key === "filter" || key === filterDefs[0]?.key) state.filter = node.value;
     state.page = 1; sync(); emit(`filter:${key}`);
   }));
+  nodes.group?.addEventListener("change", () => { state.group = nodes.group.value; state.page = 1; persist(); sync(); emit("group"); });
   nodes.sort?.addEventListener("change", () => { state.sort = nodes.sort.value; state.page = 1; persist(); sync(); emit("sort"); });
   section.addEventListener("click", (event) => {
     const viewButton = event.target.closest("[data-workspace-view]");
@@ -184,12 +205,28 @@ export function createUniversalWorkspace(parent, options = {}) {
     sync();
   }
   function resetQueryState() {
-    state.query = ""; state.sort = configuredDefaultSort; state.page = 1;
+    state.query = ""; state.group = configuredDefaultGroup; state.sort = configuredDefaultSort; state.page = 1;
     Object.keys(state.filters).forEach((key) => { state.filters[key] = ""; });
     state.filter = "";
     if (nodes.search) nodes.search.value = "";
+    if (nodes.group) nodes.group.value = state.group;
     if (nodes.sort) nodes.sort.value = state.sort;
     persist(); sync();
+  }
+  function groupItems(items = []) {
+    const rows = Array.isArray(items) ? items : [];
+    if (!state.group) return [{ key:"", label:"", items:rows }];
+    const option = groupOptions.find((item) => item.value === state.group);
+    if (!option) return [{ key:"", label:"", items:rows }];
+    const getter = option.getter || ((item) => item?.[option.field || option.value]);
+    const map = new Map();
+    rows.forEach((item) => {
+      const raw = getter(item);
+      const label = String(raw ?? "未分组") || "未分组";
+      if (!map.has(label)) map.set(label, []);
+      map.get(label).push(item);
+    });
+    return [...map.entries()].map(([label, grouped]) => ({ key:label, label, items:grouped }));
   }
   function setCount(value) { nodes.count.textContent = String(value ?? 0); }
   function updatePagination(total = 0, start = 0, end = 0, pageCount = 1) {
@@ -241,6 +278,7 @@ export function createUniversalWorkspace(parent, options = {}) {
   return Object.freeze({
     section, state, nodes, viewHosts,
     getState: () => ({ ...state, filters: { ...state.filters } }),
+    groupItems,
     getViewHost: (id) => viewHosts.get(id) || null,
     getTableNodes,
     setFilterOptions,

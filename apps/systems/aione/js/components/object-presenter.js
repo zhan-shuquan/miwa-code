@@ -51,32 +51,41 @@ function renderRichCard(item, options = {}) {
   </article>`;
 }
 
-export function renderObjectCards(host, items = [], options = {}) {
-  if (!host) return;
-  if (options.variant === "rich-media") {
-    host.innerHTML = items.map((item) => renderRichCard(item, options)).join("");
-    return;
-  }
+function standardCardHtml(item, options = {}) {
   const fields = Array.isArray(options.fields) ? options.fields : [];
   const actions = Array.isArray(options.actions) ? options.actions : [];
-  host.innerHTML = items.map((item) => {
-    const title = options.title?.(item) ?? item.name ?? item.title ?? "未命名";
-    const type = options.type?.(item) ?? item.type ?? options.objectName ?? "对象";
-    const state = options.state?.(item) ?? item.state ?? item.status ?? "待确认";
-    const summary = options.summary?.(item) || "";
-    return `<article class="miwa-object-card${options.focusId && String(options.focusId) === String(item.id) ? " is-focused" : ""}" data-object-id="${esc(item.id || "")}">
-      <header><div class="miwa-object-card__identity"><span class="miwa-object-card__visual">${visualHtml(item, options, title)}</span><div><span class="miwa-object-card__type">${esc(type)}</span><h3>${esc(title)}</h3></div></div><span class="miwa-object-card__state">${esc(state)}</span></header>
-      ${fields.length ? `<div class="miwa-object-card__facts">${fields.map((field) => `<div><span>${esc(field.label)}</span><strong title="${esc(valueOf(field, item) ?? "")}">${esc(valueOf(field, item) ?? "—")}</strong></div>`).join("")}</div>` : ""}
-      ${summary ? `<p class="miwa-object-card__summary">${esc(summary)}</p>` : ""}
-      ${actions.length ? `<footer>${actions.map((action) => actionHtml(action, item)).join("")}</footer>` : ""}
-    </article>`;
-  }).join("");
+  const title = options.title?.(item) ?? item.name ?? item.title ?? "未命名";
+  const type = options.type?.(item) ?? item.type ?? options.objectName ?? "对象";
+  const state = options.state?.(item) ?? item.state ?? item.status ?? "待确认";
+  const summary = options.summary?.(item) || "";
+  return `<article class="miwa-object-card${options.focusId && String(options.focusId) === String(item.id) ? " is-focused" : ""}" data-object-id="${esc(item.id || "")}">
+    <header><div class="miwa-object-card__identity"><span class="miwa-object-card__visual">${visualHtml(item, options, title)}</span><div><span class="miwa-object-card__type">${esc(type)}</span><h3>${esc(title)}</h3></div></div><span class="miwa-object-card__state">${esc(state)}</span></header>
+    ${fields.length ? `<div class="miwa-object-card__facts">${fields.map((field) => `<div><span>${esc(field.label)}</span><strong title="${esc(valueOf(field, item) ?? "")}">${esc(valueOf(field, item) ?? "—")}</strong></div>`).join("")}</div>` : ""}
+    ${summary ? `<p class="miwa-object-card__summary">${esc(summary)}</p>` : ""}
+    ${actions.length ? `<footer>${actions.map((action) => actionHtml(action, item)).join("")}</footer>` : ""}
+  </article>`;
+}
+
+export function renderObjectCards(host, items = [], options = {}) {
+  if (!host) return;
+  const groups = Array.isArray(options.groups) && options.groups.length ? options.groups : null;
+  const renderCard = (item) => options.variant === "rich-media" ? renderRichCard(item, options) : standardCardHtml(item, options);
+  if (groups) {
+    host.innerHTML = groups.map((group) => `<div class="miwa-object-group-heading"><strong>${esc(group.label || "未分组")}</strong><span>${Number(group.items?.length || 0)}</span></div>${(group.items || []).map(renderCard).join("")}`).join("");
+    return;
+  }
+  host.innerHTML = items.map(renderCard).join("");
 }
 
 export function renderObjectList(head, body, items = [], options = {}) {
   if (!head || !body) return;
   const fields = Array.isArray(options.fields) ? options.fields : [];
   const actions = Array.isArray(options.actions) ? options.actions : [];
+  const columnCount = fields.length + (actions.length ? 1 : 0);
+  const rowHtml = (item) => `<tr data-object-id="${esc(item.id || "")}" class="${esc(options.rowClass?.(item) || "")}">${fields.map((field) => `<td class="${esc(field.className || "")}">${htmlOf(field, item)}</td>`).join("")}${actions.length ? `<td>${actions.map((action) => actionHtml(action, item)).join("")}</td>` : ""}</tr>`;
   head.innerHTML = `<tr>${fields.map((field) => `<th>${esc(field.label)}</th>`).join("")}${actions.length ? "<th>操作</th>" : ""}</tr>`;
-  body.innerHTML = items.map((item) => `<tr data-object-id="${esc(item.id || "")}" class="${esc(options.rowClass?.(item) || "")}">${fields.map((field) => `<td class="${esc(field.className || "")}">${htmlOf(field, item)}</td>`).join("")}${actions.length ? `<td>${actions.map((action) => actionHtml(action, item)).join("")}</td>` : ""}</tr>`).join("");
+  const groups = Array.isArray(options.groups) && options.groups.length ? options.groups : null;
+  body.innerHTML = groups
+    ? groups.map((group) => `<tr class="miwa-object-group-row"><td colspan="${columnCount}"><strong>${esc(group.label || "未分组")}</strong><span>${Number(group.items?.length || 0)}</span></td></tr>${(group.items || []).map(rowHtml).join("")}`).join("")
+    : items.map(rowHtml).join("");
 }
