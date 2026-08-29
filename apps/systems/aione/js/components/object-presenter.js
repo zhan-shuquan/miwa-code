@@ -14,6 +14,7 @@ function htmlOf(field, item) {
 }
 function actionHtml(action, item) {
   if (action.visible && !action.visible(item)) return "";
+  if (typeof action.renderHtml === "function") return action.renderHtml(item);
   const label = typeof action.label === "function" ? action.label(item) : action.label;
   const href = typeof action.href === "function" ? action.href(item) : action.href;
   if (href) return `<a href="${esc(href)}" ${action.external ? 'target="_blank" rel="noopener noreferrer"' : ""}>${esc(label || "打开")}</a>`;
@@ -22,6 +23,7 @@ function actionHtml(action, item) {
 function visualHtml(item, options, title) {
   const image = options.image?.(item) || item.image || item.imageUrl || item.representativeImage?.url || "";
   if (image) return `<img src="${esc(image)}" alt="${esc(title)}" loading="lazy">`;
+  if (typeof options.emptyVisualHtml === "function") return options.emptyVisualHtml(item, title);
   const visual = options.visual?.(item) ?? String(title).slice(0, 2);
   return String(visual ?? "");
 }

@@ -9,9 +9,7 @@ const item = (id, label, route, options = {}) => Object.freeze({
   route,
   icon: options.icon || "apps",
   children: Object.freeze(options.children || []),
-  quickActions: Object.freeze(options.quickActions || []),
-  overviewRoute: options.overviewRoute || "",
-  overviewLabel: options.overviewLabel || "概览"
+  quickActions: Object.freeze(options.quickActions || [])
 });
 
 const child = (id, label, route) => Object.freeze({ id, label, route });

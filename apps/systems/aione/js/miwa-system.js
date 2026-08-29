@@ -9,15 +9,15 @@ import { systemConfig } from "./config/system-config.js";
 import { ROUTE_REGISTRY, getRouteDefinition, getRouteId } from "./config/route-registry.js";
 import { loadComponents } from "./core/component-loader.js";
 import { initHeader } from "./shell/header.js";
-import { initPrimaryNavigation } from "./shell/primary-navigation.js?v=20260829-selection-root-overview-v4-1";
+import { initPrimaryNavigation } from "./shell/primary-navigation.js";
 import { initPlatformContext } from "./shell/platform-context.js";
 import { initAside } from "./shell/aside.js";
 import { initMiwaAILayer } from "./shell/miwa-ai-layer.js?v=20260826-v1.9.30.2-work-attention";
 import { initFooter } from "./shell/footer.js";
 import { initSystemSettings } from "./shell/system-settings.js";
-import { initSelectionWorkbench } from "./pages/selection-workbench.js?v=20260829-selection-v3";
-import { initSelectionOverview } from "./pages/selection-overview.js?v=20260829-selection-route-scroll-v4-3";
-import { initSelectionSecondaryPage } from "./pages/selection-secondary-pages.js?v=20260829-selection-root-overview-v4-1";
+import { initSelectionWorkbench } from "./pages/selection-workbench.js?v=20260829-selection-reopt-v1";
+import { initSelectionOverview } from "./pages/selection-overview.js?v=20260829-selection-reopt-v1";
+import { initSelectionSecondaryPage } from "./pages/selection-secondary-pages.js?v=20260829-selection-reopt-v1";
 import { initSamplingQueue, initSamplingTasks, initSamplingWorkbench } from "./pages/sampling-workbench.js";
 import { completeTaskForBusinessObject } from "./data/collaboration-store.js";
 import { initMiwaCalendar } from "./pages/miwa-calendar.js";
@@ -55,34 +55,6 @@ const BUSINESS_TEMPLATE_ROUTES = new Set([
 // V1.9.34 legacy cache token: v1.9.34-work-home-context-records-upgrade
 const WORK_HOME_ROUTES = new Set(["work","work-today","work-mine","work-all","work-following","work-suggestions","work-innovations","work-summaries","work-business-crossborder","work-business-wholesale","work-business-procurement-agency","work-business-logistics","work-business-study-abroad","work-business-real-estate","work-business-consulting","work-business-brand","work-business-more","work-waiting","work-blocked","work-review","work-records","work-pending","work-active","work-completed"]);
 const CONTENT_TEMPLATE_ROUTES = new Set(["knowledge-home"]);
-
-function routeHasManualSection(hash = window.location.hash) {
-  const raw = String(hash || "");
-  if (!raw.includes("?")) return false;
-  return Boolean(new URLSearchParams(raw.slice(raw.indexOf("?") + 1)).get("section"));
-}
-
-function resetRouteScrollPosition({ settle = true } = {}) {
-  const reset = () => {
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-    const main = document.querySelector(".app-main");
-    const host = document.getElementById("app-main-host");
-    if (main) main.scrollTop = 0;
-    if (host) host.scrollTop = 0;
-  };
-
-  reset();
-  if (!settle) return;
-
-  window.requestAnimationFrame(() => {
-    reset();
-    window.requestAnimationFrame(reset);
-  });
-  window.setTimeout(reset, 80);
-  window.setTimeout(reset, 240);
-}
 
 function getSelectionSubview(hash = window.location.hash) {
   const path = String(hash || "").replace(/^#\/?/, "").split("?")[0];
@@ -256,10 +228,7 @@ function showStartupError(error) {
 
 async function safeRenderCurrentRoute() {
   try {
-    const preserveManualSection = routeHasManualSection();
-    if (!preserveManualSection) resetRouteScrollPosition({ settle: false });
     await renderCurrentRoute();
-    if (!preserveManualSection) resetRouteScrollPosition();
     document.querySelector(".miwa-system-error")?.remove();
     return true;
   } catch (error) {
@@ -270,7 +239,6 @@ async function safeRenderCurrentRoute() {
 
 async function startMiwaSystem() {
   try {
-    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
     const previewIdentity = await resolvePreviewIdentity();
     const previewHeaderConfig = getPreviewHeaderConfig(previewIdentity);
     window.AIONEPreviewPermissionContext = getPreviewPermissionContext(previewIdentity);

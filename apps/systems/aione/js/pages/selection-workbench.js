@@ -1,10 +1,10 @@
 import { mountLevel2EmptyBase } from "../templates/level2-empty-base.js";
 import { getTemplateRecipe } from "../templates/template-registry.js";
-import { createUniversalWorkspace } from "../components/universal-workspace.js";
-import { renderObjectList } from "../components/object-presenter.js";
+import { createUniversalWorkspace } from "../components/universal-workspace.js?v=20260829-object-workspace-v1";
+import { renderObjectCards, renderObjectList } from "../components/object-presenter.js?v=20260829-object-workspace-v1";
 import { getActiveSystemParameters } from "../shell/system-settings.js";
 import { getFieldSchema } from "../config/field-registry.js";
-import { importPreviewOpportunities } from "../data/preview-opportunities.js";
+import { importPreviewOpportunities, removePreviewOpportunity } from "../data/preview-opportunities.js";
 import {
   SELECTION_SORT_OPTIONS,
   loadSelectionItems,
@@ -14,8 +14,9 @@ import {
   selectionSourceLabel,
   selectionMoney,
   selectionResultLabel,
+  selectionStatus,
   formatLocalDateTime
-} from "../data/selection-workbench-adapter.js";
+} from "../data/selection-workbench-adapter.js?v=20260829-object-workspace-v1";
 
 const esc = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" }[char]));
 const SELECTION_FIELD_MAP = new Map(getFieldSchema("selection").map((field) => [field.key, field]));
@@ -127,10 +128,202 @@ export function initBatchImport(portalState, showToast, onCreated) {
   return { open };
 }
 
+function selectionNoImageHtml() {
+  return `<span class="miwa-selection-no-image" aria-label="暂无商品图片"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><circle cx="9" cy="10" r="1.5"></circle><path d="M5.5 17l4.2-4.2 3.2 3 2.2-2.2 3.4 3.4"></path></svg></span>`;
+}
 function listProductHtml(item) {
-  const image = item?.representativeImage?.url ? `<img src="${esc(item.representativeImage.url)}" alt="" loading="lazy">` : `<span>${esc(String(item.name || "商").slice(0,1))}</span>`;
+  const id = esc(item?.id || "");
+  const image = item?.representativeImage?.url ? `<img src="${esc(item.representativeImage.url)}" alt="${esc(item.name || "商品图片")}" loading="lazy">` : selectionNoImageHtml();
   const source = item?.sourceUrl ? `<a href="${esc(item.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(selectionSourceLabel(item))} ↗</a>` : `<em>${esc(selectionSourceLabel(item))}</em>`;
-  return `<div class="miwa-selection-list-product"><span class="miwa-selection-list-thumb">${image}</span><span><strong>${esc(item.name)}</strong><small>${esc(item.id)} · ${esc(item.type)} · ${source}</small></span></div>`;
+  return `<div class="miwa-selection-list-product">
+    <button type="button" class="miwa-selection-list-thumb" data-object-action="edit" data-object-id="${id}" aria-label="打开${esc(item.name || "商品")}">${image}</button>
+    <span><button type="button" class="miwa-selection-product-name" data-object-action="edit" data-object-id="${id}">${esc(item.name)}</button><small>${esc(item.id)} · ${esc(item.type)} · ${source}</small></span>
+  </div>`;
+}
+
+
+const SELECTION_STATUS_OPTIONS=Object.freeze([
+  {value:"ongoing",label:"进行中"},
+  {value:"pending",label:"待判断"},
+  {value:"passed",label:"已通过"},
+  {value:"rejected",label:"已淘汰"}
+]);
+const SELECTION_GROUP_OPTIONS=Object.freeze([
+  {value:"type",label:"选品方式",field:"type"},
+  {value:"stage",label:"当前阶段",getter:(item)=>item.stageName||"待确认"},
+  {value:"owner",label:"负责人",field:"owner"},
+  {value:"result",label:"结果",getter:(item)=>selectionResultLabel(item)}
+]);
+function selectionStatusLabel(item){return ({ongoing:"进行中",pending:"待判断",passed:"已通过",rejected:"已淘汰"})[selectionStatus(item)]||"进行中";}
+function selectionInteractionHtml(item){
+  const id=esc(item?.id||"");
+  return `<div class="miwa-object-interactions" aria-label="对象互动">
+    <button type="button" data-selection-object-action="like" data-object-id="${id}" title="点赞">👍 <span>点赞</span></button>
+    <button type="button" data-selection-object-action="follow" data-object-id="${id}" title="关注">☆ <span>关注</span></button>
+    <button type="button" data-selection-object-action="favorite" data-object-id="${id}" title="收藏">♡ <span>收藏</span></button>
+    <button type="button" data-selection-object-action="comment" data-object-id="${id}" title="评论">💬 <span>评论</span></button>
+    <button type="button" data-selection-object-action="share" data-object-id="${id}" title="转发">↗ <span>转发</span></button>
+  </div>`;
+}
+function selectionStats(items=[]){
+  const rows=Array.isArray(items)?items:[];
+  const count=(status)=>rows.filter((item)=>selectionStatus(item)===status).length;
+  return {all:rows.length,ongoing:count("ongoing"),pending:count("pending"),passed:count("passed"),rejected:count("rejected"),money:rows.reduce((sum,item)=>sum+Number(item.cost||0),0)};
+}
+function selectionStatsHtml(items,totalLabel="商品机会总数",activeStatus=""){
+  const stats=selectionStats(items);
+  const chips=[["",totalLabel,stats.all],["ongoing","进行中",stats.ongoing],["pending","待判断",stats.pending],["passed","已通过",stats.passed],["rejected","已淘汰",stats.rejected]];
+  return `${chips.map(([key,label,value])=>`<button type="button" class="selection-stat-chip${String(activeStatus||"")===key?" is-active":""}" data-selection-workspace-stat="${esc(key)}"><span>${esc(label)}</span><strong>${value}</strong></button>`).join("")}<span class="selection-stat-chip selection-stat-chip--money"><span>选品费用</span><strong>${esc(selectionMoney(stats.money))}</strong></span>`;
+}
+function selectionListFields(){
+  return [
+    {label:"商品",renderHtml:listProductHtml,className:"miwa-selection-list-primary"},
+    {label:selectionFieldLabel("owner","负责人"),value:(item)=>item.owner},
+    {label:selectionFieldLabel("stageName","当前事项"),value:(item)=>item.stageName},
+    {label:selectionFieldLabel("platforms","销售平台"),value:(item)=>selectionPlatformLabel(item)},
+    {label:selectionFieldLabel("time","时间"),value:(item)=>item.time},
+    {label:selectionFieldLabel("result","结果"),value:(item)=>selectionResultLabel(item)}
+  ];
+}
+function selectionCardFields(){
+  return [
+    {label:selectionFieldLabel("owner","负责人"),value:(item)=>item.owner},
+    {label:selectionFieldLabel("stageName","当前事项"),value:(item)=>item.stageName},
+    {label:selectionFieldLabel("platforms","销售平台"),value:(item)=>selectionPlatformLabel(item)},
+    {label:selectionFieldLabel("time","时间"),value:(item)=>item.time},
+    {label:selectionFieldLabel("result","结果"),value:(item)=>selectionResultLabel(item)}
+  ];
+}
+function selectionActionMenuHtml(item){
+  const id=esc(item?.id||"");
+  return `<details class="miwa-object-action-menu"><summary aria-label="对象操作" title="对象操作">⋯</summary><div class="miwa-object-action-menu__panel" role="menu">
+    <button type="button" role="menuitem" data-object-action="edit" data-object-id="${id}">编辑</button>
+    <span class="miwa-object-action-menu__separator" aria-hidden="true"></span>
+    <button type="button" role="menuitem" data-object-action="like" data-object-id="${id}">点赞</button>
+    <button type="button" role="menuitem" data-object-action="follow" data-object-id="${id}">关注</button>
+    <button type="button" role="menuitem" data-object-action="favorite" data-object-id="${id}">收藏</button>
+    <button type="button" role="menuitem" data-object-action="comment" data-object-id="${id}">评论</button>
+    <button type="button" role="menuitem" data-object-action="share" data-object-id="${id}">转发</button>
+    <span class="miwa-object-action-menu__separator" aria-hidden="true"></span>
+    <button type="button" role="menuitem" class="is-danger" data-object-action="delete" data-object-id="${id}">删除</button>
+  </div></details>`;
+}
+function selectionObjectActions(){return [{key:"menu",label:"操作",renderHtml:selectionActionMenuHtml}];}
+function downloadSelectionCsv(items=[]){
+  const headers=["机会ID","商品名称","选品方式","负责人","当前事项","销售平台","时间","结果","选品费用"];
+  const rows=items.map((item)=>[item.id,item.name,item.type,item.owner,item.stageName,selectionPlatformLabel(item),item.time,selectionResultLabel(item),Number(item.cost||0)]);
+  const cell=(value)=>`"${String(value??"").replaceAll('"','""')}"`;
+  const csv="\uFEFF"+[headers,...rows].map((row)=>row.map(cell).join(",")).join("\r\n");
+  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  const link=document.createElement("a");link.href=url;link.download=`AIONE_商品机会_${new Date().toISOString().slice(0,10)}.csv`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+}
+
+function compactSelectionWorkspaceToolbar(workspace){
+  const toolbar=workspace?.section?.querySelector(".miwa-universal-workspace__toolbar");
+  if(!toolbar || toolbar.dataset.selectionCompactReady==="true") return ()=>{};
+  toolbar.dataset.selectionCompactReady="true";
+  const filterGroup=toolbar.querySelector("[data-workspace-filter-group]");
+  const group=toolbar.querySelector("[data-workspace-group]");
+  const sort=toolbar.querySelector("[data-workspace-sort]");
+  const view=toolbar.querySelector("[data-workspace-view-switch]");
+  const columns=toolbar.querySelector("[data-card-column-switch]");
+  const importButton=toolbar.querySelector("[data-workspace-import]");
+  const importFile=toolbar.querySelector("[data-workspace-import-file]");
+  const exportButton=toolbar.querySelector("[data-workspace-export]");
+  const resetButton=toolbar.querySelector("[data-workspace-reset]");
+  const filterMenu=document.createElement("details");filterMenu.className="selection-workspace-menu selection-workspace-filter-menu";filterMenu.innerHTML='<summary>筛选 <span data-selection-filter-count hidden></span></summary><div class="selection-workspace-menu__panel"></div>';
+  const filterPanel=filterMenu.querySelector(".selection-workspace-menu__panel");if(filterGroup)filterPanel.append(filterGroup);
+  const moreMenu=document.createElement("details");moreMenu.className="selection-workspace-menu selection-workspace-more-menu";moreMenu.innerHTML='<summary>更多</summary><div class="selection-workspace-menu__panel"></div>';
+  const morePanel=moreMenu.querySelector(".selection-workspace-menu__panel");[importButton,importFile,exportButton,columns,resetButton].filter(Boolean).forEach((node)=>morePanel.append(node));
+  const search=toolbar.querySelector(".miwa-object-search");
+  toolbar.replaceChildren(...[search,filterMenu,group,sort,view,moreMenu].filter(Boolean));
+  return (state)=>{
+    const count=Object.values(state?.filters||{}).filter(Boolean).length;const badge=filterMenu.querySelector("[data-selection-filter-count]");if(badge){badge.hidden=!count;badge.textContent=String(count);}
+  };
+}
+
+export function mountSelectionObjectWorkspace(parent,{itemsProvider=loadSelectionItems,pageId="selection-object-workspace",title="商品机会一览",description="同一商品机会对象通过列表、卡片和详情视图展示。",totalLabel="商品机会总数",hideHeader=false}={}){
+  if(!parent)return null;
+  const policy=getObjectPolicies();
+  let allItems=Array.isArray(itemsProvider?.())?itemsProvider():[];
+  let visibleRows=[];
+  const portal=document.createElement("div");portal.className="miwa-level2-portal";parent.appendChild(portal);
+  const portalState=createSelectionPortal(portal);
+  let toastTimer=null;
+  const showToast=(text)=>{const node=portalState?.toast;if(!node)return;node.textContent=text;node.classList.add("is-visible");clearTimeout(toastTimer);toastTimer=setTimeout(()=>node.classList.remove("is-visible"),2400);};
+  const refreshItems=()=>{allItems=Array.isArray(itemsProvider?.())?itemsProvider():[];workspace?.setFilterOptions("owner",getSelectionOwners(allItems),workspace?.getState().filters.owner||"");renderObjects();};
+  const batchImport=initBatchImport(portalState,showToast,refreshItems);
+  let workspace=null;
+  workspace=createUniversalWorkspace(parent,{
+    pageId,title,description,
+    searchPlaceholder:"搜索商品 / 机会ID / 负责人 / 来源",
+    filters:[
+      {key:"type",label:"选品方式",allLabel:"全部选品方式",options:["直发选品","常规选品"]},
+      {key:"status",label:"状态",allLabel:"全部状态",options:SELECTION_STATUS_OPTIONS},
+      {key:"owner",label:"负责人",allLabel:"全部负责人",options:getSelectionOwners(allItems)},
+      {key:"time",label:"时间范围",allLabel:"全部时间",options:[{value:"today",label:"今天"},{value:"7d",label:"近7天"},{value:"month",label:"本月"}]}
+    ],
+    groupOptions:SELECTION_GROUP_OPTIONS,
+    sortOptions:SELECTION_SORT_OPTIONS,
+    views:["card","list"],
+    defaultView:"list",
+    cardColumns:[3,4],
+    defaultCardColumns:3,
+    allowImport:policy.importAllowed,
+    allowExport:policy.exportAllowed,
+    pageSize:12,
+    onImportRequest:()=>batchImport?.open(""),
+    onExportRequest:()=>downloadSelectionCsv(visibleRows),
+    onStateChange:()=>renderObjects()
+  });
+  const syncCompactToolbar=compactSelectionWorkspaceToolbar(workspace);
+  if(hideHeader)workspace.section.querySelector(".miwa-level2-block__head")?.classList.add("is-visually-removed");
+  const statBar=document.createElement("div");statBar.className="selection-selection-stats selection-selection-stats--workspace";
+  const head=workspace.section.querySelector(".miwa-level2-block__head");
+  (head||workspace.section.firstElementChild)?.insertAdjacentElement("afterend",statBar);
+
+  function filteredRows(){
+    const state=workspace.getState();
+    const status=state.filters.status||"";
+    const baseState={...state,filters:{...state.filters,status:""}};
+    const rows=filterSelectionItems(allItems,baseState,"").filter((item)=>!status||selectionStatus(item)===status);
+    return workspace.sortItems(rows);
+  }
+  function renderStats(){
+    const active=workspace.getState().filters.status||"";
+    statBar.innerHTML=selectionStatsHtml(allItems,totalLabel,active);
+  }
+  function renderObjects(){
+    visibleRows=filteredRows();renderStats();syncCompactToolbar(workspace.getState());
+    if(!visibleRows.length){workspace.setCount(0);if(allItems.length)workspace.showNoResults();else workspace.showEmpty("暂无商品机会","商品机会对象接入真实数据后将在这里统一展示。");return;}
+    workspace.hideState();
+    const page=workspace.paginateItems(visibleRows);
+    const groups=workspace.getState().group?workspace.groupItems(page.rows):null;
+    const view=workspace.getState().view;
+    if(view==="list"){
+      const table=workspace.getTableNodes("list");
+      renderObjectList(table.head,table.body,page.rows,{fields:selectionListFields(),groups,actions:selectionObjectActions()});
+    }else{
+      const host=workspace.getViewHost("card");
+      renderObjectCards(host,page.rows,{groups,title:(item)=>item.name,type:(item)=>item.type,state:(item)=>selectionStatusLabel(item),image:(item)=>item?.representativeImage?.url||"",emptyVisualHtml:()=>selectionNoImageHtml(),fields:selectionCardFields(),actions:selectionObjectActions()});
+    }
+  }
+  workspace.section.addEventListener("click",(event)=>{
+    const stat=event.target.closest("[data-selection-workspace-stat]");
+    if(stat){workspace.setFilter(stat.dataset.selectionWorkspaceStat||"","status");return;}
+    const interaction=event.target.closest("[data-selection-object-action]");
+    if(interaction){showToast(`${({like:"点赞",follow:"关注",favorite:"收藏",comment:"评论",share:"转发"})[interaction.dataset.selectionObjectAction]||"对象互动"}已预留统一对象能力；正式接口接入前不写入假数据。`);return;}
+    const action=event.target.closest("[data-object-action]");
+    if(!action)return;
+    const item=allItems.find((row)=>String(row.id)===String(action.dataset.objectId));if(!item)return;
+    action.closest("details")?.removeAttribute("open");
+    if(["like","follow","favorite","comment","share"].includes(action.dataset.objectAction)){showToast(`${({like:"点赞",follow:"关注",favorite:"收藏",comment:"评论",share:"转发"})[action.dataset.objectAction]}已预留统一对象能力；正式接口接入前不写入假数据。`);return;}
+    if(action.dataset.objectAction==="delete"){if(window.confirm(`确认删除商品机会「${item.name}」吗？`)){removePreviewOpportunity(item.id);refreshItems();showToast("商品机会已删除。")};return;}
+    if(action.dataset.objectAction==="edit")openSelectionRecordDetail({id:item.id,type:item.type,mode:"edit"});
+  });
+  window.addEventListener("aione:global-settings-updated",refreshItems);
+  renderObjects();
+  return {workspace,refresh:refreshItems,getVisibleRows:()=>[...visibleRows],openBatch:(type="")=>batchImport?.open(type)};
 }
 
 function focusRequestedWorkbenchArea(target) {
@@ -153,7 +346,6 @@ export async function initSelectionWorkbench() {
   if (!entry) return false;
   if (!getTemplateRecipe("standard-business")) throw new Error("标准业务母版Recipe未注册");
 
-  let items = loadSelectionItems();
   const base = await mountLevel2EmptyBase(entry, {
     routeId:"selection",
     recipeId:"standard-business",
@@ -161,83 +353,22 @@ export async function initSelectionWorkbench() {
     evidenceScope:"selection-workbench"
   });
 
-  // V2 收口：选品工作台本身就是商品机会一览。一级头部、类型卡、流程、独立指标和9要素固定模块均不再渲染。
-  const workspace = createUniversalWorkspace(base.main, {
-    pageId:"selection-opportunity-list-v2",
+  // 商品机会一览与“我的选品”共用同一对象工作区，只改变数据视图范围。
+  const browser=mountSelectionObjectWorkspace(base.main,{
+    itemsProvider:loadSelectionItems,
+    pageId:"selection-opportunity-list-reopt-v1",
     title:"商品机会一览",
-    description:"公司共享的商品机会池。列表字段沿用现有数据结构，正式字段将在商品机会对象完成冻结后再调整。",
-    searchPlaceholder:"搜索商品 / 机会ID / 负责人",
-    filters:[
-      {key:"type",label:"选品方式",allLabel:"全部选品方式",options:["直发选品","常规选品"]},
-      {key:"status",label:"状态",allLabel:"全部状态",options:[{value:"ongoing",label:"进行中"},{value:"decided",label:"已判断"}]},
-      {key:"owner",label:"负责人",allLabel:"全部负责人",options:getSelectionOwners(items)},
-      {key:"time",label:"时间范围",allLabel:"全部时间",options:[{value:"today",label:"今天"},{value:"7d",label:"近7天"},{value:"month",label:"本月"}]}
-    ],
-    sortOptions:SELECTION_SORT_OPTIONS,
-    views:["list"],
-    defaultView:"list",
-    allowImport:false,
-    allowExport:false,
-    pageSize:12,
-    onStateChange:()=>renderObjects()
-  });
-
-  function allVisibleRows(){
-    return workspace.sortItems(filterSelectionItems(items, workspace.getState(), ""));
-  }
-
-  function renderObjects(){
-    const allRows=allVisibleRows();
-    if(!allRows.length){
-      workspace.setCount(0);
-      if(items.length) workspace.showNoResults();
-      else workspace.showEmpty("暂无商品机会","商品机会对象接入真实数据后将在这里统一展示。");
-      return;
-    }
-    workspace.hideState();
-    const page=workspace.paginateItems(allRows);
-    if(workspace.nodes.range){
-      workspace.nodes.range.textContent=`当前显示 ${page.start}–${page.end} / ${page.total} 项`;
-    }
-    const table=workspace.getTableNodes("list");
-    renderObjectList(table.head,table.body,page.rows,{
-      fields:[
-        {label:"商品机会",renderHtml:listProductHtml,className:"miwa-selection-list-primary"},
-        {label:selectionFieldLabel("owner","负责人"),value:(item)=>item.owner},
-        {label:selectionFieldLabel("stageName","当前事项"),value:(item)=>item.stageName},
-        {label:selectionFieldLabel("platforms","销售平台"),value:(item)=>selectionPlatformLabel(item)},
-        {label:selectionFieldLabel("time","时间"),value:(item)=>item.time},
-        {label:selectionFieldLabel("cost","投入成本"),value:(item)=>selectionMoney(item.cost)},
-        {label:selectionFieldLabel("result","结果"),value:(item)=>selectionResultLabel(item)}
-      ],
-      actions:[{key:"edit",label:"查看对象"}]
-    });
-  }
-
-  base.root.addEventListener("click",(event)=>{
-    const action=event.target.closest("[data-object-action]");
-    if(!action)return;
-    const item=items.find((row)=>String(row.id)===String(action.dataset.objectId));
-    if(!item)return;
-    if(action.dataset.objectAction==="edit"){
-      openSelectionRecordDetail({id:item.id,type:item.type,mode:"edit"});
-    }
-  });
-
-  window.addEventListener("aione:global-settings-updated",()=>{
-    items=loadSelectionItems();
-    workspace.setFilterOptions("owner",getSelectionOwners(items),workspace.getState().filters.owner||"");
-    renderObjects();
+    description:"公司共享的商品机会对象工作区。搜索、筛选、分组、排序、列表/卡片、重置、编辑与对象互动统一复用。",
+    totalLabel:"商品机会总数"
   });
 
   window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{
     state:"light",
     kicker:"当前工作台",
-    title:"选品工作台",
-    text:"打开工作台即查看商品机会一览；具体工作从对应二级页面进入。"
+    title:"全部选品",
+    text:"这里集中查看公司共享的商品机会对象；点击商品图片或名称进入对象详情。"
   }}));
 
-  renderObjects();
-  focusRequestedWorkbenchArea(workspace.section);
+  focusRequestedWorkbenchArea(browser?.workspace?.section);
   return true;
 }
