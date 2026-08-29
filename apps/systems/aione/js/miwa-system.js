@@ -15,7 +15,9 @@ import { initAside } from "./shell/aside.js";
 import { initMiwaAILayer } from "./shell/miwa-ai-layer.js?v=20260826-v1.9.30.2-work-attention";
 import { initFooter } from "./shell/footer.js";
 import { initSystemSettings } from "./shell/system-settings.js";
-import { initSelectionWorkbench } from "./pages/selection-workbench.js";
+import { initSelectionWorkbench } from "./pages/selection-workbench.js?v=20260829-selection-v2";
+import { initSelectionOverview } from "./pages/selection-overview.js?v=20260829-selection-v2";
+import { initSelectionSecondaryPage } from "./pages/selection-secondary-pages.js?v=20260829-selection-v2";
 import { initSamplingQueue, initSamplingTasks, initSamplingWorkbench } from "./pages/sampling-workbench.js";
 import { completeTaskForBusinessObject } from "./data/collaboration-store.js";
 import { initMiwaCalendar } from "./pages/miwa-calendar.js";
@@ -32,8 +34,13 @@ import { resolvePreviewIdentity, getPreviewHeaderConfig, getPreviewPermissionCon
 import { recordPreviewActivity, getPreviewActivityRecords, getPreviewActivitySummary } from "./auth/preview-activity.js";
 
 const SELECTION_SUBVIEWS = Object.freeze({
-  overview: "./pages/selection-workbench/overview.html",
-  tasks: "./pages/selection-workbench/tasks.html"
+  overview: Object.freeze({ page:"./pages/selection-workbench/overview.html", init:()=>initSelectionOverview() }),
+  mine: Object.freeze({ page:"./pages/selection-workbench/my-selection.html", init:()=>initSelectionSecondaryPage("mine") }),
+  ai: Object.freeze({ page:"./pages/selection-workbench/ai-selection.html", init:()=>initSelectionSecondaryPage("ai") }),
+  "product-development": Object.freeze({ page:"./pages/selection-workbench/product-development.html", init:()=>initSelectionSecondaryPage("product-development") }),
+  following: Object.freeze({ page:"./pages/selection-workbench/following.html", init:()=>initSelectionSecondaryPage("following") }),
+  // 旧“选品任务”入口仅作兼容，不再形成独立目录。
+  tasks: Object.freeze({ page:"./pages/selection-workbench/my-selection.html", init:()=>initSelectionSecondaryPage("mine") })
 });
 
 const BUSINESS_TEMPLATE_ROUTES = new Set([
@@ -48,10 +55,11 @@ const BUSINESS_TEMPLATE_ROUTES = new Set([
 const WORK_HOME_ROUTES = new Set(["work","work-today","work-mine","work-all","work-following","work-suggestions","work-innovations","work-summaries","work-business-crossborder","work-business-wholesale","work-business-procurement-agency","work-business-logistics","work-business-study-abroad","work-business-real-estate","work-business-consulting","work-business-brand","work-business-more","work-waiting","work-blocked","work-review","work-records","work-pending","work-active","work-completed"]);
 const CONTENT_TEMPLATE_ROUTES = new Set(["knowledge-home"]);
 
-function getSelectionPage(hash = window.location.hash) {
-  if (hash.startsWith("#/selection/overview")) return SELECTION_SUBVIEWS.overview;
-  if (hash.startsWith("#/selection/tasks")) return SELECTION_SUBVIEWS.tasks;
-  return ROUTE_REGISTRY.selection.page;
+function getSelectionSubview(hash = window.location.hash) {
+  const path = String(hash || "").replace(/^#\/?/, "").split("?")[0];
+  const [root, child] = path.split("/");
+  if (root !== "selection" || !child) return null;
+  return SELECTION_SUBVIEWS[child] || null;
 }
 
 function getOpportunityRoute(hash = window.location.hash) {
@@ -127,9 +135,11 @@ async function renderCurrentRoute() {
   }
 
   if (routeId === "selection") {
-    const page = getSelectionPage();
+    const subview = getSelectionSubview();
+    const page = subview?.page || ROUTE_REGISTRY.selection.page;
     await loadComponents([["app-main-host", page]]);
-    if (page === ROUTE_REGISTRY.selection.page) initSelectionWorkbench();
+    if (subview?.init) await subview.init();
+    else await initSelectionWorkbench();
     return;
   }
 

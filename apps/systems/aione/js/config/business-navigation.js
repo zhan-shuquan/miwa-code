@@ -23,13 +23,10 @@ export const BUSINESS_SPACES = Object.freeze({
     workbenches: Object.freeze([
       item("selection", "选品工作台", "selection", { icon: "search", children: [
         child("selection-overview", "选品概览", "selection/overview"),
-        child("selection-tasks", "选品任务", "selection/tasks"),
-        child("selection-opportunities", "商品机会", "selection-opportunities"),
-        child("selection-ai-talent", "AI选品人才", "selection-ai-talent"),
-        child("selection-records", "选品记录", "selection-records")
-      ], quickActions: [
-        { id: "selection-create", label: "新建商品机会", icon: "opportunity", event: "selection-create" },
-        { id: "selection-import", label: "批量导入", icon: "file", event: "selection-import" }
+        child("selection-mine", "我的选品", "selection/mine"),
+        child("selection-ai", "AI选品", "selection/ai"),
+        child("selection-product-development", "产品开发", "selection/product-development"),
+        child("selection-following", "我的关注", "selection/following")
       ]}),
       item("sampling", "测样工作台", "sampling", { icon: "sampling", children: [
         child("sampling-overview", "测样概览", "sampling-overview"),
