@@ -20,8 +20,8 @@ body{
     "Noto Sans SC",
     Arial,
     sans-serif;
-  color:var(--text);
-  background:#F5F7F5;
+  color:var(--color-text-primary);
+  background:var(--color-bg-page);
   overscroll-behavior-y:none;
 }
 
@@ -42,7 +42,7 @@ img{max-width:100%}
   overflow:auto;
   border:1px solid rgba(200,58,50,.22);
   border-radius:10px;
-  background:#FFFFFF;
-  color:var(--miwa-red);
+  background:var(--color-bg-surface);
+  color:var(--color-danger);
   box-shadow:var(--shadow-md);
 }
