@@ -1,83 +1,52 @@
 # AIONE Current Tests
 
-当前正式候选验证脚本：
+本目录只保留当前仍有工程价值的验证脚本。历史追溯由 Git commit / tag 负责，不再在当前工作树维护 `tests/legacy/` 副本。
 
-- `verify-level2-foundation-v1.4.mjs`：二级空母版、两大Recipe、工作之家/分析之家、Contextual Aside基础。
-- `verify-selection-legacy-migration-v1.5.mjs`：选品成熟业务迁移到标准业务母版与共享组件。
-- `verify-route-integrity-v1.3.mjs`：内部路由与Global Shell单一来源。
-- `verify-sampling-dashboard.mjs`：测样工作台历史回归。
+## 当前验证原则
 
-`legacy/` 中的旧版本测试只用于追溯，不作为当前发布阻断测试。
+1. 路由、Global Shell、Header、Sidebar / Aside、字段、数据层、AI、外部集成与核心业务闭环应有可重复验证脚本。
+2. 已废止的 UI 规则、旧母版和旧流程不应继续作为发布标准。
+3. 版本号仍保留在部分脚本文件名中，用于识别其产生阶段；是否保留以“当前是否仍验证有效能力”为准，而不是以版本号新旧判断。
+4. UI Foundation V2 完成后，将继续收敛脚本命名，并增加母版守门测试，防止页面绕开共享组件与 Design Tokens。
 
-## V1.6字段标准化
+## 当前核心验证入口
 
-运行：
-
-`node tests/verify-field-standardization-v1.6.mjs`
-
-检查Field Registry单一字段源、字段元数据、美和9要素映射、内容字段共用、选品历史storageKey兼容、系统审计字段与页面运行时标准字段调用。
-
-## V1.7 第6阶段核心数据/后端
+### 平台与页面基础
 
 ```bash
-node tests/verify-database-backend-v1.7.mjs
-```
-
-验证核心对象模型、增量数据库迁移、9要素顺序、Backend API资源、Legacy选品边界、字段到DB映射与OpenAPI契约。
-
-
-## V1.8 第7阶段AI办公室 / AI秘书（历史验证）
-
-原V1.8验证已移动至 `tests/legacy/verify-ai-office-secretary-v1.8.mjs`。其中AI秘书常驻Aside属于已废止UI规则，仅用于历史追溯；AI Backend / Tool Layer资产继续保留。
-
-## V1.9 Cloud Data Runtime
-
-```bash
-node tests/verify-cloud-data-runtime-v1.9.mjs
-```
-
-## V1.9.3 Header核心之家 + 共享资源快捷层
-
-```bash
-node tests/legacy/verify-global-header-context-v1.9.3.mjs
-```
-
-验证H1上下文与核心之家顺序、供应商之家、H2统一共享资源注册表、自动分组分隔、`headerHidden`隐藏能力、ERP/HR资源形态、共享资源页面及V1.1导航知识。
-## V1.9.4 Smart Header Lock Candidate
-
-```bash
+node tests/verify-route-integrity-v1.3.mjs
+node tests/verify-level2-foundation-v1.4.mjs
 node tests/verify-global-header-context-v1.9.4.mjs
-```
-
-Validates the fixed H1 context chain, core-home order including Store Home, overflow-aware H1/H2 rails, Quick Access-only H2 semantics, internal Shared Resource Registry boundary, More entry, direct shortcut active state, H4 important-signal labels, and the V1.2 Header knowledge baseline.
-
-
-## V1.9.5 Sidebar + Aside Lock Candidate
-
-```bash
 node tests/verify-sidebar-aside-lock-v1.9.5.mjs
 ```
 
-验证Universal Sidebar树形/手风琴母版、Quick Actions小型启动区、动态Sidebar Registry、Contextual Aside hidden/light/standard状态、AI从Aside脱离及旧Sidebar/Aside标准正式废止。
+### 业务与对象基础
 
-## V1.9.6 美和AI Independent Layer Candidate
+```bash
+node tests/verify-selection-legacy-migration-v1.5.mjs
+node tests/verify-sampling-dashboard.mjs
+node tests/verify-field-standardization-v1.6.mjs
+node tests/verify-database-backend-v1.7.mjs
+node tests/verify-cloud-data-runtime-v1.9.mjs
+```
+
+### 美和AI与执行闭环
 
 ```bash
 node tests/verify-miwa-ai-layer-v1.9.6.mjs
-```
-
-验证Header全局工具顺序“全局搜索 → 美和AI → 通知 → 帮助 → 设置”、Desktop/Mobile美和AI入口、独立AI Layer Host、Drawer → AI工作区 → AI办公室升级路径、Route上下文能力推荐、Composer、现有AI Backend复用，以及AI不重新进入Aside。
-
-## V1.9.7 美和AI Render Hotfix
-
-运行：`node verify-miwa-ai-render-v1.9.7.mjs`
-
-重点验证美和AI外壳使用稳定Flex结构、AI Client异常不导致白屏，并继续保留V1.9.6既有AI Backend执行入口。
-
-## V1.9.8 美和AI Entry Bridge Hotfix
-
-```bash
+node tests/verify-miwa-ai-render-v1.9.7.mjs
 node tests/verify-miwa-ai-entry-v1.9.8.mjs
+node tests/verify-miwa-ai-runtime-chain-v1.9.11.mjs
+node tests/verify-model-provider-v1.9.13.mjs
+node tests/verify-miwa-ai-proposal-bridge-v1.9.16.mjs
+node tests/verify-miwa-ai-context-router-v1.9.17.mjs
+node tests/verify-miwa-ai-architecture-proposal-execution-v1.9.29.mjs
 ```
 
-验证Header美和AI入口的全局事件委托、初始化失败可重试、Layer延迟挂载自动打开、Shell初始化隔离和V1.9.8缓存破除；原AI Backend接口保持不变。
+### 集成、云与工作之家
+
+其余 `verify-*.mjs` 保留用于当前 1688、Google Drive、Cloud、内容发布与工作之家等能力的专项回归。后续在确认功能唯一入口后，再删除被新测试完全覆盖的旧脚本。
+
+## 清理边界
+
+当前清理阶段不因为脚本名称包含 `legacy`、旧版本号或历史术语就自动删除现行业务验证；只有已经明确失效、被迁移到历史追溯层或被当前测试完全替代的脚本才删除。
