@@ -23,8 +23,8 @@ export const BUSINESS_SPACES = Object.freeze({
     shortLabel: "跨境",
     defaultRoute: "selection",
     workbenches: Object.freeze([
-      item("selection", "选品工作台", "selection", { icon: "search", overviewRoute: "selection/overview", overviewLabel: "概览", children: [
-        child("selection-all", "全部选品", "selection"),
+      item("selection", "选品工作台", "selection", { icon: "search", children: [
+        child("selection-all", "全部选品", "selection/all"),
         child("selection-mine", "我的选品", "selection/mine"),
         child("selection-ai", "AI的选品", "selection/ai"),
         child("selection-product-development", "产品开发", "selection/product-development"),
