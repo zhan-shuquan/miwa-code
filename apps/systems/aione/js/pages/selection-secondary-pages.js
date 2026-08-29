@@ -6,9 +6,9 @@ import {
 } from "../data/selection-workbench-adapter.js?v=20260829-object-workspace-v1";
 import {
   getObjectPolicies,
-  mountSelectionObjectWorkspace,
   openSelectionRecordDetail
 } from "./selection-workbench.js?v=20260829-selection-v3";
+import { mountSelectionObjectWorkspace } from "./selection-object-workspace.js?v=20260829-selection-object-workspace-v1";
 
 const USER_SELECTION_TYPES=Object.freeze(["直发选品","常规选品"]);
 const esc=(value)=>String(value??"").replace(/[&<>\"]/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
