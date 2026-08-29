@@ -189,7 +189,7 @@
 
 }
 /* ============================================================
-   V1.9.22 MOBILE FULL WIDTH FIX
+   MOBILE GLOBAL SHELL FULL WIDTH
    Mobile Global Shell must use the full viewport width.
    ============================================================ */
 @media(max-width:1099px){
@@ -202,7 +202,7 @@
     overflow-x:hidden;
   }
 
-  #selection-main-host{
+  #app-main-host{
     grid-column:1 / -1 !important;
     width:100%;
     max-width:100%;
@@ -211,7 +211,7 @@
     box-sizing:border-box;
   }
 
-  #selection-main-host > *{
+  #app-main-host > *{
     width:100%;
     max-width:100%;
     min-width:0;
@@ -239,7 +239,7 @@
   }
 }
 /* ============================================================
-   V1.9.22 MOBILE VERTICAL SCROLL FIX
+   MOBILE GLOBAL SHELL VERTICAL SCROLL
    Restore normal page vertical scrolling on mobile.
    ============================================================ */
 @media(max-width:1099px){
@@ -259,7 +259,7 @@
     position:static !important;
   }
 
-  #selection-main-host{
+  #app-main-host{
     height:auto !important;
     min-height:0 !important;
     overflow:visible !important;

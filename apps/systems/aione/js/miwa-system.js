@@ -66,7 +66,7 @@ function getOpportunityRoute(hash = window.location.hash) {
 }
 
 function renderOpportunityFrame(context) {
-  const host = document.getElementById("selection-main-host");
+  const host = document.getElementById("app-main-host");
   if (!host) return;
 
   const source = new URL("./pages/selection-workbench/record-detail/index.html", window.location.href);
@@ -90,7 +90,7 @@ function renderOpportunityFrame(context) {
 }
 
 function renderReservedRoute(route) {
-  const host = document.getElementById("selection-main-host");
+  const host = document.getElementById("app-main-host");
   if (!host) return;
   const parent = route.parent ? ROUTE_REGISTRY[route.parent] : null;
   const returnLink = parent
@@ -128,77 +128,77 @@ async function renderCurrentRoute() {
 
   if (routeId === "selection") {
     const page = getSelectionPage();
-    await loadComponents([["selection-main-host", page]]);
+    await loadComponents([["app-main-host", page]]);
     if (page === ROUTE_REGISTRY.selection.page) initSelectionWorkbench();
     return;
   }
 
   if (routeId === "sampling") {
-    await loadComponents([["selection-main-host", ROUTE_REGISTRY.sampling.page]]);
+    await loadComponents([["app-main-host", ROUTE_REGISTRY.sampling.page]]);
     initSamplingWorkbench();
     return;
   }
 
   if (routeId === "sampling-overview") {
-    await loadComponents([["selection-main-host", ROUTE_REGISTRY["sampling-overview"].page]]);
+    await loadComponents([["app-main-host", ROUTE_REGISTRY["sampling-overview"].page]]);
     return;
   }
 
   if (routeId === "sampling-tasks") {
-    await loadComponents([["selection-main-host", ROUTE_REGISTRY["sampling-tasks"].page]]);
+    await loadComponents([["app-main-host", ROUTE_REGISTRY["sampling-tasks"].page]]);
     initSamplingTasks();
     return;
   }
 
   if (routeId === "sampling-queue") {
-    await loadComponents([["selection-main-host", ROUTE_REGISTRY["sampling-queue"].page]]);
+    await loadComponents([["app-main-host", ROUTE_REGISTRY["sampling-queue"].page]]);
     initSamplingQueue();
     return;
   }
 
   if (routeId === "calendar") {
-    await loadComponents([["selection-main-host", ROUTE_REGISTRY.calendar.page]]);
+    await loadComponents([["app-main-host", ROUTE_REGISTRY.calendar.page]]);
     initMiwaCalendar();
     return;
   }
 
   if (WORK_HOME_ROUTES.has(routeId)) {
-    await loadComponents([["selection-main-host", route.page || ROUTE_REGISTRY.work.page]]);
+    await loadComponents([["app-main-host", route.page || ROUTE_REGISTRY.work.page]]);
     await initMiwaWorkHome();
     return;
   }
 
   if (routeId === "company" || routeId.startsWith("company-")) {
-    await loadComponents([["selection-main-host", route.page || ROUTE_REGISTRY.company.page]]);
+    await loadComponents([["app-main-host", route.page || ROUTE_REGISTRY.company.page]]);
     await initMiwaCompanyHome();
     return;
   }
 
   if (CONTENT_TEMPLATE_ROUTES.has(routeId)) {
-    await loadComponents([["selection-main-host", route.page]]);
+    await loadComponents([["app-main-host", route.page]]);
     await initContentPage();
     return;
   }
   if (routeId === "business-home" || routeId.startsWith("business-")) {
-    await loadComponents([["selection-main-host", route.page || ROUTE_REGISTRY["business-home"].page]]);
+    await loadComponents([["app-main-host", route.page || ROUTE_REGISTRY["business-home"].page]]);
     await initMiwaBusinessHome();
     return;
   }
 
   if (BUSINESS_TEMPLATE_ROUTES.has(routeId)) {
-    await loadComponents([["selection-main-host", route.page]]);
+    await loadComponents([["app-main-host", route.page]]);
     await initBusinessPage();
     return;
   }
 
   if (routeId === "notifications") {
-    await loadComponents([["selection-main-host", route.page]]);
+    await loadComponents([["app-main-host", route.page]]);
     initNotificationsPage();
     return;
   }
 
   if (routeId === "notification-detail") {
-    await loadComponents([["selection-main-host", route.page]]);
+    await loadComponents([["app-main-host", route.page]]);
     initNotificationDetailPage();
     return;
   }
@@ -240,7 +240,7 @@ async function startMiwaSystem() {
     if (!window.location.hash) history.replaceState(null, "", "#/selection");
     initPlatformContext();
 
-    const shellComponents = systemConfig.components.filter(([hostId]) => hostId !== "selection-main-host");
+    const shellComponents = systemConfig.components.filter(([hostId]) => hostId !== "app-main-host");
     await loadComponents(shellComponents);
 
     const initShellModule = (name, fn) => {
