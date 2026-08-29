@@ -5,7 +5,7 @@
 
 @import url("./foundation/tokens.css");
 @import url("./components/preview-auth.css");
-@import url("./components/level2-components.css");
+@import url("./components/level2-components.css?v=20260829-object-readability-v1");
 @import url("./foundation/base.css");
 @import url("./shell/layout.css");
 @import url("./shell/header.css");

@@ -33,7 +33,10 @@ export function getSelectionOwners(items = []) {
   return [...new Set(items.map((item) => item.owner).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), "zh-CN"));
 }
 export function selectionStatus(item) {
-  return item?.result === "待形成" ? "ongoing" : "decided";
+  if (item?.result === "上架") return "passed";
+  if (item?.result === "不上架" || item?.result === "已作废") return "rejected";
+  if (item?.result === "待形成" && item?.stage === "decision") return "pending";
+  return "ongoing";
 }
 export function selectionResultLabel(item) {
   if (item?.result === "上架") return "✓ 上架";
