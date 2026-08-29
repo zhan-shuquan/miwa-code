@@ -9,7 +9,9 @@ const item = (id, label, route, options = {}) => Object.freeze({
   route,
   icon: options.icon || "apps",
   children: Object.freeze(options.children || []),
-  quickActions: Object.freeze(options.quickActions || [])
+  quickActions: Object.freeze(options.quickActions || []),
+  overviewRoute: options.overviewRoute || "",
+  overviewLabel: options.overviewLabel || "概览"
 });
 
 const child = (id, label, route) => Object.freeze({ id, label, route });
@@ -21,12 +23,12 @@ export const BUSINESS_SPACES = Object.freeze({
     shortLabel: "跨境",
     defaultRoute: "selection",
     workbenches: Object.freeze([
-      item("selection", "选品工作台", "selection", { icon: "search", children: [
-        child("selection-overview", "选品概览", "selection/overview"),
+      item("selection", "选品工作台", "selection", { icon: "search", overviewRoute: "selection/overview", overviewLabel: "概览", children: [
+        child("selection-all", "全部选品", "selection"),
         child("selection-mine", "我的选品", "selection/mine"),
-        child("selection-ai", "AI选品", "selection/ai"),
+        child("selection-ai", "AI的选品", "selection/ai"),
         child("selection-product-development", "产品开发", "selection/product-development"),
-        child("selection-following", "我的关注", "selection/following")
+        child("selection-following", "我的互动", "selection/following")
       ]}),
       item("sampling", "测样工作台", "sampling", { icon: "sampling", children: [
         child("sampling-overview", "测样概览", "sampling-overview"),

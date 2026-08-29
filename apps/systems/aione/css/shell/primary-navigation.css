@@ -67,6 +67,10 @@
 .sidebar-navigation-tree{display:grid;gap:2px}
 .sidebar-tree-group{display:grid}
 .sidebar-tree-row{display:grid;grid-template-columns:24px minmax(0,1fr);align-items:center;min-height:38px;border-radius:9px}
+.sidebar-tree-row.has-overview-route{grid-template-columns:24px minmax(0,1fr) auto}
+.sidebar-tree-overview-link{height:28px;display:inline-flex;align-items:center;gap:4px;padding:0 7px;margin-right:2px;border:1px solid transparent;border-radius:7px;color:#6B7B74;font-size:10.5px;font-weight:750;text-decoration:none;white-space:nowrap}
+.sidebar-tree-overview-link:hover,.sidebar-tree-overview-link[aria-current="page"]{color:var(--miwa-green-deep);background:#EEF5F1;border-color:#D7E5DE}
+.sidebar-tree-overview-link__icon{width:13px;height:13px;display:inline-flex;color:currentColor}
 .sidebar-tree-toggle{width:24px;height:32px;display:flex;align-items:center;justify-content:center;border:0;border-radius:7px;background:transparent;color:#8A9791;cursor:pointer}
 .sidebar-tree-toggle:hover{color:var(--miwa-green);background:#F4F8F6}
 .sidebar-tree-toggle__icon{width:17px;height:17px;display:inline-flex;transition:transform .16s ease}

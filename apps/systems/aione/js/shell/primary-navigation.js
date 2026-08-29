@@ -75,13 +75,29 @@ function createAccordionItem(entry, context, routeId, currentPath) {
   link.dataset.navRoute = entry.route;
   link.append(createIcon(entry.icon || "apps"), Object.assign(document.createElement("span"), { textContent: entry.label }));
   row.append(link);
+
+  if (entry.overviewRoute) {
+    row.classList.add("has-overview-route");
+    const overview = document.createElement("a");
+    overview.className = "sidebar-tree-overview-link";
+    overview.href = `#/${entry.overviewRoute}`;
+    overview.setAttribute("aria-label", `${entry.label}${entry.overviewLabel || "概览"}`);
+    overview.append(
+      Object.assign(document.createElement("span"), { textContent: entry.overviewLabel || "概览" }),
+      createIcon("link", "sidebar-tree-overview-link__icon")
+    );
+    if (isRouteCurrent(entry.overviewRoute, routeId, currentPath)) overview.setAttribute("aria-current", "page");
+    row.append(overview);
+  }
+
   group.append(row);
 
   const childCurrent = hasChildren && entry.children.some((child) => isRouteCurrent(child.route, routeId, currentPath));
   const parentCurrent = isRouteCurrent(entry.route, routeId, currentPath);
+  const childOwnsParentRoute = hasChildren && entry.children.some((child) => child.route === entry.route);
   const currentGroup = context.activeWorkbenchId === entry.id || childCurrent || parentCurrent;
   group.classList.toggle("is-current-group", currentGroup);
-  if (parentCurrent) link.setAttribute("aria-current", "page");
+  if (parentCurrent && !childOwnsParentRoute) link.setAttribute("aria-current", "page");
 
   if (hasChildren) {
     const children = document.createElement("div");
