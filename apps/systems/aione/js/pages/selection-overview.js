@@ -18,19 +18,6 @@ function manualSectionFromHash(){
   const query=raw.includes("?")?raw.slice(raw.indexOf("?")+1):"";
   return new URLSearchParams(query).get("section")||"";
 }
-function resetSelectionOverviewScroll(){
-  const reset=()=>{
-    window.scrollTo(0,0);
-    document.documentElement.scrollTop=0;
-    document.body.scrollTop=0;
-    const main=document.querySelector(".app-main");
-    const host=document.getElementById("app-main-host");
-    if(main)main.scrollTop=0;
-    if(host)host.scrollTop=0;
-  };
-  reset();
-  window.requestAnimationFrame(reset);
-}
 function scrollToManualSection(){
   const section=manualSectionFromHash();
   if(!section)return;
@@ -59,7 +46,6 @@ export async function initSelectionOverview(){
   const host=document.getElementById("selection-overview-publication");
   if(!host)return false;
   setPublicationPageMode(true);
-  resetSelectionOverviewScroll();
   host.innerHTML=bookHtml();
   bindPublicationActions(host);
   validatePublicationPages(host);
