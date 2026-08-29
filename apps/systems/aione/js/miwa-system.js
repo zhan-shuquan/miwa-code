@@ -16,7 +16,7 @@ import { initMiwaAILayer } from "./shell/miwa-ai-layer.js?v=20260826-v1.9.30.2-w
 import { initFooter } from "./shell/footer.js";
 import { initSystemSettings } from "./shell/system-settings.js";
 import { initSelectionWorkbench } from "./pages/selection-workbench.js?v=20260829-selection-v3";
-import { initSelectionOverview } from "./pages/selection-overview.js?v=20260829-selection-v2";
+import { initSelectionOverview } from "./pages/selection-overview.js?v=20260829-selection-overview-v4-2";
 import { initSelectionSecondaryPage } from "./pages/selection-secondary-pages.js?v=20260829-selection-root-overview-v4-1";
 import { initSamplingQueue, initSamplingTasks, initSamplingWorkbench } from "./pages/sampling-workbench.js";
 import { completeTaskForBusinessObject } from "./data/collaboration-store.js";
