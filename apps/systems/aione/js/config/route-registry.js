@@ -200,7 +200,7 @@ export const ROUTE_REGISTRY = Object.freeze({
 
   selection: route("selection", "选品工作台", "workbench", {
     status: "active",
-    page: "./pages/selection-workbench/home.html"
+    page: "./pages/selection-workbench/overview.html"
   }),
   "selection-opportunities": route("selection-opportunities", "商品机会", "workbench", { parent: "selection" }),
   "selection-ai-talent": route("selection-ai-talent", "AI选品人才", "workbench", { parent: "selection" }),

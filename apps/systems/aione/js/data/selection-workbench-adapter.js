@@ -21,7 +21,7 @@ export const SELECTION_SORT_OPTIONS = Object.freeze([
   { value: "default", label: "默认排序" },
   { value: "time-desc", label: "最新选品", field: "time", direction: "desc", type: "date" },
   { value: "time-asc", label: "最早选品", field: "time", direction: "asc", type: "date" },
-  { value: "cost-desc", label: "投入成本 高→低", field: "cost", direction: "desc", type: "number" },
+  { value: "cost-desc", label: "选品费用 高→低", field: "cost", direction: "desc", type: "number" },
   { value: "name-asc", label: "商品名称 A-Z", field: "name", direction: "asc" },
   { value: "owner-asc", label: "负责人", field: "owner", direction: "asc" }
 ]);
@@ -91,7 +91,7 @@ export function getSelectionMetrics(items = []) {
     { label: "不上架", value: rejected },
     { label: "上架率", value: `${rate}%` },
     { label: "进行中", value: ongoing },
-    { label: "投入总成本", value: selectionMoney(cost) }
+    { label: "选品费用", value: selectionMoney(cost) }
   ];
 }
 function inTimeRange(item, range, now = new Date()) {

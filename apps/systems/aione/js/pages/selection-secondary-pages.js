@@ -8,13 +8,13 @@ import {
   getObjectPolicies,
   mountSelectionObjectWorkspace,
   openSelectionRecordDetail
-} from "./selection-workbench.js?v=20260829-selection-v3";
+} from "./selection-workbench.js?v=20260829-selection-reopt-v1";
 
 const USER_SELECTION_TYPES=Object.freeze(["直发选品","常规选品"]);
 const esc=(value)=>String(value??"").replace(/[&<>\"]/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
 const manualHref=(section)=>`#/selection/overview?section=${encodeURIComponent(section)}`;
 
-function pageTitle(page){return ({mine:"我的选品",ai:"AI选品","product-development":"产品开发",following:"我的关注"})[page]||"选品工作台";}
+function pageTitle(page){return ({mine:"我的选品",ai:"AI的选品","product-development":"产品开发",following:"我的互动"})[page]||"选品工作台";}
 function titleBar(title,manualSection,actions="",subtitle=""){
   return `<header class="selection-secondary-head">
     <div class="selection-secondary-head__title-block">
@@ -41,7 +41,7 @@ function renderMine(root){
   renderSemanticIcons(root);
   const browser=mountSelectionObjectWorkspace(root.querySelector("[data-selection-mine-workspace]"),{
     itemsProvider:()=>loadSelectionItems().filter((item)=>USER_SELECTION_TYPES.includes(item.type)),
-    pageId:"selection-mine-object-v3",
+    pageId:"selection-mine-object-reopt-v1",
     title:"我的选品",
     description:"与商品机会一览共用同一对象字段、列表/卡片和互动能力，只改变当前个人选品视图范围。",
     totalLabel:"选品总数",
@@ -68,13 +68,13 @@ export async function initSelectionSecondaryPage(page="mine"){
   if(!root)return false;
   document.title=`美和AIONE一体化工作平台｜${pageTitle(page)}`;
   if(page==="mine")renderMine(root);
-  else if(page==="ai")root.innerHTML=emptyPage("AI选品","future","AI","该功能已预留，将根据后续业务验证结果逐步完善。");
+  else if(page==="ai")root.innerHTML=emptyPage("AI的选品","future","AI","该功能已预留，将根据后续业务验证结果逐步完善。");
   else if(page==="product-development")root.innerHTML=emptyPage("产品开发","future","开","该功能已预留，将根据后续业务验证结果逐步完善。");
-  else if(page==="following")root.innerHTML=`<section class="selection-secondary-card">${titleBar("我的关注","following","","集中查看你点赞、关注或收藏的商品机会；正式对象互动接口接入后统一沉淀。")}${mountFollowingPlaceholder()}</section>`;
+  else if(page==="following")root.innerHTML=`<section class="selection-secondary-card">${titleBar("我的互动","following","","集中查看你点赞、关注、收藏、评论或转发过的商品机会；正式对象互动接口接入后统一沉淀。")}${mountFollowingPlaceholder()}</section>`;
   renderSemanticIcons(root);
   return true;
 }
 
 function mountFollowingPlaceholder(){
-  return `<div class="selection-secondary-empty"><span>关</span><h2>对象关注视图</h2><p>点赞、关注、收藏、评论与转发已经进入统一对象工作区能力；正式Backend接入后，这里按当前用户聚合对应对象。</p></div>`;
+  return `<div class="selection-secondary-empty"><span>互</span><h2>我的互动视图</h2><p>点赞、关注、收藏、评论与转发统一沉淀为对象互动；正式Backend接入后，这里按当前用户聚合对应对象。</p></div>`;
 }

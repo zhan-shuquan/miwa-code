@@ -22,11 +22,11 @@ export const BUSINESS_SPACES = Object.freeze({
     defaultRoute: "selection",
     workbenches: Object.freeze([
       item("selection", "选品工作台", "selection", { icon: "search", children: [
-        child("selection-overview", "选品概览", "selection/overview"),
+        child("selection-all", "全部选品", "selection/all"),
         child("selection-mine", "我的选品", "selection/mine"),
-        child("selection-ai", "AI选品", "selection/ai"),
+        child("selection-ai", "AI的选品", "selection/ai"),
         child("selection-product-development", "产品开发", "selection/product-development"),
-        child("selection-following", "我的关注", "selection/following")
+        child("selection-following", "我的互动", "selection/following")
       ]}),
       item("sampling", "测样工作台", "sampling", { icon: "sampling", children: [
         child("sampling-overview", "测样概览", "sampling-overview"),

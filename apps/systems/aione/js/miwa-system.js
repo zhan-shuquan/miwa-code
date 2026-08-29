@@ -15,9 +15,9 @@ import { initAside } from "./shell/aside.js";
 import { initMiwaAILayer } from "./shell/miwa-ai-layer.js?v=20260826-v1.9.30.2-work-attention";
 import { initFooter } from "./shell/footer.js";
 import { initSystemSettings } from "./shell/system-settings.js";
-import { initSelectionWorkbench } from "./pages/selection-workbench.js?v=20260829-selection-v3";
-import { initSelectionOverview } from "./pages/selection-overview.js?v=20260829-selection-v2";
-import { initSelectionSecondaryPage } from "./pages/selection-secondary-pages.js?v=20260829-selection-v3";
+import { initSelectionWorkbench } from "./pages/selection-workbench.js?v=20260829-selection-reopt-v1";
+import { initSelectionOverview } from "./pages/selection-overview.js?v=20260829-selection-reopt-v1";
+import { initSelectionSecondaryPage } from "./pages/selection-secondary-pages.js?v=20260829-selection-reopt-v1";
 import { initSamplingQueue, initSamplingTasks, initSamplingWorkbench } from "./pages/sampling-workbench.js";
 import { completeTaskForBusinessObject } from "./data/collaboration-store.js";
 import { initMiwaCalendar } from "./pages/miwa-calendar.js";
@@ -34,6 +34,7 @@ import { resolvePreviewIdentity, getPreviewHeaderConfig, getPreviewPermissionCon
 import { recordPreviewActivity, getPreviewActivityRecords, getPreviewActivitySummary } from "./auth/preview-activity.js";
 
 const SELECTION_SUBVIEWS = Object.freeze({
+  all: Object.freeze({ page:"./pages/selection-workbench/home.html", init:()=>initSelectionWorkbench() }),
   overview: Object.freeze({ page:"./pages/selection-workbench/overview.html", init:()=>initSelectionOverview() }),
   mine: Object.freeze({ page:"./pages/selection-workbench/my-selection.html", init:()=>initSelectionSecondaryPage("mine") }),
   ai: Object.freeze({ page:"./pages/selection-workbench/ai-selection.html", init:()=>initSelectionSecondaryPage("ai") }),
@@ -139,7 +140,7 @@ async function renderCurrentRoute() {
     const page = subview?.page || ROUTE_REGISTRY.selection.page;
     await loadComponents([["app-main-host", page]]);
     if (subview?.init) await subview.init();
-    else await initSelectionWorkbench();
+    else await initSelectionOverview();
     return;
   }
 
