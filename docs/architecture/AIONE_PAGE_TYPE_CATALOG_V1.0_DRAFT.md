@@ -1,6 +1,6 @@
-# AIONE Page Type清单 V1.0 Draft
+# AIONE Page Type清单 V1.0 RC
 
-状态：待冻结
+状态：Release Candidate / 待冻结
 
 ## 核心规则
 新增页面必须先选择现有 Page Type；只有现有类型无法承载新的稳定模式时，才允许新增 Page Type。
@@ -17,6 +17,8 @@
 
 ## 横向能力
 Publication Layer 不单独作为业务 Page Type，统一提供 Web View / Print View / A4 / PDF / Download / Share。
+
+Progressive Disclosure 是所有 Page Type 的横向交互规则：高频关键动作直接显示；低频动作进入 More/Context Menu；复杂配置使用 Drawer/Dialog；不得因单页需要复制新的交互模式。
 
 ## Object List 标准批量能力
 - 当前页全选
@@ -36,3 +38,6 @@ Publication Layer 不单独作为业务 Page Type，统一提供 Web View / Prin
 4. 默认有哪些 Actions？
 5. 哪些仅为 Config？
 6. 哪些才是真正业务特化？
+
+## 当前结论
+V1.0 RC 维持8种核心 Page Type，不新增第9种。Publication、i18n、权限、审计、回收站、AI等均作为横向平台能力处理。
