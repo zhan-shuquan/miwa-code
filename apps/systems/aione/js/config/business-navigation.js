@@ -3,6 +3,8 @@
    Sidebar只展示稳定业务对象/入口；状态、步骤和操作下沉到页面内部。
 ======================================== */
 
+import { ROUTE_REGISTRY } from "./route-registry.js";
+
 const item = (id, label, route, options = {}) => Object.freeze({
   id,
   label,
@@ -15,6 +17,7 @@ const item = (id, label, route, options = {}) => Object.freeze({
 });
 
 const child = (id, label, route) => Object.freeze({ id, label, route });
+const routeLabel = (routeId) => ROUTE_REGISTRY[routeId]?.label || routeId;
 
 export const BUSINESS_SPACES = Object.freeze({
   crossborder: Object.freeze({
@@ -23,13 +26,13 @@ export const BUSINESS_SPACES = Object.freeze({
     shortLabel: "跨境",
     defaultRoute: "selection",
     workbenches: Object.freeze([
-      item("selection", "选品工作台", "selection", { icon: "search", children: [
+      item("selection", routeLabel("selection"), "selection", { icon: "search", children: [
         child("selection-all", "全部选品", "selection/all"),
         child("selection-mine", "我的选品", "selection/mine"),
         child("selection-ai", "AI的选品", "selection/ai"),
         child("selection-following", "我的互动", "selection/following")
       ]}),
-      item("sampling", "测样工作台", "sampling", { icon: "sampling", children: [
+      item("sampling", routeLabel("sampling"), "sampling", { icon: "sampling", children: [
         child("sampling-overview", "测样概览", "sampling-overview"),
         child("sampling-tasks", "测样任务", "sampling-tasks"),
         child("sampling-queue", "待测样商品", "sampling-queue"),
@@ -37,47 +40,47 @@ export const BUSINESS_SPACES = Object.freeze({
         child("sampling-reports", "测样报告", "sampling-reports"),
         child("sampling-records", "测样记录", "sampling-records")
       ]}),
-      item("procurement", "采购工作台", "procurement", { icon: "procurement", children: [
+      item("procurement", routeLabel("procurement"), "procurement", { icon: "procurement", children: [
         child("procurement-overview", "采购概览", "procurement-overview"),
         child("procurement-needs", "采购需求", "procurement-needs"),
         child("procurement-orders", "采购订单", "procurement-orders"),
         child("procurement-suppliers", "供应商", "procurement-suppliers"),
         child("procurement-records", "采购记录", "procurement-records")
       ]}),
-      item("design", "设计工作台", "design", { icon: "design", children: [
+      item("design", routeLabel("design"), "design", { icon: "design", children: [
         child("design-overview", "设计概览", "design-overview"),
         child("design-tasks", "设计任务", "design-tasks"),
         child("design-materials", "商品素材", "design-materials"),
         child("design-assets", "设计资产", "design-assets"),
         child("design-records", "设计记录", "design-records")
       ]}),
-      item("publishing", "上架工作台", "publishing", { icon: "publishing", children: [
+      item("publishing", routeLabel("publishing"), "publishing", { icon: "publishing", children: [
         child("publishing-overview", "上架概览", "publishing-overview"),
         child("publishing-tasks", "上架任务", "publishing-tasks"),
         child("publishing-products", "商品资料", "publishing-products"),
         child("publishing-records", "发布记录", "publishing-records")
       ]}),
-      item("operations", "运营工作台", "operations", { icon: "operations", children: [
+      item("operations", routeLabel("operations"), "operations", { icon: "operations", children: [
         child("operations-overview", "运营概览", "operations-overview"),
         child("operations-products", "运营商品", "operations-products"),
         child("operations-tasks", "运营任务", "operations-tasks"),
         child("operations-campaigns", "活动与推广", "operations-campaigns"),
         child("operations-records", "运营记录", "operations-records")
       ]}),
-      item("orders", "订单工作台", "orders", { icon: "orders", children: [
+      item("orders", routeLabel("orders"), "orders", { icon: "orders", children: [
         child("orders-overview", "订单概览", "orders-overview"),
         child("orders-list", "订单列表", "orders-list"),
         child("orders-exceptions", "订单异常", "orders-exceptions"),
         child("orders-records", "订单记录", "orders-records")
       ]}),
-      item("inventory", "库存工作台", "inventory", { icon: "procurement", children: [
+      item("inventory", routeLabel("inventory"), "inventory", { icon: "procurement", children: [
         child("inventory-overview", "库存概览", "inventory-overview"),
         child("inventory-list", "库存列表", "inventory-list"),
         child("inventory-movements", "入出库管理", "inventory-movements"),
         child("inventory-counts", "盘点管理", "inventory-counts"),
         child("inventory-records", "库存记录", "inventory-records")
       ]}),
-      item("service", "客服工作台", "service", { icon: "service", children: [
+      item("service", routeLabel("service"), "service", { icon: "service", children: [
         child("service-overview", "客服概览", "service-overview"),
         child("service-tickets", "客服工单", "service-tickets"),
         child("service-after-sales", "退换与售后", "service-after-sales"),
