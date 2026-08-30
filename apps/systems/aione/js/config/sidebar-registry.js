@@ -22,7 +22,7 @@ const PLATFORM_CONTEXT_META = Object.freeze({
   "ai-office": { icon: "ai", type: "content" },
   analysis: { icon: "analysis", type: "content" },
   "knowledge-home": { icon: "knowledge", type: "content" },
-  "shared-home": { icon: "apps", type: "tools" },
+  "shared-resources": { icon: "apps", type: "tools" },
   "application-home": { icon: "apps", type: "tools" },
   notifications: { icon: "notification", type: "system" },
   settings: { icon: "settings", type: "system" },
