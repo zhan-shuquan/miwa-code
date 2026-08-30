@@ -24,6 +24,7 @@ const PLATFORM_CONTEXT_META = Object.freeze({
   analysis: { icon: "analysis", type: "content" },
   "knowledge-home": { icon: "knowledge", type: "content" },
   "shared-home": { icon: "apps", type: "content" },
+  "shared-resources": { icon: "apps", type: "content" },
   "application-home": { icon: "apps", type: "tools" },
   notifications: { icon: "notification", type: "system" },
   settings: { icon: "settings", type: "system" },
@@ -75,8 +76,8 @@ function buildWorkItems() {
     { id:"work-assigned", label:"我安排的", route:"work-assigned", icon:"work", subtitle:"查看由当前用户安排给他人的工作；与负责人读取同一个Work Item。", children:[] },
     { id:"work-batch", label:"批量安排工作", route:"work-batch", icon:"file", subtitle:"导入极简工作种子，预览AI补全结果并批量批准派发。", children:[] },
     { id:"work-following", label:"我的关注", route:"work-following", icon:"notification", subtitle:"集中查看当前用户主动关注的重要业务对象。", children:[], sectionGapBefore:true },
-    { id:"work-favorites", label:"我的收藏", route:"work-favorites", icon:"brand", subtitle:"汇总从知识、共享资源、商品、分析、渠道及其他业务对象中收藏的内容。", children:[] },
-    { id:"work-learning", label:"我的学习", route:"work-learning", icon:"knowledge", subtitle:"集中管理想学习、正在学习和已完成学习的内容，并与收藏保持关联。", children:[] },
+    { id:"work-favorites", label:"我的收藏", route:"work?view=favorites", icon:"brand", subtitle:"汇总从知识、共享之家、商品、分析、渠道及其他业务对象中收藏的内容。", children:[] },
+    { id:"work-learning", label:"我的学习", route:"work?view=learning", icon:"knowledge", subtitle:"集中管理想学习、正在学习和已完成学习的内容，并与收藏保持关联。", children:[] },
     { id:"work-suggestions", label:"我的建议", route:"work-suggestions", icon:"file", subtitle:"记录和跟踪我提出的业务改善建议。", children:[] },
     { id:"work-innovations", label:"我的创新", route:"work-innovations", icon:"brand", subtitle:"记录和跟踪值得验证的新方法、新产品、新模式或新能力。", children:[] },
     { id:"work-summaries", label:"我的总结", route:"work-summaries", icon:"knowledge", subtitle:"查看本人主动形成并确认的有价值工作总结。", children:[] },
@@ -96,26 +97,30 @@ function buildRegistryHomeItems(rootId) {
     ...definition.centers.map((item) => ({
       id: item.id,
       label: item.label,
-      route: item.id,
+      route: `${rootId}?center=${encodeURIComponent(item.id)}`,
       icon: "",
       children: []
     })),
-    { id: `${rootId}-management`, label: "管理", route: `${rootId}-management`, icon: "settings", children: [], sectionGapBefore:true }
+    { id: `${rootId}-management`, label: "管理", route: `${rootId}?view=management`, icon: "settings", children: [], sectionGapBefore:true }
   ];
 }
 
 function buildPlatformItems(rootId) {
   const root = ROUTE_REGISTRY[rootId];
-  if (!root && !HOME_REGISTRY[rootId]) return [];
+  const normalizedRootId = rootId === "shared-resources" ? "shared-home" : rootId;
+  if (!root && !HOME_REGISTRY[normalizedRootId]) return [];
   if (rootId === "company") return MIWA_COMPANY_NAVIGATION;
   if (rootId === "business-home") return MIWA_BUSINESS_NAVIGATION;
   if (rootId === "work") return buildWorkItems();
-  const registryItems = buildRegistryHomeItems(rootId);
-  if (registryItems && HOME_REGISTRY[rootId]?.centers?.length) return registryItems;
+  const registryItems = buildRegistryHomeItems(normalizedRootId);
+  if (registryItems && HOME_REGISTRY[normalizedRootId]?.centers?.length) return registryItems.map((item) => ({
+    ...item,
+    route: item.route.replace(/^shared-home/, "shared-resources")
+  }));
   const children = childrenFor(rootId).map((item) => rootId === "finance-home" && item.id === "expense-home"
     ? { ...item, children: childrenFor(item.id) }
     : item);
-  const homeLabel = children.length ? "概览" : (root?.label || HOME_REGISTRY[rootId]?.label || "概览");
+  const homeLabel = children.length ? "概览" : (root?.label || HOME_REGISTRY[normalizedRootId]?.label || "概览");
   return [
     { id: `${rootId}-home`, label: homeLabel, route: rootId, icon: PLATFORM_CONTEXT_META[rootId]?.icon || "apps", children: [] },
     ...children
@@ -140,9 +145,10 @@ export function resolveSidebarContext(routeId, currentPath, currentBusinessSpace
   }
 
   const rootId = resolvePlatformRoot(routeId);
+  const normalizedRootId = rootId === "shared-resources" ? "shared-home" : rootId;
   const root = ROUTE_REGISTRY[rootId] || ROUTE_REGISTRY[routeId];
-  const homeDefinition = HOME_REGISTRY[rootId];
-  const meta = PLATFORM_CONTEXT_META[rootId] || { icon: "apps", type: "content" };
+  const homeDefinition = HOME_REGISTRY[normalizedRootId];
+  const meta = PLATFORM_CONTEXT_META[rootId] || PLATFORM_CONTEXT_META[normalizedRootId] || { icon: "apps", type: "content" };
   const publicationActions = (rootId === "company" || rootId === "business-home" || (rootId === "work" && routeId === "work"))
     ? [
         { id:"publication-print", label:"打印", icon:"file", event:"aione:publication:print" },
