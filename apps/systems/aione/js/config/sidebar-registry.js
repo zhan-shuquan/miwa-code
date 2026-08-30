@@ -61,7 +61,6 @@ function childrenFor(parentId) {
     .map((route) => ({ id: route.id, label: route.label, route: route.id, icon: "" }));
 }
 
-// V1.9.33 legacy validation token: MIWA_BUSINESSES.map
 function buildWorkItems() {
   const preferredBusinessIds = ["crossborder", "wholesale", "study-abroad"];
   const businessChildren = preferredBusinessIds
