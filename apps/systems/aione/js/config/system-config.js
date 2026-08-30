@@ -48,7 +48,7 @@ export const systemConfig = Object.freeze({
     },
 
     sharedResources: {
-      allResourcesRoute: "shared-resources",
+      allResourcesRoute: "shared-home",
       quickGroupOrder: ["core", "stores", "logistics", "office", "procurement", "mail"],
       items: [
         { id: "erp", name: "ERP", subtitle: "资源", mark: "E", color: "#176B4D", route: "erp-home", status: "active", productForm: "应用", origin: "内部", quickAccess: true, headerHidden: false, quickGroup: "core", sortOrder: 10, owner: "财务/系统负责人" },
