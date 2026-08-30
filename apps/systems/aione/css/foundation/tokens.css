@@ -31,10 +31,32 @@
   --border-soft:#EDF1EF;
 
   /* ========================================
+     Neutral Workspace Tokens
+     Google-like work surfaces: neutral first, brand as accent.
+  ======================================== */
+  --aione-bg-page:#F8F9FA;
+  --aione-bg-surface:#FFFFFF;
+  --aione-bg-subtle:#F1F3F4;
+  --aione-bg-hover:#F5F6F7;
+  --aione-border-default:#DADCE0;
+  --aione-border-light:#E8EAED;
+  --aione-text-primary:#202124;
+  --aione-text-secondary:#5F6368;
+  --aione-text-muted:#80868B;
+  --aione-action-primary:var(--miwa-green);
+  --aione-action-primary-hover:var(--miwa-green-deep);
+  --aione-action-primary-soft:var(--miwa-green-light);
+  --aione-state-success:var(--miwa-green);
+  --aione-state-danger:var(--miwa-red);
+  --aione-focus-ring:rgba(23,107,77,.14);
+  --aione-tab-indicator:var(--miwa-green);
+
+  /* ========================================
      Shadow Tokens
   ======================================== */
   --shadow-sm:0 2px 8px rgba(13,73,55,.05);
   --shadow-md:0 10px 30px rgba(13,73,55,.08);
+  --aione-shadow-workspace:0 1px 2px rgba(32,33,36,.05);
 
   /* ========================================
      Radius Tokens
@@ -86,17 +108,17 @@
 
   --color-danger:var(--miwa-red);
 
-  --color-bg-page:#F5F7F5;
-  --color-bg-surface:var(--surface);
-  --color-bg-soft:var(--surface-soft);
+  --color-bg-page:var(--aione-bg-page);
+  --color-bg-surface:var(--aione-bg-surface);
+  --color-bg-soft:var(--aione-bg-subtle);
   --color-bg-muted:var(--surface-muted);
 
-  --color-text-primary:var(--text);
-  --color-text-secondary:var(--text-secondary);
-  --color-text-muted:var(--text-muted);
+  --color-text-primary:var(--aione-text-primary);
+  --color-text-secondary:var(--aione-text-secondary);
+  --color-text-muted:var(--aione-text-muted);
 
-  --color-border-default:var(--border);
-  --color-border-soft:var(--border-soft);
+  --color-border-default:var(--aione-border-default);
+  --color-border-soft:var(--aione-border-light);
 
   /* ========================================
      Typography Tokens
