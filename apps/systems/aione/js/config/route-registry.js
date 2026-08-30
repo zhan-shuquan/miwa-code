@@ -68,7 +68,6 @@ export const ROUTE_REGISTRY = Object.freeze({
   "work-mine": route("work-mine", "我的工作", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-assigned": route("work-assigned", "我安排的", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-batch": route("work-batch", "批量安排工作", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
-  "work-today": route("work-today", "今日工作", "platform", { status: "legacy", page: "./pages/work-home/template.html", parent: "work", nav:false }),
   "work-all": route("work-all", "全部工作", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-following": route("work-following", "我的关注", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-suggestions": route("work-suggestions", "我的建议", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
@@ -85,13 +84,9 @@ export const ROUTE_REGISTRY = Object.freeze({
   "work-business-more": route("work-business-more", "更多事业", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-team": route("work-team", "团队工作", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-waiting": route("work-waiting", "等待中", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
-  // V1.9.32 legacy validation token: "work-blocked": route("work-blocked", "等待与阻塞"
   "work-blocked": route("work-blocked", "异常处理", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-review": route("work-review", "待验收", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
   "work-records": route("work-records", "工作记录", "platform", { status: "active", page: "./pages/work-home/template.html", parent: "work" }),
-  "work-pending": route("work-pending", "待处理", "platform", { status: "legacy", page: "./pages/work-home/template.html", parent: "work", nav:false }),
-  "work-active": route("work-active", "进行中", "platform", { status: "legacy", page: "./pages/work-home/template.html", parent: "work", nav:false }),
-  "work-completed": route("work-completed", "已完成", "platform", { status: "legacy", page: "./pages/work-home/template.html", parent: "work", nav:false }),
   calendar: route("calendar", "美和日历", "platform", {
     status: "active",
     page: "./pages/calendar/home.html"
