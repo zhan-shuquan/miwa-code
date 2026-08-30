@@ -1,6 +1,6 @@
-# AIONE Design Token Catalog V1.0 Draft
+# AIONE Design Token Catalog V1.0 RC
 
-Status: Draft / Pending Freeze
+Status: Release Candidate / Pending Freeze
 
 ## Purpose
 Create one visual source of truth for AIONE so that visual changes propagate globally and page-level hardcoded styles do not accumulate.
@@ -164,7 +164,10 @@ Web and print may share semantic content but need different presentation tokens.
 ## 14. Icon tokens
 Material Symbols is the default icon source. Components should reference semantic icon names where useful instead of embedding arbitrary icon assets.
 
-## 15. Hardcode prohibition
+## 15. i18n interaction with tokens
+Visual tokens must not encode language-specific business meaning. Typography and size rules must tolerate Chinese, Japanese and English labels without page-specific visual forks. Language-specific differences should be handled through shared locale/typography configuration rather than duplicated page CSS.
+
+## 16. Hardcode prohibition
 Do not introduce new page-level hardcoded values for:
 - colors
 - typography
@@ -176,14 +179,14 @@ Do not introduce new page-level hardcoded values for:
 
 Exceptions require an explicit business/visual reason and should be candidates for promotion into tokens if repeated.
 
-## 16. Governance
+## 17. Governance
 - One CURRENT token definition.
 - Deprecated tokens must be tracked.
 - Token changes should be reviewed for cross-page impact.
 - CI should progressively detect raw color values and known deprecated tokens.
 - Components, not pages, are the primary token consumers.
 
-## 17. Implementation priority
+## 18. Implementation priority
 P0: neutral/background/text/action/state colors; typography; spacing; radius; borders; control sizes.
 P1: shadows, responsive breakpoints, motion, analytics tokens.
 P2: publication tokens, automated token linting and token documentation UI.
