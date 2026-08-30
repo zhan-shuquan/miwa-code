@@ -24,7 +24,6 @@ const PLATFORM_CONTEXT_META = Object.freeze({
   analysis: { icon: "analysis", type: "content" },
   "knowledge-home": { icon: "knowledge", type: "content" },
   "shared-home": { icon: "apps", type: "content" },
-  "shared-resources": { icon: "apps", type: "content" },
   "application-home": { icon: "apps", type: "tools" },
   notifications: { icon: "notification", type: "system" },
   settings: { icon: "settings", type: "system" },
@@ -107,20 +106,16 @@ function buildRegistryHomeItems(rootId) {
 
 function buildPlatformItems(rootId) {
   const root = ROUTE_REGISTRY[rootId];
-  const normalizedRootId = rootId === "shared-resources" ? "shared-home" : rootId;
-  if (!root && !HOME_REGISTRY[normalizedRootId]) return [];
+  if (!root && !HOME_REGISTRY[rootId]) return [];
   if (rootId === "company") return MIWA_COMPANY_NAVIGATION;
   if (rootId === "business-home") return MIWA_BUSINESS_NAVIGATION;
   if (rootId === "work") return buildWorkItems();
-  const registryItems = buildRegistryHomeItems(normalizedRootId);
-  if (registryItems && HOME_REGISTRY[normalizedRootId]?.centers?.length) return registryItems.map((item) => ({
-    ...item,
-    route: item.route.replace(/^shared-home/, "shared-resources")
-  }));
+  const registryItems = buildRegistryHomeItems(rootId);
+  if (registryItems && HOME_REGISTRY[rootId]?.centers?.length) return registryItems;
   const children = childrenFor(rootId).map((item) => rootId === "finance-home" && item.id === "expense-home"
     ? { ...item, children: childrenFor(item.id) }
     : item);
-  const homeLabel = children.length ? "概览" : (root?.label || HOME_REGISTRY[normalizedRootId]?.label || "概览");
+  const homeLabel = children.length ? "概览" : (root?.label || HOME_REGISTRY[rootId]?.label || "概览");
   return [
     { id: `${rootId}-home`, label: homeLabel, route: rootId, icon: PLATFORM_CONTEXT_META[rootId]?.icon || "apps", children: [] },
     ...children
@@ -145,10 +140,9 @@ export function resolveSidebarContext(routeId, currentPath, currentBusinessSpace
   }
 
   const rootId = resolvePlatformRoot(routeId);
-  const normalizedRootId = rootId === "shared-resources" ? "shared-home" : rootId;
   const root = ROUTE_REGISTRY[rootId] || ROUTE_REGISTRY[routeId];
-  const homeDefinition = HOME_REGISTRY[normalizedRootId];
-  const meta = PLATFORM_CONTEXT_META[rootId] || PLATFORM_CONTEXT_META[normalizedRootId] || { icon: "apps", type: "content" };
+  const homeDefinition = HOME_REGISTRY[rootId];
+  const meta = PLATFORM_CONTEXT_META[rootId] || { icon: "apps", type: "content" };
   const publicationActions = (rootId === "company" || rootId === "business-home" || (rootId === "work" && routeId === "work"))
     ? [
         { id:"publication-print", label:"打印", icon:"file", event:"aione:publication:print" },
