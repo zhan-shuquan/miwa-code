@@ -1,0 +1,164 @@
+/* ========================================
+   AIONE UI Foundation V1
+   Neutral-first workspace language.
+   Brand green = action / active / success / accent.
+   Brand red = risk / error / blocked / overdue only.
+======================================== */
+
+.aione-workspace-page,
+.aione-overview-page{
+  color:var(--aione-text-primary);
+  background:var(--aione-bg-page);
+}
+
+.aione-workspace-surface,
+.aione-overview-surface,
+.aione-card{
+  background:var(--aione-bg-surface);
+  border:1px solid var(--aione-border-light);
+  border-radius:12px;
+  box-shadow:var(--aione-shadow-workspace);
+}
+
+.aione-card{padding:16px}
+.aione-card--flat{box-shadow:none}
+.aione-card--subtle{background:var(--aione-bg-subtle)}
+
+.aione-section-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--aione-text-primary);
+  font-weight:700;
+}
+.aione-section-title::before{
+  content:"";
+  width:3px;
+  height:16px;
+  border-radius:999px;
+  background:var(--miwa-green);
+}
+
+/* Google-like light horizontal tabs */
+.aione-tabs{
+  display:flex;
+  align-items:flex-end;
+  gap:24px;
+  min-height:44px;
+  overflow-x:auto;
+  border-bottom:1px solid var(--aione-border-light);
+  scrollbar-width:none;
+}
+.aione-tabs::-webkit-scrollbar{display:none}
+.aione-tab{
+  position:relative;
+  min-height:44px;
+  padding:0 2px;
+  border:0;
+  background:transparent;
+  color:var(--aione-text-secondary);
+  font:inherit;
+  font-size:13px;
+  font-weight:500;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.aione-tab:hover{color:var(--aione-text-primary)}
+.aione-tab.is-active,
+.aione-tab[aria-selected="true"]{
+  color:var(--aione-text-primary);
+  font-weight:700;
+}
+.aione-tab.is-active::after,
+.aione-tab[aria-selected="true"]::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:-1px;
+  height:2px;
+  border-radius:999px 999px 0 0;
+  background:var(--aione-tab-indicator);
+}
+
+.aione-button{
+  min-height:36px;
+  padding:0 14px;
+  border:1px solid var(--aione-border-default);
+  border-radius:8px;
+  background:var(--aione-bg-surface);
+  color:var(--aione-text-primary);
+  font:inherit;
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+}
+.aione-button:hover{background:var(--aione-bg-hover)}
+.aione-button:focus-visible,
+.aione-tab:focus-visible{
+  outline:2px solid transparent;
+  box-shadow:0 0 0 3px var(--aione-focus-ring);
+}
+.aione-button--primary{
+  border-color:var(--aione-action-primary);
+  background:var(--aione-action-primary);
+  color:#fff;
+}
+.aione-button--primary:hover{
+  border-color:var(--aione-action-primary-hover);
+  background:var(--aione-action-primary-hover);
+}
+.aione-button--quiet{
+  border-color:transparent;
+  background:transparent;
+  color:var(--aione-text-secondary);
+}
+.aione-button--danger{
+  border-color:var(--aione-state-danger);
+  background:var(--aione-state-danger);
+  color:#fff;
+}
+
+.aione-status{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:24px;
+  padding:0 8px;
+  border-radius:999px;
+  background:var(--aione-bg-subtle);
+  color:var(--aione-text-secondary);
+  font-size:11px;
+  font-weight:600;
+}
+.aione-status--success{
+  background:var(--aione-action-primary-soft);
+  color:var(--aione-state-success);
+}
+.aione-status--danger{
+  background:#FCEDEC;
+  color:var(--aione-state-danger);
+}
+
+.aione-kpi{
+  padding:16px;
+  border:1px solid var(--aione-border-light);
+  border-radius:10px;
+  background:var(--aione-bg-surface);
+}
+.aione-kpi__label{color:var(--aione-text-secondary);font-size:11px}
+.aione-kpi__value{margin-top:6px;color:var(--aione-text-primary);font-size:24px;font-weight:700}
+.aione-kpi__accent{color:var(--miwa-green)}
+
+.aione-overview-page .aione-cover,
+.aione-brand-cover,
+.aione-brand-footer,
+.aione-brand-frame{
+  border-color:var(--miwa-green);
+}
+
+@media(max-width:640px){
+  .aione-tabs{gap:18px}
+  .aione-tab{font-size:12px}
+  .aione-card{padding:14px}
+}
