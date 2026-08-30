@@ -27,7 +27,6 @@ export const BUSINESS_SPACES = Object.freeze({
         child("selection-all", "全部选品", "selection/all"),
         child("selection-mine", "我的选品", "selection/mine"),
         child("selection-ai", "AI的选品", "selection/ai"),
-        child("selection-product-development", "产品开发", "selection/product-development"),
         child("selection-following", "我的互动", "selection/following")
       ]}),
       item("sampling", "测样工作台", "sampling", { icon: "sampling", children: [
