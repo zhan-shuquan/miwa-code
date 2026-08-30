@@ -1,12 +1,13 @@
 /* ========================================
    MIWA System CSS Entry｜美和システムCSS総入口
-   公共フレームワークの読込順序はこのファイルだけで管理する。
+   公共フレームワークの読込顺序はこの文件だけで管理する。
 ======================================== */
 
 @import url("./foundation/tokens.css");
 @import url("./components/preview-auth.css");
 @import url("./components/level2-components.css?v=20260829-object-readability-v1");
 @import url("./foundation/base.css");
+@import url("./components/aione-ui-foundation.css?v=20260830-neutral-workspace-v1");
 @import url("./shell/layout.css");
 @import url("./shell/header.css");
 @import url("./shell/primary-navigation.css?v=20260829-selection-nav-v4");
