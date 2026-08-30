@@ -1,15 +1,15 @@
-# AIONE External Capability / Google Ecosystem Catalog V1.0 Draft
+# AIONE External Capability / Google Ecosystem Catalog V1.0 RC
 
-Status: Draft / Pending Freeze
+Status: Release Candidate / Pending Freeze
 
 ## Purpose
 Reduce custom development by reusing mature external capabilities when they can meet AIONE requirements with acceptable security, governance, maintainability and cost.
 
 ## Decision order
-1. Reuse an existing AIONE capability.
-2. Reuse an approved external capability directly.
-3. Integrate through a thin AIONE adapter.
-4. Build custom only when the above are insufficient.
+1. Reuse: use an existing AIONE capability if it already solves the need.
+2. Adopt / Buy: use an approved mature external capability directly when suitable.
+3. Integrate: use a thin AIONE adapter when direct adoption is insufficient.
+4. Build: custom-build only when the above are insufficient.
 
 ## Google ecosystem — preferred baseline
 
@@ -37,9 +37,10 @@ Reduce custom development by reusing mature external capabilities when they can 
 - Cloud Scheduler: deterministic scheduled triggers.
 - Pub/Sub: event and message distribution when decoupling is required.
 
-### Observability
+### Observability and resilience
 - Cloud Logging: application, integration and platform logs.
 - Cloud Monitoring: metrics, uptime, alerts and operational visibility.
+- Managed backup/restore capabilities should be used where available for Cloud SQL and storage layers; recovery procedures and tests remain an AIONE governance responsibility.
 
 ### Analytics and BI
 - BigQuery: managed analytical warehouse for larger-scale cross-domain analytics and metric computation.
@@ -69,8 +70,8 @@ Examples:
 - BigQuery = analytical copy/warehouse, not transactional master.
 - Looker = semantic/BI layer, not source transaction system.
 
-## Buy / Integrate / Build classification
-For every capability record:
+## Capability record fields
+For every external capability record:
 - capability name
 - provider
 - category
@@ -80,6 +81,7 @@ For every capability record:
 - authentication method
 - permission model
 - data residency/security notes
+- backup/recovery implications
 - cost model
 - lock-in risk
 - fallback plan
@@ -112,6 +114,8 @@ For every capability record:
 - audit semantics
 - cross-home reference rules
 - publication/business document semantics
+- data classification/retention policy
+- recovery objectives and recovery-test governance
 
 ## Governance
 - Any new external dependency requires an explicit reason and owner.
@@ -120,8 +124,9 @@ For every capability record:
 - Credentials belong in approved secret management.
 - External service outages/errors must be observable and retryable where appropriate.
 - Deprecated providers/integrations must be removed from CURRENT architecture.
+- External capabilities must comply with AIONE Progressive Disclosure and i18n architecture where they surface in the UI.
 
 ## Initial implementation priority
-P0: Google Identity, Drive/Workspace interfaces, Cloud Run, Cloud SQL PostgreSQL, Secret Manager, GitHub, Material Symbols, Logging/Monitoring.
+P0: Google Identity, Drive/Workspace interfaces, Cloud Run, Cloud SQL PostgreSQL, Secret Manager, GitHub, Material Symbols, Logging/Monitoring, backup/recovery baseline.
 P1: Cloud Tasks/Scheduler/Pub/Sub, structured integration adapters, OpenAI/Vertex through AI Gateway.
 P2: BigQuery + Looker/embedded analytics once operational data and metrics are stable.
