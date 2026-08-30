@@ -25,7 +25,7 @@ export const systemConfig = Object.freeze({
     brand: {
       logoSrc: new URL("../../assets/brand/miwa-commerce-logo.png", import.meta.url).href,
       systemShortName: "AIONE",
-      systemFormalName: "美和一体化工作平台",
+      systemFormalName: "美和AIONE一体化工作平台",
       companyRoute: "company"
     },
 
@@ -34,9 +34,7 @@ export const systemConfig = Object.freeze({
       displayName: "占树全",
       initial: "占",
       primaryWorkIdentity: "经营管理",
-      /* 職位等級：職位に紐づく比較的固定のP級 */
       positionGrade: "P9",
-      /* 能力等級：経験と実績で変化する独立項目。ヘッダー外層には表示しない */
       capabilityLevel: null,
       avatarUrl: null,
       profileRoute: "employee-profile",
@@ -49,48 +47,32 @@ export const systemConfig = Object.freeze({
       timeZone: "Asia/Tokyo"
     },
 
-    /*
-       共通入口は原則公開する。将来制限が必要な場合だけ権限設定から追加する。
-       URL未確定項目はnullのまま保持し、偽リンクを作成しない。
-    */
     sharedResources: {
-      /*
-         共享资源仅作为内部管理与注册概念，不作为Header前台页面名称。
-         productForm定义产品形态；origin定义内部/外部属性；quickGroup只负责Header第2行自动分隔；
-         quickAccess决定是否进入快捷层；headerHidden允许保留资源登记但隐藏Header入口。
-      */
-      allResourcesRoute: "shared-home",
+      allResourcesRoute: "shared-resources",
       quickGroupOrder: ["core", "stores", "logistics", "office", "procurement", "mail"],
       items: [
         { id: "erp", name: "ERP", subtitle: "资源", mark: "E", color: "#176B4D", route: "erp-home", status: "active", productForm: "应用", origin: "内部", quickAccess: true, headerHidden: false, quickGroup: "core", sortOrder: 10, owner: "财务/系统负责人" },
         { id: "hr", name: "HR", subtitle: "人事", mark: "HR", color: "#176B4D", route: "people-home", status: "planned", productForm: "应用", origin: "内部", quickAccess: true, headerHidden: true, quickGroup: "core", sortOrder: 20, owner: "人事负责人" },
-
         { id: "rakuten-1", name: "幸せ屋", subtitle: "店铺", mark: "幸", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "stores", sortOrder: 10, owner: "店铺负责人" },
         { id: "rakuten-2", name: "PrimeLife", subtitle: "店铺", mark: "P", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "stores", sortOrder: 20, owner: "店铺负责人" },
         { id: "rakuten-3", name: "永井GD", subtitle: "店铺", mark: "GD", color: "#176B4D", url: "https://glogin.rms.rakuten.co.jp/", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "stores", sortOrder: 30, owner: "店铺负责人" },
-
         { id: "robot-in", name: "Robot-in", subtitle: "订单", mark: "R", color: "#176B4D", url: "https://sso.cloud-robot.co/login/", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "logistics", sortOrder: 10, owner: "订单/物流负责人" },
         { id: "sagawa", name: "佐川", subtitle: "面单", mark: "佐", color: "#176B4D", url: "https://www.e-service.sagawa-exp.co.jp/portal/do/login/show?fr=bs", status: "active", productForm: "工具", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "logistics", sortOrder: 20, owner: "物流负责人" },
         { id: "yamato", name: "黑猫", subtitle: "面单", mark: "黒", color: "#176B4D", url: "https://newb2web.kuronekoyamato.co.jp/", status: "active", productForm: "工具", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "logistics", sortOrder: 30, owner: "物流负责人" },
         { id: "fukuyama", name: "福山", subtitle: "日暮里", mark: "福", color: "#176B4D", url: "https://wwwisx.fukutsu.co.jp/iSTARX/?timeout=true", status: "active", productForm: "工具", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "logistics", sortOrder: 40, owner: "物流负责人" },
-
         { id: "gpt", name: "GPT", subtitle: "办公", mark: "AI", color: "#176B4D", url: "https://chatgpt.com/", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "office", sortOrder: 10, owner: "系统负责人" },
         { id: "wps", name: "WPS", subtitle: "办公", mark: "W", color: "#176B4D", url: "https://www.kdocs.cn/latest", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "office", sortOrder: 20, owner: "系统负责人" },
         { id: "feishu", name: "飞书", subtitle: "办公", mark: "飞", color: "#176B4D", url: null, status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "office", sortOrder: 30, owner: "系统负责人" },
         { id: "google-drive", name: "Google Drive", subtitle: "云盘", mark: "D", color: "#176B4D", url: "https://drive.google.com/", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "office", sortOrder: 40, owner: "系统负责人" },
-
         { id: "amazon", name: "亚马逊", subtitle: "采购", mark: "A", color: "#176B4D", url: "https://www.amazon.co.jp/", status: "active", productForm: "服务", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "procurement", sortOrder: 10, owner: "采购负责人" },
         { id: "rakuten-shopping", name: "乐天", subtitle: "采购", mark: "楽", color: "#176B4D", url: "https://www.rakuten.co.jp/", status: "active", productForm: "服务", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "procurement", sortOrder: 20, owner: "采购负责人" },
         { id: "hako-one", name: "箱ワン", subtitle: "采购", mark: "箱", color: "#176B4D", url: "https://www.notosiki.co.jp/mypage/login", status: "active", productForm: "服务", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "procurement", sortOrder: 30, owner: "采购负责人" },
-
         { id: "gmail", name: "Gmail", subtitle: "邮箱", mark: "G", color: "#176B4D", url: "https://mail.google.com/mail/u/0/#inbox", status: "active", productForm: "应用", origin: "外部", quickAccess: true, headerHidden: false, quickGroup: "mail", sortOrder: 10, owner: "系统负责人" },
-
         { id: "aione-nav-standard", name: "AIONE导航规范", subtitle: "帮助中心", mark: "知", color: "#176B4D", route: "knowledge-home?type=帮助中心", status: "active", productForm: "知识", origin: "内部", quickAccess: false, headerHidden: true, quickGroup: "", sortOrder: 0, owner: "AIONE平台架构" },
         { id: "aione-code", name: "AIONE代码资产", subtitle: "GitHub", mark: "</>", color: "#176B4D", url: "https://github.com/", status: "active", productForm: "代码", origin: "内部", quickAccess: false, headerHidden: true, quickGroup: "", sortOrder: 0, owner: "系统负责人" }
       ]
     },
 
-    /* 扩展之家只有在真实配置后才显示“更多”，不为空占位。 */
     moreHomes: [],
 
     spiritContent: {
@@ -180,7 +162,6 @@ export const systemConfig = Object.freeze({
       }
     },
 
-    /* 高频资源的显示由sharedResources.items中的quickAccess/headerHidden统一控制。 */
     reservedInterfaces: {}
   },
 
