@@ -1,6 +1,6 @@
-# AIONE Developer Toolbox V1.0 Draft
+# AIONE Developer Toolbox V1.0 RC
 
-Status: Draft / Pending Freeze
+Status: Release Candidate / Pending Freeze
 
 ## Purpose
 Reduce repeated manual work, expose reusable platform assets, improve development speed, and prevent page-by-page divergence.
@@ -95,6 +95,7 @@ All business pages must use AIONE AI Gateway rather than direct model calls.
 - Migration test
 - Regression test
 - Accessibility check
+- Backup/restore recovery test
 
 ## 10. Repo and CI guardrails
 Required progressive guardrails:
@@ -109,6 +110,7 @@ Required progressive guardrails:
 - Deprecated Name Check
 - Route Check
 - Design Token Check
+- i18n / terminology check
 - Dead Code Check
 - Dependency Check
 - Branch Protection
@@ -120,14 +122,14 @@ Before adding new code, answer:
 2. Is there an existing Shared Component?
 3. Is there an existing Business Component?
 4. Is there an existing Platform Capability?
-5. Does Google or another approved provider already solve it?
+5. Does an approved external provider already solve it?
 
 Only the remaining gap should be newly implemented.
 
 ## 12. Suggested implementation priority
 P0: Component Gallery, Page Template Gallery, Token Viewer, Object/Schema Viewer, API Explorer, permission inspector.
-P1: workflow debugger, import/export test tools, AI Trace, integration test console.
-P2: page generator, automated duplicate/deprecated/token guards, full developer portal.
+P1: workflow debugger, import/export test tools, AI Trace, integration test console, observability/recovery test visibility.
+P2: page generator, automated duplicate/deprecated/token/i18n guards, full developer portal.
 
 ## Governance
 Tooling is part of the platform architecture, not optional developer convenience. Any tool that prevents repeated manual work or recurring defects should be preferred over relying on human memory.
