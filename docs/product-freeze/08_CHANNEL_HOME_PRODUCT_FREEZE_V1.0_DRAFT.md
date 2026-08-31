@@ -155,3 +155,13 @@ Channel建立 → 账号/Store配置 → 商品/Listing映射 → 发布/运营 
 
 ## 21. 当前冻结判断
 当前建议状态：Draft / 待横向Review。待12之家完成后统一Review，再决定是否升为CURRENT V1.0。
+
+## 22. 横向Review回写｜2026-08-31
+本节优先于前文中与跨之家归属冲突的Draft描述。
+- Channel / Platform / Store主对象继续归08；Product / SKU / Listing归06。08不得复制商品主数据，06不得复制渠道主档。
+- 商品上架Listing与平台Publication Layer明确为不同概念。
+- 外部账号、认证、Secret、Connector、Webhook、同步任务等技术实现统一进入Platform Integration Service / Adapter；08只保留业务配置、引用和运行状态视图。
+- Store引用Platform形成1:N关系，平台资料不在每个Store重复维护。
+- 渠道经营分析归10语义层；08仅提供来源事实和业务上下文。
+- 公共文件、权限、评论、历史、Audit、Search统一复用平台能力。
+- 本文仍为Draft，待第二轮一致性检查通过后再升级RC。
