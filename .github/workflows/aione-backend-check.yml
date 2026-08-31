@@ -1,0 +1,39 @@
+name: AIONE Backend Check
+
+on:
+  pull_request:
+    paths:
+      - "apps/systems/aione/backend/**"
+      - ".github/workflows/aione-backend-check.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/systems/aione/backend/**"
+      - ".github/workflows/aione-backend-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  backend-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/systems/aione/backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/systems/aione/backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check
+        run: npm run check
