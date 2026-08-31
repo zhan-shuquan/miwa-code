@@ -156,3 +156,14 @@ AI适合：商品资料补全、属性识别、图片/文本分类、标题/卖�
 
 ## 21. 当前冻结判断
 当前建议状态：Draft / 待横向Review。待12之家完成后统一Review，再决定是否升为CURRENT V1.0。
+
+## 22. 横向Review回写｜2026-08-31
+本节优先于前文中与跨之家归属冲突的Draft描述。
+- Product 1:N SKU继续保持；SKU生命周期状态不再使用OUT_OF_STOCK，缺货属于库存派生条件。
+- Inventory采用单一Source of Truth Contract：权威来源必须明确是AIONE或指定外部ERP/WMS，不允许双主数据并存；若AIONE自主管理，建议InventoryMovement为事实、InventoryBalance为派生投影。
+- 正式财务成本口径归09；06仅保存运营参考值或cost_ref，不形成第二套会计成本。
+- Channel/Store/时间相关销售价格不硬塞进SKU主数据；Offer / Pricing模型保持Open Issue，待单独冻结，不新增“价格中心”。
+- Listing归06，Channel / Platform / Store主对象归08；Listing只保存映射、外部ID、发布状态和必要稀疏override。
+- Brand、Counterparty、LegalEntity保持独立对象，通过Reference关联。
+- 商品附件/媒体通过统一File & Asset引用，不复制文件。
+- 本文仍为Draft，待第二轮一致性检查通过后再升级RC。
