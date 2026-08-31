@@ -204,3 +204,14 @@ AIONE只建设美和特有的业务对象、业务规则、统一体验、权限
 
 ## 26. 当前冻结判断
 当前建议状态：Draft / 待横向Review。12之家第一轮Product Freeze Draft至此齐备，下一阶段进入跨之家横向Review、对象归属冲突清理、唯一事实源收口，再决定哪些文档升级为CURRENT V1.0。
+
+## 27. 横向Review回写｜2026-08-31
+本节优先于前文中与跨之家归属冲突的Draft描述。
+- SharedResource继续作为跨域共享资源索引/治理底座，但不得承接其他业务域正式事实。
+- GitHub仍是代码唯一技术事实源；代码中心只保存repository_ref、branch/tag/ref、用途、负责人等业务索引，不复制源码。
+- Connector / API / Webhook /认证/映射/同步运行统一进入Platform Integration Service / Adapter；12集成中心提供企业级资源治理和运行视图，05只管理其AI能力语义与绑定。
+- AI之家与共享之家不得维护两套Connector实现；同一个技术实现只有一个事实源。
+- KnowledgeItem、File & Asset、SharedResource/Asset三层继续分离：知识是知识对象，文件是文件，资源是共享资产对象。
+- ERP中心只做入口、映射、集成状态与治理，不复制订单、库存、客户、财务等事实。
+- Secret只保存在Secret Manager或受控Credential能力，不进入普通对象或文件。
+- 本文仍为Draft，待第二轮一致性检查通过后再升级RC。
