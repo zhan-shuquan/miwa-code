@@ -1,0 +1,38 @@
+export function renderMarkdown(report) {
+  const lines = [];
+  lines.push('# AIONE DB Preflight Report');
+  lines.push('');
+  lines.push(`- Run ID: ${report.run_id}`);
+  lines.push(`- Environment: ${report.environment}`);
+  lines.push(`- Database: ${report.db_context?.database || 'unknown'}`);
+  lines.push(`- Checked At: ${report.checked_at}`);
+  lines.push(`- Go / No-Go: **${report.go_no_go}**`);
+  lines.push('');
+  lines.push('## Blockers');
+  if (!report.blockers?.length) lines.push('- None');
+  else for (const risk of report.blockers) lines.push(`- ${risk.code}: ${risk.message}${risk.metric == null ? '' : ` (${JSON.stringify(risk.metric)})`}`);
+  lines.push('');
+  lines.push('## High Risks');
+  const highs = (report.risks || []).filter((risk) => risk.severity === 'HIGH');
+  if (!highs.length) lines.push('- None');
+  else for (const risk of highs) lines.push(`- ${risk.code}: ${risk.message}${risk.metric == null ? '' : ` (${JSON.stringify(risk.metric)})`}`);
+  lines.push('');
+  lines.push('## Schema Facts');
+  lines.push(`- Objects in public schema: ${report.schema_inventory?.tables?.length || 0}`);
+  lines.push(`- Columns inventoried: ${report.schema_inventory?.columns?.length || 0}`);
+  lines.push(`- Constraints inventoried: ${report.schema_inventory?.constraints?.length || 0}`);
+  lines.push(`- Indexes inventoried: ${report.schema_inventory?.indexes?.length || 0}`);
+  lines.push('');
+  lines.push('## Relation Checks');
+  if (!report.relation_checks?.length) lines.push('- No supported logical relation checks were runnable.');
+  else for (const check of report.relation_checks) lines.push(`- ${check.check_id}: orphan_count=${check.orphan_count}`);
+  lines.push('');
+  lines.push('## Identity Profile');
+  lines.push('```json');
+  lines.push(JSON.stringify(report.identity_profile || {}, null, 2));
+  lines.push('```');
+  lines.push('');
+  lines.push('## Next Action');
+  lines.push(report.go_no_go === 'NO-GO' ? '- Resolve all BLOCKER findings before any migration DDL.' : '- Continue review against TD-01E/TD-01F before enabling migration implementation.');
+  return `${lines.join('\n')}\n`;
+}
