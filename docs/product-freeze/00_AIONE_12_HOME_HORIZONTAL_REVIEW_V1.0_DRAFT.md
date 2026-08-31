@@ -294,3 +294,56 @@ FAILED通常属于执行/连接结果，不应默认作为AIAsset主生命周期
 - 在RC与用户确认之前，不应把这些Draft作为main已实现事实，也不应据此直接大规模开发数据库/API。
 
 状态：Draft / 第二轮一致性检查完成，Open Issues待收口。
+
+## 29. Open Issues收口A｜Project / Decision / Proposal｜2026-08-31
+
+### 29.1 Project唯一模型｜已收口
+正式结论：Project定义为AIONE跨之家共享业务对象，技术上属于Platform Domain层的横向业务对象，不归任何单一家独占。
+
+对象职责：
+- Project拥有稳定身份、名称、目标、范围、负责人、事业/组织Scope、起止时间、状态、里程碑引用、关联对象、版本与Audit。
+- 02事业之家提供经营项目/Portfolio View，负责事业目标、经营计划与Project的业务归属视图。
+- 03工作之家只维护Project下的WorkItem执行事实，不复制Project主对象。
+- 11知识之家项目中心负责Project的复盘、成果、经验、正式资料和知识索引，不复制Project执行主数据。
+- 其他之家如商品、渠道、AI等可以作为source/related object引用Project。
+
+治理规则：全系统只能存在一个Project ID与一套CURRENT Project模型；BusinessProject、ProjectRecord等名称不再作为第二套主对象，只允许作为View、Relation或Knowledge projection。
+
+### 29.2 DecisionRecord唯一模型｜已收口
+正式结论：DecisionRecord定义为AIONE跨之家共享治理对象，技术上属于Platform Domain层，不由11知识之家独占。
+
+对象职责：
+- DecisionRecord保存decision_id、title、decision_type、source_object_ref、business_scope、decision_owner、participants、context_summary、options_ref、decision_result、reasoning_summary、effective_at、review_at、status、version、evidence_refs、created_at、updated_at。
+- 任何之家都可以产生DecisionRecord，并通过source_object_ref / business_scope显示在本域。
+- 11_11决策中心是所有正式DecisionRecord的知识化、检索、归档、Publication与复盘视图，不建立第二套Decision对象。
+- 02事业之家“重要决策”是DecisionRecord的Business Scope View。
+
+治理规则：同一决策只有一个稳定Decision ID；决策正文/依据/证据支持版本与Audit；正式决策与AI建议/Proposal严格分离。
+
+建议状态：DRAFT、VALIDATING、CURRENT、SUPERSEDED、ARCHIVED、DELETED。SUPERSEDED表示被新决策替代，不与DEPRECATED知识状态混用。
+
+### 29.3 Platform Proposal模型｜已收口
+正式结论：Proposal定义为Platform横向治理对象，用于表达“拟执行但尚未成为正式业务事实的建议/动作”。Human、AI、System、Automation均可产生Proposal。
+
+核心Schema：
+Proposal {id, proposal_type, actor_type, actor_ref, source_object_ref, target_object_refs, action_type, payload, rationale, risk_level, permission_context, confirmation_policy, status, expires_at, created_at, reviewed_by, reviewed_at, execution_ref, executed_at, result_ref, error_ref, version}。
+
+actor_type建议：HUMAN、AI、SYSTEM、AUTOMATION。
+risk_level建议：LOW、MEDIUM、HIGH、CRITICAL。
+confirmation_policy至少支持：NONE、SINGLE_CONFIRM、ELEVATED_CONFIRM、FORBIDDEN_AUTO_EXECUTE。
+
+状态机建议：CREATED → PENDING_CONFIRMATION → APPROVED / REJECTED；APPROVED → EXECUTING → EXECUTED / FAILED；任意未执行Proposal可按规则进入CANCELLED / EXPIRED。
+
+关键规则：
+- Proposal ≠ WorkItem ≠ DecisionRecord ≠ Execution Result。
+- Proposal被批准后可以生成WorkItem、调用Action或写入Domain对象，但执行结果必须回写execution_ref / result_ref。
+- HIGH / CRITICAL动作不得默认自动执行；CRITICAL原则上FORBIDDEN_AUTO_EXECUTE，除非未来有正式政策明确允许。
+- Proposal权限不得高于发起者/代理者可用权限，也不能通过AI绕过Field / Action Permission。
+- 所有Proposal确认、拒绝、执行、失败必须Audit。
+
+### 29.4 本轮治理结果
+Project、DecisionRecord、Proposal三个最高优先级Open Issues已从“待定”升级为“Architecture Truth已收口 / 待Technical Design落Schema与API Contract”。
+
+这三个对象不要求新增顶层之家或中心；它们通过已有之家View / Scope呈现。这样可以保持12之家信息架构稳定，同时避免第二套对象。
+
+剩余Open Issues继续保持：CapabilityDefinition、Location、Offer/Pricing、External Source of Truth Contract、AIAsset lifecycle、Work子对象分型、Employment/PositionAssignment、File&Asset边界、IntegrationResource Contract等。
