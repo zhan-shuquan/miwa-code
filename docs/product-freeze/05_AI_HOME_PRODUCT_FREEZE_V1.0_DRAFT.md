@@ -155,3 +155,14 @@ AI之家展示模型调用、Tool/Connector、自动化等AI相关成本视图�
 
 ## 20. 当前冻结判断
 当前建议状态：Draft / 待横向Review。待12之家完成后统一Review，再决定是否升为CURRENT V1.0。
+
+## 21. 横向Review回写｜2026-08-31
+本节优先于前文中与跨之家归属冲突的Draft描述。
+- AIExecutionTrace不再作为05独占Domain实体；统一由AIONE AI Gateway / Observability产生执行事实，AI之家提供治理、检索和绩效视图。
+- AIProposal统一改为Platform Proposal模型；AI生成Proposal ≠ 已执行，需权限、风险与人工确认策略。
+- AICostRecord由Gateway/Usage计量产生；05负责运营成本视图与AI绩效，09负责正式付款、会计和财务成本事实。
+- Connector / API / Automation / Skill等技术实现只有一个事实源：代码实现归GitHub，企业级连接/认证/映射运行由Integration Service治理，05只管理其AI能力语义、绑定、训练、授权与评估。
+- Agent可以组合Skill / Connector / API / RuleFunction / ModelCapability，不复制其实现。
+- AIAsset生命周期重新审查：FAILED更适合作为执行/健康状态，不默认作为资产主生命周期；Technical Design评估PAUSED / DEGRADED等模型。
+- Secret只保存在Secret Manager或受控Credential能力，不进入普通对象字段。
+- 本文仍为Draft，待第二轮一致性检查通过后再升级RC。
