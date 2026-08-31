@@ -141,3 +141,11 @@ AI适合：集团资料摘要、战略/治理内容检索、多文档对比、�
 ## 17. 当前冻结判断
 当前建议状态：Draft / 待Review。
 在总架构Product Freeze阶段确认无冲突后，可升级为CURRENT V1.0。
+
+## 18. 横向Review回写｜2026-08-31
+本节优先于前文中与跨之家归属冲突的Draft描述。
+- 01美和之家继续拥有Organization / LegalEntity及集团治理、战略等公司级事实。
+- Department / Position等组织结构定义归01；04人才之家只维护Person与组织/岗位之间的任职关系、历史与投影。
+- Brand、Counterparty与LegalEntity保持独立对象，仅通过稳定Reference关联，不合并事实源。
+- 公共字段、权限、附件、评论、历史、Audit、Search等统一复用Platform Object Foundation与Platform Capability。
+- 本文仍为Draft，待第二轮一致性检查通过后再升级RC。
