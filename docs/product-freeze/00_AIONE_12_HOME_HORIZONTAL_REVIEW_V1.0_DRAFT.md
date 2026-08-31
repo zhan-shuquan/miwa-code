@@ -400,3 +400,72 @@ price_type至少支持：STANDARD、SALE、WHOLESALE、MEMBER、PROMOTIONAL、CU
 CapabilityDefinition、Location、Offer/Pricing三个Open Issues已升级为“Architecture Truth已收口 / 待Technical Design落Schema、状态机与API Contract”。
 
 剩余Open Issues：External Source of Truth Contract、AIAsset lifecycle、Work子对象分型、EmploymentRelation / PositionAssignment、File & Asset边界、IntegrationResource Contract。
+
+## 31. Open Issues收口C｜剩余6项｜2026-08-31
+
+### 31.1 External Source of Truth Contract｜已收口
+正式结论：凡AIONE与ERP/WMS/会计/平台等外部系统共享同一业务事实时，必须通过统一Source of Truth Contract明确唯一权威来源，禁止双向自由编辑形成双主。
+
+Contract至少包含：domain_object_type、source_system、source_record_id、authority_mode、sync_direction、conflict_policy、idempotency_key、version/etag、last_synced_at、freshness_sla、error_policy、reconciliation_policy、owner。
+
+authority_mode至少支持：AIONE_MASTER、EXTERNAL_MASTER、FEDERATED_READONLY_VIEW。FEDERATED不代表双主，只允许受控聚合/只读。
+
+### 31.2 AIAsset lifecycle｜已收口
+正式结论：AIAsset生命周期与运行健康状态分离。
+
+AIAsset生命周期建议：DRAFT、VALIDATING、ACTIVE、PAUSED、RETIRED、ARCHIVED、DELETED。
+运行健康状态独立：HEALTHY、DEGRADED、ERROR、UNAVAILABLE。
+
+FAILED不作为AIAsset主生命周期状态；单次执行失败归Trace/Execution状态。PAUSED表示人为暂停，DEGRADED表示可运行但质量/可用性下降。
+
+### 31.3 Work子对象分型｜已收口
+正式结论：WorkItem是03工作之家的唯一主执行对象；其他概念按关系、事件、结果和投影分型，避免每个概念都建主表。
+
+- WorkAssignment：关系对象，表达WorkItem与负责人/协作者/分配来源。
+- WorkCollaboration：优先复用Interaction/Participant关系，不单独建立重型主对象。
+- WorkResult：结果对象，表达提交结果/产出引用，可1:N。
+- WorkEvidence：证据对象或File&Asset/Reference关联，可1:N。
+- WorkSummary：派生/知识化投影，正式沉淀时进入KnowledgeItem；不作为执行事实主对象。
+- WorkHistory / Activity：平台Audit/Timeline事件，不建立工作之家私有历史体系。
+
+### 31.4 EmploymentRelation / PositionAssignment｜已收口
+正式结论：两者保留独立，但职责明确。
+
+EmploymentRelation表达Person与LegalEntity/Organization之间的雇佣、任职身份与有效期，例如员工、兼职、顾问等。
+PositionAssignment表达Person在某Organization/Department下被分配到某Position/Role的具体岗位关系。
+
+一个EmploymentRelation可对应多个PositionAssignment；组织/岗位定义本身仍归01。CareerTimeline为基于EmploymentRelation、PositionAssignment、培训、绩效等生成的派生时间线，不作为独立事实源。
+
+### 31.5 Platform File & Asset边界｜已收口
+正式结论：File与Asset分层。
+
+- File：平台底层文件对象，负责文件字节、MIME、大小、存储位置、checksum、权限、版本、上传者、生命周期。
+- Asset：对File赋予可复用业务语义的资源对象，例如图片、图标、视频、品牌素材；可引用一个或多个File版本。
+- KnowledgeItem、Product、Channel、Project等业务对象通过FileReference / AssetReference关联，不复制文件。
+- 12共享之家负责Asset的跨公司复用索引与治理视图，但底层File能力属于Platform Capability。
+
+### 31.6 IntegrationResource Contract｜已收口
+正式结论：IntegrationResource是业务可见的“集成注册表/治理对象”，Platform Integration Service负责真实运行配置与执行，两者分离但稳定关联。
+
+IntegrationResource保存：integration_id、name、source_system、target_system、integration_type、owner、business_scope、status、runtime_connection_ref、mapping_ref、source_of_truth_contract_ref、documentation_ref、version。
+
+运行层保存：credential_ref、endpoint、webhook/subscription、retry、queue、schedule、cursor/checkpoint、runtime health、logs、trace等技术配置。
+
+原则：12共享之家可展示IntegrationResource；05 AI之家可引用某IntegrationResource作为AI能力实现；源码仍以GitHub为技术事实源；Secret只在Secret Manager。
+
+## 32. 第三轮最终一致性检查｜2026-08-31
+经三轮横向Review，第二轮列出的12个Open Issues现已全部获得Architecture Truth级收口结论。
+
+最终一致性结论：
+1. 12之家目录保持不变，无需因底层对象收口重新改目录。
+2. Project、DecisionRecord、Proposal、CapabilityDefinition、Location、Offer均为跨之家共享/横向对象，不增加新的顶层之家。
+3. WorkItem、Person、AIAsset、Product/SKU、Counterparty、Channel/Store、财务事实、Metric、KnowledgeItem、SharedResource继续由各自Domain持有明确事实边界。
+4. File、Permission、Search、Audit、Workflow、Integration、AI Gateway、Observability等继续统一为Platform Capability。
+5. 外部系统统一采用Source of Truth Contract，任何同一事实不得出现AIONE与外部系统双主。
+6. AIAsset生命周期、Integration健康状态、Domain业务状态、Knowledge治理状态继续分层，不混用。
+7. File ≠ Asset ≠ KnowledgeItem；Listing ≠ Offer ≠ Publication；Proposal ≠ WorkItem ≠ DecisionRecord ≠ Execution Result。
+8. 01～12 Product Freeze Draft的主要跨域冲突已经在Architecture Truth层解决。
+
+Governance判断：横向Review文档本身已达到RC候选条件；但01～12各单家Product Freeze仍需把本轮最终结论逐份回写并做一次文档级一致性校验，之后才能统一从Draft升级为RC。CURRENT仍需用户最终确认。
+
+状态：第三轮最终一致性检查通过 / 横向架构RC候选；main未修改。
