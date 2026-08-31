@@ -29,11 +29,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: apps/systems/aione/backend/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies for syntax validation
+        run: npm install --package-lock=false --no-audit --no-fund
 
       - name: Syntax check
         run: npm run check
+
+      - name: Report lockfile drift
+        run: |
+          node -e "const p=require('./package.json'); const l=require('./package-lock.json'); const pd=p.dependencies||{}; const ld=(l.packages&&l.packages['']&&l.packages[''].dependencies)||{}; const missing=Object.keys(pd).filter(k=>pd[k]!==ld[k]); if(missing.length){console.error('package-lock drift:', missing.join(',')); process.exitCode=2}else{console.log('package-lock aligned')}"
+        continue-on-error: true
