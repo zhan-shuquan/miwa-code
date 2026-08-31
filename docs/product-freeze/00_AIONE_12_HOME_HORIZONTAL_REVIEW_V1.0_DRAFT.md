@@ -347,3 +347,56 @@ Project、DecisionRecord、Proposal三个最高优先级Open Issues已从“待�
 这三个对象不要求新增顶层之家或中心；它们通过已有之家View / Scope呈现。这样可以保持12之家信息架构稳定，同时避免第二套对象。
 
 剩余Open Issues继续保持：CapabilityDefinition、Location、Offer/Pricing、External Source of Truth Contract、AIAsset lifecycle、Work子对象分型、Employment/PositionAssignment、File&Asset边界、IntegrationResource Contract等。
+
+## 30. Open Issues收口B｜CapabilityDefinition / Location / Offer-Pricing｜2026-08-31
+
+### 30.1 CapabilityDefinition共享抽象｜已收口
+正式结论：CapabilityDefinition定义为AIONE Platform Domain层的共享“能力定义”对象，用来回答“某种能力是什么”，但不直接承载某个人或某个AI资产当前拥有多少能力。
+
+统一职责：
+- CapabilityDefinition保存capability_id、code、name、category、description、level_model_ref、evidence_policy_ref、version、status等稳定定义。
+- 04人才之家使用HumanCapabilityProfile / HumanCapabilityEvidence把Person与CapabilityDefinition关联，表达人的能力等级、证据、最近评估、目标等级与差距。
+- 05 AI之家使用AICapabilityBinding把AIAsset与CapabilityDefinition关联，表达AI可调用/可执行能力、实现方式、权限、版本、验证状态与成本语义。
+- Skill / Connector / API / RuleFunction / ModelCapability等如果属于“实现类型”，不直接等同于CapabilityDefinition；它们作为实现/提供方式被AICapabilityBinding引用。
+
+治理规则：能力定义只有一套；人的能力事实归04，AI的能力绑定/验证事实归05。不得因为同名能力在04和05出现就复制两套定义。
+
+### 30.2 Location统一地点对象｜已收口
+正式结论：Location定义为AIONE Platform Domain层的共享地点主对象，不归06库存、07往来或08渠道任何一家独占。
+
+Location用于表达稳定地点身份，例如：仓库、办公室、门店、展厅、收货点、发货点、客户/供应商地址、加盟网点等。
+
+核心Schema方向：
+Location {id, code, name, location_type, address_ref, geo_ref, timezone, country, region, owner_scope, status, external_refs, version}。
+
+使用边界：
+- 06 Inventory引用location_id形成SKU + Location库存事实，不建立InventoryLocation第二套主档。
+- 07 Counterparty通过Address / ContactPoint或LocationRelation关联Location；个人联系方式与稳定经营地点可区分。
+- 08 Store / Offline / Franchise Outlet引用Location，不复制地址主对象。
+- 01组织、12共享资源等需要物理地点时同样引用Location。
+
+治理规则：地址文本可作为Address结构或Location属性，但任何需要被多个Domain长期引用的地点必须拥有稳定Location ID。历史地址变更需保留版本/有效期，不能直接无痕覆盖。
+
+### 30.3 Offer / Pricing正式模型｜已收口
+正式结论：销售价格不能塞进SKU主数据，也不能由08渠道或09财务各自维护第二套。AIONE采用Platform Commerce Domain横向Offer模型表达“某个SKU在某个渠道/店铺、某段时间、某种条件下以什么价格出售”。
+
+核心关系：Product / SKU定义卖什么；Channel / Store定义在哪里卖；Offer定义以什么商业条件卖；09财务负责最终确认后的收入、成本、结算与会计事实。
+
+核心Schema方向：
+Offer {id, sku_ref, channel_ref, store_ref, market_ref, price, currency, tax_mode, valid_from, valid_to, customer_scope, quantity_rule_ref, promotion_ref, price_type, status, source_system_ref, version}。
+
+price_type至少支持：STANDARD、SALE、WHOLESALE、MEMBER、PROMOTIONAL、CUSTOM_CONTRACT等稳定类型；具体枚举在Technical Design继续收口。
+
+关键规则：
+- SKU master不保存渠道化动态销售价格。
+- Listing负责商品与渠道/店铺的上架映射，不等于Offer。
+- Offer可引用Listing，但两者生命周期独立。
+- 08渠道之家可提供渠道价格策略View/配置入口，但不拥有第二套价格事实。
+- 09财务之家拥有交易发生后确认的收入/折扣/税/成本/结算事实，不反向成为Offer主档。
+- 批发/代理/加盟的合同价格可通过customer_scope / contract_ref / counterparty_scope形成条件化Offer，不复制SKU。
+- 外部平台或ERP若为价格权威来源，Offer必须记录source_system_ref并遵守Source of Truth Contract。
+
+### 30.4 本轮治理结果
+CapabilityDefinition、Location、Offer/Pricing三个Open Issues已升级为“Architecture Truth已收口 / 待Technical Design落Schema、状态机与API Contract”。
+
+剩余Open Issues：External Source of Truth Contract、AIAsset lifecycle、Work子对象分型、EmploymentRelation / PositionAssignment、File & Asset边界、IntegrationResource Contract。
