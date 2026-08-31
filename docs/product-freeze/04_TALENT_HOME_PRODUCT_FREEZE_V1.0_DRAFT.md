@@ -142,3 +142,13 @@ Publication由统一平台能力生成；输出内容受Field Permission控制�
 
 ## 20. 当前冻结判断
 当前建议状态：Draft / 待横向Review。待12之家完成后统一Review，再决定是否升为CURRENT V1.0。
+
+## 21. 横向Review回写｜2026-08-31
+本节优先于前文中与跨之家归属冲突的Draft描述。
+- User ≠ Person：User负责登录认证与权限主体，Person负责人才业务事实；建立稳定User ↔ Person映射。
+- Organization / Department / Position结构定义归01美和之家；04只拥有Person与组织/岗位之间的任职、历史和状态关系。页面中的organization_id / department_id / position_id可作为查询投影，不构成第二事实源。
+- 人才Capability与AI Capability不直接合并，但可共享CapabilityDefinition基础抽象；具体HumanCapabilityProfile / AICapabilityBinding待Technical Design。
+- Compensation只保留人才侧配置/视图；正式支付、会计、成本事实归09财务之家。
+- 培训内容/课程/SOP引用11知识之家，不复制正式知识。
+- 公共字段、权限、附件、评论、历史、Audit、Search等统一复用Platform Object Foundation与Platform Capability。
+- 本文仍为Draft，待第二轮一致性检查通过后再升级RC。
