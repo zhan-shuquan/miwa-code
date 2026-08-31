@@ -129,3 +129,13 @@ AI适合：主体去重建议、公司资料摘要、联系人信息整理、合
 
 ## 19. 当前冻结判断
 当前建议状态：Draft / 待横向Review。待12之家完成后统一Review，再决定是否升为CURRENT V1.0。
+
+## 20. 横向Review回写｜2026-08-31
+本节优先于前文中与跨之家归属冲突的Draft描述。
+- Counterparty / Organization继续作为统一往来主体；客户、供应商、物流、服务商、合作单位通过Role表达，不复制主体。
+- Counterparty与01 LegalEntity保持不同语义；如同一现实主体既是法人又是往来方，通过稳定Reference关联，不合并对象事实。
+- Brand归06商品之家，不因供应商/品牌持有人关系复制为Counterparty；通过owner_party_ref / supplier_ref等关系引用。
+- SupplierProductRelation等供应关系应作为关系模型，商品主数据仍归06。
+- 联系人、商务条件、信用等保留07业务语义，但正式财务应收应付、付款、会计事实归09。
+- 公共文件、权限、评论、历史、Audit、Search统一复用平台能力。
+- 本文仍为Draft，待第二轮一致性检查通过后再升级RC。
