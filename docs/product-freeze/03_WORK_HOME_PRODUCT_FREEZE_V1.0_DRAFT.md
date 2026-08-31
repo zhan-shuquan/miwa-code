@@ -127,3 +127,12 @@ WorkItem完成不等于业务对象完成；业务对象是否进入下一状态
 
 ## 18. 当前冻结判断
 当前建议状态：Draft / 待横向Review。待12之家完成后统一Review，再决定是否升为CURRENT V1.0。
+
+## 19. 横向Review回写｜2026-08-31
+本节优先于前文中与跨之家归属冲突的Draft描述。
+- Proposal不再作为工作之家或AI之家各自私有对象，统一升级为Platform Proposal模型；Proposal可由人或AI生成，Proposal ≠ 已执行。
+- WorkItem继续作为统一工作执行事实源；Project只作为上层业务项目对象被引用，不在03复制第二套Project。
+- WorkAssignment / WorkCollaboration / WorkResult / WorkEvidence / WorkSummary等需在Technical Design区分实体、关系、事件或投影，避免全部表结构化。
+- 负责人、参与人、@成员统一引用User/Person身份体系，不在工作域复制人员主数据。
+- 工作附件、评论、关注、历史、Audit、Search、Workflow等统一复用平台能力。
+- 本文仍为Draft，待第二轮一致性检查通过后再升级RC。
