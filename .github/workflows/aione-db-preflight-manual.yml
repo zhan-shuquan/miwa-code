@@ -1,0 +1,85 @@
+name: AIONE DB Preflight Manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Database target label"
+        required: true
+        default: "controlled"
+        type: choice
+        options:
+          - controlled
+          - live
+      confirm_read_only:
+        description: "Type READ_ONLY to confirm no migration or write is intended"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    if: ${{ inputs.confirm_read_only == 'READ_ONLY' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/systems/aione/backend
+    env:
+      DATABASE_URL: ${{ secrets.AIONE_DATABASE_URL }}
+      AIONE_ENV: ${{ inputs.target }}
+      GIT_COMMIT_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify database secret exists
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "AIONE_DATABASE_URL secret is not configured."
+            exit 2
+          fi
+
+      - name: Install dependencies without modifying lockfile
+        run: npm install --package-lock=false --no-audit --no-fund
+
+      - name: Syntax check
+        run: npm run check
+
+      - name: Run read-only preflight
+        shell: bash
+        run: |
+          mkdir -p preflight-output
+          node scripts/preflight.js --strict --full --markdown preflight-output/report.md > preflight-output/report.json
+
+      - name: Verify transaction read-only evidence
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('preflight-output/report.json', 'utf8'));
+          const mode = report.db_context?.transaction_read_only;
+          if (mode !== 'on') {
+            console.error('Preflight did not prove transaction_read_only=on:', mode);
+            process.exit(3);
+          }
+          console.log('transaction_read_only=on confirmed');
+          console.log('Go/No-Go:', report.go_no_go);
+          NODE
+
+      - name: Upload preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aione-db-preflight-${{ inputs.target }}-${{ github.run_id }}
+          path: apps/systems/aione/backend/preflight-output/
+          if-no-files-found: warn
+          retention-days: 14

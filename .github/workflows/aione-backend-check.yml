@@ -1,0 +1,171 @@
+name: AIONE Backend Check
+
+on:
+  pull_request:
+    paths:
+      - "apps/systems/aione/backend/**"
+      - "data-code/migrations/**"
+      - ".github/workflows/aione-backend-check.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/systems/aione/backend/**"
+      - "data-code/migrations/**"
+      - ".github/workflows/aione-backend-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  backend-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/systems/aione/backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies for syntax validation
+        run: npm install --package-lock=false --no-audit --no-fund
+
+      - name: Syntax check
+        run: npm run check
+
+      - name: Report lockfile drift
+        run: |
+          node -e "const p=require('./package.json'); const l=require('./package-lock.json'); const pd=p.dependencies||{}; const ld=(l.packages&&l.packages['']&&l.packages[''].dependencies)||{}; const missing=Object.keys(pd).filter(k=>pd[k]!==ld[k]); if(missing.length){console.error('package-lock drift:', missing.join(',')); process.exitCode=2}else{console.log('package-lock aligned')}"
+        continue-on-error: true
+
+  controlled-db-preflight:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aione_test
+          POSTGRES_PASSWORD: aione_test
+          POSTGRES_DB: aione_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aione_test -d aione_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://aione_test:aione_test@127.0.0.1:5432/aione_test
+      AIONE_ENV: controlled-ci
+      GIT_COMMIT_SHA: ${{ github.sha }}
+    defaults:
+      run:
+        working-directory: apps/systems/aione/backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install --package-lock=false --no-audit --no-fund
+
+      - name: Create existing canonical baseline tables
+        shell: bash
+        run: |
+          PGPASSWORD=aione_test psql -h 127.0.0.1 -U aione_test -d aione_test -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE TABLE public.people (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            status TEXT DEFAULT 'active'
+          );
+          CREATE TABLE public.external_identities (
+            id TEXT PRIMARY KEY,
+            provider TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            person_id TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(provider, subject)
+          );
+          CREATE TABLE public.product_opportunities (
+            id TEXT PRIMARY KEY,
+            status TEXT DEFAULT 'draft'
+          );
+          CREATE TABLE public.activity_logs (
+            id TEXT PRIMARY KEY,
+            object_type TEXT,
+            object_id TEXT,
+            event_type TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          SQL
+
+      - name: Migrate controlled database from current migration set
+        run: npm run db:migrate
+
+      - name: Prove PostgreSQL rejects writes in read-only transaction
+        shell: bash
+        run: |
+          set +e
+          output=$(PGPASSWORD=aione_test psql -h 127.0.0.1 -U aione_test -d aione_test -v ON_ERROR_STOP=1 2>&1 <<'SQL'
+          BEGIN READ ONLY;
+          INSERT INTO public.schema_migrations(version, description) VALUES ('readonly-proof', 'must fail');
+          ROLLBACK;
+          SQL
+          )
+          code=$?
+          set -e
+          echo "$output"
+          if [ "$code" -eq 0 ]; then
+            echo "Expected read-only write rejection, but INSERT succeeded."
+            exit 3
+          fi
+          echo "$output" | grep -qi "read-only" || {
+            echo "Write failed, but not with a read-only transaction error."
+            exit 4
+          }
+          echo "Read-only write rejection confirmed."
+
+      - name: Run controlled DB preflight
+        shell: bash
+        run: |
+          mkdir -p preflight-output
+          node scripts/preflight.js --strict --full --markdown preflight-output/report.md > preflight-output/report.json
+
+      - name: Verify controlled preflight evidence
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('preflight-output/report.json', 'utf8'));
+          if (report.db_context?.transaction_read_only !== 'on') {
+            console.error('transaction_read_only evidence missing:', report.db_context?.transaction_read_only);
+            process.exit(5);
+          }
+          if (report.go_no_go !== 'GO') {
+            console.error('Expected controlled fixture to be GO, got:', report.go_no_go, report.risks);
+            process.exit(6);
+          }
+          if ((report.blockers || []).length !== 0) {
+            console.error('Unexpected blockers:', report.blockers);
+            process.exit(7);
+          }
+          console.log('Controlled preflight GO with transaction_read_only=on.');
+          NODE
+
+      - name: Upload controlled preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aione-controlled-db-preflight-${{ github.run_id }}
+          path: apps/systems/aione/backend/preflight-output/
+          if-no-files-found: warn
+          retention-days: 14
