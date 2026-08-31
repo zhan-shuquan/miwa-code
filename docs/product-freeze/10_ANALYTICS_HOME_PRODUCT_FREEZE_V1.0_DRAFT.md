@@ -192,3 +192,13 @@ ForecastRecord必须保存：预测对象、预测期间、模型/方法、输�
 
 ## 24. 当前冻结判断
 当前建议状态：Draft / 待横向Review。待12之家完成后统一Review，再决定是否升为CURRENT V1.0。
+
+## 25. 横向Review回写｜2026-08-31
+本节优先于前文中与跨之家归属冲突的Draft描述。
+- 分析之家只拥有MetricDefinition、DimensionDefinition、Semantic Layer、Dashboard、Insight、Forecast等分析语义与结果，不拥有01～09/11/12的原始交易或主数据事实。
+- BigQuery / Looker / Looker Studio均属于分析副本与语义展示层，不得反向成为交易事实源。
+- 同一正式指标只能有一个CURRENT定义；其他页面不得自行硬编码第二套公式。
+- 分析权限继承来源对象权限，Search/Analytics不得通过聚合或明细穿透敏感数据边界。
+- 产能分析必须基于真实日志、工时和结果；无真实数据时标记待验证。
+- 公共图表、过滤、日期范围、导出、Publication、权限、Audit统一复用平台能力。
+- 本文仍为Draft，待第二轮一致性检查通过后再升级RC。
