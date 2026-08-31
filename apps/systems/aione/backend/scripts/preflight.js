@@ -20,9 +20,9 @@ function parseArgs(argv) {
   return options;
 }
 
-async function appliedMigrations(schemaIndex) {
+async function appliedMigrations(db, schemaIndex) {
   if (!schemaIndex.tables.has("schema_migrations")) return [];
-  const { rows } = await pool.query("SELECT version, description, applied_at FROM public.schema_migrations ORDER BY version");
+  const { rows } = await db.query("SELECT version, description, applied_at FROM public.schema_migrations ORDER BY version");
   return rows;
 }
 
@@ -30,16 +30,18 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const environment = process.env.AIONE_ENV || process.env.NODE_ENV || "unknown";
   const runId = `db-preflight-${Date.now()}`;
+  const client = await pool.connect();
 
-  await pool.query("BEGIN READ ONLY");
   try {
-    const dbContext = await collectDbContext(pool);
-    const schemaInventory = await collectSchemaInventory(pool);
+    await client.query("BEGIN READ ONLY");
+
+    const dbContext = await collectDbContext(client);
+    const schemaInventory = await collectSchemaInventory(client);
     const schemaIndex = indexSchema(schemaInventory);
-    const tableProfiles = await collectTableProfiles(pool, schemaIndex);
-    const identityProfile = await collectIdentityProfile(pool, schemaIndex);
-    const relationChecks = await collectRelationChecks(pool, schemaIndex);
-    const migrations = await appliedMigrations(schemaIndex);
+    const tableProfiles = await collectTableProfiles(client, schemaIndex);
+    const identityProfile = await collectIdentityProfile(client, schemaIndex);
+    const relationChecks = await collectRelationChecks(client, schemaIndex);
+    const migrations = await appliedMigrations(client, schemaIndex);
     const riskResult = evaluateRisks({ identityProfile, relationChecks, schemaIndex });
 
     const report = {
@@ -58,7 +60,7 @@ async function main() {
       go_no_go: riskResult.go_no_go
     };
 
-    await pool.query("ROLLBACK");
+    await client.query("ROLLBACK");
 
     if (options.markdownPath) await fs.writeFile(options.markdownPath, renderMarkdown(report), "utf8");
 
@@ -80,8 +82,10 @@ async function main() {
 
     if (options.strict && report.go_no_go === "NO-GO") process.exitCode = 2;
   } catch (error) {
-    await pool.query("ROLLBACK").catch(() => {});
+    await client.query("ROLLBACK").catch(() => {});
     throw error;
+  } finally {
+    client.release();
   }
 }
 
