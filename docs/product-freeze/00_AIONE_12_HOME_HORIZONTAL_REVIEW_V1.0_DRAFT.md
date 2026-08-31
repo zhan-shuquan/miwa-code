@@ -251,3 +251,46 @@ FAILED通常属于执行/连接结果，不应默认作为AIAsset主生命周期
 10. Object Foundation / Permission / Status统一
 
 状态：Draft / 第一轮横向Review完成，待将结论逐份回写01～12 Product Freeze并进行第二轮一致性检查。
+
+## 28. 第二轮一致性检查｜2026-08-31
+01～12 Product Freeze已完成第一轮横向Review结论回写。第二轮检查重点不再审目录，而是验证跨之家事实源、对象归属和平台能力是否仍存在双重定义。
+
+### 已收口的一致性结论
+1. Organization / LegalEntity归01；Person任职关系归04，User与Person分离并建立映射。
+2. Project不允许02/11双主模型；当前业务归属建议在02，03只执行WorkItem，11只沉淀项目知识与正式索引。
+3. Decision全系统只允许一套DecisionRecord；业务之家按Scope/Source引用，11提供正式归档与知识化视图。
+4. Proposal升级为Platform统一对象，既可由人也可由AI产生，Proposal不等于执行结果。
+5. AI Trace由AI Gateway / Observability产生，05只提供治理与绩效视图；AI运行成本计量与09正式财务事实分离。
+6. Connector / API / Webhook / Automation等技术实现只允许一个事实源：源码归GitHub，运行连接归Platform Integration Service；05与12只承载不同业务语义与治理视图。
+7. Product 1:N SKU保持；Listing归06，Channel / Platform / Store归08；商品Listing与Publication Layer分离。
+8. Brand、Counterparty、LegalEntity保持独立对象，仅通过Reference关联。
+9. 正式财务成本归09；06仅引用运营/参考成本；销售Offer / Pricing仍保持独立Open Issue，不塞进SKU主数据。
+10. Inventory必须有唯一Source of Truth Contract；如AIONE自管，InventoryMovement作为事实、InventoryBalance作为派生投影。
+11. KnowledgeItem、File & Asset、SharedResource / Asset三层概念分离，不复制文件或知识。
+12. 分析之家只拥有Metric / Dimension / Semantic Layer / Dashboard / Insight / Forecast，不拥有原始业务事实；BigQuery / Looker不可反向成为交易事实源。
+13. Object Foundation、Permission、Search、File、Interaction、Audit、Version、Workflow、Import/Export、Integration、AI Gateway、Observability等统一上收为Platform Capability。
+14. 我的/团队/事业/全部/关注/收藏等继续作为View / Scope，不复制业务对象。
+
+### 第二轮仍保留的Open Issues
+以下事项尚不应假装已经冻结，需在进入RC前继续收口：
+1. Project唯一主模型最终技术归属：02 Business Domain还是平台横向Project Domain。
+2. DecisionRecord最终技术归属：平台横向对象还是11 Knowledge Domain拥有主对象。
+3. Platform Proposal的最终Schema、状态机、风险等级、确认与执行关系。
+4. CapabilityDefinition共享抽象的最终边界，以及HumanCapabilityProfile / AICapabilityBinding的关系。
+5. InventoryLocation / Location统一地点主对象的归属，避免06库存地点、07物流地点、其他业务地点重复建模。
+6. Offer / Pricing的正式对象模型、时间有效性、Channel/Store维度与价格事实源。
+7. 外部会计/ERP/WMS被指定为事实源时的Integration Contract标准。
+8. AIAsset最终生命周期状态，特别是FAILED / DEGRADED / PAUSED的边界。
+9. 03工作之家子概念中哪些是实体、关系、事件或投影：WorkAssignment / Collaboration / Result / Evidence / Summary。
+10. 04人才之家EmploymentRelation与PositionAssignment是否保持独立，以及CareerTimeline是否仅为派生视图。
+11. Platform File & Asset与12媒体/品牌共享资产的精确对象边界。
+12. IntegrationResource作为业务资源注册表与Platform Integration运行配置之间的精确Contract。
+
+### Governance判断
+- 12之家目录层级继续保持稳定，不需要重新调整目录。
+- 第一轮发现的主要“双事实源”风险已在Product Truth / Architecture Truth层面得到方向性收口。
+- 但以上Open Issues仍涉及稳定对象边界，因此01～12当前继续保持Draft，不直接升级CURRENT。
+- 下一步应优先解决上述Open Issues，再执行第三次最终一致性检查；通过后可统一进入RC候选。
+- 在RC与用户确认之前，不应把这些Draft作为main已实现事实，也不应据此直接大规模开发数据库/API。
+
+状态：Draft / 第二轮一致性检查完成，Open Issues待收口。
