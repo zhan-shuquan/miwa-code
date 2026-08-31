@@ -151,3 +151,11 @@ AI生成的计划/决策建议默认是Proposal，需人工确认后进入正式
 ## 18. 当前冻结判断
 当前建议状态：Draft / 待Review。
 待12之家横向Review无冲突后升级为CURRENT V1.0。
+
+## 19. 横向Review回写｜2026-08-31
+本节优先于前文中与跨之家归属冲突的Draft描述。
+- BusinessProject不再视为可与知识之家Project并存的独立重复主模型；当前建议Project作为唯一业务项目对象，由02承载事业归属、目标、计划和经营意义，03引用执行WorkItem，11仅沉淀项目知识/复盘/正式索引。
+- BusinessDecision不再单独发展为第二套Decision模型；全系统只保留一套DecisionRecord，02以business_scope/source_object呈现事业决策。
+- 02不拥有工作执行事实、正式财务事实或正式知识条目，均通过稳定Reference调用。
+- 公共字段、权限、附件、评论、历史、Audit、Search等统一复用Platform Object Foundation与Platform Capability。
+- 本文仍为Draft，待第二轮一致性检查通过后再升级RC。
