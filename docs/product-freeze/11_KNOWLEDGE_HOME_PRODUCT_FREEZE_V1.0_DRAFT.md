@@ -189,3 +189,13 @@ Publication只生成表现层，不复制KnowledgeItem主事实。
 
 ## 25. 当前冻结判断
 当前建议状态：Draft / 待横向Review。待12之家完成后统一Review，再决定是否升为CURRENT V1.0。
+
+## 26. 横向Review回写｜2026-08-31
+本节优先于前文中与跨之家归属冲突的Draft描述。
+- ProjectRecord / ProjectKnowledge不再发展为第二套Project主模型；Project执行与事业归属由02/03负责，11只沉淀项目复盘、成果、经验、正式资料和知识索引。
+- BusinessDecision不与11决策中心并存双模型；全系统只保留一套DecisionRecord。11负责正式归档、知识化、检索、版本和复盘视图，业务之家通过scope/source_object引用。
+- KnowledgeItem ≠ File；文件字节与生命周期由统一File & Asset管理，KnowledgeItem负责知识身份、类型、状态、版本、权限语义和关联。
+- 同一知识主题只能有一个CURRENT正式版本。
+- 搜索与AI检索继承原始知识权限，不扩大可见范围。
+- 公共权限、版本、历史、Audit、Search、Publication统一复用平台能力。
+- 本文仍为Draft，待第二轮一致性检查通过后再升级RC。
