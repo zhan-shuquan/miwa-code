@@ -3,6 +3,7 @@ BEGIN;
 -- AIONE P0 direct-selection -> continuous publishing foundation.
 -- Product Truth: first stage validates real direct-selection business flow only.
 -- Architecture Truth: these are canonical business tables; object_registry remains a cross-object index only.
+-- Migration rule: CREATE for a fresh database, ALTER in place for legacy canonical tables.
 
 CREATE TABLE IF NOT EXISTS public.product_categories (
   id TEXT PRIMARY KEY,
@@ -52,6 +53,81 @@ CREATE TABLE IF NOT EXISTS public.product_opportunities (
   UNIQUE (source_platform, source_ref)
 );
 
+-- Older AIONE databases may already contain a minimal product_opportunities
+-- table (for example id + status only). Evolve that table in place instead of
+-- dropping or replacing it so historical rows remain available for later
+-- reconciliation/deprecation work.
+ALTER TABLE public.product_opportunities
+  ADD COLUMN IF NOT EXISTS business_id TEXT REFERENCES public.businesses(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS source_platform TEXT,
+  ADD COLUMN IF NOT EXISTS source_ref TEXT,
+  ADD COLUMN IF NOT EXISTS source_url TEXT,
+  ADD COLUMN IF NOT EXISTS supplier_ref TEXT,
+  ADD COLUMN IF NOT EXISTS title TEXT,
+  ADD COLUMN IF NOT EXISTS selection_mode TEXT NOT NULL DEFAULT 'direct',
+  ADD COLUMN IF NOT EXISTS lifecycle_status TEXT NOT NULL DEFAULT 'discovered',
+  ADD COLUMN IF NOT EXISTS owner_person_id TEXT,
+  ADD COLUMN IF NOT EXISTS category_id TEXT REFERENCES public.product_categories(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS estimated_cost NUMERIC(18,4),
+  ADD COLUMN IF NOT EXISTS estimated_sale_price NUMERIC(18,4),
+  ADD COLUMN IF NOT EXISTS currency CHAR(3) NOT NULL DEFAULT 'JPY',
+  ADD COLUMN IF NOT EXISTS qualification_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS created_by_person_id TEXT,
+  ADD COLUMN IF NOT EXISTS updated_by_person_id TEXT,
+  ADD COLUMN IF NOT EXISTS record_version INTEGER NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS source_system TEXT NOT NULL DEFAULT 'aione',
+  ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
+UPDATE public.product_opportunities
+   SET source_platform = COALESCE(NULLIF(source_platform, ''), 'legacy'),
+       title = COALESCE(NULLIF(title, ''), id),
+       lifecycle_status = COALESCE(NULLIF(lifecycle_status, ''), 'discovered')
+ WHERE source_platform IS NULL OR source_platform = ''
+    OR title IS NULL OR title = ''
+    OR lifecycle_status IS NULL OR lifecycle_status = '';
+
+ALTER TABLE public.product_opportunities
+  ALTER COLUMN source_platform SET NOT NULL,
+  ALTER COLUMN title SET NOT NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conrelid = 'public.product_opportunities'::regclass
+       AND conname = 'product_opportunities_lifecycle_status_check'
+  ) THEN
+    ALTER TABLE public.product_opportunities
+      ADD CONSTRAINT product_opportunities_lifecycle_status_check
+      CHECK (lifecycle_status IN ('discovered','reviewing','qualified','rejected','converted','archived')) NOT VALID;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conrelid = 'public.product_opportunities'::regclass
+       AND conname = 'product_opportunities_estimated_cost_check'
+  ) THEN
+    ALTER TABLE public.product_opportunities
+      ADD CONSTRAINT product_opportunities_estimated_cost_check
+      CHECK (estimated_cost IS NULL OR estimated_cost >= 0) NOT VALID;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conrelid = 'public.product_opportunities'::regclass
+       AND conname = 'product_opportunities_estimated_sale_price_check'
+  ) THEN
+    ALTER TABLE public.product_opportunities
+      ADD CONSTRAINT product_opportunities_estimated_sale_price_check
+      CHECK (estimated_sale_price IS NULL OR estimated_sale_price >= 0) NOT VALID;
+  END IF;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_product_opportunities_source
+  ON public.product_opportunities(source_platform, source_ref);
 CREATE INDEX IF NOT EXISTS idx_product_opportunities_status
   ON public.product_opportunities(lifecycle_status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_product_opportunities_owner
