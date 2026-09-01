@@ -1,0 +1,154 @@
+/* ========================================
+   AIONE Sidebar Shell V2.0
+   Shared desktop shell behavior only.
+   Business navigation content/routes remain untouched.
+======================================== */
+
+@media(min-width:1100px){
+  html[data-sidebar-mode="auto"] .app-body,
+  html[data-sidebar-mode="auto"] .app-body.has-aside{
+    grid-template-columns:var(--desktop-sidebar-rail) minmax(0,1fr) var(--desktop-aside);
+  }
+
+  html[data-sidebar-mode="pinned"] .app-body,
+  html[data-sidebar-mode="pinned"] .app-body.has-aside{
+    grid-template-columns:var(--desktop-sidebar-expanded) minmax(0,1fr) var(--desktop-aside);
+  }
+
+  .desktop-sidebar-host{
+    position:relative;
+    overflow:visible;
+  }
+
+  .desktop-sidebar{
+    top:var(--desktop-header-total);
+    height:calc(100vh - var(--desktop-header-total));
+    min-height:calc(100vh - var(--desktop-header-total));
+    transition:width .16s ease, box-shadow .16s ease;
+  }
+
+  .sidebar-shell-controls{
+    flex:0 0 auto;
+    min-height:42px;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    padding:5px 8px;
+    border-bottom:1px solid var(--border-soft);
+    background:#FFFFFF;
+  }
+
+  .sidebar-shell-mode-button{
+    width:32px;
+    height:32px;
+    display:grid;
+    place-items:center;
+    border:1px solid transparent;
+    border-radius:8px;
+    background:transparent;
+    color:#71847B;
+    cursor:pointer;
+  }
+
+  .sidebar-shell-mode-button:hover,
+  .sidebar-shell-mode-button:focus-visible{
+    outline:none;
+    border-color:#D3E2DA;
+    background:#F2F7F4;
+    color:var(--miwa-green);
+  }
+
+  .sidebar-shell-mode-button svg{
+    width:17px;
+    height:17px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  html[data-sidebar-mode="pinned"] .sidebar-shell-mode-button{
+    color:var(--miwa-green);
+    background:#EAF3EE;
+    border-color:#D3E2DA;
+  }
+
+  html[data-sidebar-mode="auto"] .desktop-sidebar{
+    width:var(--desktop-sidebar-rail);
+  }
+
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host.is-sidebar-auto-expanded .desktop-sidebar{
+    position:absolute;
+    left:0;
+    top:0;
+    z-index:calc(var(--z-sidebar) + 10);
+    width:var(--desktop-sidebar-expanded);
+    box-shadow:12px 0 28px rgba(13,73,55,.12);
+    border-right:1px solid var(--border);
+  }
+
+  html[data-sidebar-mode="pinned"] .desktop-sidebar{
+    width:100%;
+  }
+
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-shell-controls{
+    justify-content:center;
+    padding-inline:4px;
+  }
+
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-context-head,
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-primary-action,
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-quick-actions,
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-tree-toggle,
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-tree-toggle-spacer,
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-tree-link > span:not(.sidebar-icon),
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-flat-link > span:not(.sidebar-icon),
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-tree-overview-link,
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-tree-children{
+    display:none!important;
+  }
+
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-navigation-area{
+    padding:8px 5px 12px;
+    overflow:hidden;
+  }
+
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-navigation-tree{
+    gap:4px;
+  }
+
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-tree-row,
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-tree-row.has-overview-route{
+    display:block;
+    min-height:38px;
+  }
+
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-tree-link,
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-flat-link{
+    width:40px;
+    min-width:40px;
+    min-height:38px;
+    padding:0;
+    margin:0 auto;
+    justify-content:center;
+    gap:0;
+  }
+
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-icon{
+    width:20px;
+    height:20px;
+    flex-basis:20px;
+  }
+
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-tree-link[aria-current="page"],
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-flat-link[aria-current="page"],
+  html[data-sidebar-mode="auto"] .desktop-sidebar-host:not(.is-sidebar-auto-expanded) .sidebar-tree-group.is-current-group>.sidebar-tree-row .sidebar-tree-link{
+    background:#EAF3EE;
+    box-shadow:inset 3px 0 0 var(--miwa-green);
+  }
+}
+
+@media(max-width:1099px){
+  .sidebar-shell-controls{display:none!important}
+}
