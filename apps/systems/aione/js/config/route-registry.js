@@ -193,7 +193,7 @@ export const ROUTE_REGISTRY = Object.freeze({
   "identity-home": route("identity-home", "身份与权限", "platform", { parent: "shared-home" }),
   "contract-home": route("contract-home", "合同与法务", "platform", { parent: "shared-home" }),
 
-  selection: route("selection", "选品工作台", "workbench", {
+  selection: route("selection", "选品", "workbench", {
     status: "active",
     page: "./pages/selection-workbench/overview.html"
   }),
@@ -201,7 +201,7 @@ export const ROUTE_REGISTRY = Object.freeze({
   "selection-ai-talent": route("selection-ai-talent", "AI选品人才", "workbench", { parent: "selection" }),
   "selection-records": route("selection-records", "选品记录", "workbench", { parent: "selection" }),
 
-  sampling: route("sampling", "测样工作台", "workbench", {
+  sampling: route("sampling", "测样", "workbench", {
     status: "active",
     page: "./pages/sampling-workbench/home.html"
   }),
@@ -224,47 +224,47 @@ export const ROUTE_REGISTRY = Object.freeze({
   "sampling-reports": route("sampling-reports", "测样报告", "workbench", { parent: "sampling" }),
   "sampling-records": route("sampling-records", "测样记录", "workbench", { parent: "sampling" }),
 
-  procurement: route("procurement", "采购工作台", "workbench"),
+  procurement: route("procurement", "采购", "workbench"),
   "procurement-overview": route("procurement-overview", "采购概览", "workbench", { parent: "procurement" }),
   "procurement-needs": route("procurement-needs", "采购需求", "workbench", { parent: "procurement" }),
   "procurement-orders": route("procurement-orders", "采购订单", "workbench", { parent: "procurement" }),
   "procurement-suppliers": route("procurement-suppliers", "供应商", "workbench", { parent: "procurement" }),
   "procurement-records": route("procurement-records", "采购记录", "workbench", { parent: "procurement" }),
 
-  design: route("design", "设计工作台", "workbench"),
+  design: route("design", "设计", "workbench"),
   "design-overview": route("design-overview", "设计概览", "workbench", { parent: "design" }),
   "design-tasks": route("design-tasks", "设计任务", "workbench", { parent: "design" }),
   "design-materials": route("design-materials", "商品素材", "workbench", { parent: "design" }),
   "design-assets": route("design-assets", "设计资产", "workbench", { parent: "design" }),
   "design-records": route("design-records", "设计记录", "workbench", { parent: "design" }),
 
-  publishing: route("publishing", "上架工作台", "workbench"),
+  publishing: route("publishing", "上架", "workbench"),
   "publishing-overview": route("publishing-overview", "上架概览", "workbench", { parent: "publishing" }),
   "publishing-tasks": route("publishing-tasks", "上架任务", "workbench", { parent: "publishing" }),
   "publishing-products": route("publishing-products", "商品资料", "workbench", { parent: "publishing" }),
   "publishing-records": route("publishing-records", "发布记录", "workbench", { parent: "publishing" }),
 
-  operations: route("operations", "运营工作台", "workbench"),
+  operations: route("operations", "运营", "workbench"),
   "operations-overview": route("operations-overview", "运营概览", "workbench", { parent: "operations" }),
   "operations-products": route("operations-products", "运营商品", "workbench", { parent: "operations" }),
   "operations-tasks": route("operations-tasks", "运营任务", "workbench", { parent: "operations" }),
   "operations-campaigns": route("operations-campaigns", "活动与推广", "workbench", { parent: "operations" }),
   "operations-records": route("operations-records", "运营记录", "workbench", { parent: "operations" }),
 
-  orders: route("orders", "订单工作台", "workbench"),
+  orders: route("orders", "订单", "workbench"),
   "orders-overview": route("orders-overview", "订单概览", "workbench", { parent: "orders" }),
   "orders-list": route("orders-list", "订单列表", "workbench", { parent: "orders" }),
   "orders-exceptions": route("orders-exceptions", "订单异常", "workbench", { parent: "orders" }),
   "orders-records": route("orders-records", "订单记录", "workbench", { parent: "orders" }),
 
-  inventory: route("inventory", "库存工作台", "workbench"),
+  inventory: route("inventory", "库存", "workbench"),
   "inventory-overview": route("inventory-overview", "库存概览", "workbench", { parent: "inventory" }),
   "inventory-list": route("inventory-list", "库存列表", "workbench", { parent: "inventory" }),
   "inventory-movements": route("inventory-movements", "入出库管理", "workbench", { parent: "inventory" }),
   "inventory-counts": route("inventory-counts", "盘点管理", "workbench", { parent: "inventory" }),
   "inventory-records": route("inventory-records", "库存记录", "workbench", { parent: "inventory" }),
 
-  service: route("service", "客服工作台", "workbench"),
+  service: route("service", "客服", "workbench"),
   "service-overview": route("service-overview", "客服概览", "workbench", { parent: "service" }),
   "service-tickets": route("service-tickets", "客服工单", "workbench", { parent: "service" }),
   "service-after-sales": route("service-after-sales", "退换与售后", "workbench", { parent: "service" }),
