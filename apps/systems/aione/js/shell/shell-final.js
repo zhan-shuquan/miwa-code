@@ -32,13 +32,9 @@ function compactBrandAndAI() {
   aiEntry.setAttribute("title", "美和AI");
   aiEntry.setAttribute("aria-label", "打开美和AI");
 
-  const homeIcon = aiHome.querySelector(".miwa-semantic-icon");
-  if (homeIcon && !aiEntry.querySelector(".miwa-semantic-icon")) {
-    const unifiedIcon = homeIcon.cloneNode(true);
-    unifiedIcon.removeAttribute("id");
-    aiEntry.replaceChildren(unifiedIcon);
-  }
-
+  /* Critical: preserve the original AI entry subtree. Its descendants carry
+     the existing Miwa AI trigger hooks/listeners. Visual compaction belongs
+     in CSS; never replace/remove the functional DOM here. */
   if (aiHome.nextElementSibling !== aiEntry) aiHome.after(aiEntry);
 }
 
