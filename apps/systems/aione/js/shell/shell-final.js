@@ -19,6 +19,29 @@ function syncLauncherEntries() {
   grid.replaceChildren(...Array.from(source.children));
 }
 
+function compactBrandAndAI() {
+  const formalName = document.getElementById("miwaSystemFormalName");
+  if (formalName) formalName.textContent = "美和一体化工作平台";
+
+  const aiHome = document.querySelector('[data-header-route="ai-home"]');
+  const aiEntry = document.getElementById("desktop-miwa-ai-entry");
+  if (!aiHome || !aiEntry) return;
+
+  aiHome.classList.add("miwa-ai-home-compact");
+  aiEntry.classList.add("miwa-ai-header-entry--compact");
+  aiEntry.setAttribute("title", "美和AI");
+  aiEntry.setAttribute("aria-label", "打开美和AI");
+
+  const homeIcon = aiHome.querySelector(".miwa-semantic-icon");
+  if (homeIcon && !aiEntry.querySelector(".miwa-semantic-icon")) {
+    const unifiedIcon = homeIcon.cloneNode(true);
+    unifiedIcon.removeAttribute("id");
+    aiEntry.replaceChildren(unifiedIcon);
+  }
+
+  if (aiHome.nextElementSibling !== aiEntry) aiHome.after(aiEntry);
+}
+
 function installAppLauncher() {
   const tools = document.querySelector(".miwa-global-tools");
   if (!tools || document.getElementById("miwaAppLauncher")) return;
@@ -230,12 +253,14 @@ function reorderDailySignals() {
 }
 
 function refreshFinalShell() {
+  compactBrandAndAI();
   enhanceDailyAwareness();
   reorderDailySignals();
   syncLauncherEntries();
 }
 
 export function initFinalShell() {
+  compactBrandAndAI();
   installAppLauncher();
   enhanceDailyAwareness();
   reorderDailySignals();
