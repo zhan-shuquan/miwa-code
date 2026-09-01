@@ -1,0 +1,147 @@
+/* ========================================
+   AIONE Sidebar V2.0
+   Platform-level desktop navigation behavior.
+   Auto-hide by default; users may pin expanded.
+======================================== */
+
+:root{
+  /* Header V2.0 only keeps main row + daily awareness row.
+     Remove the retired quick-entry/spirit heights from Shell geometry. */
+  --desktop-header-info:var(--desktop-header-daily);
+  --aione-sidebar-expanded:var(--desktop-sidebar);
+  --aione-sidebar-rail:56px;
+}
+
+@media(min-width:1100px){
+  body[data-sidebar-mode="auto"] .app-body,
+  body[data-sidebar-mode="auto"] .app-body.has-aside{
+    grid-template-columns:var(--aione-sidebar-rail) minmax(0,1fr) var(--desktop-aside);
+  }
+
+  body[data-sidebar-mode="expanded"] .app-body,
+  body[data-sidebar-mode="expanded"] .app-body.has-aside{
+    grid-template-columns:var(--aione-sidebar-expanded) minmax(0,1fr) var(--desktop-aside);
+  }
+
+  .desktop-sidebar-host{
+    position:relative;
+    z-index:var(--z-sidebar);
+    overflow:visible;
+    transition:width .16s ease;
+  }
+
+  .desktop-sidebar{
+    top:calc(var(--desktop-header-main) + var(--desktop-header-info));
+    height:calc(100vh - var(--desktop-header-main) - var(--desktop-header-info));
+    min-height:calc(100vh - var(--desktop-header-main) - var(--desktop-header-info));
+    width:100%;
+    transition:width .16s ease,box-shadow .16s ease;
+  }
+
+  body[data-sidebar-mode="auto"] .desktop-sidebar{
+    width:var(--aione-sidebar-rail);
+  }
+
+  body[data-sidebar-mode="auto"] .desktop-sidebar:hover,
+  body[data-sidebar-mode="auto"] .desktop-sidebar:focus-within{
+    width:var(--aione-sidebar-expanded);
+    box-shadow:12px 0 28px rgba(13,73,55,.10);
+  }
+
+  .sidebar-v2-toolbar{
+    flex:0 0 auto;
+    min-height:42px;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    padding:6px 10px 4px;
+    background:#fff;
+  }
+
+  .sidebar-v2-mode-toggle{
+    width:32px;
+    height:32px;
+    display:grid;
+    place-items:center;
+    border:1px solid transparent;
+    border-radius:8px;
+    background:transparent;
+    color:#71847B;
+    cursor:pointer;
+    transition:background-color .15s ease,color .15s ease,border-color .15s ease;
+  }
+
+  .sidebar-v2-mode-toggle:hover{
+    color:var(--miwa-green);
+    background:#F1F7F4;
+    border-color:#DCE9E3;
+  }
+
+  .sidebar-v2-mode-toggle__glyph{
+    font-size:17px;
+    line-height:1;
+    transition:transform .16s ease;
+  }
+
+  body[data-sidebar-mode="expanded"] .sidebar-v2-mode-toggle{
+    color:var(--miwa-green);
+    background:#EEF6F2;
+  }
+
+  body[data-sidebar-mode="expanded"] .sidebar-v2-mode-toggle__glyph{
+    transform:rotate(-45deg);
+  }
+
+  /* Auto mode is a compact icon rail until the user points at it. */
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-context-head,
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-primary-action,
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-quick-actions,
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-tree-toggle,
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-tree-toggle-spacer,
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-tree-children{
+    display:none!important;
+  }
+
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-navigation-area{
+    padding:4px 7px 12px;
+    overflow:hidden;
+  }
+
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-tree-row,
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-tree-row.has-overview-route{
+    display:block;
+    min-height:40px;
+  }
+
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-tree-link{
+    width:40px;
+    min-width:40px;
+    min-height:40px;
+    padding:0;
+    display:grid;
+    place-items:center;
+    gap:0;
+    overflow:hidden;
+  }
+
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-tree-link>span:not(.sidebar-icon),
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-tree-overview-link{
+    display:none!important;
+  }
+
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-icon{
+    width:20px;
+    height:20px;
+    flex:0 0 20px;
+  }
+
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-tree-group.is-current-group>.sidebar-tree-row .sidebar-tree-link{
+    background:#EAF3EE;
+    box-shadow:inset 3px 0 0 var(--miwa-green);
+  }
+
+  body[data-sidebar-mode="auto"] .desktop-sidebar:not(:hover):not(:focus-within) .sidebar-v2-toolbar{
+    justify-content:center;
+    padding-inline:0;
+  }
+}
