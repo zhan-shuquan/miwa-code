@@ -4,12 +4,12 @@ import {
   createPreviewOpportunityId,
   loadSelectionItems
 } from "../data/selection-workbench-adapter.js?v=20260829-object-workspace-v1";
-import {
-  getObjectPolicies,
-  mountSelectionObjectWorkspace,
-  openSelectionRecordDetail
-} from "./selection-workbench.js?v=20260829-selection-v3";
+import * as selectionWorkbench from "./selection-workbench.js?v=20260829-selection-v3";
 
+const {
+  getObjectPolicies,
+  openSelectionRecordDetail
+}=selectionWorkbench;
 const USER_SELECTION_TYPES=Object.freeze(["直发选品","常规选品"]);
 const esc=(value)=>String(value??"").replace(/[&<>\"]/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
 const manualHref=(section)=>`#/selection/overview?section=${encodeURIComponent(section)}`;
@@ -39,7 +39,17 @@ function renderMine(root){
   ].join("");
   root.innerHTML=`<section class="selection-secondary-card selection-secondary-card--mine">${titleBar("我的选品","my-selection",actions,"公司所有成员均可根据自己的时间安排自主选品。")}<div data-selection-mine-workspace></div></section>`;
   renderSemanticIcons(root);
-  const browser=mountSelectionObjectWorkspace(root.querySelector("[data-selection-mine-workspace]"),{
+
+  const workspaceHost=root.querySelector("[data-selection-mine-workspace]");
+  const mountSelectionObjectWorkspace=selectionWorkbench.mountSelectionObjectWorkspace;
+  if(typeof mountSelectionObjectWorkspace!=="function"){
+    workspaceHost.innerHTML=`<div class="selection-secondary-empty"><span>选</span><h2>我的选品工作区正在收口</h2><p>当前 main 已完成选品工作台 V2 收口，旧对象工作区接口已停止导出。请从商品机会一览继续工作；新的个人 Scope 将按统一对象工作区重新接入。</p></div>`;
+    console.warn("[AIONE] mountSelectionObjectWorkspace is unavailable; secondary selection page entered safe fallback instead of blocking application bootstrap.");
+    window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"light",kicker:"当前页面",title:"我的选品",text:"个人选品 Scope 正在按统一对象工作区重新接入；当前不影响其他 AIONE 页面使用。"}}));
+    return;
+  }
+
+  const browser=mountSelectionObjectWorkspace(workspaceHost,{
     itemsProvider:()=>loadSelectionItems().filter((item)=>USER_SELECTION_TYPES.includes(item.type)),
     pageId:"selection-mine-object-v3",
     title:"我的选品",
