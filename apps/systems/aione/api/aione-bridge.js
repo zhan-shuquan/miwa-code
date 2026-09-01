@@ -218,6 +218,20 @@ export default async function handler(req, res) {
       redirect: "manual"
     });
 
+    if (!upstream.ok) {
+      let upstreamBody = "";
+      try { upstreamBody = (await upstream.clone().text()).slice(0, 600); } catch (_) {}
+      let backendHost = "";
+      try { backendHost = new URL(env.backendUrl).host; } catch (_) {}
+      console.warn("AIONE bridge upstream non-2xx", {
+        method: req.method,
+        rawPath,
+        upstreamStatus: upstream.status,
+        backendHost,
+        upstreamBody
+      });
+    }
+
     res.statusCode = upstream.status;
     const contentType = upstream.headers.get("content-type");
     if (contentType) res.setHeader("content-type", contentType);
