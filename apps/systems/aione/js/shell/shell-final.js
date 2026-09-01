@@ -20,11 +20,14 @@ function syncLauncherEntries() {
 }
 
 function compactBrandAndAI() {
-  const formalName = document.getElementById("miwaSystemFormalName");
+  const desktopHeader = document.querySelector(".desktop-header");
+  if (!desktopHeader) return;
+
+  const formalName = desktopHeader.querySelector("#miwaSystemFormalName");
   if (formalName) formalName.textContent = "美和一体化工作平台";
 
-  const aiHome = document.querySelector('[data-header-route="ai-home"]');
-  const aiEntry = document.getElementById("desktop-miwa-ai-entry");
+  const aiHome = desktopHeader.querySelector('[data-header-route="ai-home"]');
+  const aiEntry = desktopHeader.querySelector("#desktop-miwa-ai-entry");
   if (!aiHome || !aiEntry) return;
 
   aiHome.classList.add("miwa-ai-home-compact");
@@ -32,14 +35,14 @@ function compactBrandAndAI() {
   aiEntry.setAttribute("title", "美和AI");
   aiEntry.setAttribute("aria-label", "打开美和AI");
 
-  /* Critical: preserve the original AI entry subtree. Its descendants carry
-     the existing Miwa AI trigger hooks/listeners. Visual compaction belongs
-     in CSS; never replace/remove the functional DOM here. */
+  /* Desktop-only pairing. Preserve the original AI entry subtree and its
+     existing onclick / bridge hooks. Never move the desktop trigger into a
+     mobile header container. */
   if (aiHome.nextElementSibling !== aiEntry) aiHome.after(aiEntry);
 }
 
 function installAppLauncher() {
-  const tools = document.querySelector(".miwa-global-tools");
+  const tools = document.querySelector(".desktop-header .miwa-global-tools");
   if (!tools || document.getElementById("miwaAppLauncher")) return;
 
   const launcher = document.createElement("div");
@@ -151,7 +154,7 @@ async function loadDailyWeather(config = {}) {
 }
 
 function enhanceDailyAwareness() {
-  const daily = document.querySelector(".miwa-daily-fixed");
+  const daily = document.querySelector(".desktop-header .miwa-daily-fixed");
   const location = document.getElementById("miwaDailyLocation");
   if (!daily || !location) return;
 
@@ -231,7 +234,7 @@ function installFinalFooter() {
 }
 
 function reorderDailySignals() {
-  const row = document.querySelector(".miwa-daily-row__inner");
+  const row = document.querySelector(".desktop-header .miwa-daily-row__inner");
   const notice = document.getElementById("miwaDynamicNotice");
   const schedule = document.getElementById("miwaDynamicSchedule");
   if (!row || !notice || !schedule) return;
