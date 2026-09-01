@@ -20,30 +20,74 @@
 #miwaDynamicSchedule{justify-self:end!important;justify-content:flex-end!important;text-align:right!important}
 .miwa-daily-term,.miwa-daily-weather{color:#294D3E;font-weight:680}
 
-/* AI zone: navigation + assistant, visually one compact group. */
-.miwa-ai-home-compact{
-  margin-right:0!important;
-  border:1px solid #C7DED3!important;
-  border-right:0!important;
-  border-radius:10px 0 0 10px!important;
-  background:#F2F8F5!important;
-  color:#0F6949!important;
-  padding-inline:10px!important;
+/* Keep the original Miwa AI trigger alive but out of the header layout. */
+.miwa-ai-source-entry{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:0!important;
+  overflow:hidden!important;
+  clip:rect(0 0 0 0)!important;
+  clip-path:inset(50%)!important;
+  white-space:nowrap!important;
+  border:0!important;
+  opacity:0!important;
+  pointer-events:none!important;
 }
-.miwa-ai-home-compact.is-active{background:#E4F3EB!important;color:#0B5B40!important}
-.miwa-ai-header-entry--compact{
-  width:auto!important;min-width:72px!important;height:34px!important;
-  margin:0 6px 0 0!important;padding:0 10px 0 8px!important;
-  display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;
-  border:1px solid #C7DED3!important;border-left:0!important;border-radius:0 10px 10px 0!important;
-  background:#F2F8F5!important;color:#0F6949!important;font-size:12px!important;font-weight:760!important;cursor:pointer!important;
+
+/* Global floating Miwa AI assistant. */
+.miwa-floating-ai{
+  position:fixed;
+  right:22px;
+  bottom:86px;
+  z-index:3600;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  height:48px;
+  padding:0 15px 0 11px;
+  border:1px solid #CFE2D8;
+  border-radius:999px;
+  background:rgba(255,255,255,.96);
+  color:#0F6949;
+  box-shadow:0 10px 30px rgba(15,105,73,.18);
+  backdrop-filter:blur(10px);
+  cursor:pointer;
+  transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease;
 }
-.miwa-ai-header-entry--compact:hover{background:#E4F3EB!important;color:#0B5B40!important}
-.miwa-ai-header-entry--compact .miwa-ai-header-entry__label{display:inline!important;white-space:nowrap!important}
-.miwa-ai-header-entry--compact .miwa-ai-mini-mark{
-  display:inline-flex!important;width:18px!important;height:18px!important;flex:0 0 18px!important;align-items:center!important;justify-content:center!important;color:currentColor!important;
+.miwa-floating-ai:hover{
+  transform:translateY(-2px);
+  background:#F4FAF7;
+  box-shadow:0 14px 34px rgba(15,105,73,.24);
 }
-.miwa-ai-header-entry--compact .miwa-ai-mini-mark svg{width:18px!important;height:18px!important;stroke:currentColor!important}
+.miwa-floating-ai:active{transform:translateY(0)}
+.miwa-floating-ai__mark,
+.miwa-floating-ai__mark svg{
+  width:22px!important;
+  height:22px!important;
+  display:inline-flex!important;
+  align-items:center;
+  justify-content:center;
+  color:currentColor!important;
+  stroke:currentColor!important;
+}
+.miwa-floating-ai__fallback{
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#E5F3EC;
+  color:#0F6949;
+  font-size:11px;
+  font-weight:800;
+}
+.miwa-floating-ai__label{
+  font-size:12px;
+  font-weight:800;
+  white-space:nowrap;
+}
 
 .miwa-app-launcher{position:relative;display:flex;align-items:center}
 .miwa-app-launcher__button{
@@ -91,4 +135,13 @@
   .footer-spirit-row{display:none}
   .footer-ecosystem{justify-content:flex-start;gap:4px 14px;padding-inline:12px}
   .footer-platform-final{padding-inline:12px}
+  .miwa-floating-ai{
+    right:14px;
+    bottom:74px;
+    width:46px;
+    height:46px;
+    padding:0;
+    justify-content:center;
+  }
+  .miwa-floating-ai__label{display:none}
 }
