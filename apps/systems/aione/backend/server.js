@@ -2,7 +2,6 @@ import express from "express";
 import pool from "./db.js";
 import coreRouter from "./src/routes/core.js";
 import currentUserRouter from "./src/routes/me.js";
-import legacyProductOpportunitiesRouter from "./src/routes/legacy-product-opportunities.js";
 import aiSecretaryRouter from "./src/routes/ai-secretary.js";
 import integrations1688Router from "./src/routes/integrations-1688.js";
 import driveAssetsRouter from "./src/routes/drive-assets.js";
@@ -57,7 +56,6 @@ app.use("/api/v1/ai-secretary", aiSecretaryRouter);
 app.use("/api/v1/integrations/1688", integrations1688Router);
 app.use("/api/v1/drive-assets", driveAssetsRouter);
 app.use("/api/v1", coreRouter);
-app.use("/api/product-opportunities", legacyProductOpportunitiesRouter);
 
 app.use((req, res) => {
   res.status(404).json({ error: "not_found", path: req.path });
