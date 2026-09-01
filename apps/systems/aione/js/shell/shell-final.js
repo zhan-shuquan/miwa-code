@@ -191,3 +191,18 @@ export function initFinalShell() {
   installFinalFooter();
   moveSpiritToFooter();
 }
+
+function autoInitFinalShell() {
+  if (document.documentElement.dataset.miwaSystemReady === "true") {
+    initFinalShell();
+    return;
+  }
+  const observer = new MutationObserver(() => {
+    if (document.documentElement.dataset.miwaSystemReady !== "true") return;
+    observer.disconnect();
+    initFinalShell();
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-miwa-system-ready"] });
+}
+
+autoInitFinalShell();
