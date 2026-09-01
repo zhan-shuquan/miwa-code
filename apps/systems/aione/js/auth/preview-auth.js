@@ -1,12 +1,15 @@
 /* ========================================
-   AIONE Preview Auth｜内測認証
-   Google Identity Services + AIONE内測メンバー照合のみを使用する。
-   ローカル手動ID切替は設けず、開発時も実際のGoogle認証経路を確認する。
+   AIONE Preview Auth｜内测认证
+   Google Identity Services remains the login UX.
+   Canonical identity authority is Backend -> people/external_identities.
+   preview-identities.js is transitional UI metadata only (grade/assignment),
+   not the authorization or person-id source.
 ======================================== */
 
 import { authConfig } from "../config/auth-config.js?v=20260821-v1.0.9-header-sidebar";
 import { findPreviewIdentity, findPreviewIdentityByEmail } from "../config/preview-identities.js?v=20260821-v1.0.9-header-sidebar";
 import { recordPreviewActivity } from "./preview-activity.js?v=20260821-v1.0.9-header-sidebar";
+import { aioneApi } from "../services/aione-api-client.js";
 
 const SESSION_KEY = "aione.preview.session.v3";
 const LEGACY_SESSION_KEY = "aione.preview.subject";
@@ -19,8 +22,7 @@ function decodeJwtPayload(token) {
   const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
   const binary = atob(padded);
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  const json = new TextDecoder().decode(bytes);
-  return JSON.parse(json);
+  return JSON.parse(new TextDecoder().decode(bytes));
 }
 
 function validateGooglePayload(payload) {
@@ -40,8 +42,51 @@ async function loadAuthView() {
   return host;
 }
 
+function defaultPreviewUi(canonical) {
+  const email = canonical.primaryEmail || canonical.authenticatedEmail || "";
+  const displayName = canonical.displayName || email || "AIONE用户";
+  return Object.freeze({
+    subjectType: canonical.subjectType || "person",
+    subjectId: canonical.personId || canonical.subjectId,
+    email,
+    displayName,
+    initial: displayName.slice(0, 1),
+    primaryWorkIdentity: "",
+    positionGrade: "",
+    locationName: "",
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Tokyo",
+    permissions: Object.freeze(["preview.all"]),
+    scopes: Object.freeze({ businessSpaces:Object.freeze(["all"]), stores:Object.freeze(["all"]), dataLevel:"preview-all", decisionLevel:"preview-all" }),
+    workAssignment: Object.freeze({})
+  });
+}
+
+function mergeCanonicalIdentity(canonical, payload = {}) {
+  const previewUi =
+    findPreviewIdentity(canonical.personId || canonical.subjectId) ||
+    findPreviewIdentityByEmail(canonical.primaryEmail || canonical.authenticatedEmail || payload.email) ||
+    defaultPreviewUi(canonical);
+
+  return Object.freeze({
+    ...previewUi,
+    subjectType: canonical.subjectType || previewUi.subjectType,
+    subjectId: canonical.personId || canonical.subjectId || previewUi.subjectId,
+    email: canonical.primaryEmail || canonical.authenticatedEmail || previewUi.email,
+    displayName: canonical.displayName || previewUi.displayName,
+    canonicalIdentitySource: canonical.identitySource || "unknown"
+  });
+}
+
+async function resolveCanonicalIdentity(googleCredential, payload = {}) {
+  const canonical = await aioneApi("/api/v1/me", {
+    method: "GET",
+    headers: { Authorization: `Bearer ${String(googleCredential || "").trim()}` }
+  });
+  if (!canonical?.subjectId) throw new Error("canonical-current-user-missing");
+  return mergeCanonicalIdentity(canonical, payload);
+}
+
 function writeSession(identity, authSource, profile = {}, googleCredential = "") {
-  const googleExpiresAt = profile.exp ? Number(profile.exp) * 1000 : 0;
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({
     subjectId: identity.subjectId,
     authSource,
@@ -49,7 +94,7 @@ function writeSession(identity, authSource, profile = {}, googleCredential = "")
     googleSub: profile.sub || null,
     googlePicture: profile.picture || null,
     googleCredential: String(googleCredential || ""),
-    googleExpiresAt,
+    googleExpiresAt: profile.exp ? Number(profile.exp) * 1000 : 0,
     loginAt: new Date().toISOString()
   }));
   sessionStorage.removeItem(LEGACY_SESSION_KEY);
@@ -71,31 +116,23 @@ function clearSession() {
   sessionStorage.removeItem(LEGACY_SESSION_KEY);
 }
 
-function readSession() {
+function readStoredSession() {
   const raw = sessionStorage.getItem(SESSION_KEY);
-  if (raw) {
-    try {
-      const session = JSON.parse(raw);
-      if (session.authSource !== "google" || !session.googleCredential) {
-        clearSession();
-        return null;
-      }
-      const payload = decodeJwtPayload(session.googleCredential);
-      validateGooglePayload(payload);
-      const identity = findPreviewIdentity(session.subjectId);
-      if (!identity || String(payload.email || "").toLowerCase() !== String(identity.email || "").toLowerCase()) {
-        clearSession();
-        return null;
-      }
-      session.googleExpiresAt = Number(payload.exp || 0) * 1000;
-      return { identity, session };
-    } catch {
-      clearSession();
-    }
+  if (!raw) {
+    sessionStorage.removeItem(LEGACY_SESSION_KEY);
+    return null;
   }
-
-  sessionStorage.removeItem(LEGACY_SESSION_KEY);
-  return null;
+  try {
+    const session = JSON.parse(raw);
+    if (session.authSource !== "google" || !session.googleCredential) throw new Error("google-session-invalid");
+    const payload = decodeJwtPayload(session.googleCredential);
+    validateGooglePayload(payload);
+    session.googleExpiresAt = Number(payload.exp || 0) * 1000;
+    return { session, payload };
+  } catch (_) {
+    clearSession();
+    return null;
+  }
 }
 
 function toHeaderConfig(identity) {
@@ -109,13 +146,11 @@ function toHeaderConfig(identity) {
       displayName: identity.displayName,
       initial: identity.initial,
       avatarUrl: authSession.googlePicture || null,
-      email: authSession.authenticatedEmail || identity.email,
+      email: identity.email || authSession.authenticatedEmail,
       primaryWorkIdentity: identity.primaryWorkIdentity,
       positionGrade: identity.positionGrade || null,
       primaryResponsibility: assignment.primaryResponsibility || null,
-      primaryProject:
-        assignment.primaryProject ||
-        (assignment.store && assignment.store !== "全部" ? assignment.store : null),
+      primaryProject: assignment.primaryProject || (assignment.store && assignment.store !== "全部" ? assignment.store : null),
       legalEntity: assignment.businessUnit || null,
       locationName: identity.locationName,
       timeZone: identity.timeZone,
@@ -128,29 +163,16 @@ function toHeaderConfig(identity) {
 export function logoutPreviewIdentity(reason = "user") {
   const identity = window.AIONEPreviewIdentity || null;
   const session = window.AIONEPreviewAuthSession || {};
-
   if (identity) {
-    recordPreviewActivity(identity, "session.logout.google", {
-      authenticatedEmail: session.authenticatedEmail || identity.email,
-      reason
-    });
+    recordPreviewActivity(identity, "session.logout.google", { authenticatedEmail: session.authenticatedEmail || identity.email, reason });
   }
-
   clearSession();
   delete window.AIONEPreviewIdentity;
   delete window.AIONEPreviewAuthSession;
   delete window.AIONEPreviewPermissionContext;
   delete window.AIONEPreviewActivity;
-
-  try {
-    if (window.google?.accounts?.id) window.google.accounts.id.disableAutoSelect();
-  } catch (error) {
-    console.warn("AIONE Google logout cleanup skipped", error);
-  }
-
-  // Remove the hash so logout always returns to the Preview login entry.
-  const cleanUrl = `${window.location.pathname}${window.location.search}`;
-  window.location.replace(cleanUrl);
+  try { if (window.google?.accounts?.id) window.google.accounts.id.disableAutoSelect(); } catch (error) { console.warn("AIONE Google logout cleanup skipped", error); }
+  window.location.replace(`${window.location.pathname}${window.location.search}`);
 }
 
 window.addEventListener("aione:preview-logout-request", () => logoutPreviewIdentity("header-user-menu"));
@@ -185,40 +207,32 @@ function loadGoogleIdentityScript() {
 async function initGoogleSignIn(host, onAuthenticated) {
   const buttonHost = host.querySelector("#aioneGoogleSignInButton");
   if (!buttonHost) return;
-
   try {
     await loadGoogleIdentityScript();
     if (!window.google?.accounts?.id) throw new Error("google-identity-unavailable");
-
     window.google.accounts.id.initialize({
       client_id: authConfig.googleClientId,
-      callback: (response) => {
+      callback: async (response) => {
         try {
           const payload = decodeJwtPayload(response?.credential);
           validateGooglePayload(payload);
-          const identity = findPreviewIdentityByEmail(payload.email);
-          if (!identity) {
-            setGoogleStatus(host, `此Google账号尚未加入AIONE内测名单：${payload.email}`, "error");
-            return;
-          }
+          setGoogleStatus(host, "正在确认AIONE人员身份…", "neutral");
+          const identity = await resolveCanonicalIdentity(response.credential, payload);
           setGoogleStatus(host, `登录成功：${identity.displayName}`, "success");
-          onAuthenticated(identity, payload, response.credential);
+          await onAuthenticated(identity, payload, response.credential);
         } catch (error) {
           console.error(error);
-          setGoogleStatus(host, "Google登录验证失败，请重试或联系AIONE管理员。", "error");
+          if (error?.status === 403) setGoogleStatus(host, "此Google账号尚未登记为有效AIONE人员。", "error");
+          else setGoogleStatus(host, "Google登录或AIONE身份确认失败，请重试。", "error");
         }
       },
       auto_select: false,
       cancel_on_tap_outside: false
     });
-
     buttonHost.innerHTML = "";
     const width = Math.max(240, Math.min(560, Math.floor(buttonHost.getBoundingClientRect().width || 560)));
-    window.google.accounts.id.renderButton(buttonHost, {
-      ...authConfig.googleButton,
-      width
-    });
-    setGoogleStatus(host, "请使用已加入内测名单的Google账号登录。", "neutral");
+    window.google.accounts.id.renderButton(buttonHost, { ...authConfig.googleButton, width });
+    setGoogleStatus(host, "请使用已登记的Google账号登录。", "neutral");
   } catch (error) {
     console.error(error);
     setGoogleStatus(host, "Google登录组件加载失败，请刷新页面后重试。", "error");
@@ -226,38 +240,38 @@ async function initGoogleSignIn(host, onAuthenticated) {
 }
 
 export async function resolvePreviewIdentity() {
-  const existing = readSession();
+  const existing = readStoredSession();
   if (existing) {
-    window.AIONEPreviewIdentity = existing.identity;
-    window.AIONEPreviewAuthSession = publicAuthSession(existing.session);
-    recordPreviewActivity(existing.identity, "session.resume", {
-      authSource: "google",
-      authenticatedEmail: existing.session.authenticatedEmail || existing.identity.email
-    });
-    return existing.identity;
+    try {
+      const identity = await resolveCanonicalIdentity(existing.session.googleCredential, existing.payload);
+      writeSession(identity, "google", existing.payload, existing.session.googleCredential);
+      window.AIONEPreviewIdentity = identity;
+      window.AIONEPreviewAuthSession = publicAuthSession({ ...existing.session, googleExpiresAt:Number(existing.payload.exp || 0) * 1000 });
+      recordPreviewActivity(identity, "session.resume", { authSource:"google", authenticatedEmail:existing.payload.email, identitySource:identity.canonicalIdentitySource });
+      return identity;
+    } catch (error) {
+      console.warn("Stored AIONE session no longer resolves to a canonical identity", error);
+      clearSession();
+    }
   }
 
   const host = await loadAuthView();
   return new Promise((resolve) => {
-    initGoogleSignIn(host, (identity, payload, googleCredential) => {
+    initGoogleSignIn(host, async (identity, payload, googleCredential) => {
       writeSession(identity, "google", payload, googleCredential);
       window.AIONEPreviewIdentity = identity;
       window.AIONEPreviewAuthSession = publicAuthSession({
-        authSource: "google",
-        authenticatedEmail: payload.email,
-        googleSub: payload.sub || null,
-        googlePicture: payload.picture || null,
-        googleExpiresAt: Number(payload.exp || 0) * 1000,
-        loginAt: new Date().toISOString()
+        authSource:"google",
+        authenticatedEmail:payload.email,
+        googleSub:payload.sub || null,
+        googlePicture:payload.picture || null,
+        googleExpiresAt:Number(payload.exp || 0) * 1000,
+        loginAt:new Date().toISOString()
       });
       host.remove();
-      recordPreviewActivity(identity, "session.login.google", {
-        authenticatedEmail: payload.email,
-        googleSub: payload.sub || null
-      });
+      recordPreviewActivity(identity, "session.login.google", { authenticatedEmail:payload.email, googleSub:payload.sub || null, identitySource:identity.canonicalIdentitySource });
       resolve(identity);
     });
-
   });
 }
 
@@ -270,11 +284,12 @@ export function getPreviewPermissionContext(identity) {
   return Object.freeze({
     mode: "preview-all-open",
     authSource: authSession.authSource || "unknown",
-    authenticatedEmail: authSession.authenticatedEmail || identity.email,
+    authenticatedEmail: identity.email || authSession.authenticatedEmail,
     subjectType: identity.subjectType,
     subjectId: identity.subjectId,
-    permissions: Object.freeze([...identity.permissions]),
-    scopes: identity.scopes,
-    workAssignment: identity.workAssignment
+    permissions: Object.freeze([...(identity.permissions || [])]),
+    scopes: identity.scopes || Object.freeze({}),
+    workAssignment: identity.workAssignment || Object.freeze({}),
+    identitySource: identity.canonicalIdentitySource || "unknown"
   });
 }
