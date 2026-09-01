@@ -61,15 +61,25 @@ export async function resolveCanonicalGoogleIdentity({ subject, email }) {
   }
 
   // Controlled first-login binding: the Google token has already been verified
-  // server-side. Only an active canonical person with the same registered email
-  // may receive a new provider mapping.
+  // server-side. Resolve the verified email through the canonical login-email
+  // registry first, with people.primary_email retained as a backward-compatible
+  // fallback during migration.
   const personResult = await pool.query(
-    `SELECT id AS person_id, display_name, primary_email
-       FROM public.people
-      WHERE LOWER(primary_email) = $1
-        AND status = 'active'
-        AND archived_at IS NULL
-      LIMIT 1`,
+    `SELECT DISTINCT
+       p.id AS person_id,
+       p.display_name,
+       p.primary_email
+     FROM public.people p
+     LEFT JOIN public.person_login_emails le
+       ON le.person_id = p.id
+      AND le.status = 'active'
+     WHERE p.status = 'active'
+       AND p.archived_at IS NULL
+       AND (
+         LOWER(p.primary_email) = $1
+         OR LOWER(le.email) = $1
+       )
+     LIMIT 1`,
     [normalizedEmail]
   );
   if (!personResult.rowCount) return null;
@@ -84,7 +94,9 @@ export async function resolveCanonicalGoogleIdentity({ subject, email }) {
          last_authenticated_at, source_system)
        VALUES ($1, 'google', $2, $3, $4, 'active', NOW(), 'aione-auth')
        ON CONFLICT (provider, subject) DO UPDATE SET
+         person_id = EXCLUDED.person_id,
          email_snapshot = EXCLUDED.email_snapshot,
+         status = 'active',
          last_authenticated_at = NOW(),
          updated_at = NOW()`,
       [externalId, googleSub, person.person_id, normalizedEmail]
