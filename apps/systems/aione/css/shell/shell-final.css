@@ -16,6 +16,16 @@
 .miwa-daily-fixed{justify-content:flex-start!important}
 .miwa-daily-term,.miwa-daily-weather{color:#294D3E;font-weight:680}
 
+/* Compact unified AI group: AI之家 = navigation; adjacent icon = open 美和AI. */
+.miwa-ai-home-compact{margin-right:2px!important}
+.miwa-ai-header-entry--compact{
+  width:34px!important;min-width:34px!important;height:34px!important;padding:0!important;margin:0 6px 0 0!important;
+  display:grid!important;place-items:center!important;border-radius:8px!important;
+}
+.miwa-ai-header-entry--compact .miwa-ai-header-entry__label,
+.miwa-ai-header-entry--compact .miwa-ai-mini-mark{display:none!important}
+.miwa-ai-header-entry--compact .miwa-semantic-icon{width:17px;height:17px;display:inline-flex!important}
+
 /* Google-style app launcher in the global tool area. */
 .miwa-app-launcher{position:relative;display:flex;align-items:center}
 .miwa-app-launcher__button{
