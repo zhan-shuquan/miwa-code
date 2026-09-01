@@ -6,15 +6,24 @@
 const STORAGE_KEY = "aione.sidebar.mode.v2";
 const MODE_AUTO = "auto";
 const MODE_PINNED = "pinned";
-const COLLAPSE_DELAY = 260;
+
+/* Auto mode is optional. Delays intentionally require deliberate interaction
+   so ordinary pointer travel across the left edge does not make the workspace
+   continuously move or cover Main. */
+const EXPAND_DELAY = 220;
+const COLLAPSE_DELAY = 560;
 
 function getStoredMode() {
   try {
     const value = window.localStorage.getItem(STORAGE_KEY);
-    return value === MODE_PINNED ? MODE_PINNED : MODE_AUTO;
+    if (value === MODE_AUTO || value === MODE_PINNED) return value;
   } catch {
-    return MODE_AUTO;
+    // Preference persistence must never block Sidebar usability.
   }
+
+  /* Stability-first default: new users receive a normal pinned Sidebar.
+     Auto hide is an explicit user choice, not an automatic platform behavior. */
+  return MODE_PINNED;
 }
 
 function storeMode(mode) {
@@ -48,14 +57,14 @@ function syncModeButton(mode) {
   if (!button) return;
   const pinned = mode === MODE_PINNED;
   button.setAttribute("aria-pressed", String(pinned));
-  button.setAttribute("aria-label", pinned ? "恢复左侧导航自动隐藏" : "固定展开左侧导航");
-  button.setAttribute("title", pinned ? "恢复自动隐藏" : "固定展开");
+  button.setAttribute("aria-label", pinned ? "切换为左侧导航自动隐藏" : "固定展开左侧导航");
+  button.setAttribute("title", pinned ? "启用自动隐藏" : "固定展开");
 }
 
 function applyMode(mode, { persist = false } = {}) {
-  const next = mode === MODE_PINNED ? MODE_PINNED : MODE_AUTO;
+  const next = mode === MODE_AUTO ? MODE_AUTO : MODE_PINNED;
   document.documentElement.dataset.sidebarMode = next;
-  if (next === MODE_PINNED) setAutoExpanded(false);
+  setAutoExpanded(false);
   syncModeButton(next);
   if (persist) storeMode(next);
 }
@@ -80,13 +89,13 @@ function installModeButton() {
   `;
 
   button.addEventListener("click", () => {
-    const current = document.documentElement.dataset.sidebarMode || MODE_AUTO;
+    const current = document.documentElement.dataset.sidebarMode || MODE_PINNED;
     applyMode(current === MODE_PINNED ? MODE_AUTO : MODE_PINNED, { persist: true });
   });
 
   controls.append(button);
   sidebar.prepend(controls);
-  syncModeButton(document.documentElement.dataset.sidebarMode || MODE_AUTO);
+  syncModeButton(document.documentElement.dataset.sidebarMode || MODE_PINNED);
 }
 
 function bindAutoBehavior() {
@@ -94,29 +103,52 @@ function bindAutoBehavior() {
   if (!host || host.dataset.sidebarShellBound === "true") return;
   host.dataset.sidebarShellBound = "true";
 
+  let expandTimer = 0;
   let collapseTimer = 0;
+
+  const cancelExpand = () => {
+    if (expandTimer) window.clearTimeout(expandTimer);
+    expandTimer = 0;
+  };
+
   const cancelCollapse = () => {
     if (collapseTimer) window.clearTimeout(collapseTimer);
     collapseTimer = 0;
   };
-  const expand = () => {
+
+  const scheduleExpand = () => {
     if (document.documentElement.dataset.sidebarMode !== MODE_AUTO) return;
+    cancelCollapse();
+    cancelExpand();
+    expandTimer = window.setTimeout(() => {
+      if (document.documentElement.dataset.sidebarMode !== MODE_AUTO) return;
+      setAutoExpanded(true);
+      expandTimer = 0;
+    }, EXPAND_DELAY);
+  };
+
+  const expandForKeyboard = () => {
+    if (document.documentElement.dataset.sidebarMode !== MODE_AUTO) return;
+    cancelExpand();
     cancelCollapse();
     setAutoExpanded(true);
   };
+
   const scheduleCollapse = () => {
     if (document.documentElement.dataset.sidebarMode !== MODE_AUTO) return;
+    cancelExpand();
     cancelCollapse();
     collapseTimer = window.setTimeout(() => {
       const active = document.activeElement;
       if (active instanceof Node && host.contains(active)) return;
       setAutoExpanded(false);
+      collapseTimer = 0;
     }, COLLAPSE_DELAY);
   };
 
-  host.addEventListener("pointerenter", expand);
+  host.addEventListener("pointerenter", scheduleExpand);
   host.addEventListener("pointerleave", scheduleCollapse);
-  host.addEventListener("focusin", expand);
+  host.addEventListener("focusin", expandForKeyboard);
   host.addEventListener("focusout", scheduleCollapse);
 }
 
@@ -139,7 +171,6 @@ export function initSidebarShellV2() {
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
-
   window.setTimeout(() => observer.disconnect(), 12000);
 }
 
