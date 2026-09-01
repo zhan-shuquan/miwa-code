@@ -96,15 +96,51 @@ function getSolarTermLabel(date = new Date()) {
   return selected;
 }
 
+function weatherTextFromCode(code) {
+  const map = {
+    0:["☀","晴"], 1:["🌤","晴间多云"], 2:["⛅","多云"], 3:["☁","阴"],
+    45:["🌫","有雾"], 48:["🌫","有雾"], 51:["🌦","小雨"], 53:["🌦","小雨"],
+    55:["🌧","小雨"], 61:["🌦","小雨"], 63:["🌧","中雨"], 65:["🌧","大雨"],
+    71:["🌨","小雪"], 73:["🌨","中雪"], 75:["❄","大雪"], 80:["🌦","阵雨"],
+    81:["🌧","阵雨"], 82:["⛈","强阵雨"], 95:["⛈","雷雨"]
+  };
+  return map[Number(code)] || ["◌","天气"];
+}
+
+async function loadDailyWeather(config = {}) {
+  const weather = document.getElementById("miwaWeather");
+  if (!weather) return;
+
+  const user = config.user || {};
+  const latitude = Number.isFinite(Number(user.latitude)) ? Number(user.latitude) : 35.6762;
+  const longitude = Number.isFinite(Number(user.longitude)) ? Number(user.longitude) : 139.6503;
+  const timeZone = user.timeZone || "Asia/Tokyo";
+
+  weather.textContent = "天气读取中";
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&current=temperature_2m,weather_code&timezone=${encodeURIComponent(timeZone)}`;
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error("weather-request-failed");
+    const data = await response.json();
+    const current = data.current || {};
+    const [icon, label] = weatherTextFromCode(current.weather_code);
+    const temperature = Math.round(Number(current.temperature_2m));
+    weather.textContent = Number.isFinite(temperature) ? `${icon} ${label} ${temperature}°C` : `${icon} ${label}`;
+  } catch {
+    weather.textContent = "天气暂不可用";
+  }
+}
+
 function enhanceDailyAwareness() {
   const daily = document.querySelector(".miwa-daily-fixed");
   const location = document.getElementById("miwaDailyLocation");
   if (!daily || !location) return;
 
   const config = window.MIWAHeader?.getConfig?.() || {};
-  const country = config.user?.countryName || "日本";
-  const city = config.user?.locationName || location.textContent || "东京";
-  location.textContent = `${country}・${city}`;
+  const country = config.user?.countryName || config.user?.country || "日本";
+  const city = config.user?.locationName || config.user?.cityName || location.textContent || "东京";
+  const normalizedCity = String(city).includes("东京") ? "东京" : String(city);
+  location.textContent = `${country}・${normalizedCity}`;
 
   if (!document.getElementById("miwaSolarTerm")) {
     const separator = document.createElement("span");
@@ -113,9 +149,9 @@ function enhanceDailyAwareness() {
     const term = document.createElement("span");
     term.className = "miwa-daily-term";
     term.id = "miwaSolarTerm";
-    term.textContent = getSolarTermLabel(new Date());
     daily.append(separator, term);
   }
+  document.getElementById("miwaSolarTerm").textContent = getSolarTermLabel(new Date());
 
   if (!document.getElementById("miwaWeather")) {
     const separator = document.createElement("span");
@@ -124,11 +160,10 @@ function enhanceDailyAwareness() {
     const weather = document.createElement("span");
     weather.className = "miwa-weather miwa-daily-weather";
     weather.id = "miwaWeather";
-    weather.textContent = "天气读取中";
     daily.append(separator, weather);
   }
 
-  window.MIWAHeader?.refreshWeather?.();
+  loadDailyWeather(config);
 }
 
 function moveSpiritToFooter() {
@@ -181,7 +216,23 @@ function reorderDailySignals() {
   const notice = document.getElementById("miwaDynamicNotice");
   const schedule = document.getElementById("miwaDynamicSchedule");
   if (!row || !notice || !schedule) return;
+
+  notice.hidden = false;
+  schedule.hidden = false;
+  const noticeType = document.getElementById("miwaNoticeType");
+  const noticeText = document.getElementById("miwaNoticeText");
+  const scheduleText = document.getElementById("miwaScheduleText");
+  if (noticeType && !noticeType.textContent.trim()) noticeType.textContent = "重要通知";
+  if (noticeText && !noticeText.textContent.trim()) noticeText.textContent = "暂无重要通知";
+  if (scheduleText && !scheduleText.textContent.trim()) scheduleText.textContent = "暂无重要日程";
+
   row.append(notice, schedule);
+}
+
+function refreshFinalShell() {
+  enhanceDailyAwareness();
+  reorderDailySignals();
+  syncLauncherEntries();
 }
 
 export function initFinalShell() {
@@ -190,6 +241,8 @@ export function initFinalShell() {
   reorderDailySignals();
   installFinalFooter();
   moveSpiritToFooter();
+  window.addEventListener("miwa:header:configured", refreshFinalShell);
+  window.addEventListener("aione:current-user-change", refreshFinalShell);
 }
 
 function autoInitFinalShell() {
