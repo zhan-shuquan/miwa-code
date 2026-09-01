@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "./db.js";
 import coreRouter from "./src/routes/core.js";
+import currentUserRouter from "./src/routes/me.js";
 import legacyProductOpportunitiesRouter from "./src/routes/legacy-product-opportunities.js";
 import aiSecretaryRouter from "./src/routes/ai-secretary.js";
 import integrations1688Router from "./src/routes/integrations-1688.js";
@@ -51,6 +52,7 @@ app.get("/health", async (req, res) => {
 // Cloud Run IAM remains a separate service-to-service boundary in front of this middleware.
 app.use(resolveAioneGoogleIdentity);
 
+app.use("/api/v1/me", currentUserRouter);
 app.use("/api/v1/ai-secretary", aiSecretaryRouter);
 app.use("/api/v1/integrations/1688", integrations1688Router);
 app.use("/api/v1/drive-assets", driveAssetsRouter);
