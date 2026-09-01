@@ -1,0 +1,124 @@
+{
+  "version": "1.0",
+  "status": "validating",
+  "effectiveDate": "2026-09-01",
+  "principle": "AIONE Category is the canonical category truth. External marketplace categories map to AIONE categories and never replace them.",
+  "scope": "Verified subset only; unverified branches remain pending and must not be invented.",
+  "focusCategories": [
+    "cat_apparel_socks_mens",
+    "cat_apparel_socks_womens",
+    "cat_apparel_hats_mens",
+    "cat_apparel_hats_womens"
+  ],
+  "categories": [
+    {
+      "id": "cat_apparel",
+      "parentId": null,
+      "level": 1,
+      "code": "APPAREL_WEARABLES",
+      "nameZh": "服饰与穿戴配件",
+      "nameJa": null,
+      "status": "active",
+      "governanceStatus": "verified",
+      "sortOrder": 10
+    },
+    {
+      "id": "cat_apparel_socks",
+      "parentId": "cat_apparel",
+      "level": 2,
+      "code": "SOCKS",
+      "nameZh": "袜类",
+      "nameJa": "靴下",
+      "status": "active",
+      "governanceStatus": "verified",
+      "sortOrder": 10
+    },
+    {
+      "id": "cat_apparel_socks_mens",
+      "parentId": "cat_apparel_socks",
+      "level": 3,
+      "code": "MENS_SOCKS",
+      "nameZh": "男士袜",
+      "nameJa": "メンズ靴下",
+      "status": "active",
+      "governanceStatus": "verified",
+      "focus": true,
+      "sortOrder": 10
+    },
+    {
+      "id": "cat_apparel_socks_womens",
+      "parentId": "cat_apparel_socks",
+      "level": 3,
+      "code": "WOMENS_SOCKS",
+      "nameZh": "女士袜",
+      "nameJa": "レディース靴下",
+      "status": "active",
+      "governanceStatus": "verified",
+      "focus": true,
+      "sortOrder": 20
+    },
+    {
+      "id": "cat_apparel_hats",
+      "parentId": "cat_apparel",
+      "level": 2,
+      "code": "HATS",
+      "nameZh": "帽类",
+      "nameJa": "帽子",
+      "status": "active",
+      "governanceStatus": "verified",
+      "sortOrder": 20
+    },
+    {
+      "id": "cat_apparel_hats_mens",
+      "parentId": "cat_apparel_hats",
+      "level": 3,
+      "code": "MENS_HATS",
+      "nameZh": "男士帽",
+      "nameJa": "メンズ帽子",
+      "status": "active",
+      "governanceStatus": "verified",
+      "focus": true,
+      "sortOrder": 10
+    },
+    {
+      "id": "cat_apparel_hats_womens",
+      "parentId": "cat_apparel_hats",
+      "level": 3,
+      "code": "WOMENS_HATS",
+      "nameZh": "女士帽",
+      "nameJa": "レディース帽子",
+      "status": "active",
+      "governanceStatus": "verified",
+      "focus": true,
+      "sortOrder": 20
+    }
+  ],
+  "externalMappings": [
+    {
+      "categoryId": "cat_apparel_socks_mens",
+      "channel": "rakuten",
+      "externalName": "メンズ靴下",
+      "mappingStatus": "name_verified_id_pending"
+    },
+    {
+      "categoryId": "cat_apparel_socks_womens",
+      "channel": "rakuten",
+      "externalName": "レディース靴下",
+      "mappingStatus": "name_verified_id_pending"
+    },
+    {
+      "categoryId": "cat_apparel_hats",
+      "channel": "rakuten",
+      "externalName": "帽子・UVケア",
+      "mappingStatus": "name_verified_id_pending"
+    }
+  ],
+  "pending": {
+    "completeLevel1Directory": true,
+    "completeLevel2Directory": true,
+    "completeLevel3Directory": true,
+    "rakutenCategoryIds": true,
+    "amazonMappings": true,
+    "1688Mappings": true
+  }
+}
