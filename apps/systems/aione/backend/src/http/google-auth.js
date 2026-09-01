@@ -1,4 +1,5 @@
 import { OAuth2Client } from "google-auth-library";
+import { resolveCanonicalGoogleIdentity } from "../auth/canonical-google-identity.js";
 import { findGooglePreviewIdentityByEmail } from "../auth/google-preview-identity-registry.js";
 
 const googleClient = new OAuth2Client();
@@ -24,7 +25,6 @@ export async function resolveAioneGoogleIdentity(req, res, next) {
   if (!req.path.startsWith("/api/")) return next();
 
   // 1688 owns this redirect callback and cannot present an AIONE employee token.
-  // The normal enterprise self-use static-token flow does not use this endpoint.
   if (req.path === OAUTH_CALLBACK_PATH) return next();
 
   const clientId = String(process.env.AIONE_GOOGLE_CLIENT_ID || "").trim();
@@ -40,24 +40,38 @@ export async function resolveAioneGoogleIdentity(req, res, next) {
   try {
     const ticket = await googleClient.verifyIdToken({ idToken: token, audience: clientId });
     const payload = ticket.getPayload() || {};
-    if (!payload.email || payload.email_verified === false) {
+    if (!payload.email || payload.email_verified === false || !payload.sub) {
       return reject(res, 401, "google_identity_invalid", "Google identity verification failed.");
     }
 
-    const identity = findGooglePreviewIdentityByEmail(payload.email);
-    if (!identity) {
-      return reject(res, 403, "aione_identity_not_allowed", "This Google account is not enabled for the current AIONE preview.");
+    // Human users must resolve through canonical people + external_identities.
+    const canonicalIdentity = await resolveCanonicalGoogleIdentity({
+      subject: payload.sub,
+      email: payload.email
+    });
+    if (canonicalIdentity) {
+      req.aioneIdentity = canonicalIdentity;
+      return next();
     }
 
-    req.aioneIdentity = Object.freeze({
-      subjectType: identity.subjectType,
-      subjectId: identity.subjectId,
-      personId: identity.subjectType === "person" ? identity.subjectId : null,
-      authenticatedEmail: payload.email,
-      googleSub: payload.sub || null,
-      authSource: "google"
-    });
-    return next();
+    // Transitional exception: the non-human corporate admin principal has not
+    // yet moved to the future principal/service-account model. Do not insert it
+    // into people merely to make authentication convenient.
+    const legacyIdentity = findGooglePreviewIdentityByEmail(payload.email);
+    if (legacyIdentity?.subjectType === "admin") {
+      req.aioneIdentity = Object.freeze({
+        subjectType: "admin",
+        subjectId: legacyIdentity.subjectId,
+        personId: null,
+        authenticatedEmail: payload.email,
+        googleSub: payload.sub,
+        authSource: "google",
+        identitySource: "legacy_admin_bridge"
+      });
+      return next();
+    }
+
+    return reject(res, 403, "aione_identity_not_allowed", "This Google account is not registered as an active AIONE person.");
   } catch (error) {
     console.warn("AIONE Google identity verification rejected", { name: error?.name || "Error" });
     return reject(res, 401, "google_identity_invalid", "Google identity verification failed or the sign-in session expired.");
