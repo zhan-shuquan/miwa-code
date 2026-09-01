@@ -3,7 +3,7 @@
    Desktop interaction state only.
 ======================================== */
 
-const STORAGE_KEY = "aione.sidebar.mode.v2";
+const STORAGE_KEY = "aione.sidebar.mode.v2.1";
 const MODE_AUTO = "auto";
 const MODE_PINNED = "pinned";
 
