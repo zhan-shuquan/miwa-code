@@ -9,11 +9,32 @@
 /* MIWA spirit is moved to the global footer at runtime. */
 .desktop-header>.miwa-spirit-row{display:none!important}
 
-/* Header daily awareness: impression | important notice | important schedule. */
-.miwa-daily-row__inner{
-  grid-template-columns:minmax(0,1.6fr) minmax(190px,.7fr) minmax(190px,.7fr)!important;
+/* Final company mark used consistently in desktop/mobile shell. */
+.miwa-company-logo{
+  content:url("../../assets/brand/miwa-company-logo-preview.png")!important;
+  object-fit:contain!important;
 }
-.miwa-daily-fixed{justify-content:flex-start!important}
+
+/* Header daily awareness: left | center | right. */
+.miwa-daily-row__inner{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)!important;
+  align-items:center!important;
+}
+.miwa-daily-fixed{
+  justify-self:start!important;
+  justify-content:flex-start!important;
+  text-align:left!important;
+}
+#miwaDynamicNotice{
+  justify-self:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+}
+#miwaDynamicSchedule{
+  justify-self:end!important;
+  justify-content:flex-end!important;
+  text-align:right!important;
+}
 .miwa-daily-term,.miwa-daily-weather{color:#294D3E;font-weight:680}
 
 /* Compact unified AI group: AI之家 = navigation; adjacent icon = open 美和AI. */
