@@ -59,14 +59,15 @@
   --desktop-header-spirit:44px;
   --desktop-header-daily:32px;
 
-  /* Sidebar／Asideの高さ計算用：常用入口＋美和精神＋今日印象 */
-  --desktop-header-info:calc(
-    var(--desktop-header-entry) +
-    var(--desktop-header-spirit) +
-    var(--desktop-header-daily)
-  );
+  /* Header V2 CURRENT: primary header row + daily awareness row only.
+     Historical entry/spirit row tokens remain for compatibility but are not
+     part of the current desktop header footprint. */
+  --desktop-header-info:var(--desktop-header-daily);
+  --desktop-header-total:calc(var(--desktop-header-main) + var(--desktop-header-info));
 
-  --desktop-sidebar:232px;
+  --desktop-sidebar-expanded:232px;
+  --desktop-sidebar-rail:52px;
+  --desktop-sidebar:var(--desktop-sidebar-expanded);
   --desktop-aside:280px;
 
   /* ========================================
