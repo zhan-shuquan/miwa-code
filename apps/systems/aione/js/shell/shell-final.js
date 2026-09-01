@@ -19,26 +19,54 @@ function syncLauncherEntries() {
   grid.replaceChildren(...Array.from(source.children));
 }
 
-function compactBrandAndAI() {
+function compactBrand() {
   const desktopHeader = document.querySelector(".desktop-header");
   if (!desktopHeader) return;
-
   const formalName = desktopHeader.querySelector("#miwaSystemFormalName");
   if (formalName) formalName.textContent = "美和一体化工作平台";
+}
 
-  const aiHome = desktopHeader.querySelector('[data-header-route="ai-home"]');
-  const aiEntry = desktopHeader.querySelector("#desktop-miwa-ai-entry");
-  if (!aiHome || !aiEntry) return;
+function installFloatingMiwaAI() {
+  const sourceEntry = document.querySelector(".desktop-header #desktop-miwa-ai-entry");
+  if (!sourceEntry) return;
 
-  aiHome.classList.add("miwa-ai-home-compact");
-  aiEntry.classList.add("miwa-ai-header-entry--compact");
-  aiEntry.setAttribute("title", "美和AI");
-  aiEntry.setAttribute("aria-label", "打开美和AI");
+  sourceEntry.classList.add("miwa-ai-source-entry");
+  sourceEntry.setAttribute("aria-hidden", "true");
 
-  /* Desktop-only pairing. Preserve the original AI entry subtree and its
-     existing onclick / bridge hooks. Never move the desktop trigger into a
-     mobile header container. */
-  if (aiHome.nextElementSibling !== aiEntry) aiHome.after(aiEntry);
+  let floating = document.getElementById("miwaFloatingAI");
+  if (!floating) {
+    floating = document.createElement("button");
+    floating.type = "button";
+    floating.id = "miwaFloatingAI";
+    floating.className = "miwa-floating-ai";
+    floating.setAttribute("aria-label", "打开美和AI");
+    floating.setAttribute("title", "美和AI");
+
+    const mark = sourceEntry.querySelector(".miwa-ai-mini-mark");
+    if (mark) {
+      const clone = mark.cloneNode(true);
+      clone.removeAttribute("id");
+      clone.classList.add("miwa-floating-ai__mark");
+      floating.append(clone);
+    } else {
+      const fallback = document.createElement("span");
+      fallback.className = "miwa-floating-ai__fallback";
+      fallback.textContent = "AI";
+      floating.append(fallback);
+    }
+
+    const label = document.createElement("span");
+    label.className = "miwa-floating-ai__label";
+    label.textContent = "美和AI";
+    floating.append(label);
+
+    floating.addEventListener("click", () => {
+      const liveEntry = document.querySelector(".desktop-header #desktop-miwa-ai-entry");
+      if (liveEntry) liveEntry.click();
+    });
+
+    document.body.append(floating);
+  }
 }
 
 function installAppLauncher() {
@@ -252,14 +280,16 @@ function reorderDailySignals() {
 }
 
 function refreshFinalShell() {
-  compactBrandAndAI();
+  compactBrand();
+  installFloatingMiwaAI();
   enhanceDailyAwareness();
   reorderDailySignals();
   syncLauncherEntries();
 }
 
 export function initFinalShell() {
-  compactBrandAndAI();
+  compactBrand();
+  installFloatingMiwaAI();
   installAppLauncher();
   enhanceDailyAwareness();
   reorderDailySignals();
