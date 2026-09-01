@@ -8,7 +8,7 @@
   <title>美和AIONE一体化工作平台｜选品工作台</title>
 
   <!-- 公共システム総入口 -->
-  <link rel="stylesheet" href="./css/miwa-system.css?v=20260829-selection-nav-v4">
+  <link rel="stylesheet" href="./css/miwa-system.css?v=20260901-shell-final-v1">
   <link rel="stylesheet" href="./css/shell/miwa-ai-layer.css?v=20260824-v1.9.17-ai-context-router">
 
   <!-- 01 選品ワークベンチMain -->
@@ -50,9 +50,7 @@
   <!-- Excel解析｜SheetJS Community Edition 0.20.3 -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
-
-  <!-- 美和AI Hard Entry Bridge V1.9.9
-       目的：即使模块缓存、初始化时序或AI Client异常，也必须保证Header“美和AI”先能打开独立Layer。 -->
+  <!-- 美和AI Hard Entry Bridge V1.9.9 -->
   <script>
     (function installMiwaAIHardEntryBridge(){
       if (window.__AIONE_MIWAAI_HARD_BRIDGE__) return;
@@ -132,5 +130,6 @@
 
   <!-- 公共システムJS総入口 -->
   <script type="module" src="./js/miwa-system.js?v=20260829-selection-route-scroll-v4-3"></script>
+  <script type="module" src="./js/shell/shell-final.js?v=20260901-shell-final-v1"></script>
 </body>
 </html>
