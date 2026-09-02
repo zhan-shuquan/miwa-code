@@ -1,37 +1,24 @@
 /* ========================================
-   AIONE Sidebar Shell V2.0
+   AIONE Sidebar Shell V2.1
    Desktop interaction state only.
 ======================================== */
 
 const STORAGE_KEY = "aione.sidebar.mode.v2.1";
 const MODE_AUTO = "auto";
 const MODE_PINNED = "pinned";
-
-/* Auto mode is optional. Delays intentionally require deliberate interaction
-   so ordinary pointer travel across the left edge does not make the workspace
-   continuously move or cover Main. */
-const EXPAND_DELAY = 220;
-const COLLAPSE_DELAY = 560;
+const EXPAND_DELAY = 180;
+const COLLAPSE_DELAY = 420;
 
 function getStoredMode() {
   try {
     const value = window.localStorage.getItem(STORAGE_KEY);
     if (value === MODE_AUTO || value === MODE_PINNED) return value;
-  } catch {
-    // Preference persistence must never block Sidebar usability.
-  }
-
-  /* Stability-first default: new users receive a normal pinned Sidebar.
-     Auto hide is an explicit user choice, not an automatic platform behavior. */
+  } catch {}
   return MODE_PINNED;
 }
 
 function storeMode(mode) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, mode);
-  } catch {
-    // Preference persistence must never block Sidebar usability.
-  }
+  try { window.localStorage.setItem(STORAGE_KEY, mode); } catch {}
 }
 
 function getHost() {
@@ -57,8 +44,8 @@ function syncModeButton(mode) {
   if (!button) return;
   const pinned = mode === MODE_PINNED;
   button.setAttribute("aria-pressed", String(pinned));
-  button.setAttribute("aria-label", pinned ? "切换为左侧导航自动隐藏" : "固定展开左侧导航");
-  button.setAttribute("title", pinned ? "启用自动隐藏" : "固定展开");
+  button.setAttribute("aria-label", pinned ? "切换为自动收起左侧导航" : "固定展开左侧导航");
+  button.setAttribute("title", pinned ? "自动收起" : "固定展开");
 }
 
 function applyMode(mode, { persist = false } = {}) {
@@ -94,7 +81,7 @@ function installModeButton() {
   });
 
   controls.append(button);
-  sidebar.prepend(controls);
+  sidebar.append(controls);
   syncModeButton(document.documentElement.dataset.sidebarMode || MODE_PINNED);
 }
 
