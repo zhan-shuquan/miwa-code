@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="light">
   <title>AIONE｜品牌中心独立验收</title>
   <link rel="icon" type="image/svg+xml" href="./assets/brand/miwa-company-mark.svg">
-  <link rel="stylesheet" href="./css/pages/brand-center-preview.css?v=20260902-isolated-review-v1">
+  <link rel="stylesheet" href="./css/pages/brand-center-preview.css?v=20260903-brand-planning-v3">
   <style>
     :root{--miwa:#176b4d;--line:#e2e9e5;--soft:#f5f8f6;--text:#17382d;--muted:#718078;--sidebar:218px}
     *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,"Noto Sans SC","PingFang SC","Microsoft YaHei",Arial,sans-serif;background:#f5f7f6;color:var(--text)}
@@ -17,76 +17,18 @@
     .review-global-nav{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;white-space:nowrap}.review-global-nav span{padding:9px 8px;border-radius:8px;font-size:10px;font-weight:700;color:#324b40}.review-global-nav span.active{background:#eaf4ef;color:#0d6044}.review-header-spacer{flex:1}.review-search{min-width:180px;padding:9px 12px;border:1px solid #dbe5e0;border-radius:9px;color:#84918b;font-size:10px}.review-ai-entry{padding:9px 13px;border:1px solid #c7ded3;border-radius:9px;background:#f1f8f5;color:#0e6043;font-weight:800;cursor:pointer}
     .review-statusbar{display:flex;align-items:center;padding:0 218px 0 22px;background:#fbfcfb;border-bottom:1px solid #e7ece9;color:#718078;font-size:9px}.review-statusbar b{margin-right:8px;color:var(--miwa)}
     .review-body{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);min-height:0}.review-sidebar{position:sticky;top:102px;height:calc(100vh - 102px);padding:14px 12px;background:#fff;border-right:1px solid var(--line);overflow:auto}.review-sidebar-title{display:flex;align-items:center;gap:8px;padding:8px 10px 12px;color:#0e5f44;font-size:13px;font-weight:900}.review-sidebar-title span{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:#eaf4ef}.review-sidebar a{display:flex;align-items:center;gap:9px;min-height:40px;padding:0 11px;margin:2px 0;border-radius:8px;color:#314b40;text-decoration:none;font-size:11px;font-weight:750}.review-sidebar a i{width:18px;text-align:center;font-style:normal;color:#6f8278}.review-sidebar a.active{background:#e8f3ee;color:#0c6043;box-shadow:inset 3px 0 var(--miwa)}.review-sidebar .split{margin-top:12px;padding-top:12px;border-top:1px solid #edf1ef}.review-sidebar-note{margin-top:18px;padding:10px;border:1px solid #e3ebe7;border-radius:10px;background:#fafcfb;color:#72817a;font-size:9px;line-height:1.6}.review-sidebar-note b{display:block;margin-bottom:3px;color:#20533f}
-    .review-main{min-width:0;padding:24px 30px 70px;overflow:auto}.review-badge{display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;padding:5px 8px;border-radius:999px;background:#fff5df;color:#8b6212;font-size:9px;font-weight:800;border:1px solid #eadbb6}.review-badge:before{content:"";width:6px;height:6px;border-radius:50%;background:#d79820}
-    #app-main-host{min-width:0}
-    .ai-preview{position:fixed;inset:0 0 0 auto;z-index:80;width:min(520px,92vw);background:#fff;border-left:1px solid #dce6e1;box-shadow:-20px 0 55px rgba(18,51,39,.16);transform:translateX(102%);transition:transform .2s ease;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto}.ai-preview.open{transform:translateX(0)}.ai-head{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 14px;border-bottom:1px solid #e5ece8}.ai-head-title{display:flex;gap:10px;align-items:center}.ai-logo{display:grid;place-items:center;width:34px;height:34px;border:1px solid #bcd9ca;border-radius:10px;color:var(--miwa);font-weight:900}.ai-head small{display:block;color:#78877f;font-size:9px}.ai-head strong{display:block;margin-top:2px;color:#0e543d;font-size:17px}.ai-close{width:34px;height:34px;border:0;background:#fff;color:#65776e;font-size:21px;cursor:pointer}.ai-context{padding:10px 18px;border-bottom:1px solid #e8eeeb;background:#fafcfb;color:#65766e;font-size:9px}.ai-context b{color:#176b4d}.ai-thread{padding:18px;overflow:auto}.ai-message{padding:13px 14px;border-radius:12px;background:#f2f7f4;color:#344f43;font-size:11px;line-height:1.7}.ai-message strong{display:block;margin-bottom:5px;color:#0d5c41}.ai-hint{margin-top:12px;padding:10px 11px;border:1px dashed #cfded7;border-radius:10px;color:#7a8982;font-size:9px;line-height:1.6}.ai-compose{padding:13px 16px 16px;border-top:1px solid #e5ece8;background:#fff}.ai-compose textarea{display:block;width:100%;min-height:90px;resize:vertical;padding:12px;border:1px solid #d5e1db;border-radius:10px;outline:none;color:#2f493e;font-size:11px;line-height:1.5}.ai-compose textarea:focus{border-color:#7fb49d;box-shadow:0 0 0 3px rgba(23,107,77,.08)}.ai-actions{display:flex;justify-content:space-between;align-items:center;margin-top:9px}.ai-actions small{color:#9a7a32;font-size:8px}.ai-send{padding:9px 14px;border:0;border-radius:8px;background:var(--miwa);color:#fff;font-size:10px;font-weight:800;cursor:pointer}
-    .ai-backdrop{position:fixed;inset:0;z-index:70;background:rgba(22,48,38,.18);backdrop-filter:blur(1px);display:none}.ai-backdrop.open{display:block}
+    .review-main{min-width:0;padding:24px 30px 70px;overflow:auto}.review-badge{display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;padding:5px 8px;border-radius:999px;background:#fff5df;color:#8b6212;font-size:9px;font-weight:800;border:1px solid #eadbb6}.review-badge:before{content:"";width:6px;height:6px;border-radius:50%;background:#d79820}#app-main-host{min-width:0}
+    .ai-preview{position:fixed;inset:0 0 0 auto;z-index:80;width:min(520px,92vw);background:#fff;border-left:1px solid #dce6e1;box-shadow:-20px 0 55px rgba(18,51,39,.16);transform:translateX(102%);transition:transform .2s ease;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto}.ai-preview.open{transform:translateX(0)}.ai-head{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 14px;border-bottom:1px solid #e5ece8}.ai-head-title{display:flex;gap:10px;align-items:center}.ai-logo{display:grid;place-items:center;width:34px;height:34px;border:1px solid #bcd9ca;border-radius:10px;color:var(--miwa);font-weight:900}.ai-head small{display:block;color:#78877f;font-size:9px}.ai-head strong{display:block;margin-top:2px;color:#0e543d;font-size:17px}.ai-close{width:34px;height:34px;border:0;background:#fff;color:#65776e;font-size:21px;cursor:pointer}.ai-context{padding:10px 18px;border-bottom:1px solid #e8eeeb;background:#fafcfb;color:#65766e;font-size:9px}.ai-context b{color:#176b4d}.ai-thread{padding:18px;overflow:auto}.ai-message{padding:13px 14px;border-radius:12px;background:#f2f7f4;color:#344f43;font-size:11px;line-height:1.7}.ai-message strong{display:block;margin-bottom:5px;color:#0d5c41}.ai-hint{margin-top:12px;padding:10px 11px;border:1px dashed #cfded7;border-radius:10px;color:#7a8982;font-size:9px;line-height:1.6}.ai-compose{padding:13px 16px 16px;border-top:1px solid #e5ece8;background:#fff}.ai-compose textarea{display:block;width:100%;min-height:90px;resize:vertical;padding:12px;border:1px solid #d5e1db;border-radius:10px;outline:none;color:#2f493e;font-size:11px;line-height:1.5}.ai-actions{display:flex;justify-content:space-between;align-items:center;margin-top:9px}.ai-actions small{color:#9a7a32;font-size:8px}.ai-send{padding:9px 14px;border:0;border-radius:8px;background:var(--miwa);color:#fff;font-size:10px;font-weight:800;cursor:pointer}.ai-backdrop{position:fixed;inset:0;z-index:70;background:rgba(22,48,38,.18);backdrop-filter:blur(1px);display:none}.ai-backdrop.open{display:block}
     @media(max-width:1050px){.review-global-nav{display:none}.review-body{grid-template-columns:184px minmax(0,1fr)}.review-sidebar{width:184px}.review-main{padding:20px}.review-statusbar{padding-left:20px}}
   </style>
 </head>
 <body>
-  <div class="review-shell">
-    <header class="review-header">
-      <div class="review-brand"><img src="./assets/brand/miwa-company-mark.svg" alt="MIWA"><div><strong>AIONE</strong><small>美和AIONE一体化工作平台</small></div></div>
-      <div class="review-home">▦ 商品之家 <b>› 品牌中心</b></div>
-      <nav class="review-global-nav" aria-label="全局导航"><span>工作之家</span><span>美和日历</span><span>人才之家</span><span>AI之家</span><span class="active">商品之家</span><span>往来之家</span><span>渠道之家</span><span>财务之家</span><span>分析之家</span><span>知识之家</span></nav>
-      <div class="review-header-spacer"></div><div class="review-search">⌕ 全局搜索</div><button class="review-ai-entry" id="review-ai-entry">M 美和AI</button>
-    </header>
-    <div class="review-statusbar"><b>独立验收模式</b> 品牌中心 Product Freeze / UI / AI 上下文验证 · 不进入 Google OAuth · 不影响固定测试系统</div>
-    <div class="review-body">
-      <aside class="review-sidebar">
-        <div class="review-sidebar-title"><span>商</span> 商品之家</div>
-        <a href="#"><i>◇</i>概览</a>
-        <a href="#"><i>▦</i>分类中心</a>
-        <a href="#" class="active"><i>☆</i>品牌中心</a>
-        <a href="#"><i>◇</i>商品中心</a>
-        <a href="#"><i>⚙</i>属性中心</a>
-        <a href="#"><i>▦</i>规格中心</a>
-        <a href="#"><i>▤</i>库存中心</a>
-        <a href="#"><i>▧</i>资料中心</a>
-        <a href="#" class="split"><i>▣</i>模板中心</a>
-        <a href="#"><i>◈</i>发布中心</a>
-        <div class="review-sidebar-note"><b>本页用途</b>只验收品牌中心。其余目录不跳转，避免和稳定系统混在一起。</div>
-      </aside>
-      <main class="review-main">
-        <div class="review-badge">隔离 Branch · OAuth-free Review</div>
-        <div id="app-main-host"></div>
-      </main>
-    </div>
+  <div class="review-shell"><header class="review-header"><div class="review-brand"><img src="./assets/brand/miwa-company-mark.svg" alt="MIWA"><div><strong>AIONE</strong><small>美和AIONE一体化工作平台</small></div></div><div class="review-home">▦ 商品之家 <b>› 品牌中心</b></div><nav class="review-global-nav" aria-label="全局导航"><span>工作之家</span><span>美和日历</span><span>人才之家</span><span>AI之家</span><span class="active">商品之家</span><span>往来之家</span><span>渠道之家</span><span>财务之家</span><span>分析之家</span><span>知识之家</span></nav><div class="review-header-spacer"></div><div class="review-search">⌕ 全局搜索</div><button class="review-ai-entry" id="review-ai-entry">M 美和AI</button></header>
+    <div class="review-statusbar"><b>独立验收模式</b> 品牌中心 Brand Planning V1 / 注册闭环 / 使用关系验证 · 不进入 Google OAuth · 不影响固定测试系统</div>
+    <div class="review-body"><aside class="review-sidebar"><div class="review-sidebar-title"><span>商</span> 商品之家</div><a href="#"><i>◇</i>概览</a><a href="#"><i>▦</i>分类中心</a><a href="#" class="active"><i>☆</i>品牌中心</a><a href="#"><i>◇</i>商品中心</a><a href="#"><i>⚙</i>属性中心</a><a href="#"><i>▦</i>规格中心</a><a href="#"><i>▤</i>库存中心</a><a href="#"><i>▧</i>资料中心</a><a href="#" class="split"><i>▣</i>模板中心</a><a href="#"><i>◈</i>发布中心</a><div class="review-sidebar-note"><b>当前锁定</b>12个一级主品牌 + 4个专业品牌。第一期只验证日本英文文字商标申请准备闭环。</div></aside><main class="review-main"><div class="review-badge">隔离 Branch · OAuth-free Review</div><div id="app-main-host"></div></main></div>
   </div>
-
-  <div class="ai-backdrop" id="ai-backdrop"></div>
-  <aside class="ai-preview" id="ai-preview" aria-label="商品之家AI秘书">
-    <div class="ai-head"><div class="ai-head-title"><div class="ai-logo">M</div><div><small>AIONE 智能能力层</small><strong>商品之家AI秘书</strong></div></div><button class="ai-close" id="ai-close">×</button></div>
-    <div class="ai-context">当前上下文　<b>商品之家 › 品牌中心</b>　·　品牌事实 / 权利 / 映射</div>
-    <div class="ai-thread" id="ai-thread"><div class="ai-message"><strong>美和AI</strong>我已经进入品牌中心上下文。你可以从品牌卡片、品牌权利或品牌映射直接调用我；我会优先围绕当前品牌对象工作。</div><div class="ai-hint">当前为产品与交互验收模式：AI入口、上下文和提示词联动是真实交互设计，但此独立页面不调用正式模型或正式业务数据。</div></div>
-    <div class="ai-compose"><textarea id="ai-secretary-command-input" placeholder="例如：检查 SOCKONE 的品牌事实、商标资料和渠道映射缺口"></textarea><div class="ai-actions"><small>验收模式 · 不提交正式数据</small><button class="ai-send" id="ai-send">发送</button></div></div>
-  </aside>
-
-  <script>
-    (function(){
-      const drawer=document.getElementById('ai-preview');
-      const backdrop=document.getElementById('ai-backdrop');
-      const input=document.getElementById('ai-secretary-command-input');
-      const thread=document.getElementById('ai-thread');
-      function openAI(){drawer.classList.add('open');backdrop.classList.add('open');setTimeout(()=>input.focus(),80)}
-      function closeAI(){drawer.classList.remove('open');backdrop.classList.remove('open')}
-      window.MIWAAI={open:openAI};
-      document.getElementById('review-ai-entry').addEventListener('click',openAI);
-      document.getElementById('ai-close').addEventListener('click',closeAI);
-      backdrop.addEventListener('click',closeAI);
-      document.getElementById('ai-send').addEventListener('click',()=>{
-        const text=input.value.trim(); if(!text) return;
-        const box=document.createElement('div'); box.className='ai-message'; box.style.marginTop='10px';
-        box.innerHTML='<strong>商品之家AI秘书 · 预览响应</strong>已接收当前品牌中心任务：'+text.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'<br><br>正式接入时将读取当前 Brand 对象、权利资料、渠道映射与权限上下文，再返回事实 / 待确认 / 建议动作。';
-        thread.appendChild(box); thread.scrollTop=thread.scrollHeight;
-      });
-      document.querySelectorAll('.review-sidebar a').forEach(a=>a.addEventListener('click',e=>e.preventDefault()));
-    })();
-  </script>
-  <script type="module">
-    import { initBrandCenterPreview } from './js/pages/brand-center-preview.js?v=20260902-isolated-review-v1';
-    initBrandCenterPreview();
-  </script>
+  <div class="ai-backdrop" id="ai-backdrop"></div><aside class="ai-preview" id="ai-preview" aria-label="商品之家AI秘书"><div class="ai-head"><div class="ai-head-title"><div class="ai-logo">M</div><div><small>AIONE 智能能力层</small><strong>商品之家AI秘书</strong></div></div><button class="ai-close" id="ai-close">×</button></div><div class="ai-context">当前上下文　<b>商品之家 › 品牌中心</b>　·　品牌规划 / 注册准备 / 品牌使用</div><div class="ai-thread" id="ai-thread"><div class="ai-message"><strong>美和AI</strong>我已经进入品牌中心上下文。可以帮助检查品牌规划、准备英文文字商标检索条件和申请资料清单。</div><div class="ai-hint">当前为产品与交互验收模式：AI入口和上下文是真实交互设计，但此独立页面不调用正式模型或正式业务数据。</div></div><div class="ai-compose"><textarea id="ai-secretary-command-input" placeholder="例如：为 SOCKONE 准备英文文字商标检索条件"></textarea><div class="ai-actions"><small>验收模式 · 不提交正式数据</small><button class="ai-send" id="ai-send">发送</button></div></div></aside>
+  <script>(function(){const drawer=document.getElementById('ai-preview'),backdrop=document.getElementById('ai-backdrop'),input=document.getElementById('ai-secretary-command-input'),thread=document.getElementById('ai-thread');function openAI(){drawer.classList.add('open');backdrop.classList.add('open');setTimeout(()=>input.focus(),80)}function closeAI(){drawer.classList.remove('open');backdrop.classList.remove('open')}window.MIWAAI={open:openAI};document.getElementById('review-ai-entry').addEventListener('click',openAI);document.getElementById('ai-close').addEventListener('click',closeAI);backdrop.addEventListener('click',closeAI);document.getElementById('ai-send').addEventListener('click',()=>{const text=input.value.trim();if(!text)return;const box=document.createElement('div');box.className='ai-message';box.style.marginTop='10px';box.innerHTML='<strong>商品之家AI秘书 · 预览响应</strong>已接收品牌中心任务：'+text.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'<br><br>正式接入后将读取 Brand 对象、商标申请记录、使用关系与权限上下文，再返回事实 / 待确认 / 建议动作。';thread.appendChild(box);thread.scrollTop=thread.scrollHeight});document.querySelectorAll('.review-sidebar a').forEach(a=>a.addEventListener('click',e=>e.preventDefault()))})();</script>
+  <script type="module">import { initBrandCenterPreview } from './js/pages/brand-center-preview.js?v=20260903-brand-planning-v3';initBrandCenterPreview();</script>
 </body>
 </html>
