@@ -1,12 +1,14 @@
 /* ========================================
    AIONE Home Registry｜12之家唯一事实源
-   规则：普通之家 = 概览(唯一) + 中心(按需) + 管理(唯一)。
+   规则：普通之家 = 概览(唯一) + 中心(按需) + 管理(按需)。
    工作之家是用户专属工作空间，允许使用专属 Personal Work Home 母版。
 ======================================== */
 
 const center = (id, label, options = {}) => Object.freeze({
   id,
   label,
+  route: options.route || null,
+  icon: options.icon || "",
   tabs: Object.freeze([...(options.tabs || [])]),
   defaultView: options.defaultView || "list",
   status: options.status || "planned"
@@ -30,8 +32,8 @@ export const HOME_PAGE_MODEL = Object.freeze({
     rules: Object.freeze({
       overview: "unique",
       centers: "optional-many",
-      management: "unique",
-      centerNavigation: "sidebar-tree",
+      management: "optional-unique",
+      centerNavigation: "sidebar",
       centerSubNavigation: "horizontal-tabs"
     })
   }),
@@ -46,6 +48,18 @@ export const HOME_PAGE_MODEL = Object.freeze({
     })
   })
 });
+
+export const PRODUCT_HOME_CENTERS = Object.freeze([
+  center("category-center", "分类中心", { route: "category-home", icon: "category", status: "active" }),
+  center("brand-center", "品牌中心", { route: "product-home?center=brand-center", icon: "brand" }),
+  center("product-center", "商品中心", { route: "product-home?center=product-center", icon: "product" }),
+  center("attribute-center", "属性中心", { route: "product-home?center=attribute-center", icon: "settings" }),
+  center("specification-center", "规格中心", { route: "product-home?center=specification-center", icon: "apps" }),
+  center("inventory-center", "库存中心", { route: "product-home?center=inventory-center", icon: "database" }),
+  center("asset-center", "资料中心", { route: "product-home?center=asset-center", icon: "file" }),
+  center("template-center", "模板中心", { route: "product-home?center=template-center", icon: "standard" }),
+  center("publish-center", "发布中心", { route: "product-home?center=publish-center", icon: "publishing" })
+]);
 
 export const SHARED_HOME_CENTERS = Object.freeze([
   center("shared-file-center", "文件中心", {
@@ -105,7 +119,10 @@ export const HOME_REGISTRY = Object.freeze({
   }),
   "talent-home": home("talent-home", "人才之家"),
   "ai-home": home("ai-home", "AI之家"),
-  "product-home": home("product-home", "商品之家"),
+  "product-home": home("product-home", "商品之家", {
+    centers: PRODUCT_HOME_CENTERS,
+    management: false
+  }),
   "relations-home": home("relations-home", "往来之家"),
   "channel-home": home("channel-home", "渠道之家"),
   "finance-home": home("finance-home", "财务之家"),
