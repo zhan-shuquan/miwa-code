@@ -1,5 +1,5 @@
 import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260824-v1.9.5-sidebar-aside-lock-candidate";
-import { ROUTE_ID, PRODUCT_SIDEBAR_ITEMS, SYSTEM_TREE, STORE_TAXONOMIES, findNode } from "./category-center-preview-data.js";
+import { ROUTE_ID, SYSTEM_TREE, STORE_TAXONOMIES, findNode } from "./category-center-preview-data.js";
 import { renderPageShell, renderCurrentView } from "./category-center-preview-render.js";
 
 const state = {
@@ -41,24 +41,14 @@ function installObserver() {
   observer.observe(host, { childList: true, subtree: false });
 }
 
-function renderPreviewSidebar() {
-  const host = document.getElementById("sidebar-navigation-tree");
-  if (!host) return;
-  host.innerHTML = PRODUCT_SIDEBAR_ITEMS.map((item) => `
-    <a class="sidebar-flat-link ${item.current ? "category-preview-current" : ""}" href="${item.href}" ${item.current ? 'aria-current="page"' : ""}>
-      <span class="sidebar-icon miwa-semantic-icon" data-icon="${item.icon}"></span><span>${item.label}</span>
-    </a>`).join("");
-  renderSemanticIcons(host);
-}
-
 function renderPreview() {
   const host = document.getElementById("app-main-host");
   if (!host) return;
   document.body.dataset.categoryTaxonomyPreview = "true";
-  renderPreviewSidebar();
   host.innerHTML = renderPageShell(state);
   bindEvents(host);
   renderSemanticIcons(host);
+  window.dispatchEvent(new CustomEvent("aione:category-preview-rendered"));
 }
 
 function bindEvents(host) {
@@ -151,12 +141,7 @@ function switchIoTab(button, host) {
   const isExport = tabs.indexOf(button) === 1;
 
   if (isExport) {
-    if (panel) panel.innerHTML = `
-      <div class="tool-list">
-        <div><b>导出范围</b><span>当前分类分支 / 当前层级 / 整个分类体系</span></div>
-        <div><b>导出字段</b><span>分类编号、名称、父级、层级、状态、映射关系</span></div>
-        <div><b>导出格式</b><span>Excel / CSV（正式版接统一导出服务）</span></div>
-      </div>`;
+    if (panel) panel.innerHTML = `<div class="tool-list"><div><b>导出范围</b><span>当前分类分支 / 当前层级 / 整个分类体系</span></div><div><b>导出字段</b><span>分类编号、名称、父级、层级、状态、映射关系</span></div><div><b>导出格式</b><span>Excel / CSV（正式版接统一导出服务）</span></div></div>`;
     if (footer) footer.innerHTML = `<button value="cancel" class="tax-btn">取消</button><button type="button" class="tax-btn tax-btn--primary" data-action="preview-export">预览导出</button>`;
   } else {
     if (panel) panel.innerHTML = `<label class="upload-box"><input type="file" accept=".csv,.xlsx" data-import-file><span>选择 CSV / Excel</span><small data-import-name>尚未选择文件</small></label><div class="dialog-checks"><span>✓ 字段校验</span><span>✓ 父级关系检查</span><span>✓ 编码冲突检查</span><span>✓ 变更预览</span></div>`;
@@ -253,9 +238,9 @@ function openToolDialog(tool, host) {
   const dialog = host.querySelector('[data-dialog="tool"]');
   if (!dialog) return;
   const map = {
-    settings: ["分类设置", "设置分类编码规则、层级规则、默认展示方式、AI分类建议与权限。", `<div class="tool-list"><div><b>编码规则</b><span>01 / 0101 / 010501</span></div><div><b>层级规则</b><span>一级 → 二级 → 三级</span></div><div><b>默认展示</b><span>图文卡片</span></div><div><b>AI建议</b><span>启用（待服务接入）</span></div></div>`],
+    settings: ["分类规则", "系统分类规则为平台级只读规则；业务人员管理具体分类，不修改底层架构。", `<div class="tool-list"><div><b>编码规则</b><span>系统自动生成：01 / 0101 / 010501</span></div><div><b>层级规则</b><span>固定三级：一级 → 二级 → 三级</span></div><div><b>默认展示</b><span>统一 Visual Taxonomy 图文母版</span></div><div><b>规则变更</b><span>需 Product Freeze + Migration，不在业务页面手动修改</span></div></div>`],
     trash: ["回收站", "误建或无业务关联的分类进入软删除回收站；已产生业务关系的分类优先停用或废止。", `<div class="tool-empty"><span>🗑️</span><b>暂无预览回收项</b><p>恢复时保留原分类 ID、编号、层级与关联历史。</p></div>`],
-    history: ["操作记录", "查看分类新增、编辑、移动、合并、停用、恢复与映射变化。", `<div class="tool-timeline"><div><b>21:05</b><span>进入 Visual Taxonomy 交互验证</span></div><div><b>当前</b><span>操作记录将接入统一 Audit Log</span></div></div>`]
+    history: ["操作记录", "查看分类新增、编辑、移动、合并、停用、恢复与映射变化。", `<div class="tool-timeline"><div><b>当前</b><span>操作记录将接入统一 Audit Log</span></div></div>`]
   };
   const item = map[tool] || map.settings;
   dialog.querySelector("[data-tool-title]").textContent = item[0];
@@ -273,6 +258,7 @@ function refresh(host) {
   if (batchButton) batchButton.lastChild.textContent = state.manageMode ? "退出管理" : "批量管理";
   bindDynamicEvents(host);
   renderSemanticIcons(host);
+  window.dispatchEvent(new CustomEvent("aione:category-preview-rendered"));
 }
 
 function showToast(host, message) {
