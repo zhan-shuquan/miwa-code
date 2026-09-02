@@ -65,17 +65,6 @@ export const SYSTEM_TREE = [
 ];
 
 export const STORE_TAXONOMIES = Object.freeze({
-  nagai: {
-    label: "永井乐天", sync: "Rakuten RMS",
-    roots: [
-      { id: "N01", name: "メンズ", icon: "👨", tone: "blue", children: [
-        { id: "N0101", name: "メンズソックス", icon: "🧦", tone: "blue", children: storeLeafSet("N0101", ["ビジネス", "カジュアル", "スポーツ", "あったか", "5足セット", "新着"]) },
-        { id: "N0102", name: "帽子", icon: "🧢", tone: "violet", children: storeLeafSet("N0102", ["キャップ", "ハット", "ニット帽", "UV対策"]) }
-      ] },
-      { id: "N02", name: "レディース", icon: "👩", tone: "rose", children: simpleChildren("N02", ["ソックス", "帽子", "バッグ", "ファッション小物"], "🛍️") },
-      { id: "N03", name: "季節特集", icon: "✨", tone: "orange", children: simpleChildren("N03", ["秋冬あったか", "UV対策", "雨の日", "ギフト"], "✨") }
-    ]
-  },
   primelife: {
     label: "PrimeLife", sync: "Rakuten RMS",
     roots: [
@@ -93,8 +82,12 @@ export const STORE_TAXONOMIES = Object.freeze({
   global: {
     label: "Global Dimensions", sync: "Rakuten RMS",
     roots: [
-      { id: "G01", name: "Fashion", icon: "👕", tone: "blue", children: simpleChildren("G01", ["Socks", "Hats", "Bags", "Accessories"], "👕") },
-      { id: "G02", name: "Lifestyle", icon: "🏠", tone: "cyan", children: simpleChildren("G02", ["Home", "Kitchen", "Outdoor", "Travel"], "🏠") }
+      { id: "G01", name: "メンズ", icon: "👨", tone: "blue", children: [
+        { id: "G0101", name: "メンズソックス", icon: "🧦", tone: "blue", children: storeLeafSet("G0101", ["ビジネス", "カジュアル", "スポーツ", "あったか", "5足セット", "新着"]) },
+        { id: "G0102", name: "帽子", icon: "🧢", tone: "violet", children: storeLeafSet("G0102", ["キャップ", "ハット", "ニット帽", "UV対策"]) }
+      ] },
+      { id: "G02", name: "レディース", icon: "👩", tone: "rose", children: simpleChildren("G02", ["ソックス", "帽子", "バッグ", "ファッション小物"], "🛍️") },
+      { id: "G03", name: "季節特集", icon: "✨", tone: "orange", children: simpleChildren("G03", ["秋冬あったか", "UV対策", "雨の日", "ギフト"], "✨") }
     ]
   }
 });
