@@ -18,7 +18,15 @@ function getCurrentPath() {
 }
 
 function isRouteCurrent(route, routeId, currentPath) {
-  return route === currentPath || route === routeId;
+  if (!route) return false;
+  const routePath = String(route).split("?")[0];
+  const hashPath = String(window.location.hash || "").replace(/^#\/?/, "");
+  if (String(route).includes("?")) return hashPath === route;
+  return routePath === currentPath || routePath === routeId;
+}
+
+function routeHref(route) {
+  return route.startsWith("#/") ? route : `#/${route}`;
 }
 
 function createIcon(iconName, className = "sidebar-icon") {
@@ -31,7 +39,7 @@ function createIcon(iconName, className = "sidebar-icon") {
 function createChildLink(entry, routeId, currentPath) {
   const link = document.createElement("a");
   link.className = "sidebar-child-link";
-  link.href = `#/${entry.route}`;
+  link.href = routeHref(entry.route);
   link.textContent = entry.label;
   if (isRouteCurrent(entry.route, routeId, currentPath)) link.setAttribute("aria-current", "page");
   return link;
@@ -71,7 +79,7 @@ function createAccordionItem(entry, context, routeId, currentPath) {
 
   const link = document.createElement("a");
   link.className = "sidebar-tree-link";
-  link.href = `#/${entry.route}`;
+  link.href = routeHref(entry.route);
   link.dataset.navRoute = entry.route;
   link.append(createIcon(entry.icon || "apps"), Object.assign(document.createElement("span"), { textContent: entry.label }));
   row.append(link);
@@ -80,7 +88,7 @@ function createAccordionItem(entry, context, routeId, currentPath) {
     row.classList.add("has-overview-route");
     const overview = document.createElement("a");
     overview.className = "sidebar-tree-overview-link";
-    overview.href = `#/${entry.overviewRoute}`;
+    overview.href = routeHref(entry.overviewRoute);
     overview.setAttribute("aria-label", `${entry.label}${entry.overviewLabel || "概览"}`);
     overview.append(
       Object.assign(document.createElement("span"), { textContent: entry.overviewLabel || "概览" }),
@@ -114,7 +122,7 @@ function createFlatItem(entry, routeId, currentPath) {
   const link = document.createElement("a");
   link.className = "sidebar-flat-link";
   if (entry.sectionGapBefore) link.classList.add("has-section-gap");
-  link.href = `#/${entry.route}`;
+  link.href = routeHref(entry.route);
   link.dataset.navRoute = entry.route;
   const icon = entry.icon ? createIcon(entry.icon) : document.createElement("span");
   if (!entry.icon) icon.className = "sidebar-flat-link__indent";
@@ -134,7 +142,7 @@ function renderQuickActions(context) {
   actions.forEach((action) => {
     const node = action.route ? document.createElement("a") : document.createElement("button");
     node.className = "sidebar-quick-action";
-    if (action.route) node.href = action.route.startsWith("#/") ? action.route : `#/${action.route}`;
+    if (action.route) node.href = routeHref(action.route);
     else {
       node.type = "button";
       node.dataset.sidebarQuickAction = action.event || action.id;
@@ -150,6 +158,7 @@ function renderBusinessSwitcher() {
   const select = document.getElementById("sidebar-business-select");
   if (select?.parentElement) select.parentElement.hidden = true;
 }
+
 function renderPrimaryAction(context) {
   const host = document.getElementById("sidebar-primary-action");
   if (!host) return;
@@ -164,41 +173,30 @@ function renderPrimaryAction(context) {
   button.append(createIcon(action.icon || "work", "sidebar-primary-action__icon"), Object.assign(document.createElement("span"), { textContent:`＋ ${action.label}` }));
   host.append(button);
 }
+
 function renderSidebar() {
   const routeId = getCurrentRoute();
   const currentPath = getCurrentPath();
   const context = resolveSidebarContext(routeId, currentPath, getCurrentBusinessSpaceId());
   renderBusinessSwitcher(context, routeId);
+
   const title = document.getElementById("sidebar-context-title");
   const kicker = document.getElementById("sidebar-context-kicker");
   const icon = document.getElementById("sidebar-context-icon");
   const host = document.getElementById("sidebar-navigation-tree");
   if (!host) return;
 
-  const isBusinessSidebar = context.type === "business";
   const contextHead = document.querySelector(".sidebar-context-head");
-  if (contextHead) contextHead.hidden = isBusinessSidebar;
-
-  if (title) {
-    title.textContent = context.title;
-    title.hidden = isBusinessSidebar;
-  }
-
-  if (kicker) {
-    kicker.textContent = context.kicker;
-    kicker.hidden = true; // V1.9.39: Sidebar目录已能表达上下文，不重复显示“当前空间”等标签。
-  }
-
-  if (icon) {
-    icon.hidden = isBusinessSidebar;
-    icon.dataset.icon = context.icon || "apps";
-    icon.dataset.iconReady = "false";
-  }
+  if (contextHead) contextHead.hidden = true;
+  if (title) title.hidden = true;
+  if (kicker) kicker.hidden = true;
+  if (icon) icon.hidden = true;
 
   const hasTreeItems = context.items.some((entry) => Array.isArray(entry.children) && entry.children.length > 0);
   const nodes = context.type === "business" || hasTreeItems
     ? context.items.map((entry) => createAccordionItem(entry, context, routeId, currentPath))
     : context.items.map((entry) => createFlatItem(entry, routeId, currentPath));
+
   host.replaceChildren(...nodes);
   renderPrimaryAction(context);
   renderQuickActions(context);
@@ -206,7 +204,11 @@ function renderSidebar() {
 }
 
 function bindDesktopAccordion() {
-  document.querySelector("[data-universal-sidebar]")?.addEventListener("click", (event) => {
+  const sidebar = document.querySelector("[data-universal-sidebar]");
+  if (!sidebar || sidebar.dataset.primaryNavigationBound === "true") return;
+  sidebar.dataset.primaryNavigationBound = "true";
+
+  sidebar.addEventListener("click", (event) => {
     const toggle = event.target.closest("[data-sidebar-tree-toggle]");
     if (toggle) {
       event.preventDefault();
@@ -257,7 +259,7 @@ function bindDesktopAccordion() {
 
 function createMobileWorkbenchLink(workbench) {
   const link = document.createElement("a");
-  link.href = `#/${workbench.route}`;
+  link.href = routeHref(workbench.route);
   link.dataset.navRoute = workbench.route;
   link.className = "drawer-link";
   link.append(createIcon(workbench.icon || "apps", "drawer-link__icon"), Object.assign(document.createElement("span"), { textContent: workbench.label }));
@@ -267,43 +269,30 @@ function createMobileWorkbenchLink(workbench) {
 function renderMobileBusinessSwitcher(spaceId = getCurrentBusinessSpaceId()) {
   const select = document.getElementById("mobile-drawer-business-select");
   if (!select) return;
-
   const options = getBusinessSpaceOptions();
-
-  select.replaceChildren(
-    ...options.map((space) => {
-      const option = document.createElement("option");
-      option.value = space.id;
-      option.textContent = space.label;
-      return option;
-    })
-  );
-
+  select.replaceChildren(...options.map((space) => {
+    const option = document.createElement("option");
+    option.value = space.id;
+    option.textContent = space.label;
+    return option;
+  }));
   select.value = spaceId;
 
   if (select.dataset.bound !== "true") {
     select.dataset.bound = "true";
-
     select.addEventListener("change", () => {
       const nextId = select.value;
       if (!nextId || nextId === getCurrentBusinessSpaceId()) return;
-
-      setCurrentBusinessSpace(nextId, {
-        navigate: true,
-        reason: "mobile-drawer-business-switcher"
-      });
+      setCurrentBusinessSpace(nextId, { navigate: true, reason: "mobile-drawer-business-switcher" });
     });
   }
 }
+
 function renderMobileBusinessNavigation(spaceId = getCurrentBusinessSpaceId()) {
   renderMobileBusinessSwitcher(spaceId);
-
   const currentSpace = getBusinessSpaceOptions().find((space) => space.id === spaceId);
   const mobileBusinessLabel = document.getElementById("mobile-workbench-menu-label");
-
-  if (mobileBusinessLabel && currentSpace) {
-    mobileBusinessLabel.textContent = `${currentSpace.shortLabel || currentSpace.label}业务`;
-  }
+  if (mobileBusinessLabel && currentSpace) mobileBusinessLabel.textContent = `${currentSpace.shortLabel || currentSpace.label}业务`;
   const space = BUSINESS_SPACES[spaceId] || BUSINESS_SPACES.crossborder;
   const host = document.getElementById("mobile-workbench-navigation-list");
   if (host) host.replaceChildren(...space.workbenches.map(createMobileWorkbenchLink));
