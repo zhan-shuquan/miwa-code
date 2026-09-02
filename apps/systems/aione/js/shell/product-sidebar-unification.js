@@ -38,13 +38,47 @@ function readRecent() {
   return ["男袜", "女袜", "SOCKONE"].slice(0, 3);
 }
 
-function render() {
-  if (!isProductRoute()) return;
-  const sidebar = document.querySelector(".desktop-sidebar");
-  const host = document.getElementById("sidebar-navigation-tree");
-  if (!sidebar || !host) return;
+function clearProductSidebar(sidebar) {
+  if (!sidebar) return;
+  delete sidebar.dataset.productSidebarContext;
+  const recent = sidebar.querySelector("[data-product-sidebar-recent]");
+  if (recent) recent.hidden = true;
+}
 
-  document.querySelector(".sidebar-context-head")?.setAttribute("hidden", "");
+function renderProductIdentity(sidebar) {
+  const contextHead = sidebar.querySelector(".sidebar-context-head");
+  const title = sidebar.querySelector("#sidebar-context-title");
+  const kicker = sidebar.querySelector("#sidebar-context-kicker");
+  const contextIcon = sidebar.querySelector("#sidebar-context-icon");
+
+  sidebar.dataset.productSidebarContext = "true";
+  if (contextHead) contextHead.hidden = false;
+  if (title) {
+    title.textContent = "商品之家";
+    title.hidden = false;
+  }
+  if (kicker) kicker.hidden = true;
+  if (contextIcon) {
+    contextIcon.hidden = false;
+    contextIcon.dataset.icon = "product";
+    contextIcon.dataset.iconReady = "false";
+  }
+}
+
+function render() {
+  const sidebar = document.querySelector(".desktop-sidebar");
+  if (!sidebar) return;
+
+  if (!isProductRoute()) {
+    clearProductSidebar(sidebar);
+    return;
+  }
+
+  const host = document.getElementById("sidebar-navigation-tree");
+  if (!host) return;
+
+  renderProductIdentity(sidebar);
+
   const quick = document.getElementById("sidebar-quick-actions");
   if (quick) quick.hidden = true;
   const primary = document.getElementById("sidebar-primary-action");
