@@ -18,6 +18,7 @@ const PLATFORM_CONTEXT_META = Object.freeze({
   "finance-home": { icon: "income", type: "content" },
   "relations-home": { icon: "customer", type: "content" },
   "product-home": { icon: "product", type: "content" },
+  "category-home": { icon: "category", type: "content" },
   "talent-home": { icon: "talent", type: "content" },
   "ai-home": { icon: "ai", type: "content" },
   "ai-office": { icon: "ai", type: "content" },
@@ -43,6 +44,7 @@ function getParentRoute(routeId) {
 }
 
 function resolvePlatformRoot(routeId) {
+  if (routeId === "category-home") return "product-home";
   if (PLATFORM_CONTEXT_META[routeId]) return routeId;
   let cursor = routeId;
   const visited = new Set();
@@ -90,18 +92,27 @@ function buildWorkItems() {
 function buildRegistryHomeItems(rootId) {
   const definition = HOME_REGISTRY[rootId];
   if (!definition || definition.template === "personal-work-home") return null;
-  const icon = PLATFORM_CONTEXT_META[rootId]?.icon || "apps";
-  return [
-    { id: `${rootId}-overview`, label: "概览", route: rootId, icon, children: [] },
-    ...definition.centers.map((item) => ({
+
+  const items = [];
+  if (definition.overview?.enabled) {
+    items.push({ id: `${rootId}-overview`, label: "概览", route: rootId, icon: PLATFORM_CONTEXT_META[rootId]?.icon || "apps", children: [] });
+  }
+
+  definition.centers.forEach((item, index) => {
+    items.push({
       id: item.id,
       label: item.label,
-      route: `${rootId}?center=${encodeURIComponent(item.id)}`,
-      icon: "",
-      children: []
-    })),
-    { id: `${rootId}-management`, label: "管理", route: `${rootId}?view=management`, icon: "settings", children: [], sectionGapBefore:true }
-  ];
+      route: item.route || `${rootId}?center=${encodeURIComponent(item.id)}`,
+      icon: item.icon || "",
+      children: [],
+      sectionGapBefore: rootId === "product-home" && index === 7
+    });
+  });
+
+  if (definition.management?.enabled) {
+    items.push({ id: `${rootId}-management`, label: "管理", route: `${rootId}?view=management`, icon: "settings", children: [], sectionGapBefore:true });
+  }
+  return items;
 }
 
 function buildPlatformItems(rootId) {
