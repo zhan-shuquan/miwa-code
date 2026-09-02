@@ -7,10 +7,10 @@ const state = {
   systemRootId: "01",
   systemChildId: "0105",
   systemLeafId: "010506",
-  storeId: "nagai",
-  storeRootId: "N01",
-  storeChildId: "N0101",
-  storeLeafId: "N0101-4",
+  storeId: "primelife",
+  storeRootId: "P01",
+  storeChildId: "P0101",
+  storeLeafId: "P010101",
   manageMode: false,
   selected: new Set(),
   compactParents: false
@@ -73,6 +73,21 @@ function bindEvents(host) {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
 
+    const cancelButton = target.closest('.taxonomy-dialog button[value="cancel"]');
+    if (cancelButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      cancelButton.closest("dialog")?.close("cancel");
+      return;
+    }
+
+    const ioTab = target.closest('.taxonomy-dialog[data-dialog="io"] .dialog-tabs button');
+    if (ioTab) {
+      event.preventDefault();
+      switchIoTab(ioTab, host);
+      return;
+    }
+
     const actionNode = target.closest("[data-action]");
     if (actionNode) {
       handleAction(actionNode.dataset.action, host);
@@ -114,13 +129,39 @@ function bindEvents(host) {
     if (card && !target.closest("input,button")) selectNode(card.dataset.nodeId, Number(card.dataset.nodeLevel), host);
   });
 
-  bindDynamicEvents(host);
-  host.querySelector("[data-import-file]")?.addEventListener("change", (event) => {
-    const file = event.target.files?.[0];
+  host.addEventListener("change", (event) => {
+    const input = event.target instanceof HTMLInputElement ? event.target : null;
+    if (!input?.matches("[data-import-file]")) return;
+    const file = input.files?.[0];
     const name = host.querySelector("[data-import-name]");
     if (name) name.textContent = file ? file.name : "尚未选择文件";
   });
+
+  bindDynamicEvents(host);
   host.querySelector("[data-new-form]")?.addEventListener("submit", () => showToast(host, "分类已加入预览会话；正式版保存前将执行编码与父级关系校验。"));
+}
+
+function switchIoTab(button, host) {
+  const dialog = button.closest('[data-dialog="io"]');
+  if (!dialog) return;
+  const tabs = [...dialog.querySelectorAll(".dialog-tabs button")];
+  tabs.forEach((tab) => tab.classList.toggle("is-active", tab === button));
+  const panel = dialog.querySelector(".dialog-panel");
+  const footer = dialog.querySelector("footer");
+  const isExport = tabs.indexOf(button) === 1;
+
+  if (isExport) {
+    if (panel) panel.innerHTML = `
+      <div class="tool-list">
+        <div><b>导出范围</b><span>当前分类分支 / 当前层级 / 整个分类体系</span></div>
+        <div><b>导出字段</b><span>分类编号、名称、父级、层级、状态、映射关系</span></div>
+        <div><b>导出格式</b><span>Excel / CSV（正式版接统一导出服务）</span></div>
+      </div>`;
+    if (footer) footer.innerHTML = `<button value="cancel" class="tax-btn">取消</button><button type="button" class="tax-btn tax-btn--primary" data-action="preview-export">预览导出</button>`;
+  } else {
+    if (panel) panel.innerHTML = `<label class="upload-box"><input type="file" accept=".csv,.xlsx" data-import-file><span>选择 CSV / Excel</span><small data-import-name>尚未选择文件</small></label><div class="dialog-checks"><span>✓ 字段校验</span><span>✓ 父级关系检查</span><span>✓ 编码冲突检查</span><span>✓ 变更预览</span></div>`;
+    if (footer) footer.innerHTML = `<button value="cancel" class="tax-btn">取消</button><button type="button" class="tax-btn" data-action="download-template">下载模板</button><button type="button" class="tax-btn tax-btn--primary" data-action="preview-import">预览导入</button>`;
+  }
 }
 
 function bindDynamicEvents(host) {
@@ -161,6 +202,7 @@ function handleAction(action, host) {
   if (["sync-store", "sync-current"].includes(action)) return showToast(host, "同步控制室入口已验证；正式版将先做差异预览，再确认发布到 Rakuten。 ");
   if (action === "download-template") return downloadTemplate();
   if (action === "preview-import") return showToast(host, "导入预览：正式版将显示新增 / 更新 / 冲突 / 父级缺失等变更摘要。 ");
+  if (action === "preview-export") return showToast(host, "导出预览：正式版将按当前 Scope 生成 Excel / CSV，并保留分类层级与映射字段。 ");
   if (action === "mapping-search") return showToast(host, "已触发辅助分类查询入口；后续接平台 API、海关标准库与 GS1 GPC 数据源。 ");
   if (["edit-current", "view-related"].includes(action)) return showToast(host, `${action === "edit-current" ? "编辑" : "关联对象"}入口已验证。`);
   if (action?.startsWith("open-")) return showToast(host, "来源详情将在辅助分类数据源接入后显示版本、更新时间与原始路径。 ");
