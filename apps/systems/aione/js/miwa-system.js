@@ -26,6 +26,7 @@ import { initBusinessPage } from "./pages/business-page-template.js";
 import { initContentPage } from "./pages/content-page-template.js";
 import { initMiwaCompanyHome } from "./pages/miwa-company-home-book.js?v=20260827-v1.9.31.5-digital-publication";
 import { initMiwaBusinessHome } from "./pages/miwa-business-home-book.js?v=20260827-v1.9.31.5-digital-publication";
+import { initProductHomeCurrent } from "./pages/product-home-current.js?v=20260903-product-home-current-v2";
 import { initNotificationsPage } from "./pages/notifications.js";
 import { initNotificationDetailPage } from "./pages/notification-detail.js";
 import { syncNotificationHeader } from "./data/notification-store.js";
@@ -48,7 +49,7 @@ const BUSINESS_TEMPLATE_ROUTES = new Set([
   "finance-home",
   "channel-home",
   "business-home",
-  "category-home", "product-home", "customer-home", "supplier-home", "talent-home", "ai-home", "ai-office", "shared-home",
+  "category-home", "customer-home", "supplier-home", "talent-home", "ai-home", "ai-office", "shared-home",
   "store-home", "application-home", "income-home", "expense-home", "cash-expense", "analysis"
 ]);
 // V1.9.32 legacy work route order: "work-today","work-mine","work-all","work-blocked","work-review","work-records"
@@ -221,6 +222,11 @@ async function renderCurrentRoute() {
   if (routeId === "business-home" || routeId.startsWith("business-")) {
     await loadComponents([["app-main-host", route.page || ROUTE_REGISTRY["business-home"].page]]);
     await initMiwaBusinessHome();
+    return;
+  }
+
+  if (routeId === "product-home") {
+    initProductHomeCurrent();
     return;
   }
 
