@@ -1,9 +1,10 @@
 import { initMiwaWorkHomeV3 } from "./miwa-work-home-v3.js?v=20260903-work-home-v3";
 
 const WORK_NAV = [
-  ["工作概览","#/work"],
+  ["工作之家","#/work"],
   ["我的工作","#/work-mine"],
   ["我的安排","#/work-assigned"],
+  ["我的协同","#/work-collaboration"],
   ["我的互动","#/work-interactions"],
   ["我的学习","#/work-learning"],
   ["我的建议","#/work-suggestions"],
@@ -60,7 +61,7 @@ function rewriteWorkSidebar(){
   WORK_NAV.forEach(([label,href],index)=>{
     const link=document.createElement("a");
     link.className="sidebar-flat-link";
-    if(index===8)link.classList.add("has-section-gap");
+    if(index===9)link.classList.add("has-section-gap");
     link.href=href;
     link.dataset.navRoute=href.replace(/^#\//,"");
     const indent=document.createElement("span");indent.className="sidebar-flat-link__indent";
