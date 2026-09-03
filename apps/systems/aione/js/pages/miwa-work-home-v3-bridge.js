@@ -26,14 +26,58 @@ function isV3Route(){
   return ["work-mine","work-interactions","work-learning"].includes(route);
 }
 
+function normalizeWorkActionLabels(host){
+  if(!host)return;
+  host.querySelectorAll("button").forEach((button)=>{
+    if(button.textContent.includes("发起设计"))button.textContent="＋ 新建设计";
+    if(button.textContent.includes("发起测样"))button.textContent="＋ 新建测样";
+    if(button.textContent.includes("发起采购"))button.textContent="＋ 新建采购";
+    if(button.textContent.includes("发起上架"))button.textContent="＋ 新建上架";
+    if(button.textContent.includes("发起运营"))button.textContent="＋ 新建运营";
+    if(button.textContent.includes("发起客服"))button.textContent="＋ 新建客服";
+    if(button.textContent.includes("发起其他工作"))button.textContent="＋ 新建其他工作";
+  });
+}
+
+function ensureAIWorkView(host){
+  if(!host||hashParts().route!=="work-mine")return;
+  const typebar=host.querySelector("[data-wh3-types]");
+  const content=host.querySelector("[data-wh3-content]");
+  if(!typebar||!content)return;
+  if(typebar.querySelector('[data-work-type="ai"]'))return;
+
+  const ai=document.createElement("button");
+  ai.type="button";
+  ai.dataset.workType="ai";
+  ai.textContent="AI工作";
+  const other=typebar.querySelector('[data-work-type="other"]');
+  if(other)typebar.insertBefore(ai,other); else typebar.append(ai);
+
+  ai.addEventListener("click",()=>{
+    typebar.querySelectorAll("button").forEach(b=>b.classList.toggle("is-active",b===ai));
+    content.innerHTML=`<div class="wh3-toolbar"><button class="wh3-btn primary" data-ai-work-new>＋ 新建AI工作</button><input class="wh3-search" placeholder="搜索AI工作 / 自动化任务"><button class="wh3-btn">筛选</button><button class="wh3-btn">排序</button></div><div class="wh3-note"><b>AI工作</b><span>集中查看由AI、规则和自动化执行的工作。需要人工介入时，再进入对应人的工作或协同流程。</span></div><div class="wh3-empty"><strong>当前没有AI工作</strong>后续接入自动化任务、AI执行记录和异常接管工作。</div>`;
+    content.querySelector("[data-ai-work-new]")?.addEventListener("click",()=>alert("新建AI工作入口已保留，后续按实际自动化场景逐项接入。"));
+  });
+}
+
+function enhanceWorkMine(){
+  const host=document.getElementById("miwa-work-home-entry");
+  if(!host)return;
+  normalizeWorkActionLabels(host);
+  ensureAIWorkView(host);
+}
+
 let mounting=false;
 async function mountV3(){
   if(!isV3Route()||mounting)return false;
   const host=document.getElementById("miwa-work-home-entry");
   if(!host)return false;
   mounting=true;
-  try{return await initMiwaWorkHomeV3();}
-  finally{mounting=false;}
+  try{
+    const result=await initMiwaWorkHomeV3();
+    enhanceWorkMine();
+    return result;
+  }finally{mounting=false;}
 }
 
 function activeFor(href,current){return current.split("?")[0]===href;}
@@ -94,6 +138,7 @@ const mainObserver=new MutationObserver(()=>{
   const host=document.getElementById("miwa-work-home-entry");
   if(!host)return;
   if(!host.querySelector(".wh3"))window.setTimeout(()=>mountV3(),10);
+  else window.setTimeout(enhanceWorkMine,0);
 });
 window.addEventListener("DOMContentLoaded",()=>{
   const sidebar=document.getElementById("sidebar-host");
