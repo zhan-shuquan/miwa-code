@@ -8,6 +8,7 @@ const SECTION_MAP = Object.freeze({
   "cost-center": ["概览", "成本明细", "成本规则"],
   "price-center": ["概览", "售价", "渠道价格", "调价规则"],
   "profit-center": ["概览", "毛利", "利润", "盈亏分析"],
+  "brand-center": ["概览", "美和品牌", "品牌注册"],
   "attribute-center": ["属性", "属性组", "映射", "设置"],
   "specification-center": ["规格模板", "规格值", "SKU组合", "设置"],
   "coding-center": ["商品编码", "JAN / GTIN", "外部编码", "设置"],
@@ -101,6 +102,5 @@ export function initProductHomeCurrent(){
   if(!host)return false;
   const centerId=currentCenterId();
   if(centerId==="home")return renderHomeOverview(host),true;
-  if(centerId==="brand-center")return false;
   return renderCenter(host,centerId);
 }
