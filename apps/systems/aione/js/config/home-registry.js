@@ -38,28 +38,28 @@ export const HOME_PAGE_MODEL = Object.freeze({
   })
 });
 
-/*
- * Product Home CURRENT｜2026-09-03
- * 选品已回归工作之家“我的工作 → 选品”，不再作为独立中心。
- * 中心负责稳定业务事实、规则与跨对象管理；员工日常执行优先在工作之家。
+/* Product Home CURRENT｜2026-09-03
+ * 选品已回归工作之家“我的工作 → 选品”，不再作为独立选品中心。
+ * 商品之家保留完整专业中心，用于正式事实、规则、结果与深度管理。
  */
 export const PRODUCT_HOME_CENTERS = Object.freeze([
-  center("category-center", "分类中心", { route: "category-home", icon: "category", status: "active" }),
-  center("brand-center", "品牌中心", { route: "product-home?center=brand-center", icon: "brand", status: "active" }),
   center("product-center", "商品中心", { route: "product-home?center=product-center", icon: "product", status: "active" }),
-  center("attribute-center", "属性中心", { route: "product-home?center=attribute-center", icon: "settings" }),
-  center("specification-center", "规格中心", { route: "product-home?center=specification-center", icon: "apps" }),
-  center("coding-center", "编码中心", { route: "product-home?center=coding-center", icon: "database" }),
+  center("design-center", "设计中心", { route: "product-home?center=design-center", icon: "file" }),
+  center("publish-center", "发布中心", { route: "product-home?center=publish-center", icon: "publishing" }),
   center("cost-center", "成本中心", { route: "product-home?center=cost-center", icon: "expense" }),
   center("price-center", "价格中心", { route: "product-home?center=price-center", icon: "income" }),
   center("profit-center", "利润中心", { route: "product-home?center=profit-center", icon: "analysis" }),
-  center("design-center", "设计中心", { route: "product-home?center=design-center", icon: "file" }),
-  center("publish-center", "发布中心", { route: "product-home?center=publish-center", icon: "publishing" }),
+  center("category-center", "分类中心", { route: "category-home", icon: "category", status: "active" }),
+  center("brand-center", "品牌中心", { route: "product-home?center=brand-center", icon: "brand", status: "active" }),
+  center("attribute-center", "属性中心", { route: "product-home?center=attribute-center", icon: "settings" }),
+  center("specification-center", "规格中心", { route: "product-home?center=specification-center", icon: "apps" }),
+  center("coding-center", "编码中心", { route: "product-home?center=coding-center", icon: "database" }),
   center("sampling-center", "测样中心", { route: "product-home?center=sampling-center", icon: "standard" }),
   center("procurement-center", "采购中心", { route: "product-home?center=procurement-center", icon: "store" }),
   center("inventory-center", "库存中心", { route: "product-home?center=inventory-center", icon: "database" }),
   center("operations-center", "运营中心", { route: "product-home?center=operations-center", icon: "analysis" }),
-  center("service-center", "客服中心", { route: "product-home?center=service-center", icon: "customer" })
+  center("service-center", "客服中心", { route: "product-home?center=service-center", icon: "customer" }),
+  center("asset-center", "资料中心", { route: "product-home?center=asset-center", icon: "file" })
 ]);
 
 export const SHARED_HOME_CENTERS = Object.freeze([
