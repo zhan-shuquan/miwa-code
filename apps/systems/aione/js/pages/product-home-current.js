@@ -1,5 +1,4 @@
 import { PRODUCT_HOME_CENTERS } from "../config/home-registry.js?v=20260903-product-home-current";
-import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260903-product-home-current";
 
 function currentCenterId(){
   const raw=String(window.location.hash||"");
@@ -14,67 +13,99 @@ function centerDefinition(centerId){
 
 function renderHomeOverview(host){
   host.innerHTML=`
-    <section class="phc" aria-labelledby="phc-title">
-      <header class="phc-head">
-        <div class="phc-head__icon" data-icon="product"></div>
+    <section class="phc phc-home" aria-labelledby="phc-title">
+      <header class="phc-page-head">
         <div>
-          <div class="phc-eyebrow">PRODUCT HOME</div>
           <h1 id="phc-title">商品之家</h1>
-          <p>统一承载商品正式事实、专业规则与商品域能力。当前先锁定章节、导航与页面母版，业务内容按真实使用逐章建设。</p>
+          <p>统一管理商品正式事实、专业规则与商品域能力。</p>
         </div>
       </header>
-      <nav class="phc-tabs" aria-label="商品之家章节">
-        <a class="is-active" href="#/product-home">概览</a>
-        <a href="#/product-home?center=asset-center">资料中心</a>
-      </nav>
-      <main class="phc-stage">
-        <div class="phc-empty">
-          <div class="phc-empty__icon" data-icon="product"></div>
-          <h2>商品之家框架已建立</h2>
-          <p>先稳定“章 / 节 / 路由 / 页面母版”。各中心的业务内容将在对应章节确认后再接入，不再使用旧页面填充。</p>
-          <span>当前状态｜结构已锁定 · 内容待逐章建设</span>
+      <main class="phc-home-stage">
+        <div class="phc-home-welcome">
+          <h2>商品之家</h2>
+          <p>从左侧进入各专业中心；商品资料统一从顶部“资料中心”进入。</p>
         </div>
       </main>
     </section>`;
-  renderSemanticIcons(host);
-  window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"light",kicker:"商品之家",title:"概览",text:"商品之家当前进入结构优先阶段：先固定章、节和页面母版，再逐章建设真实业务内容。"}}));
+  window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"light",kicker:"商品之家",title:"概览",text:"统一查看商品域状态，并进入各专业中心。"}}));
+}
+
+function productEmpty(section){
+  if(section==="SKU") return `<div class="phc-empty-lite"><h2>暂无 SKU</h2><p>商品建立 SKU 后将在这里统一管理。</p></div>`;
+  if(section==="设置") return `<div class="phc-settings-lite"><div><strong>商品编号规则</strong><span>统一 Product / SKU 编号与生成规则</span></div><div><strong>默认视图</strong><span>设置商品中心默认列表与卡片视图</span></div></div>`;
+  return `<div class="phc-empty-lite"><h2>暂无商品</h2><p>新建正式商品后，将在这里统一管理商品与 SKU。</p><button type="button" class="phc-primary">＋ 新建商品</button></div>`;
+}
+
+function renderProductCenter(host,center,sections){
+  host.innerHTML=`
+    <section class="phc phc-center" aria-labelledby="phc-title">
+      <header class="phc-page-head phc-page-head--center">
+        <div>
+          <h1 id="phc-title">商品中心</h1>
+          <p>管理正式商品、SKU 与商品基础设置。</p>
+        </div>
+      </header>
+      <nav class="phc-tabs" aria-label="商品中心">
+        ${sections.map((label,index)=>`<button type="button" class="${index===0?"is-active":""}" data-phc-section="${index}">${label}</button>`).join("")}
+      </nav>
+      <div class="phc-toolbar" data-phc-toolbar>
+        <button type="button" class="phc-primary">＋ 新建商品</button>
+        <label class="phc-search"><span>⌕</span><input type="search" placeholder="搜索商品 / SKU"></label>
+        <button type="button">筛选</button>
+        <button type="button">分组</button>
+        <button type="button">排序</button>
+        <span class="phc-toolbar-spacer"></span>
+        <button type="button">列表</button>
+        <button type="button">卡片</button>
+      </div>
+      <main class="phc-content" data-phc-stage>${productEmpty(sections[0])}</main>
+    </section>`;
+
+  const stage=host.querySelector("[data-phc-stage]");
+  const toolbar=host.querySelector("[data-phc-toolbar]");
+  host.querySelectorAll("[data-phc-section]").forEach((button)=>button.addEventListener("click",()=>{
+    const index=Number(button.dataset.phcSection)||0;
+    const section=sections[index];
+    host.querySelectorAll("[data-phc-section]").forEach((item)=>item.classList.toggle("is-active",item===button));
+    toolbar.hidden=section==="设置";
+    stage.innerHTML=productEmpty(section);
+  }));
+  window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"light",kicker:"商品之家",title:"商品中心",text:"管理正式 Product、SKU 与商品基础设置。"}}));
+}
+
+function genericEmpty(center,section){
+  return `<div class="phc-empty-lite"><h2>${section}</h2><p>${center.label}的“${section}”已作为正式页面节保留，业务内容将在实际使用时逐步接入。</p></div>`;
+}
+
+function renderGenericCenter(host,center,sections){
+  host.innerHTML=`
+    <section class="phc phc-center" aria-labelledby="phc-title">
+      <header class="phc-page-head phc-page-head--center">
+        <div>
+          <h1 id="phc-title">${center.label}</h1>
+          <p>统一管理${center.label.replace("中心","")}相关事实、规则与业务能力。</p>
+        </div>
+      </header>
+      <nav class="phc-tabs" aria-label="${center.label}">
+        ${sections.map((label,index)=>`<button type="button" class="${index===0?"is-active":""}" data-phc-section="${index}">${label}</button>`).join("")}
+      </nav>
+      <main class="phc-content" data-phc-stage>${genericEmpty(center,sections[0])}</main>
+    </section>`;
+  const stage=host.querySelector("[data-phc-stage]");
+  host.querySelectorAll("[data-phc-section]").forEach((button)=>button.addEventListener("click",()=>{
+    const index=Number(button.dataset.phcSection)||0;
+    host.querySelectorAll("[data-phc-section]").forEach((item)=>item.classList.toggle("is-active",item===button));
+    stage.innerHTML=genericEmpty(center,sections[index]);
+  }));
+  window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"light",kicker:"商品之家",title:center.label,text:`${center.label}采用统一中心页母版。`}}));
 }
 
 function renderCenter(host,centerId){
   const center=centerDefinition(centerId);
   if(!center){renderHomeOverview(host);return true;}
   const sections=Array.isArray(center.tabs)&&center.tabs.length?center.tabs:["概览"];
-  host.innerHTML=`
-    <section class="phc" aria-labelledby="phc-title">
-      <header class="phc-head">
-        <div class="phc-head__icon" data-icon="${center.icon||"product"}"></div>
-        <div>
-          <div class="phc-eyebrow">PRODUCT HOME · CENTER</div>
-          <h1 id="phc-title">${center.label}</h1>
-          <p>当前先锁定本章的横向“节”和统一页面骨架；正式业务内容后续在这套母版内继续建设。</p>
-        </div>
-      </header>
-      <nav class="phc-tabs" aria-label="${center.label}章节">
-        ${sections.map((label,index)=>`<button type="button" class="${index===0?"is-active":""}" data-phc-section="${index}">${label}</button>`).join("")}
-      </nav>
-      <main class="phc-stage" data-phc-stage>
-        <div class="phc-empty">
-          <div class="phc-empty__icon" data-icon="${center.icon||"product"}"></div>
-          <h2>${sections[0]}</h2>
-          <p>${center.label}的页面结构已就位。这里暂不加载任何旧版业务页面。</p>
-          <span>当前状态｜章节已就位 · 内容待建设</span>
-        </div>
-      </main>
-    </section>`;
-  renderSemanticIcons(host);
-  const stage=host.querySelector("[data-phc-stage]");
-  host.querySelectorAll("[data-phc-section]").forEach((button)=>button.addEventListener("click",()=>{
-    const index=Number(button.dataset.phcSection)||0;
-    host.querySelectorAll("[data-phc-section]").forEach((item)=>item.classList.toggle("is-active",item===button));
-    stage.innerHTML=`<div class="phc-empty"><div class="phc-empty__icon" data-icon="${center.icon||"product"}"></div><h2>${sections[index]}</h2><p>${center.label} · ${sections[index]} 已作为稳定“节”保留，正式内容后续接入。</p><span>当前状态｜节已锁定 · 内容待建设</span></div>`;
-    renderSemanticIcons(stage);
-  }));
-  window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"light",kicker:"商品之家",title:center.label,text:`${center.label}当前只保留统一章节骨架和横向节，不再加载旧页面。`}}));
+  if(centerId==="product-center") renderProductCenter(host,center,sections);
+  else renderGenericCenter(host,center,sections);
   return true;
 }
 
