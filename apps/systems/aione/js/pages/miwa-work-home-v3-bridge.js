@@ -10,9 +10,13 @@ const WORK_NAV = [
   ["我的建议","#/work-suggestions"],
   ["我的创新","#/work-innovations"],
   ["我的总结","#/work-summaries"],
-  ["全部工作","#/work-all"],
-  ["工作记录","#/work-records"]
+  ["全部工作","#/work-all"]
 ];
+
+const WORK_ASIDE_TITLES = Object.freeze({
+  "work-assigned":"我的安排",
+  "work-interactions":"我的互动"
+});
 
 function hashParts(){
   const raw=String(window.location.hash||"#/work-mine");
@@ -67,6 +71,20 @@ function enhanceWorkMine(){
   ensureAIWorkView(host);
 }
 
+function normalizeAsideContext(){
+  const {route}=hashParts();
+  const expected=WORK_ASIDE_TITLES[route];
+  if(!expected)return;
+  const aside=document.getElementById("aside-host")||document.querySelector("aside");
+  if(!aside)return;
+  const candidates=[...aside.querySelectorAll("h1,h2,h3,h4,strong,b,div,span,p")];
+  const wrongTitles=route==="work-assigned"?["我安排的","选品工作台"]:["选品工作台","我安排的"];
+  for(const node of candidates){
+    const text=node.textContent?.trim();
+    if(wrongTitles.includes(text))node.textContent=expected;
+  }
+}
+
 let mounting=false;
 async function mountV3(){
   if(!isV3Route()||mounting)return false;
@@ -76,6 +94,7 @@ async function mountV3(){
   try{
     const result=await initMiwaWorkHomeV3();
     enhanceWorkMine();
+    normalizeAsideContext();
     return result;
   }finally{mounting=false;}
 }
@@ -122,16 +141,19 @@ function schedule(){
   window.clearTimeout(renderTimer);
   renderTimer=window.setTimeout(async()=>{
     rewriteWorkSidebar();
+    normalizeAsideContext();
     if(!isV3Route())return;
     for(let i=0;i<30;i+=1){
       if(document.getElementById("miwa-work-home-entry")){await mountV3();break;}
       await new Promise(r=>window.setTimeout(r,50));
     }
+    window.setTimeout(normalizeAsideContext,120);
+    window.setTimeout(normalizeAsideContext,420);
   },40);
 }
 
 window.addEventListener("hashchange",schedule);
-window.addEventListener("aione:platform-context-change",()=>window.setTimeout(rewriteWorkSidebar,20));
+window.addEventListener("aione:platform-context-change",()=>window.setTimeout(()=>{rewriteWorkSidebar();normalizeAsideContext();},20));
 const sidebarObserver=new MutationObserver(()=>{const {route}=hashParts();if(route.startsWith("work"))window.setTimeout(rewriteWorkSidebar,0);});
 const mainObserver=new MutationObserver(()=>{
   if(!isV3Route()||mounting)return;
@@ -140,11 +162,14 @@ const mainObserver=new MutationObserver(()=>{
   if(!host.querySelector(".wh3"))window.setTimeout(()=>mountV3(),10);
   else window.setTimeout(enhanceWorkMine,0);
 });
+const asideObserver=new MutationObserver(()=>{const {route}=hashParts();if(route.startsWith("work"))window.setTimeout(normalizeAsideContext,0);});
 window.addEventListener("DOMContentLoaded",()=>{
   const sidebar=document.getElementById("sidebar-host");
   if(sidebar)sidebarObserver.observe(sidebar,{childList:true,subtree:true});
   const main=document.getElementById("app-main-host");
   if(main)mainObserver.observe(main,{childList:true,subtree:true});
+  const aside=document.getElementById("aside-host");
+  if(aside)asideObserver.observe(aside,{childList:true,subtree:true});
   schedule();
 });
 if(document.readyState!=="loading")schedule();
