@@ -11,7 +11,7 @@ const skus=[
 {id:'MH0000128-05',productId:'MH0000128',name:'男士厚手格纹中筒袜 绿色',variant:'绿色 · 24–27cm · 5双装',origin:'中国',jan:'JAN待分配',imageName:'绿色图',status:'准备中',image:'🧦'},
 {id:'MH0000129-01',productId:'MH0000129',name:'女士棉混中筒袜 黑色',variant:'黑色 · 23–25cm',origin:'中国',jan:'JAN待分配',imageName:'黑色图',status:'待确认',image:'🧦'}
 ];
-const state={tab:'products',view:'cards',cols:3,openMenu:null};
+const state={tab:'products',view:'cards',cols:3};
 const $=(q)=>document.querySelector(q), $$=(q)=>Array.from(document.querySelectorAll(q));
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function status(v){return `<span class="status ${v==='待确认'?'warn':''}">${esc(v)}</span>`}
@@ -20,9 +20,15 @@ function productTable(){return `<section class="table"><div class="thead"><div>�
 function productCards(){return `<section class="cards" style="--card-cols:${state.cols}">${products.map(p=>`<article class="card"><div class="card-top"><div class="thumb">${p.image}</div><div class="entity"><div><div class="entity-id">${p.id}</div><div class="entity-name">${esc(p.name)}</div><div class="entity-sub">${p.category} · ${p.brand}</div></div></div></div><div class="card-facts"><div class="fact"><small>SKU</small><strong>${p.skuCount} SKU</strong></div><div class="fact"><small>负责人</small><strong>${p.owner}</strong></div><div class="fact"><small>默认SKU</small><strong>${p.defaultSku}</strong></div></div><div class="card-foot">${status(p.status)}${actions(p.id)}</div></article>`).join('')}</section>`}
 function skuTable(){return `<section class="table"><div class="thead" style="grid-template-columns:minmax(320px,1.8fr) 210px 90px 120px 100px 150px"><div>SKU对象</div><div>规格组合</div><div>原产国</div><div>JAN / GTIN</div><div>状态</div><div>对象操作</div></div>${skus.map(s=>`<div class="trow" style="grid-template-columns:minmax(320px,1.8fr) 210px 90px 120px 100px 150px"><div class="entity"><div class="thumb">${s.image}</div><div><div class="entity-id">${s.id}</div><div class="entity-name">${esc(s.name)}</div><div class="entity-sub">所属 Product：${s.productId}</div></div></div><div class="cell"><strong>${s.variant}</strong></div><div class="cell"><strong>${s.origin}</strong></div><div class="cell"><strong>${s.jan}</strong><small>编码中心统一分配</small></div><div>${status(s.status)}</div>${actions(s.id)}</div>`).join('')}</section>`}
 function settings(){return `<section class="table"><div style="padding:18px 20px"><h3 style="margin:0 0 8px;font-size:15px">商品中心设置</h3><p style="margin:0 0 16px;color:var(--muted);font-size:11px">这里只维护商品中心自己的业务设置。分类、品牌、属性、规格、编码分别由对应中心管理。</p><div class="grid2"><div class="kv"><small>Product编号规则</small><strong>MH + 7位序号</strong></div><div class="kv"><small>SKU编号规则</small><strong>Product ID + 两位子序号</strong></div><div class="kv"><small>默认卡片密度</small><strong>3列</strong></div><div class="kv"><small>新建商品规则</small><strong>正式Product必须至少1个SKU</strong></div></div></div></section>`}
+function syncViewButtons(){
+  $('#listBtn').classList.toggle('active',state.view==='list');
+  $('#cardBtn').classList.toggle('active',state.view==='cards');
+  $('#cardBtn').textContent=`▦ 卡片 ${state.cols}列 ▾`;
+  $$('#densityMenu button').forEach(b=>b.classList.toggle('active',Number(b.dataset.cols)===state.cols));
+}
 function render(){
   $$('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===state.tab));
-  $('#listBtn').classList.toggle('active',state.view==='list'); $('#cardBtn').classList.toggle('active',state.view==='cards');
+  syncViewButtons();
   $('#content').innerHTML=state.tab==='products'?(state.view==='list'?productTable():productCards()):state.tab==='sku'?skuTable():settings();
   bindOpen();
 }
@@ -35,9 +41,8 @@ function openWizard(){const list=generatedSkus();$('#wizardBody').innerHTML=`<di
 function init(){
   $$('.tabs button').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;render()});
   $('#listBtn').onclick=()=>{state.view='list';render()};
-  $('#cardBtn').onclick=()=>{state.view='cards';render()};
-  $('#densityBtn').onclick=e=>{e.stopPropagation();$('#densityMenu').classList.toggle('open')};
-  $$('#densityMenu button').forEach(b=>b.onclick=()=>{state.cols=Number(b.dataset.cols);state.view='cards';$('#densityBtn').textContent=`卡片 ${state.cols}列 ▾`;$('#densityMenu').classList.remove('open');render()});
+  $('#cardBtn').onclick=e=>{e.stopPropagation();state.view='cards';$('#densityMenu').classList.toggle('open');render()};
+  $$('#densityMenu button').forEach(b=>b.onclick=e=>{e.stopPropagation();state.cols=Number(b.dataset.cols);state.view='cards';$('#densityMenu').classList.remove('open');render()});
   $('#displayBtn').onclick=e=>{e.stopPropagation();$('#displayMenu').classList.toggle('open')};
   $('#newProduct').onclick=openWizard;
   $('#closeDrawer').onclick=closeLayers;$('#closeWizard').onclick=closeLayers;$('#backdrop').onclick=closeLayers;
