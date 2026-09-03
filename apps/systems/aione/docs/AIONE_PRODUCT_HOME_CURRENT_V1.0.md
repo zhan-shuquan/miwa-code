@@ -30,14 +30,120 @@ Effective: 2026-09-03
 
 完整商品资料属于 Product Object Workspace，不额外建立重复“商品资料”Tab。
 
-## SKU Generator
-SKU 不逐条手建。统一能力：
+## SKU Generator｜平台核心能力
+SKU Generator 不是商品中心局部表单，而是平台共享能力。
 
-Product + Specification Template + Variant Values → SKU组合 / SKU ID / SKU名称 / SKU图片关联 / 原产国 / 初始状态。
+统一输入：
 
-入口：新建商品、1688导入、批量商品导入、AI商品识别、产品开发、已有Product新增规格。
+`Product + Specification Template + Variant Values`
 
-原产国为 SKU 级标准事实。JAN / GTIN / EAN / UPC 属于唯一识别编码，由编码中心统一管理；条形码由编码生成。
+统一输出：
+
+`SKU Drafts / SKU组合 / SKU ID / SKU名称 / SKU图片关联 / 原产国 / 初始状态 / 编码状态`
+
+统一调用入口：
+- 新建商品
+- 1688导入
+- 批量商品导入
+- AI商品识别
+- 产品开发
+- 已有Product新增规格
+
+### 正式三步流程
+
+#### Step 1｜确认商品
+确认 Product 基本事实：
+- Product ID
+- 三级分类
+- 商品简称
+- 品牌
+- 来源
+- 规格模板
+
+正式 Product 建立时必须同时至少生成 1 个 SKU。
+
+#### Step 2｜确认规格
+从规格中心读取 Specification Template，并识别 Variant Values。
+
+员工只做：
+- 确认
+- 删除错误值
+- 补充缺失值
+
+不得要求员工逐条创建 SKU。
+
+事实优先级：
+
+`API事实 > 确定性规则 > AI建议 > 人工最终确认`
+
+### Step 3｜确认SKU
+系统先生成候选 SKU 组合，再由用户确认。
+
+要求支持：
+- 矩阵视图
+- 列表视图
+- 关闭不存在组合
+- 全选 / 取消全选
+- 批量原产国
+- 批量初始状态
+- 批量图片关联
+- 批量启用 / 停用组合
+- 一次性创建 Product + SKU
+
+SKU Generator 不能机械生成全部笛卡尔积后直接入库。
+
+## SKU自动生成字段
+每个 SKU 至少自动生成：
+- SKU ID
+- SKU名称
+- 所属 Product
+- 规格组合
+- SKU图片关联
+- 原产国
+- 初始状态
+- JAN / GTIN 状态
+- 来源关系
+- 创建来源
+- 创建时间
+
+## SKU图片规则
+图片关联优先级：
+
+`1688 SKU图 -> AIONE素材库已有图 -> AI匹配 -> 人工修正`
+
+不得要求员工为每个 SKU 重复上传图片。
+
+## SKU名称规则
+SKU名称由统一规则生成，默认：
+
+`Product简称 + 关键Variant Values`
+
+不得要求员工逐条手写 SKU 名称。
+
+## 单规格商品
+单规格 Product 也必须存在 1 个 SKU。
+
+系统自动生成默认 `-01` SKU，不要求员工额外点击“新增SKU”。
+
+## 原产国
+`country_of_origin` 是 SKU 级标准事实。
+
+属性中心只维护字段定义、选项和适用规则；实际值存储在 SKU。
+
+允许 SKU Generator 批量继承默认原产国，但最终持久化到 SKU。
+
+## 编码边界
+JAN / GTIN / EAN / UPC 属于编码中心，不属于普通属性。
+
+SKU Generator 只显示编码状态，例如：
+- 待分配
+- 已绑定
+
+SKU生成后，由编码中心负责：
+- 唯一性校验
+- 编码分配
+- 条形码生成
+- 编码历史 / 作废管理
 
 ## 成本 / 价格
 沿用已讨论成熟的术语，不重新命名：
@@ -53,3 +159,19 @@ Product + Specification Template + Variant Values → SKU组合 / SKU ID / SKU�
 
 ## 导航显示
 当前默认全部中心显示。允许保留轻量 `中心显示 ▾` 入口，但不让个性化设置成为主流程。
+
+## 外部API边界
+中心负责业务语义，Adapter负责外部世界。
+
+标准结构：
+
+`Center -> Domain/Application Service -> Integration Service -> External Adapter -> External API`
+
+页面组件不得长期直接调用1688、Rakuten等外部API。
+
+## 开发治理
+本文件是当前商品之家开发的 CURRENT Product Truth。
+
+后续商品之家代码开发前必须先读取本文件，不得根据临时预览代码重新猜产品。
+
+只有出现新的业务事实、明确冲突或用户明确修改 Product Truth 时，才允许调整 CURRENT 定义。
