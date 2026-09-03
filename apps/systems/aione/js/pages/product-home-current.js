@@ -1,25 +1,6 @@
 import { PRODUCT_HOME_CENTERS } from "../config/home-registry.js?v=20260903-product-home-current";
 import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260903-product-home-current";
 
-const SECTION_MAP = Object.freeze({
-  "product-center": ["全部商品", "SKU", "设置"],
-  "design-center": ["概览", "商品设计", "设计模板", "设计规则"],
-  "publish-center": ["概览", "待发布", "已发布", "发布规则"],
-  "cost-center": ["概览", "成本明细", "成本规则"],
-  "price-center": ["概览", "售价", "渠道价格", "调价规则"],
-  "profit-center": ["概览", "毛利", "利润", "盈亏分析"],
-  "brand-center": ["概览", "美和品牌", "品牌注册"],
-  "attribute-center": ["属性", "属性组", "映射", "设置"],
-  "specification-center": ["规格模板", "规格值", "SKU组合", "设置"],
-  "coding-center": ["商品编码", "JAN / GTIN", "外部编码", "设置"],
-  "sampling-center": ["概览", "待测样", "测样记录", "标准"],
-  "procurement-center": ["概览", "采购关系", "采购记录", "规则"],
-  "inventory-center": ["概览", "库存", "库存流水", "规则"],
-  "operations-center": ["概览", "运营状态", "活动", "优化记录"],
-  "service-center": ["概览", "商品问题", "客诉记录", "服务资料"],
-  "asset-center": ["全部资料", "图片", "文档", "表格", "其他"]
-});
-
 function currentCenterId(){
   const raw=String(window.location.hash||"");
   if(!raw.startsWith("#/product-home"))return null;
@@ -62,7 +43,7 @@ function renderHomeOverview(host){
 function renderCenter(host,centerId){
   const center=centerDefinition(centerId);
   if(!center){renderHomeOverview(host);return true;}
-  const sections=SECTION_MAP[centerId] || ["概览"];
+  const sections=Array.isArray(center.tabs)&&center.tabs.length?center.tabs:["概览"];
   host.innerHTML=`
     <section class="phc" aria-labelledby="phc-title">
       <header class="phc-head">
