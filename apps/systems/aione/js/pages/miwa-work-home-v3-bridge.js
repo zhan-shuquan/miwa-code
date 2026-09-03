@@ -2,7 +2,8 @@ import { initMiwaWorkHomeV3 } from "./miwa-work-home-v3.js?v=20260903-work-home-
 import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260824-v1.9.5-sidebar-aside-lock-candidate";
 
 const WORK_NAV = [
-  ["工作之家","#/work","work"],
+  ["工作之家","#/work","work","home"],
+  ["AI秘书","#","ai","ai"],
   ["我的工作","#/work-mine","work"],
   ["我的安排","#/work-assigned","calendar"],
   ["我的协同","#/work-collaboration","people"],
@@ -39,15 +40,16 @@ function ensureBridgeStyles(){
     .sidebar-flat-link .aione-work-nav-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;color:#5f6368;flex:0 0 18px;margin-right:9px}
     .sidebar-flat-link .aione-work-nav-icon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
     .sidebar-flat-link[aria-current="page"] .aione-work-nav-icon{color:#176b4d}
+    .sidebar-flat-link.aione-work-ai-secretary{color:#176b4d;font-weight:650}
+    .sidebar-flat-link.aione-work-ai-secretary .aione-work-nav-icon{color:#176b4d}
+    .sidebar-flat-link.aione-work-ai-secretary::after{content:"";position:absolute;left:12px;right:12px;bottom:-7px;border-bottom:1px solid #e5e7eb}
+    .sidebar-flat-link.aione-work-ai-secretary{position:relative;margin-bottom:14px}
     .aione-work-home-tools{display:flex;align-items:center;gap:6px;min-height:48px;padding:0 10px 0 12px;margin:0 0 12px;border-bottom:1px solid #e5e7eb;background:#fff}
     .aione-work-home-tools__item{height:34px;padding:0 11px;border:0;border-radius:8px;background:transparent;color:#3c4043;font:600 13px/1 system-ui,-apple-system,"Segoe UI",sans-serif;display:inline-flex;align-items:center;gap:7px;cursor:pointer}
     .aione-work-home-tools__item:hover{background:#f1f3f4}
     .aione-work-home-tools__item.is-active{background:#edf5f1;color:#176b4d}
     .aione-work-home-tools__icon{width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center}
     .aione-work-home-tools__icon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-    .aione-work-home-tools__spacer{flex:1}
-    .aione-work-home-tools__ai{border:1px solid #dadce0;background:#fff;color:#176b4d}
-    .aione-work-home-tools__ai:hover{background:#f8fbf9}
   `;
   document.head.append(style);
 }
@@ -93,7 +95,7 @@ function enhanceWorkMine(){
 
 function openExistingMiwaAI(){
   const candidates=[...document.querySelectorAll("button,a")];
-  const target=candidates.find(el=>/美和AI/.test(el.textContent||"")&&!el.closest(".aione-work-home-tools"));
+  const target=candidates.find(el=>/美和AI/.test(el.textContent||"")&&!el.closest("#sidebar-navigation-tree"));
   if(target){target.click();return;}
   window.location.hash="#/ai-home";
 }
@@ -111,16 +113,11 @@ function ensureWorkHomeTools(){
   bar.setAttribute("aria-label","工作之家功能");
   bar.innerHTML=`
     <button class="aione-work-home-tools__item is-active" type="button" data-work-home-action="overview"><span class="aione-work-home-tools__icon" data-icon="work"></span><span>概览</span></button>
-    <button class="aione-work-home-tools__item" type="button" data-work-home-action="manual"><span class="aione-work-home-tools__icon" data-icon="knowledge"></span><span>工作手册</span></button>
-    <button class="aione-work-home-tools__item" type="button" data-work-home-action="homes"><span class="aione-work-home-tools__icon" data-icon="apps"></span><span>全部之家</span></button>
-    <span class="aione-work-home-tools__spacer"></span>
-    <button class="aione-work-home-tools__item aione-work-home-tools__ai" type="button" data-work-home-action="ai"><span class="aione-work-home-tools__icon" data-icon="ai"></span><span>工作之家AI秘书</span></button>`;
+    <button class="aione-work-home-tools__item" type="button" data-work-home-action="all"><span class="aione-work-home-tools__icon" data-icon="database"></span><span>全部工作</span></button>`;
   main.prepend(bar);
   renderSemanticIcons(bar);
   bar.querySelector('[data-work-home-action="overview"]')?.addEventListener("click",()=>{window.location.hash="#/work";});
-  bar.querySelector('[data-work-home-action="manual"]')?.addEventListener("click",()=>{window.location.hash="#/work?section=work-overview";});
-  bar.querySelector('[data-work-home-action="homes"]')?.addEventListener("click",()=>{window.location.hash="#/business-home";});
-  bar.querySelector('[data-work-home-action="ai"]')?.addEventListener("click",openExistingMiwaAI);
+  bar.querySelector('[data-work-home-action="all"]')?.addEventListener("click",()=>{window.location.hash="#/work-all";});
 }
 
 function normalizeAsideContext(){
@@ -143,13 +140,17 @@ async function mountV3(){
   try{const result=await initMiwaWorkHomeV3();enhanceWorkMine();normalizeAsideContext();return result;}finally{mounting=false;}
 }
 
-function activeFor(href,current){return current.split("?")[0]===href;}
+function activeFor(href,current){return href!=="#"&&current.split("?")[0]===href;}
 function syncExistingNav(host,current){
   const links=[...host.querySelectorAll(":scope > a.sidebar-flat-link")];
   if(links.length!==WORK_NAV.length)return false;
   const labels=links.map(link=>link.textContent.trim());
   if(labels.some((label,i)=>label!==WORK_NAV[i][0]))return false;
-  links.forEach((link,i)=>{const href=WORK_NAV[i][1];if(activeFor(href,current))link.setAttribute("aria-current","page");else link.removeAttribute("aria-current");});
+  links.forEach((link,i)=>{
+    const href=WORK_NAV[i][1];
+    if(activeFor(href,current))link.setAttribute("aria-current","page");else link.removeAttribute("aria-current");
+    if(WORK_NAV[i][3]==="ai")link.classList.add("aione-work-ai-secretary");
+  });
   renderSemanticIcons(host);
   return true;
 }
@@ -162,15 +163,16 @@ function rewriteWorkSidebar(){
   const current=String(window.location.hash||"");
   if(syncExistingNav(host,current))return;
   const fragment=document.createDocumentFragment();
-  WORK_NAV.forEach(([label,href,icon],index)=>{
+  WORK_NAV.forEach(([label,href,icon,kind])=>{
     const link=document.createElement("a");
     link.className="sidebar-flat-link";
-    if(index===9)link.classList.add("has-section-gap");
+    if(kind==="ai")link.classList.add("aione-work-ai-secretary");
     link.href=href;
     link.dataset.navRoute=href.replace(/^#\//,"");
     const iconHost=document.createElement("span");iconHost.className="aione-work-nav-icon";iconHost.dataset.icon=icon;
     const text=document.createElement("span");text.textContent=label;
     link.append(iconHost,text);
+    if(kind==="ai")link.addEventListener("click",(event)=>{event.preventDefault();openExistingMiwaAI();});
     if(activeFor(href,current))link.setAttribute("aria-current","page");
     fragment.append(link);
   });
