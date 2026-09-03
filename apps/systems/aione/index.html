@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#176B4D">
   <meta name="color-scheme" content="light">
-  <title>美和一体化工作平台｜选品工作台</title>
+  <title>美和AIONE一体化工作平台</title>
   <link rel="icon" type="image/svg+xml" href="./assets/brand/miwa-company-mark.svg?v=20260901-v2">
   <link rel="apple-touch-icon" href="./assets/brand/miwa-company-mark.svg?v=20260901-v2">
 
@@ -28,6 +28,7 @@
   <link rel="stylesheet" href="./css/pages/category-center-preview.css?v=20260902-visual-taxonomy-v2">
   <link rel="stylesheet" href="./css/pages/category-center-panorama.css?v=20260902-category-panorama-v1">
   <link rel="stylesheet" href="./css/pages/category-center-finalize.css?v=20260902-category-finalize-v1">
+  <link rel="stylesheet" href="./css/pages/product-center-unified.css?v=20260903-product-center-unified">
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -37,11 +38,7 @@
 
     <div class="app-body has-aside">
       <aside id="sidebar-host" class="desktop-sidebar-host"></aside>
-
-      <main class="app-main">
-        <div id="app-main-host" class="page-host"></div>
-      </main>
-
+      <main class="app-main"><div id="app-main-host" class="page-host"></div></main>
       <aside id="aside-host" class="desktop-aside-host"></aside>
     </div>
 
@@ -53,7 +50,6 @@
   </div>
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-
   <script>
     (function installMiwaAIHardEntryBridge(){
       if (window.__AIONE_MIWAAI_HARD_BRIDGE__) return;
@@ -61,77 +57,20 @@
       var ENTRY_SELECTOR = '#desktop-miwa-ai-entry,#mobile-miwa-ai-entry,[data-miwa-ai-entry]';
       var pendingSource = null;
       var observer = null;
-
-      function syncEntries(open){
-        document.querySelectorAll(ENTRY_SELECTOR).forEach(function(button){
-          button.classList.toggle('is-active', !!open);
-          button.setAttribute('aria-expanded', String(!!open));
-        });
-      }
-
+      function syncEntries(open){document.querySelectorAll(ENTRY_SELECTOR).forEach(function(button){button.classList.toggle('is-active',!!open);button.setAttribute('aria-expanded',String(!!open));});}
       function hardOpen(source){
-        var root = document.getElementById('miwa-ai-layer');
-        if (!root){
-          pendingSource = source || 'header-hard-bridge';
-          var host = document.getElementById('miwa-ai-layer-host');
-          if (!host) return false;
-          if (!observer){
-            observer = new MutationObserver(function(){
-              if (!document.getElementById('miwa-ai-layer')) return;
-              observer.disconnect(); observer = null;
-              var next = pendingSource; pendingSource = null;
-              hardOpen(next);
-            });
-            observer.observe(host,{childList:true,subtree:true});
-          }
-          return false;
-        }
-        root.hidden = false;
-        root.setAttribute('data-mode','drawer');
-        root.setAttribute('data-hard-open','true');
-        document.body.classList.add('miwa-ai-open');
-        syncEntries(true);
-        try {
-          if (window.MIWAAI && typeof window.MIWAAI.open === 'function') {
-            window.MIWAAI.open(source || 'header-hard-bridge');
-          }
-        } catch (error) {
-          console.error('[美和AI Hard Bridge] 增强初始化失败，但Layer已强制打开。', error);
-        }
-        return true;
+        var root=document.getElementById('miwa-ai-layer');
+        if(!root){pendingSource=source||'header-hard-bridge';var host=document.getElementById('miwa-ai-layer-host');if(!host)return false;if(!observer){observer=new MutationObserver(function(){if(!document.getElementById('miwa-ai-layer'))return;observer.disconnect();observer=null;var next=pendingSource;pendingSource=null;hardOpen(next);});observer.observe(host,{childList:true,subtree:true});}return false;}
+        root.hidden=false;root.setAttribute('data-mode','drawer');root.setAttribute('data-hard-open','true');document.body.classList.add('miwa-ai-open');syncEntries(true);
+        try{if(window.MIWAAI&&typeof window.MIWAAI.open==='function')window.MIWAAI.open(source||'header-hard-bridge');}catch(error){console.error('[美和AI Hard Bridge] 增强初始化失败，但Layer已强制打开。',error);}return true;
       }
-
-      function hardClose(){
-        var root = document.getElementById('miwa-ai-layer');
-        if (!root) return false;
-        root.hidden = true;
-        root.removeAttribute('data-hard-open');
-        document.body.classList.remove('miwa-ai-open');
-        syncEntries(false);
-        return true;
-      }
-
-      document.addEventListener('click', function(event){
-        var target = event.target;
-        if (!(target instanceof Element)) return;
-        var entry = target.closest(ENTRY_SELECTOR);
-        if (entry){
-          event.preventDefault();
-          hardOpen(entry.id && entry.id.indexOf('mobile') === 0 ? 'mobile-header-hard' : 'desktop-header-hard');
-          return;
-        }
-        var close = target.closest('[data-miwa-ai-action="close"]');
-        if (close && document.getElementById('miwa-ai-layer')){
-          event.preventDefault();
-          hardClose();
-        }
-      }, true);
-
-      window.AIONEMiwaAIHardBridge = Object.freeze({open:hardOpen,close:hardClose});
+      function hardClose(){var root=document.getElementById('miwa-ai-layer');if(!root)return false;root.hidden=true;root.removeAttribute('data-hard-open');document.body.classList.remove('miwa-ai-open');syncEntries(false);return true;}
+      document.addEventListener('click',function(event){var target=event.target;if(!(target instanceof Element))return;var entry=target.closest(ENTRY_SELECTOR);if(entry){event.preventDefault();hardOpen(entry.id&&entry.id.indexOf('mobile')===0?'mobile-header-hard':'desktop-header-hard');return;}var close=target.closest('[data-miwa-ai-action="close"]');if(close&&document.getElementById('miwa-ai-layer')){event.preventDefault();hardClose();}},true);
+      window.AIONEMiwaAIHardBridge=Object.freeze({open:hardOpen,close:hardClose});
     })();
   </script>
 
-  <script type="module" src="./js/miwa-system.js?v=20260902-product-sidebar-v1"></script>
+  <script type="module" src="./js/miwa-system.js?v=20260903-unified-test-flow"></script>
   <script type="module" src="./js/pages/category-center-preview.js?v=20260902-visual-taxonomy-v2"></script>
   <script type="module" src="./js/pages/category-center-panorama.js?v=20260902-category-panorama-v1"></script>
   <script type="module" src="./js/pages/category-center-finalize.js?v=20260902-category-finalize-v1"></script>
@@ -139,6 +78,6 @@
   <script type="module" src="./js/shell/sidebar-shell-v2.js?v=20260902-sidebar-shell-v2-1"></script>
   <script type="module" src="./js/shell/product-sidebar-unification.js?v=20260902-product-sidebar-v1-1"></script>
   <script type="module" src="./js/pages/miwa-work-home-v3-bridge.js?v=20260903-work-home-v3"></script>
-  <!-- Work Home V3 migration bridge: real-shell validation on #/work-mine -->
+  <script type="module" src="./js/pages/product-center-unified-bridge.js?v=20260903-product-center-unified"></script>
 </body>
 </html>
