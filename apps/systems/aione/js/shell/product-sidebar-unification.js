@@ -62,11 +62,19 @@ function renderGroup(group,map){
     <div class="product-sidebar-group__items">${children}</div>
   </section>`;
 }
-function ensureProductHomeTools(){
-  const main=document.getElementById("app-main-host");
-  const existing=document.getElementById("aione-product-home-tools");
-  if(!isProductRoute()){existing?.remove();return;}
-  if(!main||existing)return;
+function syncProductHomePage(){
+  const root=hashValue();
+  document.documentElement.dataset.productHomeRoute=isProductRoute()?"true":"false";
+  document.documentElement.dataset.productHomeOverview=root==="product-home"?"true":"false";
+  if(root==="product-home"){
+    const header=document.querySelector("#app-main-host .miwa-page-header, #app-main-host [data-page-header]");
+    header?.querySelectorAll("button,a").forEach((node)=>{
+      const label=(node.textContent||"").trim();
+      if(label==="商品概览"||label==="+ 商品概览"||label==="＋ 商品概览"||label.includes("新建商品")) node.hidden=true;
+    });
+  }
+}
+function buildProductHomeTools(){
   const asset=PRODUCT_HOME_CENTERS.find((center)=>center.id==="asset-center");
   const bar=document.createElement("nav");
   bar.id="aione-product-home-tools";
@@ -75,8 +83,17 @@ function ensureProductHomeTools(){
   bar.innerHTML=`
     <a class="aione-product-home-tools__item ${active("product-home")?"is-active":""}" href="#/product-home">${icon("product")}<span>概览</span></a>
     ${asset?`<a class="aione-product-home-tools__item ${active(asset.route)?"is-active":""}" href="#/${asset.route}">${icon(asset.icon||"file")}<span>资料中心</span></a>`:""}`;
-  main.prepend(bar);
   renderSemanticIcons(bar);
+  return bar;
+}
+function ensureProductHomeTools(){
+  const main=document.getElementById("app-main-host");
+  const existing=document.getElementById("aione-product-home-tools");
+  if(!isProductRoute()){existing?.remove();return;}
+  if(!main)return;
+  const next=buildProductHomeTools();
+  if(existing) existing.replaceWith(next); else main.prepend(next);
+  syncProductHomePage();
 }
 function bindGroupToggles(host){
   host.querySelectorAll("[data-product-group-toggle]").forEach((button)=>{
@@ -109,8 +126,26 @@ function render(){
   renderSemanticIcons(sidebar);
   ensureProductHomeTools();
 }
+let mainSyncQueued=false;
+function scheduleMainSync(){
+  if(mainSyncQueued)return;
+  mainSyncQueued=true;
+  requestAnimationFrame(()=>{
+    mainSyncQueued=false;
+    if(isProductRoute())ensureProductHomeTools();
+  });
+}
 window.addEventListener("hashchange",()=>window.setTimeout(render,0));
 window.addEventListener("aione:category-preview-rendered",render);
 window.addEventListener("aione:platform-context-change",()=>window.setTimeout(render,0));
-window.addEventListener("DOMContentLoaded",render);
+window.addEventListener("DOMContentLoaded",()=>{
+  render();
+  const main=document.getElementById("app-main-host");
+  if(main)new MutationObserver(scheduleMainSync).observe(main,{childList:true,subtree:false});
+});
+if(document.readyState!=="loading"){
+  render();
+  const main=document.getElementById("app-main-host");
+  if(main)new MutationObserver(scheduleMainSync).observe(main,{childList:true,subtree:false});
+}
 window.setTimeout(render,700);
