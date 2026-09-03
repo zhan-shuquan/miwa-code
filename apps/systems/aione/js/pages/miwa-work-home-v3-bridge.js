@@ -45,12 +45,32 @@ async function mountV3(){
   finally{if(target!=="work-mine")history.replaceState(history.state,"",original);}
 }
 
+function activeFor(href,route,view,current){
+  if(href==="#/work?view=interactions")return route==="work"&&view==="interactions";
+  if(href==="#/work?view=learning")return route==="work"&&view==="learning";
+  return current.split("?")[0]===href;
+}
+
+function syncExistingNav(host,route,view,current){
+  const links=[...host.querySelectorAll(":scope > a.sidebar-flat-link")];
+  if(links.length!==WORK_NAV.length)return false;
+  const labels=links.map(link=>link.textContent.trim());
+  if(labels.some((label,i)=>label!==WORK_NAV[i][0]))return false;
+  links.forEach((link,i)=>{
+    const href=WORK_NAV[i][1];
+    if(activeFor(href,route,view,current))link.setAttribute("aria-current","page");
+    else link.removeAttribute("aria-current");
+  });
+  return true;
+}
+
 function rewriteWorkSidebar(){
   const {route,view}=hashParts();
   if(!route.startsWith("work"))return;
   const host=document.getElementById("sidebar-navigation-tree");
   if(!host)return;
   const current=String(window.location.hash||"");
+  if(syncExistingNav(host,route,view,current))return;
   const fragment=document.createDocumentFragment();
   WORK_NAV.forEach(([label,href],index)=>{
     const link=document.createElement("a");
@@ -61,10 +81,7 @@ function rewriteWorkSidebar(){
     const indent=document.createElement("span");indent.className="sidebar-flat-link__indent";
     const text=document.createElement("span");text.textContent=label;
     link.append(indent,text);
-    const active=href==="#/work?view=interactions"?(route==="work"&&view==="interactions"):
-      href==="#/work?view=learning"?(route==="work"&&view==="learning"):
-      current.split("?")[0]===href;
-    if(active)link.setAttribute("aria-current","page");
+    if(activeFor(href,route,view,current))link.setAttribute("aria-current","page");
     fragment.append(link);
   });
   host.replaceChildren(fragment);
