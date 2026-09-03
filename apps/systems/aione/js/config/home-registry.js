@@ -41,25 +41,26 @@ export const HOME_PAGE_MODEL = Object.freeze({
 /* Product Home CURRENT｜2026-09-03
  * 选品已回归工作之家“我的工作 → 选品”，不再作为独立选品中心。
  * 商品之家保留完整专业中心，用于正式事实、规则、结果与深度管理。
+ * CURRENT 导航事实：章 = centers；节 = tabs。不得在页面中维护第二套同名定义。
  */
 export const PRODUCT_HOME_CENTERS = Object.freeze([
-  center("product-center", "商品中心", { route: "product-home?center=product-center", icon: "product", status: "active" }),
-  center("design-center", "设计中心", { route: "product-home?center=design-center", icon: "file" }),
-  center("publish-center", "发布中心", { route: "product-home?center=publish-center", icon: "publishing" }),
-  center("cost-center", "成本中心", { route: "product-home?center=cost-center", icon: "expense" }),
-  center("price-center", "价格中心", { route: "product-home?center=price-center", icon: "income" }),
-  center("profit-center", "利润中心", { route: "product-home?center=profit-center", icon: "analysis" }),
-  center("category-center", "分类中心", { route: "category-home", icon: "category", status: "active" }),
-  center("brand-center", "品牌中心", { route: "product-home?center=brand-center", icon: "brand", status: "active" }),
-  center("attribute-center", "属性中心", { route: "product-home?center=attribute-center", icon: "settings" }),
-  center("specification-center", "规格中心", { route: "product-home?center=specification-center", icon: "apps" }),
-  center("coding-center", "编码中心", { route: "product-home?center=coding-center", icon: "database" }),
-  center("sampling-center", "测样中心", { route: "product-home?center=sampling-center", icon: "standard" }),
-  center("procurement-center", "采购中心", { route: "product-home?center=procurement-center", icon: "store" }),
-  center("inventory-center", "库存中心", { route: "product-home?center=inventory-center", icon: "database" }),
-  center("operations-center", "运营中心", { route: "product-home?center=operations-center", icon: "analysis" }),
-  center("service-center", "客服中心", { route: "product-home?center=service-center", icon: "customer" }),
-  center("asset-center", "资料中心", { route: "product-home?center=asset-center", icon: "file" })
+  center("product-center", "商品中心", { route: "product-home?center=product-center", icon: "product", tabs: ["全部商品", "SKU", "设置"], status: "active" }),
+  center("design-center", "设计中心", { route: "product-home?center=design-center", icon: "file", tabs: ["概览", "商品设计", "设计模板", "设计规则"] }),
+  center("publish-center", "发布中心", { route: "product-home?center=publish-center", icon: "publishing", tabs: ["概览", "待发布", "已发布", "发布规则"] }),
+  center("cost-center", "成本中心", { route: "product-home?center=cost-center", icon: "expense", tabs: ["概览", "成本明细", "成本规则"] }),
+  center("price-center", "价格中心", { route: "product-home?center=price-center", icon: "income", tabs: ["概览", "售价", "渠道价格", "调价规则"] }),
+  center("profit-center", "利润中心", { route: "product-home?center=profit-center", icon: "analysis", tabs: ["概览", "毛利", "利润", "盈亏分析"] }),
+  center("category-center", "分类中心", { route: "category-home", icon: "category", tabs: ["概览", "系统分类", "店铺分类", "分类映射"], status: "active" }),
+  center("brand-center", "品牌中心", { route: "product-home?center=brand-center", icon: "brand", tabs: ["概览", "美和品牌", "品牌注册"], status: "active" }),
+  center("attribute-center", "属性中心", { route: "product-home?center=attribute-center", icon: "settings", tabs: ["属性", "属性组", "映射", "设置"] }),
+  center("specification-center", "规格中心", { route: "product-home?center=specification-center", icon: "apps", tabs: ["规格模板", "规格值", "SKU组合", "设置"] }),
+  center("coding-center", "编码中心", { route: "product-home?center=coding-center", icon: "database", tabs: ["商品编码", "JAN / GTIN", "外部编码", "设置"] }),
+  center("sampling-center", "测样中心", { route: "product-home?center=sampling-center", icon: "standard", tabs: ["概览", "待测样", "测样记录", "标准"] }),
+  center("procurement-center", "采购中心", { route: "product-home?center=procurement-center", icon: "store", tabs: ["概览", "采购关系", "采购记录", "规则"] }),
+  center("inventory-center", "库存中心", { route: "product-home?center=inventory-center", icon: "database", tabs: ["概览", "库存", "库存流水", "规则"] }),
+  center("operations-center", "运营中心", { route: "product-home?center=operations-center", icon: "analysis", tabs: ["概览", "运营状态", "活动", "优化记录"] }),
+  center("service-center", "客服中心", { route: "product-home?center=service-center", icon: "customer", tabs: ["概览", "商品问题", "客诉记录", "服务资料"] }),
+  center("asset-center", "资料中心", { route: "product-home?center=asset-center", icon: "file", tabs: ["全部资料", "图片", "文档", "表格", "其他"] })
 ]);
 
 export const SHARED_HOME_CENTERS = Object.freeze([
