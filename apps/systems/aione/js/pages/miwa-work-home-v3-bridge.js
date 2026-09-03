@@ -11,12 +11,12 @@ const WORK_NAV = [
   ["我的学习","#/work-learning","knowledge"],
   ["我的建议","#/work-suggestions","standard"],
   ["我的创新","#/work-innovations","innovation"],
-  ["我的总结","#/work-summaries","evidence"],
-  ["全部工作","#/work-all","database"]
+  ["我的总结","#/work-summaries","evidence"]
 ];
 
 const WORK_ASIDE_TITLES = Object.freeze({
   "work-assigned":"我的安排",
+  "work-collaboration":"我的协同",
   "work-interactions":"我的互动"
 });
 
@@ -127,8 +127,11 @@ function normalizeAsideContext(){
   const aside=document.getElementById("aside-host")||document.querySelector("aside");
   if(!aside)return;
   const candidates=[...aside.querySelectorAll("h1,h2,h3,h4,strong,b,div,span,p")];
-  const wrongTitles=route==="work-assigned"?["我安排的","选品工作台"]:["选品工作台","我安排的"];
-  for(const node of candidates){const text=node.textContent?.trim();if(wrongTitles.includes(text))node.textContent=expected;}
+  const wrongTitles=["我安排的","选品工作台","工作概览"];
+  for(const node of candidates){
+    const text=node.textContent?.trim();
+    if(wrongTitles.includes(text))node.textContent=expected;
+  }
 }
 
 let mounting=false;
