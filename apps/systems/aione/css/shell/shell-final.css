@@ -11,9 +11,25 @@
   object-fit:contain!important;
 }
 
-/* 事业之家在Header只保留之家入口；当前阶段不再常驻事业切换按钮。 */
-.desktop-header .miwa-business-context.is-home-only .miwa-business-context__shell{padding-right:0}
-.desktop-header .miwa-business-context.is-home-only .miwa-business-context__home{min-width:auto}
+/* 事业之家在Header只保留之家入口；取消原事业切换后立即收缩，不保留空占位。 */
+.desktop-header .miwa-business-context.is-home-only{
+  flex:0 0 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+}
+.desktop-header .miwa-business-context.is-home-only .miwa-business-context__shell{
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  padding:0!important;
+  display:inline-flex!important;
+}
+.desktop-header .miwa-business-context.is-home-only .miwa-business-context__home{
+  width:auto!important;
+  min-width:0!important;
+  padding-inline:10px!important;
+}
 
 .miwa-daily-row__inner{
   grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)!important;
@@ -53,6 +69,89 @@
 
 /* Legacy floating AI is retired from the active shell. */
 #miwaFloatingAI,.miwa-floating-ai{display:none!important}
+
+/* =========================================================
+   美和AI Desktop Bottom Sheet
+   左侧Sidebar保持原定义与可操作；AI从Main/Aside底部展开。
+   ========================================================= */
+@media(min-width:1100px){
+  .miwa-ai-layer[data-mode="drawer"]{
+    align-items:flex-end!important;
+    justify-content:flex-end!important;
+    padding:0!important;
+    pointer-events:none;
+  }
+
+  .miwa-ai-layer[data-mode="drawer"] .miwa-ai-layer__backdrop{
+    top:0!important;
+    right:0!important;
+    bottom:0!important;
+    left:var(--desktop-sidebar)!important;
+    pointer-events:auto;
+    background:rgba(16,38,30,.08)!important;
+    backdrop-filter:blur(.6px)!important;
+  }
+
+  .miwa-ai-layer[data-mode="drawer"] .miwa-ai-panel{
+    width:calc(100vw - var(--desktop-sidebar))!important;
+    max-width:none!important;
+    height:min(58vh,590px)!important;
+    min-height:390px!important;
+    flex:0 0 auto;
+    pointer-events:auto;
+    border:1px solid #cfddd6!important;
+    border-bottom:0!important;
+    border-radius:16px 16px 0 0!important;
+    box-shadow:0 -18px 54px rgba(13,73,55,.18)!important;
+    overflow:hidden;
+  }
+
+  .miwa-ai-layer[data-mode="drawer"] .miwa-ai-panel__header{
+    min-height:54px!important;
+    padding-block:8px!important;
+  }
+
+  .miwa-ai-layer[data-mode="drawer"] .miwa-ai-contextbar{
+    min-height:36px!important;
+    padding-block:5px!important;
+  }
+
+  .miwa-ai-layer[data-mode="drawer"] .miwa-ai-panel__body{
+    display:grid!important;
+    grid-template-columns:minmax(250px,300px) minmax(0,1fr)!important;
+    gap:14px!important;
+    align-items:stretch!important;
+    min-height:0!important;
+    overflow:hidden!important;
+    padding:14px!important;
+  }
+
+  .miwa-ai-layer[data-mode="drawer"] .miwa-ai-recommendations{
+    min-width:0;
+    margin:0!important;
+    overflow:auto;
+    padding-right:2px;
+  }
+
+  .miwa-ai-layer[data-mode="drawer"] .miwa-ai-suggestion-grid{
+    grid-template-columns:1fr!important;
+  }
+
+  .miwa-ai-layer[data-mode="drawer"] .miwa-ai-workarea{
+    min-width:0;
+    min-height:0;
+    height:100%;
+  }
+
+  .miwa-ai-layer[data-mode="drawer"] .miwa-ai-thread{
+    min-height:0!important;
+    max-height:none!important;
+  }
+
+  .miwa-ai-layer[data-mode="drawer"] .miwa-ai-composer-shell{
+    padding:8px 12px 10px!important;
+  }
+}
 
 .miwa-app-launcher{position:relative;display:flex;align-items:center}
 .miwa-app-launcher__button{
