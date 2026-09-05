@@ -61,8 +61,13 @@
       function hardOpen(source){
         var root=document.getElementById('miwa-ai-layer');
         if(!root){pendingSource=source||'header-hard-bridge';var host=document.getElementById('miwa-ai-layer-host');if(!host)return false;if(!observer){observer=new MutationObserver(function(){if(!document.getElementById('miwa-ai-layer'))return;observer.disconnect();observer=null;var next=pendingSource;pendingSource=null;hardOpen(next);});observer.observe(host,{childList:true,subtree:true});}return false;}
-        root.hidden=false;root.setAttribute('data-mode','drawer');root.setAttribute('data-hard-open','true');document.body.classList.add('miwa-ai-open');syncEntries(true);
-        try{if(window.MIWAAI&&typeof window.MIWAAI.open==='function')window.MIWAAI.open(source||'header-hard-bridge');}catch(error){console.error('[美和AI Hard Bridge] 增强初始化失败，但Layer已强制打开。',error);}return true;
+        root.hidden=false;root.setAttribute('data-mode','workspace');root.setAttribute('data-hard-open','true');document.body.classList.add('miwa-ai-open');syncEntries(true);
+        try{
+          if(window.MIWAAI&&typeof window.MIWAAI.open==='function')window.MIWAAI.open(source||'header-hard-bridge');
+          root.setAttribute('data-mode','workspace');
+          var expand=document.getElementById('miwa-ai-expand');
+          if(expand){expand.setAttribute('aria-label','切换为紧凑模式');expand.setAttribute('title','切换为紧凑模式');}
+        }catch(error){console.error('[美和AI Hard Bridge] 增强初始化失败，但Layer已强制打开。',error);}return true;
       }
       function hardClose(){var root=document.getElementById('miwa-ai-layer');if(!root)return false;root.hidden=true;root.removeAttribute('data-hard-open');document.body.classList.remove('miwa-ai-open');syncEntries(false);return true;}
       document.addEventListener('click',function(event){var target=event.target;if(!(target instanceof Element))return;var entry=target.closest(ENTRY_SELECTOR);if(entry){event.preventDefault();hardOpen(entry.id&&entry.id.indexOf('mobile')===0?'mobile-header-hard':'desktop-header-hard');return;}var close=target.closest('[data-miwa-ai-action="close"]');if(close&&document.getElementById('miwa-ai-layer')){event.preventDefault();hardClose();}},true);
