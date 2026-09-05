@@ -1,11 +1,15 @@
 /* =========================================================
-   AIONE グローバルレイアウト
-   Mobile First / Tablet / Desktop
-   ========================================================= */
+   AIONE Global Layout｜RESET BASELINE
+   2026-09-05
 
-/* ---------------------------------------------------------
-   共通レイアウト
-   --------------------------------------------------------- */
+   CURRENT shell:
+   Header = global / 12之家
+   Main = primary workspace
+   Footer = low-attention system information
+
+   Sidebar and Context Drawer are intentionally absent from the desktop layout
+   until their new Product Freeze is completed.
+   ========================================================= */
 
 .app-shell{
   min-height:100vh;
@@ -19,33 +23,20 @@
   min-width:0;
 }
 
-/* モバイルではデスクトップ専用領域を非表示 */
 #desktop-header-host,
 .desktop-sidebar-host,
 .desktop-aside-host{
   display:none;
 }
 
-/* フッター */
 #desktop-footer-host{
   display:block;
-  padding-bottom:calc(
-    var(--mobile-bottom) +
-    var(--safe-bottom)
-  );
+  padding-bottom:calc(var(--mobile-bottom) + var(--safe-bottom));
 }
 
-/* メインコンテンツ */
 .app-main{
   min-width:0;
-  padding:
-    14px
-    14px
-    calc(
-      var(--mobile-bottom) +
-      var(--safe-bottom) +
-      18px
-    );
+  padding:14px 14px calc(var(--mobile-bottom) + var(--safe-bottom) + 18px);
 }
 
 .page-host{
@@ -54,39 +45,13 @@
   margin:0 auto;
 }
 
-
-/* =========================================================
-   Tablet
-   768px ～ 1099px
-   ========================================================= */
-
 @media(min-width:768px){
-
   .app-main{
-    padding:
-      20px
-      22px
-      calc(
-        var(--mobile-bottom) +
-        var(--safe-bottom) +
-        24px
-      );
+    padding:20px 22px calc(var(--mobile-bottom) + var(--safe-bottom) + 24px);
   }
-
 }
 
-
-/* =========================================================
-   Desktop
-   1100px 以上
-
-   基础3区：Sidebar + Main + Aside
-   Aside按上下文允许 hidden / light / standard。
-   ========================================================= */
-
 @media(min-width:1100px){
-
-  /* モバイル専用UIを非表示 */
   #mobile-topbar-host,
   #mobile-info-host,
   #mobile-bottom-host,
@@ -94,7 +59,6 @@
     display:none;
   }
 
-  /* デスクトップ共通UI */
   #desktop-header-host,
   #desktop-footer-host{
     display:block;
@@ -105,95 +69,31 @@
     padding-bottom:0;
   }
 
-
-  /* -------------------------------------------------------
-     デスクトップ动态3カラム
-     ------------------------------------------------------- */
-
-  .app-body,
-  .app-body.has-aside{
+  .app-body{
     display:grid;
-
-    grid-template-columns:
-      var(--desktop-sidebar)
-      minmax(0,1fr)
-      var(--desktop-aside);
-
+    grid-template-columns:minmax(0,1fr);
     align-items:stretch;
     min-width:0;
   }
 
-
-  /* -------------------------------------------------------
-     左：Sidebar
-     ------------------------------------------------------- */
-
-  .desktop-sidebar-host{
-    display:block;
-    min-width:0;
-
-    min-height:calc(
-      100vh -
-      var(--desktop-header-main) -
-      var(--desktop-header-info)
-    );
-
-    background:#FFFFFF;
-    border-right:1px solid var(--border);
+  .desktop-sidebar-host,
+  .desktop-aside-host{
+    display:none!important;
   }
-
-
-  /* -------------------------------------------------------
-     中：Main
-     ------------------------------------------------------- */
 
   .app-main{
     min-width:0;
     padding:22px;
   }
-
-
-  /* -------------------------------------------------------
-     右：Aside
-     按上下文显示
-     ------------------------------------------------------- */
-
-  .desktop-aside-host,
-  .app-body.has-aside .desktop-aside-host{
-    display:block;
-    min-width:0;
-
-    min-height:calc(
-      100vh -
-      var(--desktop-header-main) -
-      var(--desktop-header-info)
-    );
-
-    background:#FFFFFF;
-    border-left:1px solid var(--border);
-  }
-
 }
 
-
-/* =========================================================
-   Large Desktop
-   1600px 以上
-   ========================================================= */
-
 @media(min-width:1600px){
-
   .app-main{
     padding:24px 28px;
   }
-
 }
-/* ============================================================
-   MOBILE GLOBAL SHELL FULL WIDTH
-   Mobile Global Shell must use the full viewport width.
-   ============================================================ */
-@media(max-width:1099px){
 
+@media(max-width:1099px){
   html,
   body{
     width:100%;
@@ -238,12 +138,8 @@
     box-sizing:border-box;
   }
 }
-/* ============================================================
-   MOBILE GLOBAL SHELL VERTICAL SCROLL
-   Restore normal page vertical scrolling on mobile.
-   ============================================================ */
-@media(max-width:1099px){
 
+@media(max-width:1099px){
   html{
     height:auto !important;
     min-height:100%;
