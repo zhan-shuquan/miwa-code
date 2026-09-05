@@ -2,6 +2,11 @@
    AIONE Home Registry｜12之家唯一事实源
    规则：普通之家 = 概览(唯一) + 中心(按需) + 管理(按需)。
    工作之家是用户专属工作空间，允许使用专属 Personal Work Home 母版。
+
+   Governance CURRENT｜2026-09-05
+   已基本锁定：美和之家、事业之家、工作之家、商品之家。
+   其余之家保留12之家一级入口，但二级目录/中心仍处于随“美和跨境”真实业务闭环逐步验证阶段；
+   当前临时页面、临时目录或已有代码不得自动视为正式CURRENT定义。
 ======================================== */
 
 const center = (id, label, options = {}) => Object.freeze({
@@ -22,7 +27,8 @@ const home = (id, label, options = {}) => Object.freeze({
   centers: Object.freeze([...(options.centers || [])]),
   management: Object.freeze({ unique: true, enabled: options.management !== false }),
   personalCapabilities: Object.freeze([...(options.personalCapabilities || [])]),
-  status: options.status || "active"
+  status: options.status || "active",
+  governance: options.governance || "validating"
 });
 
 export const HOME_PAGE_MODEL = Object.freeze({
@@ -76,24 +82,30 @@ export const SHARED_HOME_CENTERS = Object.freeze([
 ]);
 
 export const HOME_REGISTRY = Object.freeze({
-  company: home("company", "美和之家"),
-  "business-home": home("business-home", "事业之家"),
+  company: home("company", "美和之家", { governance: "locked" }),
+  "business-home": home("business-home", "事业之家", { governance: "locked" }),
   work: home("work", "工作之家", {
     template: "personal-work-home",
     management: false,
-    personalCapabilities: ["我的工作", "我的安排", "我的互动", "我的学习", "我的建议", "我的创新", "我的总结", "全部工作", "工作记录"]
+    personalCapabilities: ["我的工作", "我的安排", "我的互动", "我的学习", "我的建议", "我的创新", "我的总结", "全部工作", "工作记录"],
+    governance: "locked"
   }),
-  "talent-home": home("talent-home", "人才之家"),
-  "ai-home": home("ai-home", "AI之家"),
-  "product-home": home("product-home", "商品之家", { centers: PRODUCT_HOME_CENTERS, management: false }),
-  "relations-home": home("relations-home", "往来之家"),
-  "channel-home": home("channel-home", "渠道之家"),
-  "finance-home": home("finance-home", "财务之家"),
-  analysis: home("analysis", "分析之家"),
-  "knowledge-home": home("knowledge-home", "知识之家"),
-  "shared-home": home("shared-home", "共享之家", { centers: SHARED_HOME_CENTERS })
+  "talent-home": home("talent-home", "人才之家", { governance: "validating" }),
+  "ai-home": home("ai-home", "AI之家", { governance: "validating" }),
+  "product-home": home("product-home", "商品之家", { centers: PRODUCT_HOME_CENTERS, management: false, governance: "locked" }),
+  "relations-home": home("relations-home", "往来之家", { governance: "validating" }),
+  "channel-home": home("channel-home", "渠道之家", { governance: "validating" }),
+  "finance-home": home("finance-home", "财务之家", { governance: "validating" }),
+  analysis: home("analysis", "分析之家", { governance: "validating" }),
+  "knowledge-home": home("knowledge-home", "知识之家", { governance: "validating" }),
+  "shared-home": home("shared-home", "共享之家", { centers: SHARED_HOME_CENTERS, governance: "validating" })
 });
 
 export const HOME_IDS = Object.freeze(Object.keys(HOME_REGISTRY));
+export const LOCKED_HOME_IDS = Object.freeze(HOME_IDS.filter((id) => HOME_REGISTRY[id]?.governance === "locked"));
+export const VALIDATING_HOME_IDS = Object.freeze(HOME_IDS.filter((id) => HOME_REGISTRY[id]?.governance === "validating"));
+
 export function getHomeDefinition(homeId) { return HOME_REGISTRY[homeId] || null; }
+export function getHomeGovernanceState(homeId) { return HOME_REGISTRY[homeId]?.governance || null; }
+export function isHomeLocked(homeId) { return getHomeGovernanceState(homeId) === "locked"; }
 export function isHomeRoute(routeId) { return Boolean(HOME_REGISTRY[routeId]); }
