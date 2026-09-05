@@ -26,47 +26,25 @@ function compactBrand() {
   if (formalName) formalName.textContent = "美和一体化工作平台";
 }
 
-function installFloatingMiwaAI() {
-  const sourceEntry = document.querySelector(".desktop-header #desktop-miwa-ai-entry");
-  if (!sourceEntry) return;
+function simplifyBusinessContext() {
+  const context = document.querySelector(".desktop-header .miwa-business-context");
+  if (!context) return;
+  context.querySelector(".miwa-business-context__divider")?.remove();
+  context.querySelector("#desktop-business-entry")?.remove();
+  context.querySelector("#desktop-business-menu")?.remove();
+  context.classList.add("is-home-only");
+}
 
-  sourceEntry.classList.add("miwa-ai-source-entry");
-  sourceEntry.setAttribute("aria-hidden", "true");
-
-  let floating = document.getElementById("miwaFloatingAI");
-  if (!floating) {
-    floating = document.createElement("button");
-    floating.type = "button";
-    floating.id = "miwaFloatingAI";
-    floating.className = "miwa-floating-ai";
-    floating.setAttribute("aria-label", "打开美和AI");
-    floating.setAttribute("title", "美和AI");
-
-    const mark = sourceEntry.querySelector(".miwa-ai-mini-mark");
-    if (mark) {
-      const clone = mark.cloneNode(true);
-      clone.removeAttribute("id");
-      clone.classList.add("miwa-floating-ai__mark");
-      floating.append(clone);
-    } else {
-      const fallback = document.createElement("span");
-      fallback.className = "miwa-floating-ai__fallback";
-      fallback.textContent = "AI";
-      floating.append(fallback);
-    }
-
-    const label = document.createElement("span");
-    label.className = "miwa-floating-ai__label";
-    label.textContent = "美和AI";
-    floating.append(label);
-
-    floating.addEventListener("click", () => {
-      const liveEntry = document.querySelector(".desktop-header #desktop-miwa-ai-entry");
-      if (liveEntry) liveEntry.click();
-    });
-
-    document.body.append(floating);
-  }
+function installInlineMiwaAI() {
+  document.getElementById("miwaFloatingAI")?.remove();
+  const entry = document.querySelector(".desktop-header #desktop-miwa-ai-entry");
+  const aiHome = document.querySelector('.desktop-header [data-header-route="ai-home"]');
+  if (!entry || !aiHome) return;
+  entry.classList.remove("miwa-ai-source-entry");
+  entry.classList.add("miwa-nav-item", "miwa-nav-item--ai-action");
+  entry.removeAttribute("aria-hidden");
+  entry.hidden = false;
+  if (aiHome.nextElementSibling !== entry) aiHome.after(entry);
 }
 
 function installAppLauncher() {
@@ -146,6 +124,41 @@ function getSolarTermLabel(date = new Date()) {
   return selected;
 }
 
+function getChineseZodiacLabel(year) {
+  const animals = ["猴","鸡","狗","猪","鼠","牛","虎","兔","龙","蛇","马","羊"];
+  return `${animals[((Number(year) % 12) + 12) % 12]}年`;
+}
+
+function getStarSignLabel(month, day) {
+  const value = Number(month) * 100 + Number(day);
+  if (value >= 120 && value <= 218) return "水瓶座";
+  if (value >= 219 && value <= 320) return "双鱼座";
+  if (value >= 321 && value <= 419) return "白羊座";
+  if (value >= 420 && value <= 520) return "金牛座";
+  if (value >= 521 && value <= 621) return "双子座";
+  if (value >= 622 && value <= 722) return "巨蟹座";
+  if (value >= 723 && value <= 822) return "狮子座";
+  if (value >= 823 && value <= 922) return "处女座";
+  if (value >= 923 && value <= 1023) return "天秤座";
+  if (value >= 1024 && value <= 1122) return "天蝎座";
+  if (value >= 1123 && value <= 1221) return "射手座";
+  return "摩羯座";
+}
+
+function getZonedDateParts(timeZone = "Asia/Tokyo") {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year:"numeric",
+    month:"2-digit",
+    day:"2-digit"
+  }).formatToParts(new Date());
+  const map = {};
+  parts.forEach((part) => {
+    if (part.type !== "literal") map[part.type] = part.value;
+  });
+  return map;
+}
+
 function weatherTextFromCode(code) {
   const map = {
     0:["☀","晴"], 1:["🌤","晴间多云"], 2:["⛅","多云"], 3:["☁","阴"],
@@ -181,38 +194,38 @@ async function loadDailyWeather(config = {}) {
   }
 }
 
+function appendDailyItem(daily, id, className) {
+  let item = document.getElementById(id);
+  if (item) return item;
+  const separator = document.createElement("span");
+  separator.className = "miwa-daily-separator";
+  separator.setAttribute("aria-hidden", "true");
+  item = document.createElement("span");
+  item.className = className;
+  item.id = id;
+  daily.append(separator, item);
+  return item;
+}
+
 function enhanceDailyAwareness() {
   const daily = document.querySelector(".desktop-header .miwa-daily-fixed");
   const location = document.getElementById("miwaDailyLocation");
   if (!daily || !location) return;
 
   const config = window.MIWAHeader?.getConfig?.() || {};
-  const country = config.user?.countryName || config.user?.country || "日本";
-  const city = config.user?.locationName || config.user?.cityName || location.textContent || "东京";
-  const normalizedCity = String(city).includes("东京") ? "东京" : String(city);
-  location.textContent = `${country}・${normalizedCity}`;
+  const user = config.user || {};
+  const country = user.countryName || user.country || "日本";
+  const city = user.cityName || user.locationName || "东京";
+  const normalizedCountry = String(country).trim() || "日本";
+  const normalizedCity = String(city).includes("东京") ? "东京" : String(city).trim() || "东京";
+  location.textContent = `${normalizedCountry}・${normalizedCity}`;
 
-  if (!document.getElementById("miwaSolarTerm")) {
-    const separator = document.createElement("span");
-    separator.className = "miwa-daily-separator";
-    separator.setAttribute("aria-hidden", "true");
-    const term = document.createElement("span");
-    term.className = "miwa-daily-term";
-    term.id = "miwaSolarTerm";
-    daily.append(separator, term);
-  }
-  document.getElementById("miwaSolarTerm").textContent = getSolarTermLabel(new Date());
-
-  if (!document.getElementById("miwaWeather")) {
-    const separator = document.createElement("span");
-    separator.className = "miwa-daily-separator";
-    separator.setAttribute("aria-hidden", "true");
-    const weather = document.createElement("span");
-    weather.className = "miwa-weather miwa-daily-weather";
-    weather.id = "miwaWeather";
-    daily.append(separator, weather);
-  }
-
+  const timeZone = user.timeZone || "Asia/Tokyo";
+  const dateParts = getZonedDateParts(timeZone);
+  appendDailyItem(daily, "miwaChineseZodiac", "miwa-daily-zodiac").textContent = getChineseZodiacLabel(dateParts.year);
+  appendDailyItem(daily, "miwaStarSign", "miwa-daily-star-sign").textContent = getStarSignLabel(dateParts.month, dateParts.day);
+  appendDailyItem(daily, "miwaSolarTerm", "miwa-daily-term").textContent = getSolarTermLabel(new Date());
+  appendDailyItem(daily, "miwaWeather", "miwa-weather miwa-daily-weather");
   loadDailyWeather(config);
 }
 
@@ -281,7 +294,8 @@ function reorderDailySignals() {
 
 function refreshFinalShell() {
   compactBrand();
-  installFloatingMiwaAI();
+  simplifyBusinessContext();
+  installInlineMiwaAI();
   enhanceDailyAwareness();
   reorderDailySignals();
   syncLauncherEntries();
@@ -289,7 +303,8 @@ function refreshFinalShell() {
 
 export function initFinalShell() {
   compactBrand();
-  installFloatingMiwaAI();
+  simplifyBusinessContext();
+  installInlineMiwaAI();
   installAppLauncher();
   enhanceDailyAwareness();
   reorderDailySignals();
