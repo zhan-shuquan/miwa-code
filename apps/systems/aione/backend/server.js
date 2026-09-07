@@ -6,6 +6,7 @@ import aiSecretaryRouter from "./src/routes/ai-secretary.js";
 import integrations1688Router from "./src/routes/integrations-1688.js";
 import driveAssetsRouter from "./src/routes/drive-assets.js";
 import productLifecycleRouter from "./src/routes/product-lifecycle.js";
+import productAssetsRouter from "./src/routes/product-assets.js";
 import { resolveAioneGoogleIdentity } from "./src/http/google-auth.js";
 
 const app = express();
@@ -57,6 +58,7 @@ app.use("/api/v1/ai-secretary", aiSecretaryRouter);
 app.use("/api/v1/integrations/1688", integrations1688Router);
 app.use("/api/v1/drive-assets", driveAssetsRouter);
 app.use("/api/v1/product-lifecycle", productLifecycleRouter);
+app.use("/api/v1/product-assets", productAssetsRouter);
 app.use("/api/v1", coreRouter);
 
 app.use((req, res) => {
