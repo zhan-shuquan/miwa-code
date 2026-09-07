@@ -258,25 +258,36 @@ router.post("/products/:productId/rakuten/allocate", requireWriteActor, async (r
         throw error;
       }
 
-      const containersResult = await client.query(
-        `SELECT c.*,
-                COUNT(m.id) FILTER (WHERE m.archived_at IS NULL AND m.lifecycle_status <> 'deleted')::int AS allocated_count
-           FROM public.channel_asset_containers c
-           LEFT JOIN public.channel_asset_mappings m ON m.container_id=c.id
-          WHERE c.channel='rakuten' AND c.shop_ref=$1 AND c.archived_at IS NULL AND c.lifecycle_status='active'
-          GROUP BY c.id
-          ORDER BY c.container_code
-          FOR UPDATE OF c`,
+      const lockedContainersResult = await client.query(
+        `SELECT *
+           FROM public.channel_asset_containers
+          WHERE channel='rakuten' AND shop_ref=$1 AND archived_at IS NULL AND lifecycle_status='active'
+          ORDER BY container_code
+          FOR UPDATE`,
         [shopRef]
       );
-      if (!containersResult.rowCount) {
+      if (!lockedContainersResult.rowCount) {
         const error = new Error("No active Rakuten R-Cabinet container is configured for this shop.");
         error.statusCode = 409;
         error.code = "rakuten_container_not_configured";
         throw error;
       }
 
-      const containers = containersResult.rows.map((row) => ({ ...row, allocated_count: Number(row.allocated_count || 0) }));
+      const allocationCountsResult = await client.query(
+        `SELECT container_id,
+                COUNT(*) FILTER (WHERE archived_at IS NULL AND lifecycle_status <> 'deleted')::int AS allocated_count
+           FROM public.channel_asset_mappings
+          WHERE container_id = ANY($1::text[])
+          GROUP BY container_id`,
+        [lockedContainersResult.rows.map((row) => row.id)]
+      );
+      const allocationCountByContainerId = new Map(
+        allocationCountsResult.rows.map((row) => [row.container_id, Number(row.allocated_count || 0)])
+      );
+      const containers = lockedContainersResult.rows.map((row) => ({
+        ...row,
+        allocated_count: allocationCountByContainerId.get(row.id) || 0
+      }));
       const mappings = [];
 
       for (const asset of assetsResult.rows) {
