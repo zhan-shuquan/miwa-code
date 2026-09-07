@@ -283,7 +283,7 @@ router.post("/convert-selection", requireWriteActor, async (req, res, next) => {
         `UPDATE public.product_opportunities
             SET selection_code=$2,
                 lifecycle_status='converted',
-                metadata=COALESCE(metadata,'{}'::jsonb) || jsonb_build_object('convertedProductId',$3,'convertedProductCode',$4),
+                metadata=COALESCE(metadata,'{}'::jsonb) || jsonb_build_object('convertedProductId',$3::text,'convertedProductCode',$4::text),
                 updated_at=NOW(),
                 updated_by_person_id=$5,
                 record_version=record_version+1
