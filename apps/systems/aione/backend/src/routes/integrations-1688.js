@@ -7,6 +7,10 @@ import {
   fetch1688ProductByUrl,
   get1688RuntimeStatus
 } from "../integrations/alibaba1688-client.js";
+import {
+  fetch1688CrossProductByUrl,
+  get1688CrossProductRuntimeStatus
+} from "../integrations/alibaba1688-cross-client.js";
 
 const router = Router();
 const oauthStates = new Map();
@@ -29,7 +33,12 @@ function oauthHtml({ ok, title, message, detail = "" }) {
 }
 
 router.get("/status", (req, res) => {
-  res.json({ ok: true, integration: "1688", ...get1688RuntimeStatus() });
+  res.json({
+    ok: true,
+    integration: "1688",
+    legacy: get1688RuntimeStatus(),
+    crossProduct: get1688CrossProductRuntimeStatus()
+  });
 });
 
 router.get("/oauth/start", (req, res, next) => {
@@ -124,6 +133,25 @@ router.post("/product-by-url", async (req, res, next) => {
       throw error;
     }
     const result = await fetch1688ProductByUrl(url);
+    res.json({
+      ...result,
+      opportunityId: req.body?.opportunityId ? String(req.body.opportunityId) : null
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/cross-product-by-url", async (req, res, next) => {
+  try {
+    const url = String(req.body?.url || "").trim();
+    if (!url) {
+      const error = new Error("1688 source URL is required");
+      error.statusCode = 400;
+      error.code = "source_url_required";
+      throw error;
+    }
+    const result = await fetch1688CrossProductByUrl(url);
     res.json({
       ...result,
       opportunityId: req.body?.opportunityId ? String(req.body.opportunityId) : null
