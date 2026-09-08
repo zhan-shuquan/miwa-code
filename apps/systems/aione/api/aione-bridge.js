@@ -3,6 +3,7 @@ import { getVercelOidcToken } from "@vercel/oidc";
 
 const STS_URL = "https://sts.googleapis.com/v1/token";
 const IAM_CREDENTIALS_BASE = "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts";
+const CURRENT_BACKEND_URL = "https://aione-backend-current-jjlnxogxta-an.a.run.app";
 const ALLOWED_API_PATH = /^(?:v1(?:\/|$)|product-opportunities(?:\/|$))/;
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
@@ -10,7 +11,7 @@ let cachedRunIdToken = { token: "", expiresAt: 0 };
 
 function requiredEnv() {
   const env = {
-    backendUrl: String(process.env.AIONE_BACKEND_URL || "").replace(/\/$/, ""),
+    backendUrl: CURRENT_BACKEND_URL,
     projectNumber: String(process.env.GCP_PROJECT_NUMBER || "").trim(),
     serviceAccountEmail: String(process.env.GCP_SERVICE_ACCOUNT_EMAIL || "").trim(),
     poolId: String(process.env.GCP_WORKLOAD_IDENTITY_POOL_ID || "").trim(),
@@ -136,8 +137,6 @@ function enforceBodyLimit(value) {
 async function readBody(req) {
   if (req.method === "GET" || req.method === "HEAD") return undefined;
 
-  // Vercel Node Functions expose a lazily parsed req.body. Prefer it when
-  // available so JSON/form bodies are not lost after the platform parser runs.
   let parsedBody;
   try {
     parsedBody = req.body;
