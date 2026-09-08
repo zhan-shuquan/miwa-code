@@ -69,7 +69,7 @@ gcloud iam service-accounts add-iam-policy-binding "$VERCEL_INVOKER_SA_EMAIL" \
   --member="$FEDERATED_PRINCIPAL" \
   --role="roles/iam.serviceAccountOpenIdTokenCreator" >/dev/null
 
-say "Allow the dedicated service account to invoke the private AIONE Cloud Run service"
+say "Allow the dedicated service account to invoke the CURRENT private AIONE Cloud Run service"
 gcloud run services add-iam-policy-binding "$RUN_SERVICE" \
   --region="$REGION" \
   --project="$PROJECT_ID" \
@@ -82,20 +82,20 @@ SERVICE_URL="$(gcloud run services describe "$RUN_SERVICE" --region="$REGION" --
 cat <<TXT
 
 [AIONE] Vercel -> private Cloud Run WIF bridge is configured on Google Cloud.
+Target Cloud Run service: ${RUN_SERVICE}
+Target Cloud Run URL    : ${SERVICE_URL}
 
-Set these Vercel Production environment variables on project: ${VERCEL_PROJECT_NAME}
+Required Vercel Production environment variables on project: ${VERCEL_PROJECT_NAME}
 
-AIONE_BACKEND_URL=${SERVICE_URL}
 GCP_PROJECT_NUMBER=${PROJECT_NUMBER}
 GCP_SERVICE_ACCOUNT_EMAIL=${VERCEL_INVOKER_SA_EMAIL}
 GCP_WORKLOAD_IDENTITY_POOL_ID=${WIF_POOL_ID}
-GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=${WIF_PROVIDER_ID}  # base id; bridge auto-selects -team or -global
+GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=${WIF_PROVIDER_ID}
+
+AIONE_BACKEND_URL is no longer a runtime source of truth. CURRENT backend binding is versioned in Repo code so stale Vercel environment values cannot silently route the frontend back to a legacy/dev backend.
 
 Security boundary:
-  Browser Google ID token -> Vercel /api bridge -> Authorization header
-  Vercel OIDC (team/global issuer auto-detected) -> Google WIF -> short-lived Cloud Run ID token -> X-Serverless-Authorization
-  Cloud Run remains --no-allow-unauthenticated.
-
-After setting Vercel variables, redeploy main and test:
-  https://aione.miwa-happyhouse.com/api/v1/ai-secretary/status
+  Browser Google ID token -> same-origin Vercel /api bridge -> Authorization header
+  Vercel OIDC -> Google WIF -> short-lived Cloud Run ID token -> X-Serverless-Authorization
+  Cloud Run remains private.
 TXT
