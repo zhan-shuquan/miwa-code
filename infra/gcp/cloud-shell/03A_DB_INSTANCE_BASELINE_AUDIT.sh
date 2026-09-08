@@ -2,13 +2,22 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/lib.sh" ]]; then
+  LIB_SH="$SCRIPT_DIR/lib.sh"
+elif [[ -f "./lib.sh" ]]; then
+  LIB_SH="$(pwd)/lib.sh"
+else
+  echo "[AIONE][ERROR] lib.sh not found. Run this script from infra/gcp/cloud-shell or keep it beside lib.sh." >&2
+  exit 1
+fi
+
 INSTANCES=("aione-postgres" "aione-pg-dev")
 
 for INSTANCE in "${INSTANCES[@]}"; do
   (
     export AIONE_SQL_INSTANCE="$INSTANCE"
     # shellcheck source=/dev/null
-    source "$SCRIPT_DIR/lib.sh"
+    source "$LIB_SH"
     require_db_secret
 
     JOB="aione-db-baseline-audit-${INSTANCE}"
