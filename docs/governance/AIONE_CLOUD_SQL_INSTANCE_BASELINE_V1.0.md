@@ -1,67 +1,120 @@
 # AIONE Cloud SQL 实例基线 V1.0
 
-状态：CURRENT IMPLEMENTATION FACT
+状态：CURRENT / FORMAL DATABASE BASELINE LOCKED
 日期：2026-09-08
 适用项目：美和AIONE一体化工作平台
 
-## 1. 当前正式后端
+## 1. 正式数据库基线结论
 
-Cloud Run 服务：
-
-```text
-aione-backend-v190
-```
-
-区域：
+2026-09-08完成双实例只读Preflight后，正式锁定：
 
 ```text
-asia-northeast1
+FORMAL CURRENT Cloud SQL = aione-pg-dev
+LEGACY RUNTIME / MIGRATION SOURCE = aione-postgres
 ```
 
-## 2. 当前实际连接的Cloud SQL实例
+理由不是实例名称，而是实际Schema与迁移事实。
 
-2026-09-08通过Cloud Shell读取Cloud Run服务annotation确认：
+## 2. 双实例事实
+
+### aione-postgres
+
+创建时间：
 
 ```text
-run.googleapis.com/cloudsql-instances
-= miwa-aione:asia-northeast1:aione-postgres
+2026-08-19T05:39:12.153Z
 ```
 
-因此当前Implementation Truth为：
+当前Cloud Run `aione-backend-v190`仍连接该实例。
 
-> `aione-backend-v190` 当前实际连接 `aione-postgres`。
-
-在新的正式架构决策出现前，所有AIONE数据库Preflight、Migration、Schema审计和选品数据库实施均以`aione-postgres`为CURRENT目标实例。
-
-## 3. 另一个实例
-
-项目中同时存在：
+其`product_opportunities`仍为早期旧结构，包含：
 
 ```text
-aione-pg-dev
+opportunity_id
+selection_type
+product_name
+source_platform
+source_url
+representative_image_url
+current_stage
+result_status
+owner_person_id
+...
 ```
 
-当前尚未确认其是否仍承担有效开发用途，因此状态定义为：
+该结构与Repo当前Canonical Schema不一致，因此不再作为后续正式Schema演进目标。
+
+### aione-pg-dev
+
+创建时间：
 
 ```text
-REVIEW_REQUIRED
+2026-08-31T10:06:52.199Z
 ```
 
-不得在未确认用途前删除，也不得把它当作CURRENT正式数据库继续迁移。
+双实例Preflight已成功连接并完成。
 
-## 4. 治理规则
+其`product_opportunities`已采用当前Canonical方向字段，包括：
 
-- CURRENT数据库实例：`aione-postgres`
-- `aione-pg-dev`：待审计，不作为当前正式技术事实源
-- 后续Cloud SQL脚本应显式或可验证地指向CURRENT实例
-- Migration前必须确认目标实例名称
-- 不允许两个实例同时演化为两套AIONE正式Schema
+```text
+id
+business_id
+source_platform
+source_ref
+record_version
+source_system
+archived_at
+...
+```
 
-## 5. 下一步
+并确认迁移记录至少已经到：
 
-在`aione-postgres`上继续：
+```text
+0091 | product assets and channel image mapping
+applied_at = 2026-09-07T09:16:21.377Z
+```
 
-1. 核对`product_opportunities`唯一现有记录
-2. 判断其是否为测试/历史数据
-3. 根据真实数据决定Canonical迁移策略
-4. 生成`0090_selection_opportunity_import_foundation.sql`
+该Schema与Repo当前Technical Design方向一致，因此锁定为后续正式开发数据库基线。
+
+## 3. Governance Truth
+
+从本结论生效后：
+
+- 所有新的正式Schema、Migration、选品数据库、Import API均只面向`aione-pg-dev`。
+- 不再在`aione-postgres`继续新增正式Schema。
+- `aione-postgres`暂不删除，只作为旧运行环境和数据迁移来源。
+- 在切换Cloud Run前，必须审计`aione-postgres`中需要保留的真实业务数据，并迁移到`aione-pg-dev`。
+- 数据迁移和运行时切换完成、验证通过后，`aione-postgres`进入Deprecated/待下线治理。
+
+## 4. 下一阶段顺序
+
+```text
+1. 锁定 aione-pg-dev 为正式数据库基线
+2. 只读盘点 aione-postgres 需要保留的真实数据
+3. 生成明确的数据迁移计划与映射
+4. 迁移需要保留的数据到 aione-pg-dev
+5. 验证数据完整性
+6. 将 aione-backend-v190 切换连接到 aione-pg-dev
+7. 运行Preflight与业务Smoke Test
+8. 验证通过后停止在 aione-postgres 写入
+9. 再进入新的正式Migration与选品Import API开发
+```
+
+## 5. 禁止事项
+
+在完成旧数据盘点前：
+
+- 不删除`aione-postgres`
+- 不清空旧表
+- 不直接覆盖旧数据
+- 不把两个实例长期并行作为CURRENT
+- 不在旧实例继续执行新的正式业务Migration
+
+## 6. 当前工程门禁
+
+```text
+Formal DB Baseline        = PASS -> aione-pg-dev
+Legacy Data Inventory     = NEXT
+Runtime Cutover           = BLOCKED UNTIL DATA INVENTORY/MIGRATION
+New Selection Migration   = AFTER BASELINE CLEANUP CONFIRMED
+```
