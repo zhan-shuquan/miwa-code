@@ -16,6 +16,11 @@ INSTANCES=("aione-postgres" "aione-pg-dev")
 for INSTANCE in "${INSTANCES[@]}"; do
   (
     export AIONE_SQL_INSTANCE="$INSTANCE"
+    case "$INSTANCE" in
+      aione-postgres) export AIONE_DB_PASSWORD_SECRET="aione-db-password" ;;
+      aione-pg-dev)   export AIONE_DB_PASSWORD_SECRET="aione-db-password-dev" ;;
+    esac
+
     # shellcheck source=/dev/null
     source "$LIB_SH"
     require_db_secret
@@ -27,6 +32,7 @@ for INSTANCE in "${INSTANCES[@]}"; do
     printf '[AIONE] Connection name       : %s\n' "$INSTANCE_CONNECTION_NAME"
     printf '[AIONE] Database              : %s\n' "$DB_NAME"
     printf '[AIONE] Database user         : %s\n' "$DB_USER"
+    printf '[AIONE] DB password secret    : %s\n' "$DB_PASSWORD_SECRET"
     printf '[AIONE] Cloud SQL create time : '
     gcloud sql instances describe "$INSTANCE" \
       --project="$PROJECT_ID" \
