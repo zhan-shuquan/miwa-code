@@ -1,14 +1,11 @@
 /* AIONE API Client｜统一前端后端入口 */
 const STORAGE_KEY = "miwa-aione:api-base-url:v1";
 const AUTH_SESSION_KEY = "aione.preview.session.v3";
-const TEST_HOST = "aione-test.miwa-happyhouse.com";
-const DEV_BACKEND = "https://aione-backend-dev-49629089449.asia-northeast1.run.app";
 function normalizeBase(value) { return String(value || "").replace(/\/$/, ""); }
 export function getAioneApiBaseUrl() {
   if (window.AIONE_API_BASE_URL) return normalizeBase(window.AIONE_API_BASE_URL);
-  const host = window.location.hostname;
-  if (host === TEST_HOST) return DEV_BACKEND;
   try { const stored = localStorage.getItem(STORAGE_KEY); if (stored) return normalizeBase(stored); } catch (_) {}
+  const host = window.location.hostname;
   if (host === "127.0.0.1" || host === "localhost") return `http://${host}:8080`;
   return "";
 }
@@ -54,7 +51,6 @@ export async function aioneApi(path, options = {}) {
   }
   return payload;
 }
-
 
 function filenameFromDisposition(value, fallback = "download") {
   const raw = String(value || "");
