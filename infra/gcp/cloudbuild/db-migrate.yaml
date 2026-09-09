@@ -1,0 +1,36 @@
+steps:
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: execute-db-migration
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        if [ "${_CONFIRM}" != "MIGRATE_AIONE" ]; then
+          echo '[AIONE][ERROR] Set _CONFIRM=MIGRATE_AIONE to execute migration.' >&2
+          exit 2
+        fi
+
+        echo '[AIONE] Execute CURRENT database migration job'
+        gcloud run jobs execute "${_MIGRATION_JOB}" \
+          --region="${_REGION}" \
+          --project="$PROJECT_ID" \
+          --wait
+
+        echo '[AIONE] Re-run read-only preflight after migration'
+        gcloud run jobs execute "${_PREFLIGHT_JOB}" \
+          --region="${_REGION}" \
+          --project="$PROJECT_ID" \
+          --wait
+
+        echo '[AIONE] Database migration pipeline PASS'
+
+substitutions:
+  _REGION: asia-northeast1
+  _MIGRATION_JOB: aione-db-migrate
+  _PREFLIGHT_JOB: aione-db-preflight
+  _CONFIRM: DO_NOT_RUN
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1800s
