@@ -8,6 +8,7 @@ RUN npm install --omit=dev --no-audit --no-fund
 
 COPY apps/systems/aione/backend/ ./
 COPY data-code/migrations/ /app/data-code/migrations/
+COPY data-code/current/ /app/data-code/current/
 
 EXPOSE 8080
 CMD ["npm", "start"]
