@@ -64,7 +64,11 @@ function isExcel(file) {
 }
 
 function zipItemId(file) {
-  const match = /^1688_(\d+)_.*\.zip$/i.exec(String(file.name || ""));
+  // Verified 1688 downloads use both:
+  //   1688_<itemId>_<title>.zip
+  //   1688_<itemId> <title>.zip
+  // The item id is the deterministic contract; the human title separator is not.
+  const match = /^1688_(\d+)(?:[ _-].*)?\.zip$/i.exec(String(file.name || "").trim());
   return match ? match[1] : null;
 }
 
@@ -78,6 +82,26 @@ function buildZipIndex(files) {
     if (!existing || String(file.modifiedTime || "") > String(existing.modifiedTime || "")) index.set(itemId, file);
   }
   return index;
+}
+
+function sourceMaterialZipMetadata(zip) {
+  return {
+    provider: "google-drive",
+    fileId: zip.id,
+    name: zip.name,
+    mimeType: zip.mimeType || "application/zip",
+    size: zip.size ? Number(zip.size) : null,
+    modifiedTime: zip.modifiedTime || null
+  };
+}
+
+function sameZipEvidence(current, next) {
+  return Boolean(
+    current &&
+    current.fileId === next.fileId &&
+    current.modifiedTime === next.modifiedTime &&
+    Number(current.size || 0) === Number(next.size || 0)
+  );
 }
 
 function findHeaderRow(worksheet) {
@@ -177,16 +201,7 @@ async function importRow(item, zipIndex) {
       [item.sourcePlatform, item.sourceRef]
     );
     const zip = zipIndex.get(item.sourceRef) || null;
-    const zipMetadata = zip ? {
-      sourceMaterialZip: {
-        provider: "google-drive",
-        fileId: zip.id,
-        name: zip.name,
-        mimeType: zip.mimeType || "application/zip",
-        size: zip.size ? Number(zip.size) : null,
-        modifiedTime: zip.modifiedTime || null
-      }
-    } : {};
+    const zipMetadata = zip ? { sourceMaterialZip: sourceMaterialZipMetadata(zip) } : {};
 
     if (existingResult.rowCount) {
       const current = existingResult.rows[0];
@@ -236,6 +251,56 @@ async function importRow(item, zipIndex) {
   });
 }
 
+async function reconcileDuplicateZipEvidence(buffer, zipIndex) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+  const rows = parseWorkbookRows(workbook);
+  let matchedRecordCount = 0;
+  let reconciledCount = 0;
+  let missingOpportunityCount = 0;
+
+  for (const item of rows) {
+    const zip = zipIndex.get(item.sourceRef) || null;
+    if (!zip) continue;
+    matchedRecordCount += 1;
+    const nextEvidence = sourceMaterialZipMetadata(zip);
+
+    await withTransaction(async (client) => {
+      const existingResult = await client.query(
+        `SELECT id, metadata FROM public.product_opportunities
+          WHERE source_platform=$1 AND source_ref=$2 AND archived_at IS NULL
+          LIMIT 1 FOR UPDATE`,
+        [item.sourcePlatform, item.sourceRef]
+      );
+      if (!existingResult.rowCount) {
+        missingOpportunityCount += 1;
+        return;
+      }
+
+      const current = existingResult.rows[0];
+      const currentEvidence = (current.metadata || {}).sourceMaterialZip || null;
+      if (sameZipEvidence(currentEvidence, nextEvidence)) return;
+
+      await client.query(
+        `UPDATE public.product_opportunities
+            SET metadata=COALESCE(metadata,'{}'::jsonb) || $2::jsonb,
+                last_imported_at=NOW(), updated_at=NOW(), record_version=record_version+1
+          WHERE id=$1`,
+        [current.id, JSON.stringify({ sourceMaterialZip: nextEvidence })]
+      );
+      reconciledCount += 1;
+    });
+  }
+
+  return {
+    availableZipCount: zipIndex.size,
+    matchedRecordCount,
+    unmatchedRecordCount: Math.max(0, rows.length - matchedRecordCount),
+    reconciledCount,
+    missingOpportunityCount
+  };
+}
+
 async function finishBatch(batchId, status, counters, errors, zipStats) {
   return pool.query(
     `UPDATE public.selection_import_batches
@@ -260,7 +325,18 @@ export async function import1688DriveInbox({ folderId, driveId }) {
     const fileHash = hashBuffer(buffer);
     const { duplicate, batch } = await createBatch(file, fileHash);
     if (duplicate) {
-      summaries.push({ fileId: file.id, fileName: file.name, status: "duplicate", batchId: duplicate.id });
+      try {
+        const zip = await reconcileDuplicateZipEvidence(buffer, zipIndex);
+        summaries.push({ fileId: file.id, fileName: file.name, status: "duplicate", batchId: duplicate.id, zip });
+      } catch (error) {
+        summaries.push({
+          fileId: file.id,
+          fileName: file.name,
+          status: "failed",
+          batchId: duplicate.id,
+          error: { code: error.code || "duplicate_zip_reconcile_failed", message: error.message }
+        });
+      }
       continue;
     }
 
