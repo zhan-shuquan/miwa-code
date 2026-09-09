@@ -1,0 +1,73 @@
+name: AIONE DevOps Check
+
+on:
+  pull_request:
+    paths:
+      - "infra/gcp/cloudbuild/**"
+      - "infra/gcp/bootstrap/**"
+      - "docs/governance/AIONE_DEVOPS_FOUNDATION_V1.0.md"
+      - ".github/workflows/aione-devops-check.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/gcp/cloudbuild/**"
+      - "infra/gcp/bootstrap/**"
+      - "docs/governance/AIONE_DEVOPS_FOUNDATION_V1.0.md"
+      - ".github/workflows/aione-devops-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  devops-guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bash syntax check
+        run: bash -n infra/gcp/bootstrap/01_SETUP_DEVOPS_V1.sh
+
+      - name: Verify CURRENT identifiers remain singular
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            infra/gcp/cloudbuild/verify-current.yaml
+            infra/gcp/cloudbuild/db-migrate.yaml
+            infra/gcp/cloudbuild/deploy-current-backend.yaml
+            infra/gcp/bootstrap/01_SETUP_DEVOPS_V1.sh
+          )
+
+          grep -q 'aione-backend-current' infra/gcp/cloudbuild/verify-current.yaml
+          grep -q 'aione-backend-current' infra/gcp/cloudbuild/deploy-current-backend.yaml
+          grep -q 'aione-pg-dev' infra/gcp/cloudbuild/deploy-current-backend.yaml
+
+          if grep -En 'aione-backend-v190|aione-postgres' "${files[@]}"; then
+            echo '[AIONE][ERROR] Legacy runtime identifier detected in CURRENT DevOps automation.' >&2
+            exit 2
+          fi
+
+      - name: Verify production safety gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q -- '--no-allow-unauthenticated' infra/gcp/cloudbuild/deploy-current-backend.yaml
+          grep -q '_CONFIRM: DO_NOT_RUN' infra/gcp/cloudbuild/db-migrate.yaml
+          grep -q 'MIGRATE_AIONE' infra/gcp/cloudbuild/db-migrate.yaml
+          grep -q 'print-identity-token' infra/gcp/cloudbuild/verify-current.yaml
+          grep -q 'print-identity-token' infra/gcp/cloudbuild/deploy-current-backend.yaml
+          grep -q 'ok.*true' infra/gcp/cloudbuild/verify-current.yaml
+          grep -q 'ok.*true' infra/gcp/cloudbuild/deploy-current-backend.yaml
+          grep -q 'CURRENT_BRANCH.*main' infra/gcp/bootstrap/01_SETUP_DEVOPS_V1.sh
+
+      - name: Verify secrets are references only
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -REn '(OPENAI_API_KEY|DB_PASS)=[A-Za-z0-9_-]{20,}' infra/gcp/cloudbuild infra/gcp/bootstrap; then
+            echo '[AIONE][ERROR] Possible secret value committed to DevOps files.' >&2
+            exit 3
+          fi
+          echo '[AIONE] DevOps guardrails PASS'
