@@ -6,6 +6,7 @@ die(){ printf '\n[AIONE][ERROR] %s\n' "$*" >&2; exit 1; }
 need(){ command -v "$1" >/dev/null 2>&1 || die "Required command not found: $1"; }
 
 need gcloud
+need git
 
 EXPECTED_PROJECT_ID="${AIONE_EXPECTED_PROJECT_ID:-miwa-aione}"
 PROJECT_ID="${AIONE_PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || true)}"
@@ -24,6 +25,13 @@ TRIGGER_DEPLOY="${AIONE_TRIGGER_DEPLOY:-aione-deploy-backend}"
 
 [[ -n "$PROJECT_ID" && "$PROJECT_ID" != "(unset)" ]] || die "No active Google Cloud project."
 [[ "$PROJECT_ID" == "$EXPECTED_PROJECT_ID" ]] || die "Refusing to bootstrap project '$PROJECT_ID'. Expected '$EXPECTED_PROJECT_ID'."
+
+CURRENT_BRANCH="$(git branch --show-current 2>/dev/null || true)"
+[[ "$CURRENT_BRANCH" == "main" ]] || die "Formal trigger bootstrap must run from main after DevOps V1 is merged. Current branch: ${CURRENT_BRANCH:-unknown}"
+[[ -z "$(git status --porcelain)" ]] || die "Working tree must be clean."
+
+git fetch origin main
+git pull --ff-only origin main
 
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
 [[ -n "$PROJECT_NUMBER" ]] || die "Project number unavailable for $PROJECT_ID"
@@ -78,12 +86,17 @@ gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA_EMAIL" \
   --project="$PROJECT_ID" \
   --quiet >/dev/null
 
-say "Allow Cloud Build service agent to mint credentials for the dedicated deploy account"
-gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA_EMAIL" \
-  --member="serviceAccount:${BUILD_SERVICE_AGENT}" \
-  --role="roles/iam.serviceAccountTokenCreator" \
-  --project="$PROJECT_ID" \
-  --quiet >/dev/null
+say "Allow Cloud Build infrastructure to mint credentials for the dedicated deploy account"
+for member in \
+  "serviceAccount:${BUILD_SERVICE_AGENT}" \
+  "serviceAccount:${DEPLOY_SA_EMAIL}"
+do
+  gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA_EMAIL" \
+    --member="$member" \
+    --role="roles/iam.serviceAccountTokenCreator" \
+    --project="$PROJECT_ID" \
+    --quiet >/dev/null
+done
 
 say "Ensure runtime identity can reach CURRENT database and only the required secrets"
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
@@ -115,7 +128,7 @@ create_manual_trigger(){
     --region="$REGION" \
     --project="$PROJECT_ID" \
     --name="$name" \
-    --repo="$REPO_NAME" \
+    --repo="${REPO_OWNER}/${REPO_NAME}" \
     --repo-type=GITHUB \
     --branch-pattern='^main$' \
     --build-config="$config" \
@@ -145,5 +158,5 @@ Next validation gate:
   1. Run $TRIGGER_VERIFY on main.
   2. Confirm authenticated /health + DB preflight PASS.
   3. Keep DB migration trigger at _CONFIRM=DO_NOT_RUN unless a real migration is intended.
-  4. Run $TRIGGER_DEPLOY only after the PR is reviewed.
+  4. Run $TRIGGER_DEPLOY only for reviewed main code.
 TXT
