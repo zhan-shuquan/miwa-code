@@ -31,6 +31,13 @@ async function resolveAudience(client, rule) {
   if (Array.isArray(policy.personIds) && policy.personIds.length) {
     return [...new Set(policy.personIds.map(String).filter(Boolean))];
   }
+  if (policy.peopleStatus) {
+    const result = await client.query(
+      "SELECT id AS person_id FROM public.people WHERE status=$1 ORDER BY id",
+      [policy.peopleStatus]
+    );
+    return result.rows.map((row) => row.person_id).filter(Boolean);
+  }
   if (policy.assignmentStatus) {
     const result = await client.query(
       "SELECT DISTINCT person_id FROM public.assignments WHERE status=$1 AND (effective_to IS NULL OR effective_to >= CURRENT_DATE)",
