@@ -1,0 +1,100 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: build-backend-image
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_IMAGE_NAME}:main-$SHORT_SHA
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    id: push-backend-image
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_IMAGE_NAME}:main-$SHORT_SHA
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: deploy-preflight-job
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_IMAGE_NAME}:main-$SHORT_SHA"
+        CONNECTION_NAME="$(gcloud sql instances describe "${_SQL_INSTANCE}" --project="$PROJECT_ID" --format='value(connectionName)')"
+        test -n "$CONNECTION_NAME"
+
+        gcloud run jobs deploy "${_PREFLIGHT_JOB}" \
+          --image="$IMAGE" \
+          --region="${_REGION}" \
+          --project="$PROJECT_ID" \
+          --service-account="${_RUNTIME_SA_NAME}@$PROJECT_ID.iam.gserviceaccount.com" \
+          --set-cloudsql-instances="$CONNECTION_NAME" \
+          --set-env-vars="DB_USER=${_DB_USER},DB_NAME=${_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/$CONNECTION_NAME,AIONE_ALLOW_PREVIEW_ACTOR=false,AIONE_ALLOW_SYSTEM_WRITES=false,NODE_ENV=production" \
+          --set-secrets="DB_PASS=${_DB_PASSWORD_SECRET}:latest" \
+          --command=npm \
+          --args=run,db:preflight \
+          --tasks=1 \
+          --max-retries=0 \
+          --task-timeout=10m
+
+        gcloud run jobs execute "${_PREFLIGHT_JOB}" \
+          --region="${_REGION}" \
+          --project="$PROJECT_ID" \
+          --wait
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: deploy-current-backend
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_IMAGE_NAME}:main-$SHORT_SHA"
+        CONNECTION_NAME="$(gcloud sql instances describe "${_SQL_INSTANCE}" --project="$PROJECT_ID" --format='value(connectionName)')"
+        test -n "$CONNECTION_NAME"
+
+        gcloud run deploy "${_RUN_SERVICE}" \
+          --image="$IMAGE" \
+          --region="${_REGION}" \
+          --project="$PROJECT_ID" \
+          --service-account="${_RUNTIME_SA_NAME}@$PROJECT_ID.iam.gserviceaccount.com" \
+          --set-cloudsql-instances="$CONNECTION_NAME" \
+          --update-secrets="DB_PASS=${_DB_PASSWORD_SECRET}:latest,OPENAI_API_KEY=${_OPENAI_API_KEY_SECRET}:latest" \
+          --update-env-vars="^@^DB_USER=${_DB_USER}@DB_NAME=${_DB_NAME}@INSTANCE_UNIX_SOCKET=/cloudsql/$CONNECTION_NAME@NODE_ENV=production@AIONE_ALLOW_PREVIEW_ACTOR=false@AIONE_ALLOW_SYSTEM_WRITES=false@AIONE_REQUIRE_GOOGLE_AUTH=true@AIONE_GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID}@AIONE_AI_MODE=live@AIONE_AI_PROVIDER=openai@AIONE_AI_MODEL=${_AI_MODEL}@AIONE_DRIVE_PROXY_ENABLED=true@AIONE_CORS_ORIGINS=https://aione.miwa-happyhouse.com,https://aione-test.miwa-happyhouse.com" \
+          --no-allow-unauthenticated
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: verify-deployment
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        SERVICE_URL="$(gcloud run services describe "${_RUN_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(status.url)')"
+        REVISION="$(gcloud run services describe "${_RUN_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(status.latestReadyRevisionName)')"
+        IMAGE="$(gcloud run services describe "${_RUN_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(spec.template.spec.containers[0].image)')"
+        test -n "$SERVICE_URL"
+        test -n "$REVISION"
+        test -n "$IMAGE"
+        printf '[AIONE] deployment PASS\nservice=%s\nrevision=%s\nimage=%s\nurl=%s\n' "${_RUN_SERVICE}" "$REVISION" "$IMAGE" "$SERVICE_URL"
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_IMAGE_NAME}:main-$SHORT_SHA
+
+substitutions:
+  _REGION: asia-northeast1
+  _RUN_SERVICE: aione-backend-current
+  _SQL_INSTANCE: aione-pg-dev
+  _ARTIFACT_REPO: aione
+  _IMAGE_NAME: aione-backend
+  _PREFLIGHT_JOB: aione-db-preflight
+  _RUNTIME_SA_NAME: aione-runtime
+  _DB_NAME: aione
+  _DB_USER: aione_app
+  _DB_PASSWORD_SECRET: aione-db-password-dev
+  _OPENAI_API_KEY_SECRET: aione-openai-api-key
+  _GOOGLE_CLIENT_ID: 49629089449-5lkfjfnadvq14f9uuid91chqgjjdihmi.apps.googleusercontent.com
+  _AI_MODEL: gpt-5.6-sol
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1800s
