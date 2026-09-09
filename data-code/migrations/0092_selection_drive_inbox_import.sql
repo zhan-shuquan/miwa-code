@@ -6,9 +6,9 @@ BEGIN;
 --   * 1688 groups/tags/remarks are source facts, not a second AIONE selection model.
 --   * 直发选品 is retained only as a source-side fulfillment hint.
 --   * Remark pure-number weight is source_weight_g (grams), not final billable weight.
+--   * 1688 source price is CNY source fact and must not inherit AIONE JPY business currency semantics.
 --   * Google Drive Inbox is a single-level dropbox; processing state lives in AIONE.
 
--- Refuse to guess the meaning of archived or unknown historical selection states.
 DO $$
 DECLARE
   unexpected TEXT;
@@ -31,7 +31,6 @@ BEGIN
   END IF;
 END $$;
 
--- Align the already-created machine identity column with the locked Product Freeze name.
 DO $$
 BEGIN
   IF EXISTS (
@@ -55,6 +54,7 @@ ALTER TABLE public.product_opportunities
   ADD COLUMN IF NOT EXISTS source_category TEXT,
   ADD COLUMN IF NOT EXISTS source_cover_image_url TEXT,
   ADD COLUMN IF NOT EXISTS source_price NUMERIC(18,4),
+  ADD COLUMN IF NOT EXISTS source_currency CHAR(3),
   ADD COLUMN IF NOT EXISTS source_supplier_name TEXT,
   ADD COLUMN IF NOT EXISTS source_group TEXT,
   ADD COLUMN IF NOT EXISTS source_tags TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
@@ -91,8 +91,6 @@ BEGIN
   END IF;
 END $$;
 
--- One unified selection model. Existing direct/regular implementation values are implementation debt,
--- not separate Product Truth, so normalize them in place.
 UPDATE public.product_opportunities
    SET selection_mode = 'selection'
  WHERE selection_mode IS NULL
@@ -100,7 +98,6 @@ UPDATE public.product_opportunities
     OR selection_mode IN ('direct','regular','standard');
 ALTER TABLE public.product_opportunities ALTER COLUMN selection_mode SET DEFAULT 'selection';
 
--- Normalize the legacy implementation state names to the locked four-state Product Truth.
 ALTER TABLE public.product_opportunities
   DROP CONSTRAINT IF EXISTS product_opportunities_lifecycle_status_check;
 
@@ -117,12 +114,10 @@ ALTER TABLE public.product_opportunities
   CHECK (lifecycle_status IN ('pending','selected','rejected','converted'));
 ALTER TABLE public.product_opportunities ALTER COLUMN lifecycle_status SET DEFAULT 'pending';
 
--- Source-added date is the business selection date when available; otherwise preserve creation date.
 UPDATE public.product_opportunities
    SET selection_date = COALESCE(selection_date, source_added_at::date, created_at::date)
  WHERE selection_date IS NULL;
 
--- Locked xpYYMMDDNNN numbering. Re-key deprecated SEL-* implementation identifiers in one migration.
 UPDATE public.product_opportunities
    SET selection_no = NULL
  WHERE selection_no IS NOT NULL
@@ -134,7 +129,6 @@ CREATE TABLE IF NOT EXISTS public.selection_number_counters (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Seed counters from any already-valid CURRENT identifiers.
 INSERT INTO public.selection_number_counters(selection_date, last_number, updated_at)
 SELECT selection_date,
        MAX(SUBSTRING(selection_no FROM 9 FOR 3)::INTEGER),
@@ -175,7 +169,6 @@ BEGIN
   END LOOP;
 END $$;
 
--- Keep Product JSON aligned where an older implementation embedded selectionCode.
 UPDATE public.products p
    SET product_data = (COALESCE(p.product_data, '{}'::jsonb) - 'selectionCode')
                       || jsonb_build_object('selectionNo', o.selection_no)
