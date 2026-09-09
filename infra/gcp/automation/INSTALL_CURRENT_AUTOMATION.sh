@@ -30,6 +30,7 @@ gcloud services enable \
   artifactregistry.googleapis.com \
   iam.googleapis.com \
   iamcredentials.googleapis.com \
+  sts.googleapis.com \
   secretmanager.googleapis.com \
   sqladmin.googleapis.com \
   --project="$PROJECT_ID" >/dev/null
@@ -81,6 +82,7 @@ INCLUDED_FILES='apps/systems/aione/backend/**,data-code/migrations/**,data-code/
 SERVICE_ACCOUNT_RESOURCE="projects/${PROJECT_ID}/serviceAccounts/${DEPLOYER_SA}"
 
 echo '[AIONE] Create or update the single main -> CURRENT deployment trigger'
+echo '[AIONE] Every matching main push creates a PENDING build. Only the GitHub PR-merge approval workflow may approve it.'
 if gcloud builds triggers describe "$TRIGGER" --project="$PROJECT_ID" --region=global >/dev/null 2>&1; then
   gcloud builds triggers update github "$TRIGGER" \
     --project="$PROJECT_ID" \
@@ -90,7 +92,7 @@ if gcloud builds triggers describe "$TRIGGER" --project="$PROJECT_ID" --region=g
     --included-files="$INCLUDED_FILES" \
     --service-account="$SERVICE_ACCOUNT_RESOURCE" \
     --include-logs-with-status \
-    --no-require-approval \
+    --require-approval \
     --quiet
 else
   gcloud builds triggers create github \
@@ -104,16 +106,17 @@ else
     --included-files="$INCLUDED_FILES" \
     --service-account="$SERVICE_ACCOUNT_RESOURCE" \
     --include-logs-with-status \
-    --no-require-approval
+    --require-approval
 fi
 
-echo '[AIONE] Verify exactly one CURRENT deployment trigger exists'
+echo '[AIONE] Verify exactly one CURRENT deployment trigger exists and approval is required'
 gcloud builds triggers describe "$TRIGGER" \
   --project="$PROJECT_ID" \
   --region=global \
-  --format='yaml(name,filename,github.push.branch,serviceAccount,includedFiles,disabled)'
+  --format='yaml(name,filename,github.push.branch,serviceAccount,includedFiles,approvalConfig.approvalRequired,disabled)'
 
 printf '\n[AIONE] AUTOMATED OPS INSTALLED\n'
 printf 'Normal operation from now on:\n'
-printf '  Branch work -> checks -> merge main -> Cloud Build auto deploy -> candidate health -> 100%% cutover\n'
+printf '  Branch work -> checks -> merge main -> pending Cloud Build -> GitHub PR-merge approval -> candidate health -> 100%% cutover\n'
+printf 'Direct pushes to main can create a pending build but are not auto-approved for production deployment.\n'
 printf 'Database migration mismatch blocks deployment automatically and requires a separately reviewed CURRENT migration action.\n'
