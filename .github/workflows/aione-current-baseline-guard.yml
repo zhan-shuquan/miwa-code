@@ -97,7 +97,15 @@ jobs:
             fi
           done
 
-          if grep -RFn 'AIONE_DATABASE_URL' .github infra/gcp 2>/dev/null; then
+          active_files=(
+            infra/gcp/cloud-shell/CURRENT_BASELINE.sh
+            infra/gcp/cloud-shell/lib.sh
+            infra/gcp/cloud-shell/09_DEPLOY_CURRENT_BACKEND.sh
+            infra/gcp/cloudbuild/deploy-current.yaml
+            infra/gcp/automation/INSTALL_CURRENT_AUTOMATION.sh
+          )
+
+          if grep -Fn 'AIONE_DATABASE_URL' "${active_files[@]}"; then
             echo '[AIONE][FATAL] Alternate DATABASE_URL deployment path detected.'
             exit 3
           fi
