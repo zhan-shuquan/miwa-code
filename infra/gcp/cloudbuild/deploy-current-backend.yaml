@@ -74,6 +74,15 @@ steps:
         test -n "$SERVICE_URL"
         test -n "$REVISION"
         test -n "$IMAGE"
+
+        IAM_TOKEN="$(gcloud auth print-identity-token --audiences="$SERVICE_URL")"
+        HEALTH_JSON="$(curl -fsS -H "Authorization: Bearer $IAM_TOKEN" "$SERVICE_URL/health")"
+        printf '%s\n' "$HEALTH_JSON"
+        printf '%s' "$HEALTH_JSON" | grep -q '"ok"[[:space:]]*:[[:space:]]*true' || {
+          echo '[AIONE][ERROR] authenticated /health did not return ok=true' >&2
+          exit 4
+        }
+
         printf '[AIONE] deployment PASS\nservice=%s\nrevision=%s\nimage=%s\nurl=%s\n' "${_RUN_SERVICE}" "$REVISION" "$IMAGE" "$SERVICE_URL"
 
 images:
