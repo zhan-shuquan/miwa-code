@@ -8,6 +8,7 @@ import integrationsRakutenRouter from "./src/routes/integrations-rakuten.js";
 import driveAssetsRouter from "./src/routes/drive-assets.js";
 import productLifecycleRouter from "./src/routes/product-lifecycle.js";
 import productAssetsRouter from "./src/routes/product-assets.js";
+import recurringWorkRouter from "./src/routes/recurring-work.js";
 import { resolveAioneGoogleIdentity } from "./src/http/google-auth.js";
 
 const app = express();
@@ -22,7 +23,7 @@ app.use((req, res, next) => {
   if (origin && corsOrigins.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, x-aione-person-id, x-aione-assignment-id, x-aione-source-system, x-correlation-id");
+    res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, x-aione-person-id, x-aione-assignment-id, x-aione-source-system, x-correlation-id, x-aione-scheduler-secret");
     res.setHeader("Access-Control-Expose-Headers", "Content-Disposition, Content-Length, X-AIONE-Asset-Id");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,OPTIONS");
   }
@@ -61,6 +62,7 @@ app.use("/api/v1/integrations/rakuten", integrationsRakutenRouter);
 app.use("/api/v1/drive-assets", driveAssetsRouter);
 app.use("/api/v1/product-lifecycle", productLifecycleRouter);
 app.use("/api/v1/product-assets", productAssetsRouter);
+app.use("/api/v1/recurring-work", recurringWorkRouter);
 app.use("/api/v1", coreRouter);
 
 app.use((req, res) => {
