@@ -2,17 +2,11 @@ name: AIONE CURRENT Baseline Guard
 
 on:
   pull_request:
-    paths:
-      - "infra/gcp/**"
-      - ".github/workflows/aione-current-baseline-guard.yml"
-      - ".github/workflows/aione-db-preflight-manual.yml"
+    branches:
+      - main
   push:
     branches:
       - main
-    paths:
-      - "infra/gcp/**"
-      - ".github/workflows/aione-current-baseline-guard.yml"
-      - ".github/workflows/aione-db-preflight-manual.yml"
 
 permissions:
   contents: read
