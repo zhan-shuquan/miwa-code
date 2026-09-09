@@ -3,6 +3,7 @@
 # This file is the only supported source for runtime and deployment target names.
 
 export AIONE_PROJECT_ID="miwa-aione"
+export AIONE_PROJECT_NUMBER="49629089449"
 export AIONE_REGION="asia-northeast1"
 export AIONE_RUN_SERVICE="aione-backend-current"
 export AIONE_SQL_INSTANCE="aione-pg-dev"
@@ -16,6 +17,10 @@ export AIONE_MIGRATION_JOB="aione-db-migrate-current"
 export AIONE_RUNTIME_SERVICE_ACCOUNT_NAME="aione-runtime"
 export AIONE_DEPLOYER_SERVICE_ACCOUNT_NAME="aione-deployer"
 export AIONE_DEPLOY_TRIGGER_NAME="aione-current-deploy"
+export AIONE_GITHUB_APPROVER_SERVICE_ACCOUNT_NAME="aione-github-approver"
+export AIONE_GITHUB_WIF_POOL_ID="github-aione"
+export AIONE_GITHUB_WIF_PROVIDER_ID="github-miwa-code"
+export AIONE_GITHUB_REPOSITORY="zhan-shuquan/miwa-code"
 
 export AIONE_AI_MODE="live"
 export AIONE_AI_PROVIDER="openai"
@@ -38,6 +43,10 @@ assert_aione_current_baseline() {
 
   [[ "${AIONE_PROJECT_ID:-}" == "miwa-aione" ]] || {
     echo "[AIONE][FATAL] PROJECT_ID must be miwa-aione" >&2
+    exit 90
+  }
+  [[ "${AIONE_PROJECT_NUMBER:-}" == "49629089449" ]] || {
+    echo "[AIONE][FATAL] PROJECT_NUMBER must be 49629089449" >&2
     exit 90
   }
   [[ "${AIONE_RUN_SERVICE:-}" == "aione-backend-current" ]] || {
@@ -66,6 +75,10 @@ assert_aione_current_baseline() {
   }
   [[ "${AIONE_DEPLOY_TRIGGER_NAME:-}" == "aione-current-deploy" ]] || {
     echo "[AIONE][FATAL] Deploy trigger must be aione-current-deploy" >&2
+    exit 97
+  }
+  [[ "${AIONE_GITHUB_REPOSITORY:-}" == "zhan-shuquan/miwa-code" ]] || {
+    echo "[AIONE][FATAL] GitHub repository must be zhan-shuquan/miwa-code" >&2
     exit 97
   }
 
