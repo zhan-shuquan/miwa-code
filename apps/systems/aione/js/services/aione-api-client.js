@@ -1,15 +1,45 @@
 /* AIONE API Client｜统一前端后端入口 */
 const STORAGE_KEY = "miwa-aione:api-base-url:v1";
 const AUTH_SESSION_KEY = "aione.preview.session.v3";
-function normalizeBase(value) { return String(value || "").replace(/\/$/, ""); }
-export function getAioneApiBaseUrl() {
-  if (window.AIONE_API_BASE_URL) return normalizeBase(window.AIONE_API_BASE_URL);
-  try { const stored = localStorage.getItem(STORAGE_KEY); if (stored) return normalizeBase(stored); } catch (_) {}
+
+function isLocalDevelopmentHost() {
   const host = window.location.hostname;
-  if (host === "127.0.0.1" || host === "localhost") return `http://${host}:8080`;
+  return host === "127.0.0.1" || host === "localhost";
+}
+
+function normalizeBase(value) {
+  return String(value || "").replace(/\/$/, "");
+}
+
+function clearLegacyApiOverride() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+}
+
+export function getAioneApiBaseUrl() {
+  if (isLocalDevelopmentHost()) {
+    if (window.AIONE_API_BASE_URL) return normalizeBase(window.AIONE_API_BASE_URL);
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) return normalizeBase(stored);
+    } catch (_) {}
+    return `http://${window.location.hostname}:8080`;
+  }
+
+  // Hosted AIONE must always use the same-origin /api bridge.
+  // Remove stale browser-local runtime overrides so production can never route
+  // back to a deleted, dev, or legacy backend.
+  clearLegacyApiOverride();
   return "";
 }
-export function setAioneApiBaseUrl(value) { try { localStorage.setItem(STORAGE_KEY, normalizeBase(value)); } catch (_) {} }
+
+export function setAioneApiBaseUrl(value) {
+  if (!isLocalDevelopmentHost()) {
+    clearLegacyApiOverride();
+    return;
+  }
+  try { localStorage.setItem(STORAGE_KEY, normalizeBase(value)); } catch (_) {}
+}
+
 function getGoogleIdToken() {
   try {
     const raw = sessionStorage.getItem(AUTH_SESSION_KEY);
@@ -34,6 +64,7 @@ function actorHeaders() {
   if (assignmentId) headers["x-aione-assignment-id"] = assignmentId;
   return headers;
 }
+
 export async function aioneApi(path, options = {}) {
   const base = getAioneApiBaseUrl();
   const response = await fetch(`${base}${path}`, {
