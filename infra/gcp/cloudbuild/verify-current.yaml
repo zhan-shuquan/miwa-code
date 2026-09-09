@@ -1,0 +1,29 @@
+steps:
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: verify-current-runtime
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        echo '[AIONE] Verify CURRENT runtime'
+        SERVICE_URL="$(gcloud run services describe "${_RUN_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(status.url)')"
+        REVISION="$(gcloud run services describe "${_RUN_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(status.latestReadyRevisionName)')"
+        IMAGE="$(gcloud run services describe "${_RUN_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(spec.template.spec.containers[0].image)')"
+        SERVICE_ACCOUNT="$(gcloud run services describe "${_RUN_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(spec.template.spec.serviceAccountName)')"
+        test -n "$SERVICE_URL"
+        test -n "$REVISION"
+        test -n "$IMAGE"
+        test -n "$SERVICE_ACCOUNT"
+        printf 'service=%s\nrevision=%s\nimage=%s\nruntime_sa=%s\nurl=%s\n' "${_RUN_SERVICE}" "$REVISION" "$IMAGE" "$SERVICE_ACCOUNT" "$SERVICE_URL"
+        echo '[AIONE] Authenticated /health'
+        IAM_TOKEN="$(gcloud auth print-identity-token --audiences="$SERVICE_URL")"
+        HEALTH_JSON="$(curl -fsS -H "Authorization: Bearer $IAM_TOKEN" "$SERVICE_URL/health")"
+        printf '%s\n' "$HEALTH_JSON"
+        printf '%s' "$HEALTH_JSON" | grep -q '"ok"[[:space:]]*:[[:space:]]*true' || { echo '[AIONE][ERROR] /health did not return ok=true' >&2; exit 3; }
+        echo '[AIONE] CURRENT runtime verification PASS'
+substitutions:
+  _REGION: asia-northeast1
+  _RUN_SERVICE: aione-backend-current
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1200s
