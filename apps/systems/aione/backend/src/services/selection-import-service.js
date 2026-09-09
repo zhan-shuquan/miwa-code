@@ -44,7 +44,8 @@ function parseTags(value) {
 function parseDate(value) {
   if (!value) return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
-  const date = new Date(text(value).replace(" ", "T") + (text(value).includes("T") ? "" : ""));
+  const raw = text(value).replace(" ", "T");
+  const date = new Date(raw);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
@@ -63,8 +64,7 @@ function isExcel(file) {
 }
 
 function zipItemId(file) {
-  const name = String(file.name || "");
-  const match = /^1688_(\d+)_.*\.zip$/i.exec(name);
+  const match = /^1688_(\d+)_.*\.zip$/i.exec(String(file.name || ""));
   return match ? match[1] : null;
 }
 
@@ -83,9 +83,8 @@ function buildZipIndex(files) {
 function findHeaderRow(worksheet) {
   const maxRows = Math.min(worksheet.rowCount, 20);
   for (let rowNo = 1; rowNo <= maxRows; rowNo += 1) {
-    const row = worksheet.getRow(rowNo);
     const values = [];
-    row.eachCell({ includeEmpty: true }, (cell) => values.push(text(cell.value)));
+    worksheet.getRow(rowNo).eachCell({ includeEmpty: true }, (cell) => values.push(text(cell.value)));
     if (values.includes("商品ID") && values.includes("商品标题")) return rowNo;
   }
   return null;
@@ -93,8 +92,7 @@ function findHeaderRow(worksheet) {
 
 function buildHeaderMap(worksheet, rowNo) {
   const map = new Map();
-  const row = worksheet.getRow(rowNo);
-  row.eachCell({ includeEmpty: true }, (cell, colNo) => {
+  worksheet.getRow(rowNo).eachCell({ includeEmpty: true }, (cell, colNo) => {
     const name = text(cell.value);
     if (name) map.set(name, colNo);
   });
@@ -124,17 +122,18 @@ function parseWorkbookRows(workbook) {
     const title = text(get("商品标题"));
     if (!sourceRef && !title) continue;
 
+    const sourcePlatform = text(get("平台")) || "1688";
     const tags = parseTags(get("标签"));
-    const sourceAddedAt = parseDate(get("加入时间"));
     rows.push({
       rowNo,
-      sourcePlatform: text(get("平台")) || "1688",
+      sourcePlatform,
       sourceRef,
       title,
       sourceUrl: nullableText(get("商品链接")),
       sourceCoverImageUrl: nullableText(get("图片地址")),
       sourcePrice: numberOrNull(get("商品价格")),
-      sourceAddedAt,
+      sourceCurrency: sourcePlatform === "1688" ? "CNY" : null,
+      sourceAddedAt: parseDate(get("加入时间")),
       sourceSupplierName: nullableText(get("店铺名称")),
       sourceGroup: nullableText(get("所属分组")),
       sourceTags: tags,
@@ -147,7 +146,6 @@ function parseWorkbookRows(workbook) {
 }
 
 async function createBatch(file, fileHash) {
-  const id = `sib_${randomUUID()}`;
   const duplicate = await pool.query(
     `SELECT * FROM public.selection_import_batches
       WHERE source_file_hash=$1 AND status='completed'
@@ -162,7 +160,7 @@ async function createBatch(file, fileHash) {
        source_file_modified_at, source_file_size, status, started_at, source_system)
      VALUES ($1,'1688_selection_pool',$2,$3,$4,$5,$6,$7,'processing',NOW(),'aione-1688-drive-inbox')
      RETURNING *`,
-    [id, file.id, file.name, file.webViewLink || null, fileHash, file.modifiedTime || null, file.size ? Number(file.size) : null]
+    [`sib_${randomUUID()}`, file.id, file.name, file.webViewLink || null, fileHash, file.modifiedTime || null, file.size ? Number(file.size) : null]
   );
   return { duplicate: null, batch: result.rows[0] };
 }
@@ -194,46 +192,45 @@ async function importRow(item, zipIndex) {
       const current = existingResult.rows[0];
       const updated = await client.query(
         `UPDATE public.product_opportunities
-            SET title=COALESCE(NULLIF($3,''),title),
-                source_url=COALESCE($4,source_url),
-                source_cover_image_url=COALESCE($5,source_cover_image_url),
-                source_price=COALESCE($6,source_price),
+            SET title=COALESCE(NULLIF($2,''),title),
+                source_url=COALESCE($3,source_url),
+                source_cover_image_url=COALESCE($4,source_cover_image_url),
+                source_price=COALESCE($5,source_price),
+                source_currency=COALESCE($6,source_currency),
                 source_supplier_name=COALESCE($7,source_supplier_name),
                 source_group=COALESCE($8,source_group),
-                source_tags=CASE WHEN cardinality($9::text[]) > 0 THEN $9::text[] ELSE source_tags END,
+                source_tags=$9::text[],
                 source_note=COALESCE($10,source_note),
                 source_weight_g=COALESCE($11,source_weight_g),
-                source_fulfillment_hint=COALESCE($12,source_fulfillment_hint),
+                source_fulfillment_hint=$12,
                 source_added_at=COALESCE(source_added_at,$13),
                 first_imported_at=COALESCE(first_imported_at,NOW()),
                 last_imported_at=NOW(),
                 metadata=COALESCE(metadata,'{}'::jsonb) || $14::jsonb,
                 updated_at=NOW(), record_version=record_version+1
           WHERE id=$1 RETURNING *`,
-        [current.id, item.sourcePlatform, item.title, item.sourceUrl, item.sourceCoverImageUrl,
-          item.sourcePrice, item.sourceSupplierName, item.sourceGroup, item.sourceTags, item.sourceNote,
-          item.sourceWeightG, item.sourceFulfillmentHint, item.sourceAddedAt,
-          JSON.stringify(zipMetadata)]
+        [current.id, item.title, item.sourceUrl, item.sourceCoverImageUrl, item.sourcePrice,
+          item.sourceCurrency, item.sourceSupplierName, item.sourceGroup, item.sourceTags, item.sourceNote,
+          item.sourceWeightG, item.sourceFulfillmentHint, item.sourceAddedAt, JSON.stringify(zipMetadata)]
       );
       return { action: "updated", selection: updated.rows[0], zipMatched: Boolean(zip) };
     }
 
-    const selectionDateValue = item.sourceAddedAt || new Date();
-    const { selectionNo, selectionDate } = await allocateSelectionNo(client, selectionDateValue);
+    const { selectionNo, selectionDate } = await allocateSelectionNo(client, item.sourceAddedAt || new Date());
     const inserted = await client.query(
       `INSERT INTO public.product_opportunities
         (id, source_platform, source_ref, source_url, title, selection_mode, lifecycle_status,
-         selection_no, selection_date, source_cover_image_url, source_price, source_supplier_name,
-         source_group, source_tags, source_note, source_weight_g, source_fulfillment_hint,
-         source_added_at, first_imported_at, last_imported_at, classification_status, metadata,
-         source_system)
-       VALUES ($1,$2,$3,$4,$5,'selection','pending',$6,$7::date,$8,$9,$10,$11,$12::text[],$13,$14,$15,
-               $16,NOW(),NOW(),'pending',$17::jsonb,'aione-1688-drive-inbox')
+         selection_no, selection_date, source_cover_image_url, source_price, source_currency,
+         source_supplier_name, source_group, source_tags, source_note, source_weight_g,
+         source_fulfillment_hint, source_added_at, first_imported_at, last_imported_at,
+         classification_status, metadata, source_system)
+       VALUES ($1,$2,$3,$4,$5,'selection','pending',$6,$7::date,$8,$9,$10,$11,$12,$13::text[],$14,$15,$16,
+               $17,NOW(),NOW(),'pending',$18::jsonb,'aione-1688-drive-inbox')
        RETURNING *`,
       [`sel_${randomUUID()}`, item.sourcePlatform, item.sourceRef, item.sourceUrl, item.title,
-        selectionNo, selectionDate, item.sourceCoverImageUrl, item.sourcePrice, item.sourceSupplierName,
-        item.sourceGroup, item.sourceTags, item.sourceNote, item.sourceWeightG, item.sourceFulfillmentHint,
-        item.sourceAddedAt, JSON.stringify(zipMetadata)]
+        selectionNo, selectionDate, item.sourceCoverImageUrl, item.sourcePrice, item.sourceCurrency,
+        item.sourceSupplierName, item.sourceGroup, item.sourceTags, item.sourceNote, item.sourceWeightG,
+        item.sourceFulfillmentHint, item.sourceAddedAt, JSON.stringify(zipMetadata)]
     );
     return { action: "created", selection: inserted.rows[0], zipMatched: Boolean(zip) };
   });
