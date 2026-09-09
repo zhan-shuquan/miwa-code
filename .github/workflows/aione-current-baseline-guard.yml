@@ -1,0 +1,54 @@
+name: AIONE CURRENT Baseline Guard
+
+on:
+  pull_request:
+    paths:
+      - "infra/gcp/**"
+      - ".github/workflows/aione-current-baseline-guard.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/gcp/**"
+      - ".github/workflows/aione-current-baseline-guard.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  guard-current-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify required CURRENT baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          source infra/gcp/cloud-shell/CURRENT_BASELINE.sh
+
+          test "$AIONE_RUN_SERVICE" = "aione-backend-current"
+          test "$AIONE_SQL_INSTANCE" = "aione-pg-dev"
+          test "$AIONE_DB_NAME" = "aione"
+          test "$AIONE_DB_USER" = "aione_app"
+          test "$AIONE_DB_PASSWORD_SECRET" = "aione-db-password-dev"
+
+      - name: Block legacy runtime targets in active CURRENT deployment files
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            infra/gcp/cloud-shell/lib.sh
+            infra/gcp/cloud-shell/09_DEPLOY_CURRENT_BACKEND.sh
+            infra/gcp/cloud-shell/cloud-config.sh.example
+          )
+
+          legacy='aione-backend-v190|aione-backend-dev|aione-backend-pgdev-check|aione-postgres'
+
+          if grep -En "$legacy" "${files[@]}"; then
+            echo "[AIONE][FATAL] Legacy runtime target found in active CURRENT deployment files."
+            exit 1
+          fi
+
+          echo "AIONE CURRENT baseline guard passed."
