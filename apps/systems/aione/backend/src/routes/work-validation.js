@@ -2,8 +2,22 @@ import { Router } from "express";
 import { getRequestContext, requireWriteActor } from "../http/context.js";
 import { validate1688WeeklyEvidence } from "../services/work-evidence-validation-service.js";
 import { validateDrive1688Evidence } from "../services/drive-work-evidence-service.js";
+import { discover1688EvidenceForWorkItem } from "../services/work-evidence-discovery-service.js";
 
 const router = Router();
+
+router.get("/work-items/:id/evidence/discover-1688", async (req, res, next) => {
+  try {
+    const context = req.aioneContext || getRequestContext(req);
+    const result = await discover1688EvidenceForWorkItem({ workItemId: req.params.id });
+    if (String(result.personId) !== String(context.personId)) {
+      return res.status(403).json({ error: "forbidden", message: "This work item belongs to another person." });
+    }
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
 
 // Runtime path: AIONE downloads the registered Drive file, parses the original XLSX and validates it deterministically.
 router.post("/work-items/:id/evidence/:evidenceId/validate-1688-drive", requireWriteActor, async (req, res, next) => {
