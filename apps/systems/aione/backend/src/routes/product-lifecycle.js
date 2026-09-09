@@ -3,19 +3,12 @@ import { randomUUID } from "node:crypto";
 import { withTransaction } from "../../db.js";
 import { requireWriteActor } from "../http/context.js";
 import { recordBusinessEvent } from "../services/event-service.js";
+import { allocateSelectionNo } from "../services/selection-number-service.js";
 
 const router = Router();
 
 function pad(value, width) {
   return String(value).padStart(width, "0");
-}
-
-function todayCode() {
-  const now = new Date();
-  const y = now.getUTCFullYear();
-  const m = pad(now.getUTCMonth() + 1, 2);
-  const d = pad(now.getUTCDate(), 2);
-  return `${y}${m}${d}`;
 }
 
 function selectionId() {
@@ -34,11 +27,6 @@ function cleanText(value, maxLength = 4000) {
   return String(value ?? "").trim().slice(0, maxLength);
 }
 
-async function allocateSelectionCode(client) {
-  const seqResult = await client.query("SELECT nextval('public.aione_selection_code_seq') AS n");
-  return `SEL-${todayCode()}-${pad(seqResult.rows[0].n, 6)}`;
-}
-
 async function loadExistingProduct(client, opportunityId) {
   const productResult = await client.query(
     "SELECT * FROM public.products WHERE source_opportunity_id=$1 AND archived_at IS NULL LIMIT 1",
@@ -53,25 +41,21 @@ async function loadExistingProduct(client, opportunityId) {
   return { product, skus: skuResult.rows };
 }
 
-// Create the machine identity for a human-readable Selection.
-// Human naming remains display data; canonical system naming is allocated here.
+// One canonical Selection / ProductOpportunity model. Fulfillment is not a selection type.
 router.post("/selections", requireWriteActor, async (req, res, next) => {
   const sourcePlatform = cleanText(req.body?.sourcePlatform, 80);
   const sourceRef = cleanText(req.body?.sourceRef, 240) || null;
   const sourceUrl = cleanText(req.body?.sourceUrl, 2000) || null;
   const title = cleanText(req.body?.title, 500);
-  const selectionMode = cleanText(req.body?.selectionMode || "regular", 80);
   const supplierRef = cleanText(req.body?.supplierRef, 240) || null;
+  const selectionDateInput = req.body?.selectionDate || req.body?.sourceAddedAt || new Date();
   const qualificationData = req.body?.qualificationData && typeof req.body.qualificationData === "object"
     ? req.body.qualificationData
     : {};
   const metadata = req.body?.metadata && typeof req.body.metadata === "object" ? req.body.metadata : {};
 
   if (!sourcePlatform || !title) {
-    return res.status(400).json({
-      error: "bad_request",
-      message: "sourcePlatform and title are required."
-    });
+    return res.status(400).json({ error: "bad_request", message: "sourcePlatform and title are required." });
   }
 
   try {
@@ -88,13 +72,13 @@ router.post("/selections", requireWriteActor, async (req, res, next) => {
       }
 
       const id = selectionId();
-      const selectionCode = await allocateSelectionCode(client);
+      const { selectionNo, selectionDate } = await allocateSelectionNo(client, selectionDateInput);
       const inserted = await client.query(
         `INSERT INTO public.product_opportunities
           (id, source_platform, source_ref, source_url, supplier_ref, title, selection_mode,
-           lifecycle_status, owner_person_id, qualification_data, metadata, selection_code,
-           created_by_person_id, updated_by_person_id, source_system)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,'reviewing',$8,$9::jsonb,$10::jsonb,$11,$12,$12,$13)
+           lifecycle_status, owner_person_id, qualification_data, metadata, selection_no,
+           selection_date, created_by_person_id, updated_by_person_id, source_system)
+         VALUES ($1,$2,$3,$4,$5,$6,'selection','pending',$7,$8::jsonb,$9::jsonb,$10,$11::date,$12,$12,$13)
          RETURNING *`,
         [
           id,
@@ -103,11 +87,11 @@ router.post("/selections", requireWriteActor, async (req, res, next) => {
           sourceUrl,
           supplierRef,
           title,
-          selectionMode,
           context.personId || null,
           JSON.stringify(qualificationData),
           JSON.stringify(metadata),
-          selectionCode,
+          selectionNo,
+          selectionDate,
           context.personId || null,
           context.sourceSystem || "aione"
         ]
@@ -118,7 +102,7 @@ router.post("/selections", requireWriteActor, async (req, res, next) => {
         objectType: "product_opportunity",
         objectId: id,
         context,
-        payload: { selectionCode, sourcePlatform, sourceRef, selectionMode }
+        payload: { selectionNo, sourcePlatform, sourceRef }
       });
 
       return { selection: inserted.rows[0], reused: false };
@@ -130,8 +114,8 @@ router.post("/selections", requireWriteActor, async (req, res, next) => {
   }
 });
 
-// Qualification is explicit: Product Code must never be allocated before Selection passes.
-router.post("/selections/:id/qualify", requireWriteActor, async (req, res, next) => {
+// CURRENT human decision: pending -> selected.
+router.post("/selections/:id/select", requireWriteActor, async (req, res, next) => {
   const opportunityId = cleanText(req.params.id, 240);
   const qualificationData = req.body?.qualificationData && typeof req.body.qualificationData === "object"
     ? req.body.qualificationData
@@ -150,8 +134,8 @@ router.post("/selections/:id/qualify", requireWriteActor, async (req, res, next)
         error.code = "selection_not_found";
         throw error;
       }
-      if (["rejected", "archived", "converted"].includes(current.rows[0].lifecycle_status)) {
-        const error = new Error(`Selection cannot be qualified from status ${current.rows[0].lifecycle_status}.`);
+      if (current.rows[0].lifecycle_status !== "pending") {
+        const error = new Error(`Selection cannot be selected from status ${current.rows[0].lifecycle_status}.`);
         error.statusCode = 409;
         error.code = "selection_status_conflict";
         throw error;
@@ -159,7 +143,7 @@ router.post("/selections/:id/qualify", requireWriteActor, async (req, res, next)
 
       const updated = await client.query(
         `UPDATE public.product_opportunities
-            SET lifecycle_status='qualified',
+            SET lifecycle_status='selected',
                 qualification_data=COALESCE(qualification_data,'{}'::jsonb) || $2::jsonb,
                 updated_at=NOW(),
                 updated_by_person_id=$3,
@@ -170,15 +154,49 @@ router.post("/selections/:id/qualify", requireWriteActor, async (req, res, next)
       );
 
       await recordBusinessEvent(client, {
-        eventType: "selection.qualified",
+        eventType: "selection.selected",
         objectType: "product_opportunity",
         objectId: opportunityId,
         context,
-        payload: { selectionCode: updated.rows[0].selection_code }
+        payload: { selectionNo: updated.rows[0].selection_no }
       });
       return updated.rows[0];
     });
 
+    return res.json({ selection });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.post("/selections/:id/reject", requireWriteActor, async (req, res, next) => {
+  const opportunityId = cleanText(req.params.id, 240);
+  try {
+    const context = req.aioneContext || {};
+    const selection = await withTransaction(async (client) => {
+      const updated = await client.query(
+        `UPDATE public.product_opportunities
+            SET lifecycle_status='rejected', updated_at=NOW(), updated_by_person_id=$2,
+                record_version=record_version+1
+          WHERE id=$1 AND lifecycle_status='pending' AND archived_at IS NULL
+          RETURNING *`,
+        [opportunityId, context.personId || null]
+      );
+      if (!updated.rowCount) {
+        const error = new Error("Only a pending selection can be rejected.");
+        error.statusCode = 409;
+        error.code = "selection_status_conflict";
+        throw error;
+      }
+      await recordBusinessEvent(client, {
+        eventType: "selection.rejected",
+        objectType: "product_opportunity",
+        objectId: opportunityId,
+        context,
+        payload: { selectionNo: updated.rows[0].selection_no }
+      });
+      return updated.rows[0];
+    });
     return res.json({ selection });
   } catch (error) {
     return next(error);
@@ -192,12 +210,8 @@ router.post("/convert-selection", requireWriteActor, async (req, res, next) => {
     ? requestedSkuCount
     : null;
 
-  if (!opportunityId) {
-    return res.status(400).json({ error: "bad_request", message: "opportunityId is required." });
-  }
-  if (!skuCount) {
-    return res.status(400).json({ error: "bad_request", message: "skuCount must be an integer from 1 to 99." });
-  }
+  if (!opportunityId) return res.status(400).json({ error: "bad_request", message: "opportunityId is required." });
+  if (!skuCount) return res.status(400).json({ error: "bad_request", message: "skuCount must be an integer from 1 to 99." });
 
   try {
     const context = req.aioneContext || {};
@@ -217,23 +231,22 @@ router.post("/convert-selection", requireWriteActor, async (req, res, next) => {
       }
 
       const opportunity = opportunityResult.rows[0];
-      if (opportunity.lifecycle_status !== "qualified") {
-        const error = new Error("Selection must be qualified before Product creation.");
+      if (opportunity.lifecycle_status !== "selected") {
+        const error = new Error("Selection must be selected before Product creation.");
         error.statusCode = 409;
-        error.code = "selection_not_qualified";
+        error.code = "selection_not_selected";
         throw error;
       }
 
-      const selectionCode = opportunity.selection_code || await allocateSelectionCode(client);
       const productSeq = await client.query("SELECT nextval('public.aione_product_code_seq') AS n");
       const productCode = `MH${pad(productSeq.rows[0].n, 7)}`;
       const id = productId();
-
       const productData = {
-        selectionCode,
+        selectionNo: opportunity.selection_no,
         sourceTitle: opportunity.title,
-        selectionMode: opportunity.selection_mode,
         qualificationData: opportunity.qualification_data || {},
+        sourceFulfillmentHint: opportunity.source_fulfillment_hint || null,
+        sourceWeightG: opportunity.source_weight_g || null,
         skuCount
       };
 
@@ -246,22 +259,11 @@ router.post("/convert-selection", requireWriteActor, async (req, res, next) => {
          VALUES ($1,$2,$3,$4,$5,'draft',$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb,$15,$15,$16)
          RETURNING *`,
         [
-          id,
-          opportunity.id,
-          opportunity.business_id,
-          opportunity.category_id,
-          opportunity.title,
-          opportunity.owner_person_id || context.personId || null,
-          opportunity.source_platform,
-          opportunity.source_ref,
-          opportunity.source_url,
-          opportunity.supplier_ref,
-          opportunity.estimated_cost,
-          opportunity.currency || "JPY",
-          productCode,
-          JSON.stringify(productData),
-          context.personId || null,
-          context.sourceSystem || "aione"
+          id, opportunity.id, opportunity.business_id, opportunity.category_id, opportunity.title,
+          opportunity.owner_person_id || context.personId || null, opportunity.source_platform,
+          opportunity.source_ref, opportunity.source_url, opportunity.supplier_ref,
+          opportunity.estimated_cost, opportunity.currency || "JPY", productCode,
+          JSON.stringify(productData), context.personId || null, context.sourceSystem || "aione"
         ]
       );
 
@@ -281,14 +283,11 @@ router.post("/convert-selection", requireWriteActor, async (req, res, next) => {
 
       await client.query(
         `UPDATE public.product_opportunities
-            SET selection_code=$2,
-                lifecycle_status='converted',
-                metadata=COALESCE(metadata,'{}'::jsonb) || jsonb_build_object('convertedProductId',$3::text,'convertedProductCode',$4::text),
-                updated_at=NOW(),
-                updated_by_person_id=$5,
-                record_version=record_version+1
+            SET lifecycle_status='converted',
+                metadata=COALESCE(metadata,'{}'::jsonb) || jsonb_build_object('convertedProductId',$2::text,'convertedProductCode',$3::text),
+                updated_at=NOW(), updated_by_person_id=$4, record_version=record_version+1
           WHERE id=$1`,
-        [opportunity.id, selectionCode, id, productCode, context.personId || null]
+        [opportunity.id, id, productCode, context.personId || null]
       );
 
       await client.query(
@@ -296,21 +295,12 @@ router.post("/convert-selection", requireWriteActor, async (req, res, next) => {
           (id, object_type, object_id, canonical_table, display_name, lifecycle_status, business_id, owner_person_id, metadata, source_system)
          VALUES ($1,'product',$2,'products',$3,'draft',$4,$5,$6::jsonb,$7)
          ON CONFLICT (object_type, object_id) DO UPDATE
-           SET display_name=EXCLUDED.display_name,
-               lifecycle_status=EXCLUDED.lifecycle_status,
-               business_id=EXCLUDED.business_id,
-               owner_person_id=EXCLUDED.owner_person_id,
-               metadata=EXCLUDED.metadata,
-               updated_at=NOW()`,
-        [
-          `obj_${randomUUID()}`,
-          id,
-          opportunity.title,
-          opportunity.business_id,
+           SET display_name=EXCLUDED.display_name, lifecycle_status=EXCLUDED.lifecycle_status,
+               business_id=EXCLUDED.business_id, owner_person_id=EXCLUDED.owner_person_id,
+               metadata=EXCLUDED.metadata, updated_at=NOW()`,
+        [`obj_${randomUUID()}`, id, opportunity.title, opportunity.business_id,
           opportunity.owner_person_id || context.personId || null,
-          JSON.stringify({ productCode, selectionCode }),
-          context.sourceSystem || "aione"
-        ]
+          JSON.stringify({ productCode, selectionNo: opportunity.selection_no }), context.sourceSystem || "aione"]
       );
 
       await recordBusinessEvent(client, {
@@ -318,7 +308,7 @@ router.post("/convert-selection", requireWriteActor, async (req, res, next) => {
         objectType: "product",
         objectId: id,
         context,
-        payload: { opportunityId: opportunity.id, selectionCode, productCode, skuCodes: skus.map((sku) => sku.sku_code) }
+        payload: { opportunityId: opportunity.id, selectionNo: opportunity.selection_no, productCode, skuCodes: skus.map((sku) => sku.sku_code) }
       });
 
       return { product: productResult.rows[0], skus, reused: false };
