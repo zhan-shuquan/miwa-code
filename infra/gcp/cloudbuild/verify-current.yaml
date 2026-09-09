@@ -19,6 +19,15 @@ steps:
         printf 'service=%s\nrevision=%s\nimage=%s\nruntime_sa=%s\nurl=%s\n' \
           "${_RUN_SERVICE}" "$REVISION" "$IMAGE" "$SERVICE_ACCOUNT" "$SERVICE_URL"
 
+        echo '[AIONE] Authenticated /health'
+        IAM_TOKEN="$(gcloud auth print-identity-token --audiences="$SERVICE_URL")"
+        HEALTH_JSON="$(curl -fsS -H "Authorization: Bearer $IAM_TOKEN" "$SERVICE_URL/health")"
+        printf '%s\n' "$HEALTH_JSON"
+        printf '%s' "$HEALTH_JSON" | grep -q '"ok"[[:space:]]*:[[:space:]]*true' || {
+          echo '[AIONE][ERROR] /health did not return ok=true' >&2
+          exit 3
+        }
+
         echo '[AIONE] Execute read-only database preflight job'
         gcloud run jobs execute "${_PREFLIGHT_JOB}" \
           --region="${_REGION}" \
