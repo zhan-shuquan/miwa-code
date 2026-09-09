@@ -64,7 +64,11 @@ function isExcel(file) {
 }
 
 function zipItemId(file) {
-  const match = /^1688_(\d+)_.*\.zip$/i.exec(String(file.name || ""));
+  // Verified 1688 downloads use both:
+  //   1688_<itemId>_<title>.zip
+  //   1688_<itemId> <title>.zip
+  // The item id is the deterministic contract; the human title separator is not.
+  const match = /^1688_(\d+)(?:[ _-].*)?\.zip$/i.exec(String(file.name || "").trim());
   return match ? match[1] : null;
 }
 
