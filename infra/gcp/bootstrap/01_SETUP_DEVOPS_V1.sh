@@ -33,12 +33,8 @@ CURRENT_BRANCH="$(git branch --show-current 2>/dev/null || true)"
 git fetch origin main
 git pull --ff-only origin main
 
-PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
-[[ -n "$PROJECT_NUMBER" ]] || die "Project number unavailable for $PROJECT_ID"
-
 DEPLOY_SA_EMAIL="${DEPLOY_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 RUNTIME_SA_EMAIL="${RUNTIME_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
-BUILD_SERVICE_AGENT="service-${PROJECT_NUMBER}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
 
 say "Enable required Google Cloud APIs"
 gcloud services enable \
@@ -86,17 +82,12 @@ gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA_EMAIL" \
   --project="$PROJECT_ID" \
   --quiet >/dev/null
 
-say "Allow Cloud Build infrastructure to mint credentials for the dedicated deploy account"
-for member in \
-  "serviceAccount:${BUILD_SERVICE_AGENT}" \
-  "serviceAccount:${DEPLOY_SA_EMAIL}"
-do
-  gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA_EMAIL" \
-    --member="$member" \
-    --role="roles/iam.serviceAccountTokenCreator" \
-    --project="$PROJECT_ID" \
-    --quiet >/dev/null
-done
+say "Allow deploy service account to mint only OIDC identity tokens for private Cloud Run health checks"
+gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA_EMAIL" \
+  --member="serviceAccount:${DEPLOY_SA_EMAIL}" \
+  --role="roles/iam.serviceAccountOpenIdTokenCreator" \
+  --project="$PROJECT_ID" \
+  --quiet >/dev/null
 
 say "Ensure runtime identity can reach CURRENT database and only the required secrets"
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
@@ -128,7 +119,7 @@ create_manual_trigger(){
     --region="$REGION" \
     --project="$PROJECT_ID" \
     --name="$name" \
-    --repo="${REPO_OWNER}/${REPO_NAME}" \
+    --repo="$REPO_NAME" \
     --repo-type=GITHUB \
     --branch-pattern='^main$' \
     --build-config="$config" \
