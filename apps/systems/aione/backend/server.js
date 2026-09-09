@@ -10,6 +10,7 @@ import productLifecycleRouter from "./src/routes/product-lifecycle.js";
 import productAssetsRouter from "./src/routes/product-assets.js";
 import recurringWorkRouter from "./src/routes/recurring-work.js";
 import workRuntimeRouter from "./src/routes/work-runtime.js";
+import workValidationRouter from "./src/routes/work-validation.js";
 import { resolveAioneGoogleIdentity } from "./src/http/google-auth.js";
 
 const app = express();
@@ -65,6 +66,7 @@ app.use("/api/v1/product-lifecycle", productLifecycleRouter);
 app.use("/api/v1/product-assets", productAssetsRouter);
 app.use("/api/v1/recurring-work", recurringWorkRouter);
 app.use("/api/v1", workRuntimeRouter);
+app.use("/api/v1", workValidationRouter);
 app.use("/api/v1", coreRouter);
 
 app.use((req, res) => {
