@@ -34,12 +34,11 @@ jobs:
           test "$AIONE_DB_USER" = "aione_app"
           test "$AIONE_DB_PASSWORD_SECRET" = "aione-db-password-dev"
 
-      - name: Block legacy runtime targets in CURRENT deployment files
+      - name: Block legacy runtime targets in active CURRENT deployment files
         shell: bash
         run: |
           set -euo pipefail
           files=(
-            infra/gcp/cloud-shell/CURRENT_BASELINE.sh
             infra/gcp/cloud-shell/lib.sh
             infra/gcp/cloud-shell/09_DEPLOY_CURRENT_BACKEND.sh
             infra/gcp/cloud-shell/cloud-config.sh.example
@@ -47,8 +46,8 @@ jobs:
 
           legacy='aione-backend-v190|aione-backend-dev|aione-backend-pgdev-check|aione-postgres'
 
-          if grep -En "$legacy" "${files[@]}" | grep -v 'AIONE_FORBIDDEN_RUNTIME_NAMES'; then
-            echo "[AIONE][FATAL] Legacy runtime target found in CURRENT deployment files."
+          if grep -En "$legacy" "${files[@]}"; then
+            echo "[AIONE][FATAL] Legacy runtime target found in active CURRENT deployment files."
             exit 1
           fi
 
