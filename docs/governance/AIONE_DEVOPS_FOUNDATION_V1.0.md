@@ -53,9 +53,14 @@ GitHub main
 职责：
 - 默认 `_CONFIRM=DO_NOT_RUN`
 - 只有显式传入 `_CONFIRM=MIGRATE_AIONE` 才执行
-- 执行现有 `aione-db-migrate` Cloud Run Job
-- Migration 完成后自动执行 `aione-db-preflight`
+- 先执行 Backend syntax check
+- 以当前 reviewed main commit 构建 immutable image `main-$SHORT_SHA`
+- 将 `aione-db-migrate` 与 `aione-db-preflight` 同时绑定到该 commit image
+- 执行 `aione-db-migrate`
+- Migration 完成后自动执行同镜像的 `aione-db-preflight`
 - Migration 与普通 Backend deployment 分离
+
+禁止使用“旧 migration job 当前碰巧绑定的镜像”作为新 schema migration 的事实来源。
 
 ### AIONE Deploy Backend
 
@@ -151,7 +156,7 @@ Cloud Build 使用专用 deploy service account，不依赖个人账号，也不
 aione-cloud-build-deployer
 → 构建 / 发布 / Job 编排 / runtime metadata 验证
 
- aione-runtime
+aione-runtime
 → 业务运行 / Cloud SQL connection / 指定 Secret 读取
 ```
 
