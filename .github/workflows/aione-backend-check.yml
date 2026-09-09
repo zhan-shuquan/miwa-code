@@ -2,17 +2,11 @@ name: AIONE Backend Check
 
 on:
   pull_request:
-    paths:
-      - "apps/systems/aione/backend/**"
-      - "data-code/migrations/**"
-      - ".github/workflows/aione-backend-check.yml"
+    branches:
+      - main
   push:
     branches:
       - main
-    paths:
-      - "apps/systems/aione/backend/**"
-      - "data-code/migrations/**"
-      - ".github/workflows/aione-backend-check.yml"
 
 permissions:
   contents: read
