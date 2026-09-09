@@ -45,8 +45,8 @@ jobs:
           set -euo pipefail
           test -f infra/gcp/cloudbuild/deploy-current.yaml
           test -f infra/gcp/automation/INSTALL_CURRENT_AUTOMATION.sh
-          grep -Fq 'aione-backend-current' infra/gcp/cloudbuild/deploy-current.yaml
-          grep -Fq 'aione-pg-dev' infra/gcp/cloud-shell/CURRENT_BASELINE.sh
+          grep -Fq '$AIONE_RUN_SERVICE' infra/gcp/cloudbuild/deploy-current.yaml
+          grep -Fq '$AIONE_SQL_INSTANCE' infra/gcp/cloudbuild/deploy-current.yaml
           grep -Fq 'candidate-' infra/gcp/cloudbuild/deploy-current.yaml
           grep -Fq -- '--no-traffic' infra/gcp/cloudbuild/deploy-current.yaml
           grep -Fq 'update-traffic' infra/gcp/cloudbuild/deploy-current.yaml
