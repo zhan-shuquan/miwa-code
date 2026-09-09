@@ -47,7 +47,7 @@ INSERT INTO public.recurring_rules (
   '00:05',
   6,
   '20:00',
-  '{"assignmentStatus":"active"}'::jsonb,
+  '{"peopleStatus":"active"}'::jsonb,
   '{"defaultMinValidSelections":1,"operationsOrSelectionMinValidSelections":5,"deadlineLabel":"每周六20:00"}'::jsonb,
   TRUE,
   DATE '2026-09-09',
