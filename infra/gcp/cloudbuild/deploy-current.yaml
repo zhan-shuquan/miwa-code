@@ -1,6 +1,30 @@
 steps:
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
-    id: baseline-and-migration-gate
+    id: baseline-gate
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        source infra/gcp/cloud-shell/CURRENT_BASELINE.sh
+        assert_aione_current_baseline
+        echo '[AIONE] CURRENT baseline PASS'
+
+  - name: gcr.io/cloud-builders/docker
+    id: build-image
+    args:
+      - build
+      - -t
+      - asia-northeast1-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:main-$SHORT_SHA
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    id: push-image
+    args:
+      - push
+      - asia-northeast1-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:main-$SHORT_SHA
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: migration-gate
     entrypoint: bash
     args:
       - -ceu
@@ -19,24 +43,11 @@ steps:
         test -n "$DB_VERSION"
         test -n "$REPO_VERSION"
         if [[ "$DB_VERSION" != "$REPO_VERSION" ]]; then
-          echo '[AIONE][STOP] Repo contains a migration state not yet applied to CURRENT DB. Automatic deployment is blocked.' >&2
+          echo '[AIONE][STOP] Immutable main image is ready, but CURRENT DB migration is behind Repo.' >&2
+          echo '[AIONE][STOP] Automatic production deployment is blocked. Run the reviewed CURRENT migration action.' >&2
           exit 20
         fi
         echo '[AIONE] Migration gate PASS'
-
-  - name: gcr.io/cloud-builders/docker
-    id: build-image
-    args:
-      - build
-      - -t
-      - asia-northeast1-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:main-$SHORT_SHA
-      - .
-
-  - name: gcr.io/cloud-builders/docker
-    id: push-image
-    args:
-      - push
-      - asia-northeast1-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:main-$SHORT_SHA
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     id: read-only-db-preflight

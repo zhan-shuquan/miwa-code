@@ -17,6 +17,12 @@ export AIONE_RUNTIME_SERVICE_ACCOUNT_NAME="aione-runtime"
 export AIONE_DEPLOYER_SERVICE_ACCOUNT_NAME="aione-deployer"
 export AIONE_DEPLOY_TRIGGER_NAME="aione-current-deploy"
 
+# AIONE 1688 selection CURRENT file-driven integration.
+export AIONE_SHARED_DRIVE_ID="0AIPSFkmR2vB_Uk9PVA"
+export AIONE_1688_SELECTION_INBOX_FOLDER_ID="1_hCOozd_Het_7LqMXxHBwdk4ku37JFHs"
+export AIONE_SELECTION_IMPORT_JOB="aione-selection-import-current"
+export AIONE_SELECTION_IMPORT_SCHEDULER="aione-selection-import-every-10m"
+
 export AIONE_AI_MODE="live"
 export AIONE_AI_PROVIDER="openai"
 export AIONE_AI_MODEL="gpt-5.6-sol"
@@ -67,6 +73,18 @@ assert_aione_current_baseline() {
   [[ "${AIONE_DEPLOY_TRIGGER_NAME:-}" == "aione-current-deploy" ]] || {
     echo "[AIONE][FATAL] Deploy trigger must be aione-current-deploy" >&2
     exit 97
+  }
+  [[ "${AIONE_SHARED_DRIVE_ID:-}" == "0AIPSFkmR2vB_Uk9PVA" ]] || {
+    echo "[AIONE][FATAL] Shared Drive must be 美和集团（全球） CURRENT drive" >&2
+    exit 99
+  }
+  [[ "${AIONE_1688_SELECTION_INBOX_FOLDER_ID:-}" == "1_hCOozd_Het_7LqMXxHBwdk4ku37JFHs" ]] || {
+    echo "[AIONE][FATAL] 1688 selection inbox folder is not CURRENT" >&2
+    exit 100
+  }
+  [[ "${AIONE_SELECTION_IMPORT_JOB:-}" == "aione-selection-import-current" ]] || {
+    echo "[AIONE][FATAL] Selection import job must be aione-selection-import-current" >&2
+    exit 101
   }
 
   for bad in "${AIONE_FORBIDDEN_RUNTIME_NAMES[@]}"; do
