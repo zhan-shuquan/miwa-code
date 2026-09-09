@@ -1,6 +1,6 @@
 steps:
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
-    id: execute-db-migration
+    id: confirm-migration
     entrypoint: bash
     args:
       - -ceu
@@ -9,6 +9,69 @@ steps:
           echo '[AIONE][ERROR] Set _CONFIRM=MIGRATE_AIONE to execute migration.' >&2
           exit 2
         fi
+        echo '[AIONE] Explicit migration confirmation accepted.'
+
+  - name: node:24-bookworm-slim
+    id: backend-syntax-check
+    dir: apps/systems/aione/backend
+    entrypoint: npm
+    args:
+      - run
+      - check
+
+  - name: gcr.io/cloud-builders/docker
+    id: build-migration-image
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_IMAGE_NAME}:main-$SHORT_SHA
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    id: push-migration-image
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_IMAGE_NAME}:main-$SHORT_SHA
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: deploy-and-run-migration
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_IMAGE_NAME}:main-$SHORT_SHA"
+        CONNECTION_NAME="$(gcloud sql instances describe "${_SQL_INSTANCE}" --project="$PROJECT_ID" --format='value(connectionName)')"
+        test -n "$CONNECTION_NAME"
+
+        echo '[AIONE] Bind migration job to reviewed main image'
+        gcloud run jobs deploy "${_MIGRATION_JOB}" \
+          --image="$IMAGE" \
+          --region="${_REGION}" \
+          --project="$PROJECT_ID" \
+          --service-account="${_RUNTIME_SA_NAME}@$PROJECT_ID.iam.gserviceaccount.com" \
+          --set-cloudsql-instances="$CONNECTION_NAME" \
+          --set-env-vars="DB_USER=${_DB_USER},DB_NAME=${_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/$CONNECTION_NAME,AIONE_ALLOW_PREVIEW_ACTOR=false,AIONE_ALLOW_SYSTEM_WRITES=false,NODE_ENV=production" \
+          --set-secrets="DB_PASS=${_DB_PASSWORD_SECRET}:latest" \
+          --command=npm \
+          --args=run,db:migrate \
+          --tasks=1 \
+          --max-retries=0 \
+          --task-timeout=15m
+
+        echo '[AIONE] Bind preflight job to the same reviewed main image'
+        gcloud run jobs deploy "${_PREFLIGHT_JOB}" \
+          --image="$IMAGE" \
+          --region="${_REGION}" \
+          --project="$PROJECT_ID" \
+          --service-account="${_RUNTIME_SA_NAME}@$PROJECT_ID.iam.gserviceaccount.com" \
+          --set-cloudsql-instances="$CONNECTION_NAME" \
+          --set-env-vars="DB_USER=${_DB_USER},DB_NAME=${_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/$CONNECTION_NAME,AIONE_ALLOW_PREVIEW_ACTOR=false,AIONE_ALLOW_SYSTEM_WRITES=false,NODE_ENV=production" \
+          --set-secrets="DB_PASS=${_DB_PASSWORD_SECRET}:latest" \
+          --command=npm \
+          --args=run,db:preflight \
+          --tasks=1 \
+          --max-retries=0 \
+          --task-timeout=10m
 
         echo '[AIONE] Execute CURRENT database migration job'
         gcloud run jobs execute "${_MIGRATION_JOB}" \
@@ -24,13 +87,23 @@ steps:
 
         echo '[AIONE] Database migration pipeline PASS'
 
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_IMAGE_NAME}:main-$SHORT_SHA
+
 substitutions:
   _REGION: asia-northeast1
+  _SQL_INSTANCE: aione-pg-dev
+  _ARTIFACT_REPO: aione
+  _IMAGE_NAME: aione-backend
   _MIGRATION_JOB: aione-db-migrate
   _PREFLIGHT_JOB: aione-db-preflight
+  _RUNTIME_SA_NAME: aione-runtime
+  _DB_NAME: aione
+  _DB_USER: aione_app
+  _DB_PASSWORD_SECRET: aione-db-password-dev
   _CONFIRM: DO_NOT_RUN
 
 options:
   logging: CLOUD_LOGGING_ONLY
 
-timeout: 1800s
+timeout: 2400s
