@@ -1,0 +1,38 @@
+steps:
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: verify-current-runtime
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        echo '[AIONE] Verify CURRENT runtime'
+        SERVICE_URL="$(gcloud run services describe "${_RUN_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(status.url)')"
+        REVISION="$(gcloud run services describe "${_RUN_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(status.latestReadyRevisionName)')"
+        IMAGE="$(gcloud run services describe "${_RUN_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(spec.template.spec.containers[0].image)')"
+        SERVICE_ACCOUNT="$(gcloud run services describe "${_RUN_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(spec.template.spec.serviceAccountName)')"
+
+        test -n "$SERVICE_URL"
+        test -n "$REVISION"
+        test -n "$IMAGE"
+        test -n "$SERVICE_ACCOUNT"
+
+        printf 'service=%s\nrevision=%s\nimage=%s\nruntime_sa=%s\nurl=%s\n' \
+          "${_RUN_SERVICE}" "$REVISION" "$IMAGE" "$SERVICE_ACCOUNT" "$SERVICE_URL"
+
+        echo '[AIONE] Execute read-only database preflight job'
+        gcloud run jobs execute "${_PREFLIGHT_JOB}" \
+          --region="${_REGION}" \
+          --project="$PROJECT_ID" \
+          --wait
+
+        echo '[AIONE] CURRENT runtime verification PASS'
+
+substitutions:
+  _REGION: asia-northeast1
+  _RUN_SERVICE: aione-backend-current
+  _PREFLIGHT_JOB: aione-db-preflight
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1200s
