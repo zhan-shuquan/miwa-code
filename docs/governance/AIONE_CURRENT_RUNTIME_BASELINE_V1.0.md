@@ -1,209 +1,123 @@
-# AIONE CURRENT Runtime Baseline V1.0
+# AIONE CURRENT Runtime Baseline V1.1
 
 状态：CURRENT / GOVERNANCE
-日期：2026-09-08
+生效日期：2026-09-09
 适用项目：美和AIONE一体化工作平台
 
-## 1. 唯一正式技术基线
-
-AIONE 当前唯一正式技术基线如下：
+## 唯一 CURRENT
 
 ```text
-GitHub main
-→ Vercel Frontend / same-origin API Bridge
-→ Cloud Run aione-backend-current
-→ Cloud SQL aione-pg-dev
+Repository     zhan-shuquan/miwa-code
+Code Branch    main
+Domain         https://aione.miwa-happyhouse.com
+Frontend       Vercel production
+API Binding    same-origin /api/*
+Cloud Run      aione-backend-current
+Cloud SQL      aione-postgres
+Database       aione
+Runtime SA     aione-runtime@miwa-aione.iam.gserviceaccount.com
+DB Baseline    data-code/current/0001_aione_current_baseline.sql
 ```
 
-任何新开发、数据库迁移、API 调整、AI/自动化接入均必须基于此链路继续。
+以上为 AIONE 唯一正式技术事实。任何代码、自动化、文档或聊天结论不得创建第二套 CURRENT。
 
-## 2. Code Truth
+## 数据库原则
+
+AIONE 从 2026-09-09 起采用新的 V1 clean baseline：
 
 ```text
-Repository: zhan-shuquan/miwa-code
-Branch: main
+0001_aione_current_baseline.sql
+→ 0002
+→ 0003
+→ ...
 ```
 
-main 是唯一稳定代码事实源。
+旧 0069/0070/0071/0072、旧 0091 链及其他历史 migration 不再作为 CURRENT 迁移链。
 
-已废止的 Sidebar / Aside / 旧 Shell、旧页面实验代码、旧对象模型和旧 API 定义不得重新回流到 CURRENT。
+## Frontend / API
 
-## 3. Frontend / Hosting Truth
-
-Vercel Project：
+正式入口只有：
 
 ```text
-miwa-aione-test
+https://aione.miwa-happyhouse.com
 ```
 
-GitHub Integration：
+浏览器统一通过 same-origin `/api/*` 访问后端。Vercel bridge 只允许绑定唯一 CURRENT Backend：`aione-backend-current`。
 
-```text
-zhan-shuquan/miwa-code
-main push -> Vercel production deployment
-```
+`aione-test.miwa-happyhouse.com`、Preview 环境和 Preview 专属路由不再拥有 CURRENT 定义权。
 
-截至 2026-09-08，以下两个入口均已返回当前 main 的新版 Shell：
+## Runtime
 
-```text
-https://aione.miwa-happyhouse.com/
-https://aione-test.miwa-happyhouse.com/
-```
-
-两者当前 HTML 均表现为：
-
-```text
-Header host
-Main host
-Footer host
-sidebar-host hidden
-aside-host hidden
-```
-
-因此旧正式域名中的旧左右栏工程已经不再作为 CURRENT 运行事实。
-
-## 4. Frontend API Binding Truth
-
-浏览器不得再根据 `aione-test` host 特判直连 dev Backend。
-
-CURRENT 前端统一使用 same-origin：
-
-```text
-/api/*
-```
-
-Vercel `api/aione-bridge.js` 负责：
-
-```text
-Browser Google ID token
-→ Vercel /api bridge
-→ Google WIF
-→ private Cloud Run
-```
-
-Cloud Run 保持 `--no-allow-unauthenticated`。
-
-CURRENT Bridge Backend 已锁定为：
-
-```text
-https://aione-backend-current-jjlnxogxta-an.a.run.app
-```
-
-旧 `AIONE_BACKEND_URL` Vercel 环境变量不再作为 Backend 路由唯一事实源，避免旧环境值把前端静默带回 dev/legacy Backend。
-
-## 5. Backend Truth
-
-CURRENT Cloud Run Service：
+唯一 CURRENT Cloud Run Service：
 
 ```text
 aione-backend-current
 ```
 
-首个正式 CURRENT Revision：
-
-```text
-aione-backend-current-00001-krt
-```
-
-部署镜像基于 main commit：
-
-```text
-4784b0d2e8d6ea0aa4ca14fd045d196651f099ef
-```
-
-部署验证已通过：
-
-```text
-/health -> ok=true
-database -> connected
-latestMigration -> 0091
-```
-
-未携带有效 AIONE Google 用户 token 时，`/api/v1/me` 正确返回 401。这证明请求已穿过 Vercel Bridge 和 Cloud Run IAM 并到达 CURRENT Backend 的用户认证层。
-
-## 6. Database Truth
-
-CURRENT Cloud SQL：
-
-```text
-aione-pg-dev
-```
-
-虽然实例名包含 `dev`，治理意义上它已锁定为 CURRENT 正式数据库基线。
-
-当前最新迁移：
-
-```text
-0091 product assets and channel image mapping
-```
-
-Legacy Cloud SQL：
+唯一 CURRENT Cloud SQL：
 
 ```text
 aione-postgres
+Database: aione
+Runtime user: aione_app
 ```
 
-仅作为历史数据来源保留，不参与新开发，不允许新业务继续写入形成第二套事实。
+## Deprecated / Cleanup
 
-## 7. Legacy / Deprecated
-
-以下内容不再拥有 CURRENT 定义权：
+以下名称一律视为历史或临时资源，不允许参与新开发：
 
 ```text
+aione-backend
+aione-backend-dev
+aione-backend-pgdev-check
 aione-backend-v190
-旧 v1.9.40 runtime
-旧 aione-postgres schema
-旧 Sidebar / Aside / Shell
-旧 recovery 页面
-旧 Mock 编号和状态
-旧 API / 前端直连 dev Backend 逻辑
+aione-pg-dev
+旧 v1.9.x runtime
+旧 Preview runtime
+旧数据库 migration chain
 ```
 
-历史数据是否迁移，必须按对象逐项判断；禁止整库盲迁。
+验证 CURRENT 完成后应从 Google Cloud 清理不再需要的历史 Service / Job / Cloud SQL，避免再次形成多基线。
 
-## 8. Deployment Rule
+## 开发与运维方式
 
-正式开发固定采用：
+当前阶段坚持简单、一体化：
 
 ```text
-Product Freeze
-→ Technical Design
-→ Branch
-→ Vercel Preview
-→ Review / Validation
-→ Fast-forward or reviewed merge to main
-→ Vercel Production auto-deploy
-→ CURRENT Backend / Database validation
+main Push
+→ CI / Build
+→ Deploy aione-backend-current
+→ 必要时执行 Cloud Run Job
+→ Verify CURRENT
 ```
 
-main 不作为实验区。
+Cloud Shell 只作为 bootstrap、break-glass 和故障排查入口。重复技术动作必须进入 Repo Script / Cloud Build / Cloud Run Job / Cloud Scheduler / AIONE 系统管理能力。
 
-## 9. Runtime Gate
+临时分支如确有必要：创建 → 验证 → 合并 main → 立即删除，不长期保留。
 
-截至 2026-09-08：
+## 当前 P0 业务主线
 
 ```text
-CURRENT Code Baseline            = PASS
-CURRENT Frontend Deployment      = PASS
-CURRENT Frontend API Binding     = PASS
-CURRENT Cloud Run Backend        = PASS
-CURRENT Cloud SQL Connectivity   = PASS
-CURRENT DB Migration Baseline    = PASS (0091)
-Cloud Run IAM Gate               = PASS
-Browser Google User E2E          = PENDING USER SESSION VALIDATION
-Legacy Runtime Definition Power  = REVOKED
+1688 Excel
+→ 自动解析
+→ AI筛选
+→ 选品一览
+→ Product
+→ SKU
+→ AI设计
+→ Product Asset
+→ Listing
+→ 乐天上架
 ```
 
-Browser Google User E2E 只用于确认真实员工登录态，不再影响 CURRENT 工程基线的判断。
-
-## 10. 下一建设阶段
-
-完成本 Runtime Baseline 后，不再重复审计“main 是谁 / Backend 是谁 / Database 是谁”。只有部署拓扑发生正式变更时才更新本文件。
-
-下一正式建设阶段：
+第二阶段：
 
 ```text
-商品之家 Product Freeze V1.0
-→ 商品之家 Technical Design
-→ 商品之家正式 Branch 开发
+运营 → 订单 → 采购 → 补货/库存 → 客服
 ```
+
+自动化为默认路径；人工页面主要承担查看、纠正、确认与异常处理。
+
+## Governance Gate
+
+只有本文件定义的这一套 Runtime 可以被称为 CURRENT。拓扑发生正式变化时，必须先更新本文件，再更新自动化与代码；禁止先创建第二套运行定义后再补文档。
