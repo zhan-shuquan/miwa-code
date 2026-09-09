@@ -33,16 +33,16 @@ steps:
         assert_aione_current_baseline
 
         echo '[AIONE] Verify deployed DB migration matches Repo before automatic deployment'
-        SERVICE_URL="$(gcloud run services describe "$AIONE_RUN_SERVICE" --region="$AIONE_REGION" --project="$AIONE_PROJECT_ID" --format='value(status.url)')"
-        IAM_TOKEN="$(gcloud auth print-identity-token --audiences="$SERVICE_URL")"
-        HEALTH_JSON="$(curl -fsS -H "Authorization: Bearer $IAM_TOKEN" "$SERVICE_URL/health")"
-        DB_VERSION="$(printf '%s' "$HEALTH_JSON" | python3 -c 'import json,sys; p=json.load(sys.stdin); print((p.get("latestMigration") or {}).get("version") or "")')"
-        REPO_VERSION="$(find data-code/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]_*.sql' -printf '%f\n' | sort | tail -n1 | cut -d_ -f1)"
+        SERVICE_URL="$$(gcloud run services describe "$$AIONE_RUN_SERVICE" --region="$$AIONE_REGION" --project="$$AIONE_PROJECT_ID" --format='value(status.url)')"
+        IAM_TOKEN="$$(gcloud auth print-identity-token --audiences="$$SERVICE_URL")"
+        HEALTH_JSON="$$(curl -fsS -H "Authorization: Bearer $$IAM_TOKEN" "$$SERVICE_URL/health")"
+        DB_VERSION="$$(printf '%s' "$$HEALTH_JSON" | python3 -c 'import json,sys; p=json.load(sys.stdin); print((p.get("latestMigration") or {}).get("version") or "")')"
+        REPO_VERSION="$$(find data-code/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]_*.sql' -printf '%f\n' | sort | tail -n1 | cut -d_ -f1)"
 
-        printf 'db_migration=%s\nrepo_migration=%s\n' "$DB_VERSION" "$REPO_VERSION"
-        test -n "$DB_VERSION"
-        test -n "$REPO_VERSION"
-        if [[ "$DB_VERSION" != "$REPO_VERSION" ]]; then
+        printf 'db_migration=%s\nrepo_migration=%s\n' "$$DB_VERSION" "$$REPO_VERSION"
+        test -n "$$DB_VERSION"
+        test -n "$$REPO_VERSION"
+        if [[ "$$DB_VERSION" != "$$REPO_VERSION" ]]; then
           echo '[AIONE][STOP] Immutable main image is ready, but CURRENT DB migration is behind Repo.' >&2
           echo '[AIONE][STOP] Automatic production deployment is blocked. Run the reviewed CURRENT migration action.' >&2
           exit 20
@@ -57,18 +57,18 @@ steps:
       - |
         source infra/gcp/cloud-shell/CURRENT_BASELINE.sh
         assert_aione_current_baseline
-        IMAGE="${AIONE_REGION}-docker.pkg.dev/${AIONE_PROJECT_ID}/${AIONE_ARTIFACT_REPO}/${AIONE_IMAGE_NAME}:main-${SHORT_SHA}"
-        CONNECTION="$(gcloud sql instances describe "$AIONE_SQL_INSTANCE" --project="$AIONE_PROJECT_ID" --format='value(connectionName)')"
-        RUNTIME_SA="${AIONE_RUNTIME_SERVICE_ACCOUNT_NAME}@${AIONE_PROJECT_ID}.iam.gserviceaccount.com"
+        IMAGE="$${AIONE_REGION}-docker.pkg.dev/$${AIONE_PROJECT_ID}/$${AIONE_ARTIFACT_REPO}/$${AIONE_IMAGE_NAME}:main-${SHORT_SHA}"
+        CONNECTION="$$(gcloud sql instances describe "$$AIONE_SQL_INSTANCE" --project="$$AIONE_PROJECT_ID" --format='value(connectionName)')"
+        RUNTIME_SA="$${AIONE_RUNTIME_SERVICE_ACCOUNT_NAME}@$${AIONE_PROJECT_ID}.iam.gserviceaccount.com"
 
-        gcloud run jobs deploy "$AIONE_PREFLIGHT_JOB" \
-          --image="$IMAGE" \
-          --region="$AIONE_REGION" \
-          --project="$AIONE_PROJECT_ID" \
-          --service-account="$RUNTIME_SA" \
-          --set-cloudsql-instances="$CONNECTION" \
-          --set-env-vars="DB_USER=${AIONE_DB_USER},DB_NAME=${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/${CONNECTION},AIONE_ALLOW_PREVIEW_ACTOR=false,AIONE_ALLOW_SYSTEM_WRITES=false,NODE_ENV=production" \
-          --set-secrets="DB_PASS=${AIONE_DB_PASSWORD_SECRET}:latest" \
+        gcloud run jobs deploy "$$AIONE_PREFLIGHT_JOB" \
+          --image="$$IMAGE" \
+          --region="$$AIONE_REGION" \
+          --project="$$AIONE_PROJECT_ID" \
+          --service-account="$$RUNTIME_SA" \
+          --set-cloudsql-instances="$$CONNECTION" \
+          --set-env-vars="DB_USER=$${AIONE_DB_USER},DB_NAME=$${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/$${CONNECTION},AIONE_ALLOW_PREVIEW_ACTOR=false,AIONE_ALLOW_SYSTEM_WRITES=false,NODE_ENV=production" \
+          --set-secrets="DB_PASS=$${AIONE_DB_PASSWORD_SECRET}:latest" \
           --command=npm \
           --args=run,db:preflight,--,--strict \
           --tasks=1 \
@@ -76,9 +76,9 @@ steps:
           --task-timeout=10m \
           --quiet
 
-        gcloud run jobs execute "$AIONE_PREFLIGHT_JOB" \
-          --region="$AIONE_REGION" \
-          --project="$AIONE_PROJECT_ID" \
+        gcloud run jobs execute "$$AIONE_PREFLIGHT_JOB" \
+          --region="$$AIONE_REGION" \
+          --project="$$AIONE_PROJECT_ID" \
           --wait
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
@@ -90,62 +90,62 @@ steps:
         source infra/gcp/cloud-shell/CURRENT_BASELINE.sh
         assert_aione_current_baseline
 
-        IMAGE="${AIONE_REGION}-docker.pkg.dev/${AIONE_PROJECT_ID}/${AIONE_ARTIFACT_REPO}/${AIONE_IMAGE_NAME}:main-${SHORT_SHA}"
-        CONNECTION="$(gcloud sql instances describe "$AIONE_SQL_INSTANCE" --project="$AIONE_PROJECT_ID" --format='value(connectionName)')"
-        RUNTIME_SA="${AIONE_RUNTIME_SERVICE_ACCOUNT_NAME}@${AIONE_PROJECT_ID}.iam.gserviceaccount.com"
+        IMAGE="$${AIONE_REGION}-docker.pkg.dev/$${AIONE_PROJECT_ID}/$${AIONE_ARTIFACT_REPO}/$${AIONE_IMAGE_NAME}:main-${SHORT_SHA}"
+        CONNECTION="$$(gcloud sql instances describe "$$AIONE_SQL_INSTANCE" --project="$$AIONE_PROJECT_ID" --format='value(connectionName)')"
+        RUNTIME_SA="$${AIONE_RUNTIME_SERVICE_ACCOUNT_NAME}@$${AIONE_PROJECT_ID}.iam.gserviceaccount.com"
         CANDIDATE_TAG="candidate-${SHORT_SHA}"
-        PREVIOUS_REVISION="$(gcloud run services describe "$AIONE_RUN_SERVICE" --region="$AIONE_REGION" --project="$AIONE_PROJECT_ID" --format='value(status.traffic[0].revisionName)')"
+        PREVIOUS_REVISION="$$(gcloud run services describe "$$AIONE_RUN_SERVICE" --region="$$AIONE_REGION" --project="$$AIONE_PROJECT_ID" --format='value(status.traffic[0].revisionName)')"
 
-        echo "[AIONE] Previous traffic revision: $PREVIOUS_REVISION"
+        echo "[AIONE] Previous traffic revision: $$PREVIOUS_REVISION"
         echo '[AIONE] Deploy candidate with 0 percent traffic'
-        gcloud run deploy "$AIONE_RUN_SERVICE" \
-          --image="$IMAGE" \
-          --region="$AIONE_REGION" \
-          --project="$AIONE_PROJECT_ID" \
-          --service-account="$RUNTIME_SA" \
-          --set-cloudsql-instances="$CONNECTION" \
-          --update-secrets="DB_PASS=${AIONE_DB_PASSWORD_SECRET}:latest,OPENAI_API_KEY=${AIONE_OPENAI_API_KEY_SECRET}:latest" \
-          --update-env-vars="^@^DB_USER=${AIONE_DB_USER}@DB_NAME=${AIONE_DB_NAME}@INSTANCE_UNIX_SOCKET=/cloudsql/${CONNECTION}@NODE_ENV=production@AIONE_ALLOW_PREVIEW_ACTOR=false@AIONE_ALLOW_SYSTEM_WRITES=false@AIONE_REQUIRE_GOOGLE_AUTH=true@AIONE_GOOGLE_CLIENT_ID=${AIONE_GOOGLE_CLIENT_ID}@AIONE_AI_MODE=${AIONE_AI_MODE}@AIONE_AI_PROVIDER=${AIONE_AI_PROVIDER}@AIONE_AI_MODEL=${AIONE_AI_MODEL}@AIONE_DRIVE_PROXY_ENABLED=true@AIONE_CORS_ORIGINS=${AIONE_PRODUCTION_ORIGIN},${AIONE_TEST_ORIGIN}" \
+        gcloud run deploy "$$AIONE_RUN_SERVICE" \
+          --image="$$IMAGE" \
+          --region="$$AIONE_REGION" \
+          --project="$$AIONE_PROJECT_ID" \
+          --service-account="$$RUNTIME_SA" \
+          --set-cloudsql-instances="$$CONNECTION" \
+          --update-secrets="DB_PASS=$${AIONE_DB_PASSWORD_SECRET}:latest,OPENAI_API_KEY=$${AIONE_OPENAI_API_KEY_SECRET}:latest" \
+          --update-env-vars="^@^DB_USER=$${AIONE_DB_USER}@DB_NAME=$${AIONE_DB_NAME}@INSTANCE_UNIX_SOCKET=/cloudsql/$${CONNECTION}@NODE_ENV=production@AIONE_ALLOW_PREVIEW_ACTOR=false@AIONE_ALLOW_SYSTEM_WRITES=false@AIONE_REQUIRE_GOOGLE_AUTH=true@AIONE_GOOGLE_CLIENT_ID=$${AIONE_GOOGLE_CLIENT_ID}@AIONE_AI_MODE=$${AIONE_AI_MODE}@AIONE_AI_PROVIDER=$${AIONE_AI_PROVIDER}@AIONE_AI_MODEL=$${AIONE_AI_MODEL}@AIONE_DRIVE_PROXY_ENABLED=true@AIONE_CORS_ORIGINS=$${AIONE_PRODUCTION_ORIGIN},$${AIONE_TEST_ORIGIN}" \
           --no-allow-unauthenticated \
           --no-traffic \
-          --tag="$CANDIDATE_TAG" \
+          --tag="$$CANDIDATE_TAG" \
           --quiet
 
-        SERVICE_JSON="$(gcloud run services describe "$AIONE_RUN_SERVICE" --region="$AIONE_REGION" --project="$AIONE_PROJECT_ID" --format=json)"
-        CANDIDATE_REVISION="$(printf '%s' "$SERVICE_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"]["latestReadyRevisionName"])')"
-        SERVICE_URL="$(printf '%s' "$SERVICE_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"]["url"])')"
-        CANDIDATE_URL="$(printf '%s' "$SERVICE_JSON" | python3 -c 'import json,sys; p=json.load(sys.stdin); tag=sys.argv[1]; print(next(x["url"] for x in p["status"]["traffic"] if x.get("tag")==tag))' "$CANDIDATE_TAG")"
-        IAM_TOKEN="$(gcloud auth print-identity-token --audiences="$SERVICE_URL")"
+        SERVICE_JSON="$$(gcloud run services describe "$$AIONE_RUN_SERVICE" --region="$$AIONE_REGION" --project="$$AIONE_PROJECT_ID" --format=json)"
+        CANDIDATE_REVISION="$$(printf '%s' "$$SERVICE_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"]["latestReadyRevisionName"])')"
+        SERVICE_URL="$$(printf '%s' "$$SERVICE_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"]["url"])')"
+        CANDIDATE_URL="$$(printf '%s' "$$SERVICE_JSON" | python3 -c 'import json,sys; p=json.load(sys.stdin); tag=sys.argv[1]; print(next(x["url"] for x in p["status"]["traffic"] if x.get("tag")==tag))' "$$CANDIDATE_TAG")"
+        IAM_TOKEN="$$(gcloud auth print-identity-token --audiences="$$SERVICE_URL")"
 
-        echo "[AIONE] Candidate revision: $CANDIDATE_REVISION"
+        echo "[AIONE] Candidate revision: $$CANDIDATE_REVISION"
         echo '[AIONE] Authenticated candidate /health'
-        CANDIDATE_HEALTH="$(curl -fsS -H "Authorization: Bearer $IAM_TOKEN" "$CANDIDATE_URL/health")"
-        printf '%s\n' "$CANDIDATE_HEALTH"
-        printf '%s' "$CANDIDATE_HEALTH" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p.get("ok") is True and p.get("database")=="connected"'
+        CANDIDATE_HEALTH="$$(curl -fsS -H "Authorization: Bearer $$IAM_TOKEN" "$$CANDIDATE_URL/health")"
+        printf '%s\n' "$$CANDIDATE_HEALTH"
+        printf '%s' "$$CANDIDATE_HEALTH" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p.get("ok") is True and p.get("database")=="connected"'
 
         echo '[AIONE] Candidate healthy; switch 100 percent traffic'
-        gcloud run services update-traffic "$AIONE_RUN_SERVICE" \
-          --region="$AIONE_REGION" \
-          --project="$AIONE_PROJECT_ID" \
-          --to-revisions="${CANDIDATE_REVISION}=100" \
+        gcloud run services update-traffic "$$AIONE_RUN_SERVICE" \
+          --region="$$AIONE_REGION" \
+          --project="$$AIONE_PROJECT_ID" \
+          --to-revisions="$${CANDIDATE_REVISION}=100" \
           --quiet
 
         echo '[AIONE] Verify production after cutover'
-        if ! FINAL_HEALTH="$(curl -fsS -H "Authorization: Bearer $IAM_TOKEN" "$SERVICE_URL/health")"; then
+        if ! FINAL_HEALTH="$$(curl -fsS -H "Authorization: Bearer $$IAM_TOKEN" "$$SERVICE_URL/health")"; then
           echo '[AIONE][ERROR] Post-cutover health failed; rolling traffic back.' >&2
-          if [[ -n "$PREVIOUS_REVISION" ]]; then
-            gcloud run services update-traffic "$AIONE_RUN_SERVICE" \
-              --region="$AIONE_REGION" \
-              --project="$AIONE_PROJECT_ID" \
-              --to-revisions="${PREVIOUS_REVISION}=100" \
+          if [[ -n "$$PREVIOUS_REVISION" ]]; then
+            gcloud run services update-traffic "$$AIONE_RUN_SERVICE" \
+              --region="$$AIONE_REGION" \
+              --project="$$AIONE_PROJECT_ID" \
+              --to-revisions="$${PREVIOUS_REVISION}=100" \
               --quiet || true
           fi
           exit 30
         fi
-        printf '%s\n' "$FINAL_HEALTH"
-        printf '%s' "$FINAL_HEALTH" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p.get("ok") is True and p.get("database")=="connected"'
+        printf '%s\n' "$$FINAL_HEALTH"
+        printf '%s' "$$FINAL_HEALTH" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p.get("ok") is True and p.get("database")=="connected"'
 
-        echo "[AIONE] AUTO DEPLOY PASS: ${AIONE_RUN_SERVICE} -> ${AIONE_SQL_INSTANCE} -> ${CANDIDATE_REVISION}"
+        echo "[AIONE] AUTO DEPLOY PASS: $${AIONE_RUN_SERVICE} -> $${AIONE_SQL_INSTANCE} -> $${CANDIDATE_REVISION}"
 
 options:
   logging: CLOUD_LOGGING_ONLY
