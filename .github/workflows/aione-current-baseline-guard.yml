@@ -5,12 +5,14 @@ on:
     paths:
       - "infra/gcp/**"
       - ".github/workflows/aione-current-baseline-guard.yml"
+      - ".github/workflows/aione-db-preflight-manual.yml"
   push:
     branches:
       - main
     paths:
       - "infra/gcp/**"
       - ".github/workflows/aione-current-baseline-guard.yml"
+      - ".github/workflows/aione-db-preflight-manual.yml"
 
 permissions:
   contents: read
@@ -28,12 +30,26 @@ jobs:
           set -euo pipefail
           source infra/gcp/cloud-shell/CURRENT_BASELINE.sh
 
+          test "$AIONE_PROJECT_ID" = "miwa-aione"
           test "$AIONE_RUN_SERVICE" = "aione-backend-current"
           test "$AIONE_SQL_INSTANCE" = "aione-pg-dev"
           test "$AIONE_DB_NAME" = "aione"
           test "$AIONE_DB_USER" = "aione_app"
           test "$AIONE_DB_PASSWORD_SECRET" = "aione-db-password-dev"
           test "$AIONE_PREFLIGHT_JOB" = "aione-db-preflight-current"
+          test "$AIONE_DEPLOY_TRIGGER_NAME" = "aione-current-deploy"
+
+      - name: Verify automated deployment assets exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f infra/gcp/cloudbuild/deploy-current.yaml
+          test -f infra/gcp/automation/INSTALL_CURRENT_AUTOMATION.sh
+          grep -Fq 'aione-backend-current' infra/gcp/cloudbuild/deploy-current.yaml
+          grep -Fq 'aione-pg-dev' infra/gcp/cloud-shell/CURRENT_BASELINE.sh
+          grep -Fq 'candidate-' infra/gcp/cloudbuild/deploy-current.yaml
+          grep -Fq -- '--no-traffic' infra/gcp/cloudbuild/deploy-current.yaml
+          grep -Fq 'update-traffic' infra/gcp/cloudbuild/deploy-current.yaml
 
       - name: Block legacy runtime targets in active CURRENT deployment files
         shell: bash
@@ -44,6 +60,8 @@ jobs:
             infra/gcp/cloud-shell/09_DEPLOY_CURRENT_BACKEND.sh
             infra/gcp/cloud-shell/cloud-config.sh.example
             infra/gcp/cloud-shell/README.md
+            infra/gcp/cloudbuild/deploy-current.yaml
+            infra/gcp/automation/INSTALL_CURRENT_AUTOMATION.sh
           )
 
           legacy='aione-backend-v190|aione-backend-dev|aione-backend-pgdev-check|aione-postgres'
@@ -53,11 +71,12 @@ jobs:
             exit 1
           fi
 
-      - name: Block removed legacy runtime scripts from returning
+      - name: Block alternate database/deployment paths from returning
         shell: bash
         run: |
           set -euo pipefail
           removed=(
+            .github/workflows/aione-db-preflight-manual.yml
             infra/gcp/cloud-shell/00_DISCOVER.sh
             infra/gcp/cloud-shell/01_PREPARE_RUNTIME.sh
             infra/gcp/cloud-shell/02_BUILD_IMAGE.sh
@@ -73,9 +92,14 @@ jobs:
 
           for file in "${removed[@]}"; do
             if [[ -e "$file" ]]; then
-              echo "[AIONE][FATAL] Removed legacy/one-time runtime script returned: $file"
+              echo "[AIONE][FATAL] Removed legacy/alternate runtime path returned: $file"
               exit 2
             fi
           done
+
+          if grep -RFn 'AIONE_DATABASE_URL' .github infra/gcp 2>/dev/null; then
+            echo '[AIONE][FATAL] Alternate DATABASE_URL deployment path detected.'
+            exit 3
+          fi
 
           echo "AIONE CURRENT baseline guard passed."
