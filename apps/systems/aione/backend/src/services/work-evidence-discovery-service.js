@@ -2,6 +2,7 @@ import pool from "../../db.js";
 import { listDriveFolderFiles } from "../integrations/google-drive-client.js";
 
 const PURPOSE = "1688_weekly_selection_submission";
+const RULE_CODE = "miwa-crossborder-1688-weekly-selection";
 
 function yyyymmdd(isoDate) {
   return String(isoDate || "").slice(0, 10).replaceAll("-", "");
@@ -23,8 +24,8 @@ export async function discover1688EvidenceForWorkItem({ workItemId }) {
     FROM public.work_items w
     JOIN public.people p ON p.id=w.responsible_person_id
     LEFT JOIN public.recurring_rules r ON r.id=w.recurring_rule_id
-    WHERE w.id=$1 AND w.archived_at IS NULL AND r.code='weekly-1688-selection'
-  `, [workItemId]);
+    WHERE w.id=$1 AND w.archived_at IS NULL AND r.code=$2
+  `, [workItemId, RULE_CODE]);
   if (!itemResult.rowCount) {
     const error = new Error("1688 recurring work item not found.");
     error.statusCode = 404;
