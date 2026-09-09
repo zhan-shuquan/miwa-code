@@ -45,6 +45,31 @@ jobs:
           grep -Fq -- '--no-traffic' infra/gcp/cloudbuild/deploy-current.yaml
           grep -Fq 'update-traffic' infra/gcp/cloudbuild/deploy-current.yaml
 
+      - name: Block unescaped Cloud Build shell variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          path = Path('infra/gcp/cloudbuild/deploy-current.yaml')
+          text = path.read_text(encoding='utf-8')
+          allowed = {'PROJECT_ID', 'SHORT_SHA'}
+          failures = []
+          pattern = re.compile(r'(?<!\$)\$(?:\{)?([A-Z][A-Z0-9_]*)')
+          for lineno, line in enumerate(text.splitlines(), 1):
+              for match in pattern.finditer(line):
+                  name = match.group(1)
+                  if name not in allowed:
+                      failures.append((lineno, name, line.strip()))
+          if failures:
+              for lineno, name, line in failures:
+                  print(f'[AIONE][FATAL] Cloud Build shell variable must be escaped with $$: line {lineno}: {name}: {line}')
+              raise SystemExit(4)
+          print('Cloud Build shell-variable escaping guard passed.')
+          PY
+
       - name: Block legacy runtime targets in active CURRENT deployment files
         shell: bash
         run: |
