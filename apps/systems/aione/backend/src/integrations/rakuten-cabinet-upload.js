@@ -49,7 +49,8 @@ function numberOrNull(value) {
 function assertRakutenSuccess(xml) {
   const systemStatus = xmlText(xml, "systemStatus");
   const resultCode = xmlText(xml, "resultCode");
-  if ((systemStatus && systemStatus !== "OK") || (resultCode && resultCode !== "0")) {
+  const successCode = resultCode === "0" || resultCode === "N000";
+  if ((systemStatus && systemStatus !== "OK") || (resultCode && !successCode)) {
     const error = new Error(`Rakuten RMS API returned systemStatus=${systemStatus || "unknown"}, resultCode=${resultCode || "unknown"}.`);
     error.statusCode = 502;
     error.code = "rakuten_rms_result_error";
@@ -110,7 +111,7 @@ export async function insertCabinetFile({ folderId, fileName, bytes, mimeType = 
     throw error;
   }
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><request><fileInsertRequest><file><fileName>${escapeXml(cleanFileName)}</fileName><folderId>${escapeXml(folderId)}</folderId><filePath>${escapeXml(cleanFileName)}</filePath><overWrite>${overwrite ? "true" : "false"}</overWrite></file></fileInsertRequest></request>`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><request><fileInsertRequest><file><fileName>${escapeXml(cleanFileName)}</fileName><folderId>${escapeXml(folderId)}</folderId><filePath>${escapeXml(cleanFileName)}</filePath><overwrite>${overwrite ? "true" : "false"}</overwrite></file></fileInsertRequest></request>`;
   const form = new FormData();
   form.append("xml", xml);
   form.append("file", new Blob([bytes], { type: mimeType }), cleanFileName);
