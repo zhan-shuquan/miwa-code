@@ -42,7 +42,7 @@ if ! gcloud storage buckets describe "gs://${BUCKET}" --project="$PROJECT_ID" >/
     --uniform-bucket-level-access \
     --public-access-prevention >/dev/null
 fi
-BUCKET_PROJECT_RAW="$(gcloud storage buckets describe "gs://${BUCKET}" --project="$PROJECT_ID" --format='value(projectNumber)')"
+BUCKET_PROJECT_RAW="$(gcloud storage buckets describe "gs://${BUCKET}" --project="$PROJECT_ID" --raw --format='value(projectNumber)')"
 PROJECT_NUMBER_RAW="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
 BUCKET_PROJECT="$(printf '%s' "$BUCKET_PROJECT_RAW" | tr -cd '0-9')"
 PROJECT_NUMBER="$(printf '%s' "$PROJECT_NUMBER_RAW" | tr -cd '0-9')"
