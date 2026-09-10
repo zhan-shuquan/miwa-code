@@ -21,6 +21,13 @@ function stop(message, code) {
   throw error;
 }
 
+function safeRemoteBody(value) {
+  return String(value || "")
+    .replace(/Authorization\s*[:=]\s*[^\s<]+/gi, "Authorization:[REDACTED]")
+    .replace(/ESA\s+[A-Za-z0-9+/=]+/g, "ESA [REDACTED]")
+    .slice(0, 4000);
+}
+
 async function loadProduct() {
   const result = await pool.query(
     `SELECT p.id, p.product_code, p.name, p.source_opportunity_id,
@@ -199,7 +206,10 @@ run()
       contract: "AIONE Rakuten Canonical Publish Backend Closure V1",
       ok: false,
       error: error.code || "acceptance_failed",
-      message: error.message
+      message: error.message,
+      remoteStatus: error.rakutenStatus || error.remoteStatus || null,
+      remoteCode: error.remoteCode || null,
+      remoteBody: safeRemoteBody(error.rakutenBody)
     }, null, 2));
     await pool.end().catch(() => {});
     process.exit(1);
