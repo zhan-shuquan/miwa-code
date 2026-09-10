@@ -12,6 +12,13 @@ function fail(message, details = {}) {
   throw error;
 }
 
+function extract1688OfferId(value) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  const match = text.match(/detail\.1688\.com\/offer\/(\d+)\.html/i);
+  return match ? match[1] : null;
+}
+
 async function loadOpportunity() {
   const result = await pool.query(
     `SELECT *
@@ -147,6 +154,8 @@ async function main() {
   const productCode = String(product.product_code || "");
   const metadata = opportunity.metadata && typeof opportunity.metadata === "object" ? opportunity.metadata : {};
   const evidence = confirmationEvents[0] || null;
+  const opportunityOfferId = extract1688OfferId(opportunity.source_url);
+  const productOfferId = extract1688OfferId(product.source_url);
 
   const checks = {
     historicalOpportunityRemainsConverted: opportunity.lifecycle_status === "converted",
@@ -156,7 +165,7 @@ async function main() {
     sourceOpportunityLinked: String(product.source_opportunity_id) === String(opportunity.id),
     sourcePlatformRetained: String(product.source_platform) === EXPECTED_SOURCE_PLATFORM,
     sourceRefRetained: String(product.source_ref) === EXPECTED_SOURCE_REF,
-    sourceUrlRetained: String(product.source_url || "") === String(opportunity.source_url || ""),
+    sourceUrlRetained: opportunityOfferId === EXPECTED_SOURCE_REF && productOfferId === EXPECTED_SOURCE_REF,
     selectionNoRetained: String(product.product_data?.selectionNo || "") === String(opportunity.selection_no || ""),
     sourceWeightRetained: Number(product.product_data?.sourceWeightG || 0) === Number(opportunity.source_weight_g || 0),
     conversionMetadataIdMatches: String(metadata.convertedProductId || "") === String(product.id),
@@ -192,6 +201,12 @@ async function main() {
     productId: product.id,
     productCode,
     productStatus: product.lifecycle_status,
+    sourceUrls: {
+      opportunity: opportunity.source_url || null,
+      product: product.source_url || null,
+      opportunityOfferId,
+      productOfferId
+    },
     skuCodes: skus.map((sku) => sku.sku_code),
     firstConversionReused: firstConversion.reused,
     secondConversionReused: secondConversion.reused,
