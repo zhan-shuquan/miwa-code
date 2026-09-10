@@ -21,9 +21,9 @@ CONNECTION="$(gcloud sql instances describe "$AIONE_SQL_INSTANCE" --project="$PR
 JOB="aione-assisted-design-deterministic-acceptance-current"
 BUCKET="$AIONE_PRODUCT_ASSET_BUCKET"
 MIGRATION_JOB="$AIONE_MIGRATION_JOB"
-HUMAN_EMAIL="$(gcloud config get-value account 2>/dev/null | tr '[:upper:]' '[:lower:]' | xargs)"
+HUMAN_EMAIL="$(printf '%s' "${AIONE_ACCEPT_HUMAN_EMAIL:-$(gcloud config get-value account 2>/dev/null)}" | tr '[:upper:]' '[:lower:]' | xargs)"
 
-[[ -n "$HUMAN_EMAIL" && "$HUMAN_EMAIL" == *@* ]] || { echo '[AIONE][STOP] Active Cloud Shell Google account email could not be resolved.' >&2; exit 24; }
+[[ -n "$HUMAN_EMAIL" && "$HUMAN_EMAIL" == *@* ]] || { echo '[AIONE][STOP] Explicit or active Google account email could not be resolved.' >&2; exit 24; }
 [[ "$HUMAN_EMAIL" != "info@miwa-happyhouse.com" ]] || { echo '[AIONE][STOP] Transitional admin identity cannot be used as human acceptance evidence.' >&2; exit 25; }
 
 cleanup() {
