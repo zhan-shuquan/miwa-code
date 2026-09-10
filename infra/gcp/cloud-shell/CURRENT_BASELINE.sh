@@ -23,6 +23,10 @@ export AIONE_1688_SELECTION_INBOX_FOLDER_ID="1_hCOozd_Het_7LqMXxHBwdk4ku37JFHs"
 export AIONE_SELECTION_IMPORT_JOB="aione-selection-import-current"
 export AIONE_SELECTION_IMPORT_SCHEDULER="aione-selection-import-every-10m"
 
+# AIONE Product SOURCE asset CURRENT storage/runtime.
+export AIONE_PRODUCT_ASSET_BUCKET="miwa-aione-product-assets"
+export AIONE_PRODUCT_ASSET_INTAKE_JOB="aione-product-asset-intake-current"
+
 export AIONE_AI_MODE="live"
 export AIONE_AI_PROVIDER="openai"
 export AIONE_AI_MODEL="gpt-5.6-sol"
@@ -85,6 +89,14 @@ assert_aione_current_baseline() {
   [[ "${AIONE_SELECTION_IMPORT_JOB:-}" == "aione-selection-import-current" ]] || {
     echo "[AIONE][FATAL] Selection import job must be aione-selection-import-current" >&2
     exit 101
+  }
+  [[ "${AIONE_PRODUCT_ASSET_BUCKET:-}" == "miwa-aione-product-assets" ]] || {
+    echo "[AIONE][FATAL] Product asset bucket is not CURRENT" >&2
+    exit 102
+  }
+  [[ "${AIONE_PRODUCT_ASSET_INTAKE_JOB:-}" == "aione-product-asset-intake-current" ]] || {
+    echo "[AIONE][FATAL] Product asset intake job is not CURRENT" >&2
+    exit 103
   }
 
   for bad in "${AIONE_FORBIDDEN_RUNTIME_NAMES[@]}"; do
