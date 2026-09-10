@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 const RMS_BASE_URL = "https://api.rms.rakuten.co.jp/es/1.0";
 
 function requiredEnv(name) {
@@ -60,6 +62,23 @@ function assertRakutenSuccess(xml) {
   }
 }
 
+function rakutenExtension(mimeType, fileName) {
+  const mime = String(mimeType || "").toLowerCase();
+  if (mime === "image/png") return "png";
+  if (mime === "image/gif") return "gif";
+  if (mime === "image/jpeg" || mime === "image/jpg") return "jpg";
+  const match = String(fileName || "").toLowerCase().match(/\.([a-z0-9]{2,5})$/);
+  const ext = match?.[1];
+  if (["jpg", "jpeg", "png", "gif"].includes(ext)) return ext === "jpeg" ? "jpg" : ext;
+  return "jpg";
+}
+
+export function buildRakutenSafeFilePath(fileName, mimeType) {
+  const ext = rakutenExtension(mimeType, fileName);
+  const digest = createHash("sha256").update(String(fileName || ""), "utf8").digest("hex").slice(0, 12);
+  return `a${digest}.${ext}`;
+}
+
 export async function downloadRemoteImage(sourceUrl, { referer } = {}) {
   const response = await fetch(sourceUrl, {
     method: "GET",
@@ -111,10 +130,11 @@ export async function insertCabinetFile({ folderId, fileName, bytes, mimeType = 
     throw error;
   }
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><request><fileInsertRequest><file><fileName>${escapeXml(cleanFileName)}</fileName><folderId>${escapeXml(folderId)}</folderId><filePath>${escapeXml(cleanFileName)}</filePath><overwrite>${overwrite ? "true" : "false"}</overwrite></file></fileInsertRequest></request>`;
+  const providerFilePath = buildRakutenSafeFilePath(cleanFileName, mimeType);
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><request><fileInsertRequest><file><fileName>${escapeXml(providerFilePath)}</fileName><folderId>${escapeXml(folderId)}</folderId><filePath>${escapeXml(providerFilePath)}</filePath><overwrite>${overwrite ? "true" : "false"}</overwrite></file></fileInsertRequest></request>`;
   const form = new FormData();
   form.append("xml", xml);
-  form.append("file", new Blob([bytes], { type: mimeType }), cleanFileName);
+  form.append("file", new Blob([bytes], { type: mimeType }), providerFilePath);
 
   const response = await fetch(`${RMS_BASE_URL}/cabinet/file/insert`, {
     method: "POST",
@@ -142,8 +162,8 @@ export async function insertCabinetFile({ folderId, fileName, bytes, mimeType = 
     resultCode: xmlText(text, "resultCode"),
     fileId: numberOrNull(xmlText(text, "fileId")),
     folderId: numberOrNull(xmlText(text, "folderId")) ?? Number(folderId),
-    fileName: xmlText(text, "fileName") || cleanFileName,
-    filePath: xmlText(text, "filePath") || cleanFileName,
+    fileName: xmlText(text, "fileName") || providerFilePath,
+    filePath: xmlText(text, "filePath") || providerFilePath,
     fileUrl: xmlText(text, "fileUrl") || xmlText(text, "fileURL") || null
   };
 }
