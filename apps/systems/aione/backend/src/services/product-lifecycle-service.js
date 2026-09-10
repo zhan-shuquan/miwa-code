@@ -14,13 +14,79 @@ function skuId() {
   return `sku_${randomUUID()}`;
 }
 
-async function loadExistingProduct(client, opportunityId) {
+async function reconcileExistingProductProvenance(client, product, opportunityId, context = {}) {
+  const opportunityResult = await client.query(
+    "SELECT * FROM public.product_opportunities WHERE id=$1 AND archived_at IS NULL LIMIT 1",
+    [opportunityId]
+  );
+  if (!opportunityResult.rowCount) return product;
+
+  const opportunity = opportunityResult.rows[0];
+  const currentProductData = product.product_data && typeof product.product_data === "object"
+    ? product.product_data
+    : {};
+  const mergedProductData = { ...currentProductData };
+  let productDataChanged = false;
+
+  if (mergedProductData.sourceWeightG == null && opportunity.source_weight_g != null) {
+    mergedProductData.sourceWeightG = opportunity.source_weight_g;
+    productDataChanged = true;
+  }
+
+  const sourceUrlMissing = !String(product.source_url || "").trim() && Boolean(String(opportunity.source_url || "").trim());
+  if (!sourceUrlMissing && !productDataChanged) return product;
+
+  const updated = await client.query(
+    `UPDATE public.products
+        SET source_url = CASE
+              WHEN NULLIF(BTRIM(COALESCE(source_url, '')), '') IS NULL THEN $2
+              ELSE source_url
+            END,
+            product_data = CASE
+              WHEN $3::boolean THEN $4::jsonb
+              ELSE product_data
+            END,
+            updated_at = NOW(),
+            updated_by_person_id = COALESCE($5, updated_by_person_id)
+      WHERE id=$1
+      RETURNING *`,
+    [
+      product.id,
+      opportunity.source_url || null,
+      productDataChanged,
+      JSON.stringify(mergedProductData),
+      context.personId || null
+    ]
+  );
+
+  await recordBusinessEvent(client, {
+    eventType: "product.source_provenance_reconciled",
+    objectType: "product",
+    objectId: product.id,
+    context,
+    payload: {
+      opportunityId,
+      sourceUrlBackfilled: sourceUrlMissing,
+      sourceWeightBackfilled: productDataChanged
+    }
+  });
+
+  return updated.rows[0];
+}
+
+async function loadExistingProduct(client, opportunityId, context = {}) {
   const productResult = await client.query(
     "SELECT * FROM public.products WHERE source_opportunity_id=$1 AND archived_at IS NULL LIMIT 1",
     [opportunityId]
   );
   if (!productResult.rowCount) return null;
-  const product = productResult.rows[0];
+
+  const product = await reconcileExistingProductProvenance(
+    client,
+    productResult.rows[0],
+    opportunityId,
+    context
+  );
   const skuResult = await client.query(
     "SELECT * FROM public.product_skus WHERE product_id=$1 AND archived_at IS NULL ORDER BY sku_no",
     [product.id]
@@ -93,7 +159,7 @@ export async function convertProductOpportunityToProduct({ opportunityId, skuCou
   }
 
   return withTransaction(async (client) => {
-    const existing = await loadExistingProduct(client, opportunityId);
+    const existing = await loadExistingProduct(client, opportunityId, context);
     if (existing) return { ...existing, reused: true };
 
     const opportunityResult = await client.query(
