@@ -4,7 +4,7 @@ ENV NODE_ENV=production
 WORKDIR /app/apps/systems/aione/backend
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends unzip \
+  && apt-get install -y --no-install-recommends unzip imagemagick \
   && rm -rf /var/lib/apt/lists/*
 
 COPY apps/systems/aione/backend/package.json ./package.json
