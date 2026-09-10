@@ -1,5 +1,5 @@
 import pool, { withTransaction } from "../db.js";
-import { createDesignTask, proposeDesignTask, approveDesignTask, reviewDesignTask } from "../src/services/design-task-service.js";
+import { createDesignTask, proposeDesignTask, approveDesignTask } from "../src/services/design-task-service.js";
 import { executeNormalizeCanvas, listDesignTaskOutputs } from "../src/services/design-output-service.js";
 import { getGcsObjectMetadata } from "../src/integrations/google-cloud-storage-client.js";
 
@@ -90,13 +90,14 @@ async function main() {
   const gcs = await getGcsObjectMetadata({ bucketName: output.metadata.gcsBucket, objectName: output.metadata.gcsObject });
   if (!gcs || Number(gcs.size || 0) <= 0) fail("DERIVED GCS object is missing or empty.");
 
-  let finalTask = first.task;
-  if (finalTask.review_status !== "approved") {
-    finalTask = await withTransaction((client) => reviewDesignTask(client, task.id, { outcome: "approve", detail: { acceptance: "v1", confirmedByHuman: true } }, context));
+  const finalTask = first.task;
+  if (!finalTask.review_status) fail("DesignTask review status is missing after output generation.");
+  if (finalTask.review_status === "approved") {
+    fail("Technical acceptance cannot certify a previously auto-approved visual output. Human visual review must be explicit and separate.");
   }
 
   const summary = {
-    contract: "AIONE Assisted Design Deterministic Backend Closure V1",
+    contract: "AIONE Assisted Design Deterministic Technical Closure V1",
     ok: true,
     productCode: product.product_code,
     taskId: task.id,
@@ -113,7 +114,7 @@ async function main() {
     humanIdentityResolution: "explicit_active_google_identity"
   };
   process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
-  process.stdout.write("[AIONE] ASSISTED DESIGN DETERMINISTIC BACKEND CLOSURE V1 PASS\n");
+  process.stdout.write("[AIONE] ASSISTED DESIGN DETERMINISTIC TECHNICAL CLOSURE V1 PASS\n");
 }
 
 main().catch((error) => {
