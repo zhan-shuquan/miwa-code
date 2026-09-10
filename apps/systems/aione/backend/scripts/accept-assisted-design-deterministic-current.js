@@ -5,6 +5,7 @@ import { getGcsObjectMetadata } from "../src/integrations/google-cloud-storage-c
 
 const PRODUCT_CODE = "MH0000002";
 const TEMPLATE_ID = "dtpl_socks_rakuten_benefit_1000x1500_v1";
+const ACCEPTANCE_REVISION = "technical-v2";
 const TRANSITIONAL_ADMIN_EMAIL = "info@miwa-happyhouse.com";
 
 function fail(message, details = {}) {
@@ -67,7 +68,7 @@ async function main() {
     taskType: "normalize_canvas",
     inputAssetIds: [sourceAsset.id],
     inputFactSnapshot: { productCode: product.product_code, productName: product.name || null },
-    instructionSnapshot: { operation: "normalize_canvas", acceptance: "v1" },
+    instructionSnapshot: { operation: "normalize_canvas", acceptanceRevision: ACCEPTANCE_REVISION },
     context
   }));
 
@@ -93,12 +94,13 @@ async function main() {
   const finalTask = first.task;
   if (!finalTask.review_status) fail("DesignTask review status is missing after output generation.");
   if (finalTask.review_status === "approved") {
-    fail("Technical acceptance cannot certify a previously auto-approved visual output. Human visual review must be explicit and separate.");
+    fail("Technical acceptance cannot certify an already-approved visual output. Human visual review must be explicit and separate.");
   }
 
   const summary = {
     contract: "AIONE Assisted Design Deterministic Technical Closure V1",
     ok: true,
+    acceptanceRevision: ACCEPTANCE_REVISION,
     productCode: product.product_code,
     taskId: task.id,
     taskReused: created.reused,
