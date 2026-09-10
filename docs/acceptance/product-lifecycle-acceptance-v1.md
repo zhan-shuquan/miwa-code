@@ -4,38 +4,63 @@ Status: VALIDATING
 
 ## Purpose
 
-Validate one real business lifecycle against the only CURRENT AIONE baseline after Selection Backend Closure V1 passed.
+Validate the real Product lifecycle truth for the only CURRENT AIONE baseline after Selection Backend Closure V1 passed.
 
 ## Human-confirmed source object
 
 - Source platform: `1688`
 - Source product ID: `855305580969`
-- ProductOpportunity business decision: selected
+- Current ProductOpportunity lifecycle truth: already `converted` before this acceptance run
+- Human business confirmation: selected / keep as the formal Product candidate
 - Decision confirmation channel: `02|AIONE系统`
-- This acceptance is hard-locked to this source product ID. It must not select or convert the other imported ProductOpportunity records.
+- This acceptance is hard-locked to this source product ID. It must not mutate or operate on the other imported ProductOpportunity records.
 
-## Lifecycle contract
+## Lifecycle truth
+
+This V1 acceptance does **not** replay a fake historical transition such as:
 
 ```text
-ProductOpportunity.pending
--> ProductOpportunity.selected
--> Product.draft
--> ProductOpportunity.converted
+pending -> selected -> converted
 ```
 
-The formal Product must:
+The real object is already converted. Therefore the contract is:
 
-- be created exactly once for the ProductOpportunity;
-- receive a `MHxxxxxxx` Product code;
-- retain the source ProductOpportunity relation and source identity;
+```text
+existing ProductOpportunity.converted
+-> resolve exactly one existing Product
+-> verify Product / SKU / source relation / conversion metadata
+-> call conversion again and prove idempotent reuse
+-> record today's human confirmation as a separate business event
+-> keep ProductOpportunity.converted
+```
+
+No lifecycle reset, duplicate ProductOpportunity, replacement Product, or second operational baseline is permitted.
+
+## Formal Product requirements
+
+The existing formal Product must:
+
+- exist exactly once for the ProductOpportunity;
+- have a valid `MHxxxxxxx` Product code;
+- remain linked through `source_opportunity_id`;
+- retain source platform, source product ID and source URL;
 - preserve selection number and source weight in Product data;
-- write `convertedProductId` and `convertedProductCode` back to ProductOpportunity metadata;
-- create exactly one draft SKU (`MHxxxxxxx-01`) for this V1 lifecycle acceptance;
-- return the same Product on repeated conversion attempts rather than creating a duplicate.
+- match `convertedProductId` and `convertedProductCode` stored on ProductOpportunity metadata;
+- retain its existing draft SKU set with SKU codes under the same Product code;
+- be returned unchanged on repeated conversion attempts rather than creating a duplicate.
 
-## Actor truth
+## Human confirmation evidence
 
-The business decision was explicitly made by a human in `02|AIONE系统`. The Cloud Run acceptance job is the technical executor, not a fabricated human identity. Therefore the acceptance execution records a system actor plus decision evidence in `qualification_data`; it does not invent a `personId`.
+The user explicitly confirmed source product ID `855305580969` in `02|AIONE系统` on 2026-09-10.
+
+Because the historical ProductOpportunity was already converted, this acceptance must not pretend that today's confirmation caused the historical conversion. Instead it records one idempotent `selection.human_confirmation_recorded` business event with:
+
+- `actor_kind = system` for the technical executor;
+- no fabricated `personId`;
+- payload `confirmedByHuman = true`;
+- confirmation channel `02|AIONE系统`;
+- source product ID `855305580969`;
+- historical lifecycle status recorded as evidence.
 
 Future production UI/API writes continue to require the authenticated human actor contract.
 
