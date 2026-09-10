@@ -28,7 +28,12 @@ async function loadExistingProduct(client, opportunityId) {
   return { product, skus: skuResult.rows };
 }
 
-export async function selectProductOpportunity({ opportunityId, qualificationData = {}, context = {} }) {
+export async function selectProductOpportunity({
+  opportunityId,
+  qualificationData = {},
+  context = {},
+  allowAlreadySelected = false
+}) {
   return withTransaction(async (client) => {
     const current = await client.query(
       "SELECT * FROM public.product_opportunities WHERE id=$1 AND archived_at IS NULL FOR UPDATE",
@@ -42,7 +47,7 @@ export async function selectProductOpportunity({ opportunityId, qualificationDat
     }
 
     const existing = current.rows[0];
-    if (existing.lifecycle_status === "selected" || existing.lifecycle_status === "converted") {
+    if (allowAlreadySelected && ["selected", "converted"].includes(existing.lifecycle_status)) {
       return { selection: existing, reused: true };
     }
     if (existing.lifecycle_status !== "pending") {
