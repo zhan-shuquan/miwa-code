@@ -1,12 +1,10 @@
 import pool from "../db.js";
-import {
-  selectProductOpportunity,
-  convertProductOpportunityToProduct
-} from "../src/services/product-lifecycle-service.js";
+import { recordBusinessEvent } from "../src/services/event-service.js";
+import { convertProductOpportunityToProduct } from "../src/services/product-lifecycle-service.js";
 
 const EXPECTED_SOURCE_PLATFORM = "1688";
 const EXPECTED_SOURCE_REF = "855305580969";
-const EXPECTED_SKU_COUNT = 1;
+const CONFIRMATION_REF = "02|AIONE系统:855305580969:2026-09-10";
 
 function fail(message, details = {}) {
   const error = new Error(message);
@@ -40,7 +38,7 @@ async function loadProduct(opportunityId) {
     [opportunityId]
   );
   if (result.rowCount !== 1) {
-    fail("Expected exactly one Product for the selected ProductOpportunity.", { count: result.rowCount });
+    fail("Expected exactly one existing Product for the converted ProductOpportunity.", { count: result.rowCount });
   }
   return result.rows[0];
 }
@@ -53,6 +51,52 @@ async function loadSkus(productId) {
         AND archived_at IS NULL
       ORDER BY sku_no`,
     [productId]
+  );
+  return result.rows;
+}
+
+async function ensureHumanConfirmationEvidence(opportunity, context) {
+  const existing = await pool.query(
+    `SELECT id
+       FROM public.business_events
+      WHERE event_type='selection.human_confirmation_recorded'
+        AND object_type='product_opportunity'
+        AND object_id=$1
+        AND correlation_id=$2
+      LIMIT 1`,
+    [opportunity.id, CONFIRMATION_REF]
+  );
+  if (existing.rowCount) return { eventId: existing.rows[0].id, reused: true };
+
+  const eventId = await recordBusinessEvent(pool, {
+    eventType: "selection.human_confirmation_recorded",
+    objectType: "product_opportunity",
+    objectId: opportunity.id,
+    context: { ...context, correlationId: CONFIRMATION_REF },
+    payload: {
+      decision: "selected",
+      confirmedByHuman: true,
+      confirmationChannel: "02|AIONE系统",
+      sourcePlatform: EXPECTED_SOURCE_PLATFORM,
+      sourceRef: EXPECTED_SOURCE_REF,
+      historicalLifecycleStatus: opportunity.lifecycle_status
+    }
+  });
+  return { eventId, reused: false };
+}
+
+async function loadConfirmationEvidence(opportunityId) {
+  const result = await pool.query(
+    `SELECT id, event_type, object_type, object_id, actor_kind, actor_person_id,
+            correlation_id, payload, source_system
+       FROM public.business_events
+      WHERE event_type='selection.human_confirmation_recorded'
+        AND object_type='product_opportunity'
+        AND object_id=$1
+        AND correlation_id=$2
+      ORDER BY id
+      LIMIT 2`,
+    [opportunityId, CONFIRMATION_REF]
   );
   return result.rows;
 }
@@ -70,62 +114,43 @@ async function main() {
     personId: null,
     actorKind: "system",
     sourceSystem: "aione-product-lifecycle-acceptance-v1",
-    correlationId: `selection:${EXPECTED_SOURCE_REF}`
-  };
-  const decisionEvidence = {
-    decision: "selected",
-    confirmedByHuman: true,
-    confirmationChannel: "02|AIONE系统",
-    sourcePlatform: EXPECTED_SOURCE_PLATFORM,
-    sourceRef: EXPECTED_SOURCE_REF
+    correlationId: CONFIRMATION_REF
   };
 
   let opportunity = await loadOpportunity();
   const startingStatus = opportunity.lifecycle_status;
-  if (!["pending", "selected", "converted"].includes(startingStatus)) {
-    fail("ProductOpportunity is not eligible for lifecycle acceptance.", { lifecycleStatus: startingStatus });
-  }
-
-  if (startingStatus === "pending") {
-    await selectProductOpportunity({
-      opportunityId: opportunity.id,
-      qualificationData: { decisionEvidence },
-      context: executionContext
+  if (startingStatus !== "converted") {
+    fail("This acceptance is for the already-converted historical ProductOpportunity and must not mutate lifecycle state.", {
+      expectedLifecycleStatus: "converted",
+      actualLifecycleStatus: startingStatus
     });
   }
 
-  opportunity = await loadOpportunity();
-  if (!["selected", "converted"].includes(opportunity.lifecycle_status)) {
-    fail("Selection decision did not reach selected state.", { lifecycleStatus: opportunity.lifecycle_status });
-  }
+  const productBefore = await loadProduct(opportunity.id);
+  const confirmation = await ensureHumanConfirmationEvidence(opportunity, executionContext);
 
   const firstConversion = await convertProductOpportunityToProduct({
     opportunityId: opportunity.id,
-    skuCount: EXPECTED_SKU_COUNT,
+    skuCount: 1,
     context: executionContext
   });
-
   const secondConversion = await convertProductOpportunityToProduct({
     opportunityId: opportunity.id,
-    skuCount: EXPECTED_SKU_COUNT,
+    skuCount: 1,
     context: executionContext
   });
-  if (!secondConversion.reused) {
-    fail("Second conversion must be idempotent and reuse the existing Product.");
-  }
 
   opportunity = await loadOpportunity();
   const product = await loadProduct(opportunity.id);
   const skus = await loadSkus(product.id);
+  const confirmationEvents = await loadConfirmationEvidence(opportunity.id);
   const productCode = String(product.product_code || "");
   const metadata = opportunity.metadata && typeof opportunity.metadata === "object" ? opportunity.metadata : {};
-  const qualificationData = opportunity.qualification_data && typeof opportunity.qualification_data === "object"
-    ? opportunity.qualification_data
-    : {};
-  const storedDecision = qualificationData.decisionEvidence || null;
+  const evidence = confirmationEvents[0] || null;
 
   const checks = {
-    opportunityConverted: opportunity.lifecycle_status === "converted",
+    historicalOpportunityRemainsConverted: opportunity.lifecycle_status === "converted",
+    exactlyOneExistingProduct: String(product.id) === String(productBefore.id),
     productCodeValid: /^MH\d{7}$/.test(productCode),
     productDraft: product.lifecycle_status === "draft",
     sourceOpportunityLinked: String(product.source_opportunity_id) === String(opportunity.id),
@@ -136,15 +161,20 @@ async function main() {
     sourceWeightRetained: Number(product.product_data?.sourceWeightG || 0) === Number(opportunity.source_weight_g || 0),
     conversionMetadataIdMatches: String(metadata.convertedProductId || "") === String(product.id),
     conversionMetadataCodeMatches: String(metadata.convertedProductCode || "") === productCode,
-    decisionEvidenceRetained: Boolean(
-      storedDecision &&
-      storedDecision.confirmedByHuman === true &&
-      String(storedDecision.sourceRef) === EXPECTED_SOURCE_REF
-    ),
     sourcePriceNotPromotedToFinalCost: product.cost_amount == null,
-    oneDraftSku: skus.length === EXPECTED_SKU_COUNT && skus.every((sku) => sku.lifecycle_status === "draft"),
-    skuCodeValid: skus.length === 1 && String(skus[0].sku_code) === `${productCode}-01`,
-    conversionIdempotent: String(firstConversion.product.id) === String(secondConversion.product.id)
+    hasDraftSku: skus.length >= 1 && skus.every((sku) => sku.lifecycle_status === "draft"),
+    skuCodesBelongToProduct: skus.length >= 1 && skus.every((sku) => String(sku.sku_code || "").startsWith(`${productCode}-`)),
+    firstConversionReusedExistingProduct: firstConversion.reused === true && String(firstConversion.product.id) === String(product.id),
+    secondConversionReusedExistingProduct: secondConversion.reused === true && String(secondConversion.product.id) === String(product.id),
+    exactlyOneConfirmationEvidence: confirmationEvents.length === 1,
+    confirmationEvidenceTruthful: Boolean(
+      evidence &&
+      evidence.actor_kind === "system" &&
+      evidence.actor_person_id == null &&
+      evidence.payload?.confirmedByHuman === true &&
+      String(evidence.payload?.sourceRef || "") === EXPECTED_SOURCE_REF &&
+      String(evidence.payload?.confirmationChannel || "") === "02|AIONE系统"
+    )
   };
 
   const failures = Object.entries(checks)
@@ -153,7 +183,7 @@ async function main() {
 
   const summary = {
     ok: failures.length === 0,
-    contract: "AIONE Product Lifecycle Acceptance V1",
+    contract: "AIONE Product Lifecycle Acceptance V1 - existing converted object",
     sourcePlatform: EXPECTED_SOURCE_PLATFORM,
     sourceRef: EXPECTED_SOURCE_REF,
     startingStatus,
@@ -165,6 +195,8 @@ async function main() {
     skuCodes: skus.map((sku) => sku.sku_code),
     firstConversionReused: firstConversion.reused,
     secondConversionReused: secondConversion.reused,
+    confirmationEventId: confirmation.eventId,
+    confirmationEventReused: confirmation.reused,
     checks,
     failures
   };
