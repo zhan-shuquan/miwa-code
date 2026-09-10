@@ -10,6 +10,7 @@ import {
   proposeDesignTask,
   reviewDesignTask
 } from "../services/design-task-service.js";
+import { executeNormalizeCanvas, listDesignTaskOutputs } from "../services/design-output-service.js";
 
 const router = Router();
 
@@ -75,6 +76,15 @@ router.get("/design/tasks/:taskId", async (req, res, next) => {
   }
 });
 
+router.get("/design/tasks/:taskId/outputs", async (req, res, next) => {
+  try {
+    const outputs = await listDesignTaskOutputs(pool, cleanText(req.params.taskId, 240));
+    res.json({ outputs });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post("/design/tasks/:taskId/propose", requireWriteActor, async (req, res, next) => {
   try {
     const task = await withTransaction((client) => proposeDesignTask(
@@ -96,6 +106,19 @@ router.post("/design/tasks/:taskId/approve", requireWriteActor, async (req, res,
       req.aioneContext || {}
     ));
     res.json({ task });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/design/tasks/:taskId/execute", requireWriteActor, async (req, res, next) => {
+  try {
+    const result = await withTransaction((client) => executeNormalizeCanvas(
+      client,
+      cleanText(req.params.taskId, 240),
+      req.aioneContext || {}
+    ));
+    res.json(result);
   } catch (error) {
     next(error);
   }
