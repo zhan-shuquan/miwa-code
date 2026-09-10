@@ -31,7 +31,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '\n[AIONE] Assisted Design Deterministic Backend Closure V1\n'
+printf '\n[AIONE] Assisted Design Deterministic Technical Closure V1\n'
 printf 'Main SHA     : %s\n' "$SHORT_SHA"
 printf 'Product      : MH0000002\n'
 printf 'Canvas       : 1000x1500\n'
@@ -116,8 +116,8 @@ gcloud run jobs deploy "$JOB" \
   --set-cloudsql-instances="$CONNECTION" \
   --set-env-vars="DB_USER=${AIONE_DB_USER},DB_NAME=${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/${CONNECTION},NODE_ENV=production,AIONE_PRODUCT_ASSET_BUCKET=${BUCKET},AIONE_ACCEPT_HUMAN_EMAIL=${HUMAN_EMAIL}" \
   --set-secrets="DB_PASS=${AIONE_DB_PASSWORD_SECRET}:latest" \
-  --command=bash \
-  --args=-lc,'npm run db:migrate && npm run design:deterministic:accept' \
+  --command=npm \
+  --args=run,design:deterministic:accept:current \
   --tasks=1 \
   --max-retries=0 \
   --task-timeout=20m \
@@ -135,7 +135,15 @@ if [[ -z "$EXECUTION" ]]; then
   EXECUTION="$(gcloud run jobs executions list --job="$JOB" --region="$REGION" --project="$PROJECT_ID" --sort-by='~metadata.creationTimestamp' --limit=1 --format='value(metadata.name)' 2>/dev/null || true)"
 fi
 [[ -n "$EXECUTION" ]] || { echo '[AIONE][STOP] Acceptance execution id missing.' >&2; exit 26; }
-LOGS="$(gcloud beta run jobs executions logs read "$EXECUTION" --region="$REGION" --project="$PROJECT_ID" --limit=1000 2>&1)"
+
+LOGS=""
+for i in $(seq 1 18); do
+  LOGS="$(gcloud beta run jobs executions logs read "$EXECUTION" --region="$REGION" --project="$PROJECT_ID" --limit=1000 2>&1 || true)"
+  if grep -q 'ASSISTED DESIGN DETERMINISTIC TECHNICAL CLOSURE V1 PASS' <<<"$LOGS" || grep -q '"ok": false' <<<"$LOGS"; then
+    break
+  fi
+  sleep 5
+done
 printf '\n[AIONE] authoritative logs\n%s\n' "$LOGS"
 [[ "$CODE" -eq 0 ]] || { echo '[AIONE][STOP] Assisted Design deterministic acceptance failed. Root-cause logs are printed above.' >&2; exit 27; }
 grep -q '"ok": true' <<<"$LOGS" || { echo '[AIONE][STOP] Acceptance did not return ok=true.' >&2; exit 28; }
@@ -143,9 +151,8 @@ grep -q '"productCode": "MH0000002"' <<<"$LOGS" || { echo '[AIONE][STOP] Accepta
 grep -q '"outputLayer": "DERIVED"' <<<"$LOGS" || { echo '[AIONE][STOP] DERIVED ProductAsset evidence missing.' >&2; exit 30; }
 grep -q '"canvas": "1000x1500"' <<<"$LOGS" || { echo '[AIONE][STOP] Canvas normalization evidence missing.' >&2; exit 31; }
 grep -q '"secondExecutionReused": true' <<<"$LOGS" || { echo '[AIONE][STOP] Execution idempotency was not proven.' >&2; exit 32; }
-grep -q '"reviewStatus": "approved"' <<<"$LOGS" || { echo '[AIONE][STOP] Human review approval evidence missing.' >&2; exit 33; }
-grep -q '"humanIdentityResolution": "explicit_active_google_identity"' <<<"$LOGS" || { echo '[AIONE][STOP] Explicit human identity evidence missing.' >&2; exit 34; }
-grep -q 'ASSISTED DESIGN DETERMINISTIC BACKEND CLOSURE V1 PASS' <<<"$LOGS" || { echo '[AIONE][STOP] PASS marker missing.' >&2; exit 35; }
+grep -q '"humanIdentityResolution": "explicit_active_google_identity"' <<<"$LOGS" || { echo '[AIONE][STOP] Explicit human identity evidence missing.' >&2; exit 33; }
+grep -q 'ASSISTED DESIGN DETERMINISTIC TECHNICAL CLOSURE V1 PASS' <<<"$LOGS" || { echo '[AIONE][STOP] PASS marker missing.' >&2; exit 34; }
 
-printf '\n[AIONE] ASSISTED DESIGN DETERMINISTIC BACKEND CLOSURE V1 PASS\n'
-printf 'Verified: MH0000002 canonical SOURCE main image -> explicitly resolved active Google human -> approved DesignTask -> deterministic 1000x1500 normalization -> GCS DERIVED object -> ProductAsset provenance -> explicit human review -> idempotent second execution.\n'
+printf '\n[AIONE] ASSISTED DESIGN DETERMINISTIC TECHNICAL CLOSURE V1 PASS\n'
+printf 'Verified: MH0000002 canonical SOURCE main image -> explicitly resolved active Google human -> approved DesignTask -> deterministic 1000x1500 normalization -> GCS DERIVED object -> ProductAsset provenance -> idempotent second execution. Visual review remains a separate explicit human step.\n'
