@@ -79,42 +79,6 @@ export function buildRakutenSafeFilePath(fileName, mimeType) {
   return `a${digest}.${ext}`;
 }
 
-export async function downloadRemoteImage(sourceUrl, { referer } = {}) {
-  const response = await fetch(sourceUrl, {
-    method: "GET",
-    headers: {
-      "User-Agent": "Mozilla/5.0 AIONE/1.0",
-      Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-      ...(referer ? { Referer: referer } : {})
-    },
-    signal: AbortSignal.timeout(20_000),
-    redirect: "follow"
-  });
-  if (!response.ok) {
-    const error = new Error(`Source image download failed with HTTP ${response.status}.`);
-    error.statusCode = 502;
-    error.code = "source_image_download_failed";
-    error.remoteStatus = response.status;
-    throw error;
-  }
-  const contentType = String(response.headers.get("content-type") || "application/octet-stream").split(";")[0].trim().toLowerCase();
-  if (!contentType.startsWith("image/")) {
-    const error = new Error(`Source URL did not return an image (${contentType || "unknown"}).`);
-    error.statusCode = 502;
-    error.code = "source_image_invalid_content_type";
-    throw error;
-  }
-  const arrayBuffer = await response.arrayBuffer();
-  const bytes = Buffer.from(arrayBuffer);
-  if (!bytes.length) {
-    const error = new Error("Source image response was empty.");
-    error.statusCode = 502;
-    error.code = "source_image_empty";
-    throw error;
-  }
-  return { bytes, contentType, size: bytes.length };
-}
-
 export async function insertCabinetFile({ folderId, fileName, bytes, mimeType = "image/jpeg", overwrite = true }) {
   if (!folderId && folderId !== 0) {
     const error = new Error("folderId is required.");
