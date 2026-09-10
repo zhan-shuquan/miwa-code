@@ -16,7 +16,8 @@
     "product:lifecycle:accept": "node scripts/accept-product-lifecycle-current.js",
     "product:assets:intake": "node scripts/intake-product-assets-current.js",
     "rakuten:canonical:accept": "node scripts/accept-rakuten-canonical-publish-current.js",
-    "design:deterministic:accept": "node scripts/accept-assisted-design-deterministic-current.js"
+    "design:deterministic:accept": "node scripts/accept-assisted-design-deterministic-current.js",
+    "design:deterministic:accept:current": "node scripts/migrate.js && node scripts/accept-assisted-design-deterministic-current.js"
   },
   "dependencies": {
     "exceljs": "4.4.0",
