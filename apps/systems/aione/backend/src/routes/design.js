@@ -113,11 +113,11 @@ router.post("/design/tasks/:taskId/approve", requireWriteActor, async (req, res,
 
 router.post("/design/tasks/:taskId/execute", requireWriteActor, async (req, res, next) => {
   try {
-    const result = await withTransaction((client) => executeNormalizeCanvas(
-      client,
+    const result = await executeNormalizeCanvas(
+      pool,
       cleanText(req.params.taskId, 240),
       req.aioneContext || {}
-    ));
+    );
     res.json(result);
   } catch (error) {
     next(error);
