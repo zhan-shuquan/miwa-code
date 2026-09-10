@@ -85,12 +85,44 @@ gcloud run jobs deploy "$ACCEPTANCE_JOB" \
   --task-timeout=10m \
   --quiet >/dev/null
 
-EXECUTION="$(gcloud run jobs execute "$ACCEPTANCE_JOB" --region="$REGION" --project="$PROJECT_ID" --wait --format='value(metadata.name)')"
+set +e
+EXECUTE_OUTPUT="$(gcloud run jobs execute "$ACCEPTANCE_JOB" \
+  --region="$REGION" \
+  --project="$PROJECT_ID" \
+  --wait \
+  --format='value(metadata.name)' 2>&1)"
+EXECUTE_CODE=$?
+set -e
+printf '%s\n' "$EXECUTE_OUTPUT"
+
+EXECUTION="$(printf '%s\n' "$EXECUTE_OUTPUT" | grep -Eo 'aione-selection-acceptance-current-[a-z0-9]+' | tail -n1 || true)"
+if [[ -z "$EXECUTION" ]]; then
+  EXECUTION="$(gcloud run jobs executions list \
+    --job="$ACCEPTANCE_JOB" \
+    --region="$REGION" \
+    --project="$PROJECT_ID" \
+    --sort-by='~metadata.creationTimestamp' \
+    --limit=1 \
+    --format='value(metadata.name)' 2>/dev/null || true)"
+fi
 [[ -n "$EXECUTION" ]] || { echo '[AIONE][STOP] Acceptance execution id missing.' >&2; exit 24; }
 
 echo '[AIONE] 4/4 Read authoritative acceptance result'
+set +e
 LOGS="$(gcloud beta run jobs executions logs read "$EXECUTION" --region="$REGION" --project="$PROJECT_ID" --limit=300 2>&1)"
+LOG_READ_CODE=$?
+set -e
 printf '%s\n' "$LOGS"
+
+if [[ "$LOG_READ_CODE" -ne 0 ]]; then
+  echo '[AIONE][STOP] Acceptance logs could not be read.' >&2
+  exit 27
+fi
+
+if [[ "$EXECUTE_CODE" -ne 0 ]]; then
+  echo '[AIONE][STOP] Selection acceptance job execution failed. Root-cause logs are printed above.' >&2
+  exit 25
+fi
 
 if ! grep -q '"ok": true' <<<"$LOGS"; then
   echo '[AIONE][STOP] Selection Backend Closure V1 acceptance did not PASS.' >&2
