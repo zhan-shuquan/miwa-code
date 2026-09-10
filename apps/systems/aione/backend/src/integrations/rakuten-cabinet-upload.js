@@ -73,7 +73,7 @@ function rakutenExtension(mimeType, fileName) {
   return "jpg";
 }
 
-function buildRakutenSafeFilePath(fileName, mimeType) {
+export function buildRakutenSafeFilePath(fileName, mimeType) {
   const ext = rakutenExtension(mimeType, fileName);
   const digest = createHash("sha256").update(String(fileName || ""), "utf8").digest("hex").slice(0, 12);
   return `a${digest}.${ext}`;
