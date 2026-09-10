@@ -6,17 +6,23 @@ const EXPECTED_SOURCE_REFS = [
   "855305580969"
 ];
 
+function zipEvidenceName(zip) {
+  return String(zip?.name || zip?.fileName || "").trim();
+}
+
 function zipMatchesSourceRef(row) {
   const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
   const zip = metadata.sourceMaterialZip;
-  if (!zip || !zip.fileId || !zip.fileName) return false;
-  const match = /^1688_(\d+)(?:[ _-].*)?\.zip$/i.exec(String(zip.fileName).trim());
+  const name = zipEvidenceName(zip);
+  if (!zip || !zip.fileId || !name) return false;
+  const match = /^1688_(\d+)(?:[ _-].*)?\.zip$/i.exec(name);
   return Boolean(match && match[1] === String(row.source_ref));
 }
 
 function summarize(row) {
   const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
   const zip = metadata.sourceMaterialZip || null;
+  const name = zipEvidenceName(zip);
   return {
     id: row.id,
     selectionNo: row.selection_no,
@@ -30,7 +36,7 @@ function summarize(row) {
     sourceTags: row.source_tags,
     sourceWeightG: row.source_weight_g,
     sourceFulfillmentHint: row.source_fulfillment_hint,
-    zip: zip ? { fileId: zip.fileId || null, fileName: zip.fileName || null } : null
+    zip: zip ? { fileId: zip.fileId || null, name: name || null } : null
   };
 }
 
