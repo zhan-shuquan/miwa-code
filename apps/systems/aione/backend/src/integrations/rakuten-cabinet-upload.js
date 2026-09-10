@@ -110,7 +110,7 @@ export async function insertCabinetFile({ folderId, fileName, bytes, mimeType = 
     throw error;
   }
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><request><fileInsertRequest><file><fileName>${escapeXml(cleanFileName)}</fileName><folderId>${escapeXml(folderId)}</folderId><filePath>${escapeXml(cleanFileName)}</filePath><overwrite>${overwrite ? "true" : "false"}</overwrite></file></fileInsertRequest></request>`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><request><fileInsertRequest><file><fileName>${escapeXml(cleanFileName)}</fileName><folderId>${escapeXml(folderId)}</folderId><filePath>${escapeXml(cleanFileName)}</filePath><overWrite>${overwrite ? "true" : "false"}</overWrite></file></fileInsertRequest></request>`;
   const form = new FormData();
   form.append("xml", xml);
   form.append("file", new Blob([bytes], { type: mimeType }), cleanFileName);
