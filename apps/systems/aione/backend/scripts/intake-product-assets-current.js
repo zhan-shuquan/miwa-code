@@ -1,5 +1,6 @@
 import pool from "../db.js";
 import { formalizeProductSourceAssets } from "../src/services/product-asset-intake-service.js";
+import { reconcileProductSourceAssetRoles } from "../src/services/product-asset-role-reconciliation-service.js";
 
 const EXPECTED_SOURCE_REF = "855305580969";
 
@@ -17,9 +18,16 @@ async function main() {
     bucketName: process.env.AIONE_PRODUCT_ASSET_BUCKET
   });
 
+  const roleReconciliation = await reconcileProductSourceAssetRoles({
+    productId: result.productId,
+    sourceRef
+  });
+
   process.stdout.write(`${JSON.stringify({
     contract: "AIONE Product Asset Intake Backend Closure V1",
-    ...result
+    ...result,
+    roles: roleReconciliation.roles,
+    roleReconciliation
   }, null, 2)}\n`);
 }
 
