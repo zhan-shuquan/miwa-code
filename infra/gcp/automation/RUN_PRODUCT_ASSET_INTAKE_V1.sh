@@ -42,9 +42,15 @@ if ! gcloud storage buckets describe "gs://${BUCKET}" --project="$PROJECT_ID" >/
     --uniform-bucket-level-access \
     --public-access-prevention >/dev/null
 fi
-BUCKET_PROJECT="$(gcloud storage buckets describe "gs://${BUCKET}" --project="$PROJECT_ID" --format='value(projectNumber)')"
-PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
-[[ "$BUCKET_PROJECT" == "$PROJECT_NUMBER" ]] || { echo '[AIONE][STOP] Product asset bucket does not belong to CURRENT project.' >&2; exit 22; }
+BUCKET_PROJECT_RAW="$(gcloud storage buckets describe "gs://${BUCKET}" --project="$PROJECT_ID" --format='value(projectNumber)')"
+PROJECT_NUMBER_RAW="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+BUCKET_PROJECT="$(printf '%s' "$BUCKET_PROJECT_RAW" | tr -cd '0-9')"
+PROJECT_NUMBER="$(printf '%s' "$PROJECT_NUMBER_RAW" | tr -cd '0-9')"
+[[ -n "$BUCKET_PROJECT" && -n "$PROJECT_NUMBER" && "$BUCKET_PROJECT" == "$PROJECT_NUMBER" ]] || {
+  printf '[AIONE][STOP] Product asset bucket project mismatch. bucketRaw=%q projectRaw=%q normalizedBucket=%q normalizedProject=%q\n' \
+    "$BUCKET_PROJECT_RAW" "$PROJECT_NUMBER_RAW" "$BUCKET_PROJECT" "$PROJECT_NUMBER" >&2
+  exit 22
+}
 
 echo '[AIONE] 2/6 Ensure CURRENT runtime can write Product SOURCE assets'
 gcloud storage buckets add-iam-policy-binding "gs://${BUCKET}" \
