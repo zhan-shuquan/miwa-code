@@ -30,27 +30,44 @@ printf 'Main SHA     : %s\n' "$SHORT_SHA"
 printf 'Image        : %s\n' "$IMAGE"
 printf 'Cloud SQL    : %s\n\n' "$AIONE_SQL_INSTANCE"
 
-echo '[AIONE] 1/4 Wait for CURRENT immutable main image'
-for i in $(seq 1 60); do
-  if gcloud artifacts docker images describe "$IMAGE" --project="$PROJECT_ID" >/dev/null 2>&1; then
-    echo '[AIONE] Immutable image ready.'
+echo '[AIONE] 1/4 Ensure CURRENT immutable main image exists'
+if gcloud artifacts docker images describe "$IMAGE" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  echo '[AIONE] Immutable image already exists.'
+else
+  echo '[AIONE] Immutable image missing; trigger the single CURRENT deployment pipeline now.'
+  gcloud builds triggers run "$AIONE_DEPLOY_TRIGGER_NAME" \
+    --region=global \
+    --branch=main \
+    --project="$PROJECT_ID" \
+    --quiet >/dev/null
+
+  for i in $(seq 1 90); do
+    if gcloud artifacts docker images describe "$IMAGE" --project="$PROJECT_ID" >/dev/null 2>&1; then
+      echo '[AIONE] Immutable image ready.'
+      break
+    fi
+    if [[ "$i" -eq 90 ]]; then
+      echo '[AIONE][STOP] CURRENT deployment pipeline did not produce the immutable main image within 15 minutes.' >&2
+      exit 22
+    fi
+    sleep 10
+  done
+fi
+
+echo '[AIONE] 2/4 Verify CURRENT service uses the same immutable image'
+for i in $(seq 1 90); do
+  SERVICE_IMAGE="$(gcloud run services describe "$AIONE_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format='value(spec.template.spec.containers[0].image)')"
+  if [[ "$SERVICE_IMAGE" == "$IMAGE" ]]; then
+    echo '[AIONE] CURRENT service image PASS.'
     break
   fi
-  if [[ "$i" -eq 60 ]]; then
-    echo '[AIONE][STOP] CURRENT main image was not produced within 10 minutes.' >&2
-    exit 22
+  if [[ "$i" -eq 90 ]]; then
+    echo '[AIONE][STOP] CURRENT service did not deploy this main image within 15 minutes.' >&2
+    printf 'Expected: %s\nActual  : %s\n' "$IMAGE" "$SERVICE_IMAGE" >&2
+    exit 23
   fi
   sleep 10
 done
-
-echo '[AIONE] 2/4 Verify CURRENT service uses the same immutable image'
-SERVICE_IMAGE="$(gcloud run services describe "$AIONE_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format='value(spec.template.spec.containers[0].image)')"
-if [[ "$SERVICE_IMAGE" != "$IMAGE" ]]; then
-  echo '[AIONE][STOP] CURRENT service has not deployed this main image yet.' >&2
-  printf 'Expected: %s\nActual  : %s\n' "$IMAGE" "$SERVICE_IMAGE" >&2
-  exit 23
-fi
-echo '[AIONE] CURRENT service image PASS.'
 
 echo '[AIONE] 3/4 Execute read-only CURRENT database acceptance'
 gcloud run jobs deploy "$ACCEPTANCE_JOB" \
