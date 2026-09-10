@@ -64,7 +64,30 @@ gcloud run jobs deploy "$AIONE_SELECTION_IMPORT_JOB" \
   --task-timeout=10m \
   --quiet >/dev/null
 
-gcloud run jobs execute "$AIONE_SELECTION_IMPORT_JOB" --region="$REGION" --project="$PROJECT_ID" --wait >/dev/null
+set +e
+IMPORT_EXECUTE_OUTPUT="$(gcloud run jobs execute "$AIONE_SELECTION_IMPORT_JOB" --region="$REGION" --project="$PROJECT_ID" --wait --format='value(metadata.name)' 2>&1)"
+IMPORT_EXECUTE_CODE=$?
+set -e
+printf '%s\n' "$IMPORT_EXECUTE_OUTPUT"
+
+IMPORT_EXECUTION="$(printf '%s\n' "$IMPORT_EXECUTE_OUTPUT" | grep -Eo 'aione-selection-import-current-[a-z0-9]+' | tail -n1 || true)"
+if [[ -z "$IMPORT_EXECUTION" ]]; then
+  IMPORT_EXECUTION="$(gcloud run jobs executions list --job="$AIONE_SELECTION_IMPORT_JOB" --region="$REGION" --project="$PROJECT_ID" --sort-by='~metadata.creationTimestamp' --limit=1 --format='value(metadata.name)' 2>/dev/null || true)"
+fi
+[[ -n "$IMPORT_EXECUTION" ]] || { echo '[AIONE][STOP] Selection import execution id missing.' >&2; exit 28; }
+
+IMPORT_LOGS="$(gcloud beta run jobs executions logs read "$IMPORT_EXECUTION" --region="$REGION" --project="$PROJECT_ID" --limit=300 2>&1 || true)"
+printf '\n[AIONE] CURRENT selection import evidence\n%s\n' "$IMPORT_LOGS"
+[[ "$IMPORT_EXECUTE_CODE" -eq 0 ]] || { echo '[AIONE][STOP] CURRENT selection import execution failed.' >&2; exit 29; }
+
+if grep -q '"availableZipCount": 0' <<<"$IMPORT_LOGS"; then
+  echo '[AIONE][STOP] CURRENT importer sees zero 1688 ZIP files in the Drive Inbox. Do not modify ProductOpportunity directly.' >&2
+  exit 30
+fi
+if grep -q '"matchedRecordCount": 0' <<<"$IMPORT_LOGS"; then
+  echo '[AIONE][STOP] CURRENT importer sees ZIP files but matches zero Excel records. ZIP filename recognition must be fixed.' >&2
+  exit 31
+fi
 
 echo '[AIONE] 4/5 Execute read-only CURRENT database acceptance'
 gcloud run jobs deploy "$ACCEPTANCE_JOB" \
