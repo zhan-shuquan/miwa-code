@@ -5,6 +5,7 @@ import { getGcsObjectMetadata } from "../src/integrations/google-cloud-storage-c
 
 const PRODUCT_CODE = "MH0000002";
 const TEMPLATE_ID = "dtpl_socks_rakuten_benefit_1000x1500_v1";
+const TRANSITIONAL_ADMIN_EMAIL = "info@miwa-happyhouse.com";
 
 function fail(message, details = {}) {
   const error = new Error(message);
@@ -12,17 +13,32 @@ function fail(message, details = {}) {
   throw error;
 }
 
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
 async function resolveHumanActor() {
+  const requestedEmail = normalizeEmail(process.env.AIONE_ACCEPT_HUMAN_EMAIL);
+  if (!requestedEmail || !requestedEmail.includes("@")) {
+    fail("AIONE_ACCEPT_HUMAN_EMAIL is required for explicit human acceptance identity.");
+  }
+  if (requestedEmail === TRANSITIONAL_ADMIN_EMAIL) {
+    fail("The transitional admin identity cannot be used as human acceptance evidence.");
+  }
+
   const result = await pool.query(`
     SELECT DISTINCT p.id
       FROM public.people p
       JOIN public.external_identities e ON e.person_id=p.id
      WHERE p.status='active' AND p.archived_at IS NULL
        AND e.status='active' AND LOWER(e.provider)='google'
-       AND LOWER(COALESCE(p.primary_email,e.email_snapshot,'')) <> 'info@miwa-happyhouse.com'
-  `);
+       AND LOWER(COALESCE(p.primary_email,e.email_snapshot,''))=$1
+  `, [requestedEmail]);
+
   if (result.rowCount !== 1) {
-    fail("Acceptance requires exactly one active canonical human Google identity after excluding the transitional admin identity.", { candidateCount: result.rowCount });
+    fail("Explicit acceptance email must resolve to exactly one active canonical Google human identity.", {
+      candidateCount: result.rowCount
+    });
   }
   return result.rows[0].id;
 }
@@ -93,7 +109,8 @@ async function main() {
     canvas: `${output.metadata.width}x${output.metadata.height}`,
     gcsObject: output.metadata.gcsObject,
     reviewStatus: finalTask.review_status,
-    humanActorResolved: true
+    humanActorResolved: true,
+    humanIdentityResolution: "explicit_active_google_identity"
   };
   process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
   process.stdout.write("[AIONE] ASSISTED DESIGN DETERMINISTIC BACKEND CLOSURE V1 PASS\n");
