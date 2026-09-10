@@ -7,8 +7,16 @@ const ROLE_BY_SEGMENT = new Map([
   ["视频", "source_video"]
 ]);
 
+function decodeInfoZipUnicodeEscapes(value) {
+  return String(value || "").replace(/#U([0-9A-Fa-f]{4,6})/g, (match, hex) => {
+    const codePoint = Number.parseInt(hex, 16);
+    if (!Number.isInteger(codePoint) || codePoint < 0 || codePoint > 0x10ffff) return match;
+    return String.fromCodePoint(codePoint);
+  });
+}
+
 export function detect1688SourceAssetRole(relativePath) {
-  const segments = String(relativePath || "")
+  const segments = decodeInfoZipUnicodeEscapes(relativePath)
     .replaceAll("\\", "/")
     .split("/")
     .map((segment) => segment.trim())
