@@ -119,7 +119,7 @@ export async function listDesignTaskOutputs(client, taskId) {
 }
 
 export async function executeNormalizeCanvas(client, taskId, context = {}) {
-  const task = await getDesignTask(client, taskId);
+  let task = await getDesignTask(client, taskId);
   if (task.task_type !== "normalize_canvas") {
     const error = new Error("This executor only supports normalize_canvas tasks.");
     error.statusCode = 409;
@@ -150,13 +150,27 @@ export async function executeNormalizeCanvas(client, taskId, context = {}) {
 
   const inputAsset = await loadInputAsset(client, task);
 
-  await client.query(
+  const claimed = await client.query(
     `UPDATE public.design_tasks
         SET task_status='running', started_at=COALESCE(started_at,NOW()),
             updated_by_person_id=$2, updated_at=NOW(), record_version=record_version+1
-      WHERE id=$1`,
+      WHERE id=$1 AND task_status='approved'
+      RETURNING *`,
     [taskId, context.personId || null]
   );
+  if (!claimed.rowCount) {
+    task = await getDesignTask(client, taskId);
+    if (task.task_status === "completed") {
+      const outputs = await listDesignTaskOutputs(client, taskId);
+      if (outputs.length) return { task, outputs, reused: true };
+    }
+    const error = new Error("DesignTask execution is already claimed or is no longer executable.");
+    error.statusCode = 409;
+    error.code = "design_task_execution_conflict";
+    throw error;
+  }
+  task = claimed.rows[0];
+
   await recordBusinessEvent(client, {
     eventType: "product.design_execution_started",
     objectType: "product",
@@ -312,7 +326,7 @@ export async function executeNormalizeCanvas(client, taskId, context = {}) {
       `UPDATE public.design_tasks
           SET task_status='failed', failure_code=$2, failure_detail=$3::jsonb,
               completed_at=NOW(), updated_by_person_id=$4, updated_at=NOW(), record_version=record_version+1
-        WHERE id=$1`,
+        WHERE id=$1 AND task_status='running'`,
       [
         taskId,
         error.code || "design_execution_failed",
