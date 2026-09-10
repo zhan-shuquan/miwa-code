@@ -45,6 +45,60 @@ export async function getGcsObjectMetadata({ bucketName, objectName }) {
   }
 }
 
+export async function readGcsObject({ bucketName, objectName }) {
+  const bucket = requiredBucket(bucketName);
+  const cleanObjectName = String(objectName || "").trim();
+  if (!cleanObjectName) {
+    const error = new Error("GCS objectName is required.");
+    error.code = "canonical_asset_storage_missing";
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const metadata = await getGcsObjectMetadata({ bucketName: bucket, objectName: cleanObjectName });
+  if (!metadata) {
+    const error = new Error("Canonical GCS asset object was not found.");
+    error.code = "canonical_asset_object_missing";
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const client = await getClient();
+  try {
+    const response = await client.request({
+      url: `${objectMetadataUrl(bucket, cleanObjectName)}?alt=media`,
+      method: "GET",
+      responseType: "arraybuffer"
+    });
+    const bytes = Buffer.from(response.data || []);
+    if (!bytes.length) {
+      const error = new Error("Canonical GCS asset object was empty.");
+      error.code = "canonical_asset_object_empty";
+      error.statusCode = 409;
+      throw error;
+    }
+    const expectedSize = Number(metadata.size || 0);
+    if (expectedSize && expectedSize !== bytes.length) {
+      const error = new Error("Canonical GCS asset size verification failed.");
+      error.code = "canonical_asset_size_mismatch";
+      error.statusCode = 409;
+      throw error;
+    }
+    return {
+      bytes,
+      contentType: String(metadata.contentType || "application/octet-stream"),
+      size: bytes.length,
+      metadata
+    };
+  } catch (error) {
+    if (error?.code?.startsWith?.("canonical_asset_")) throw error;
+    const wrapped = new Error("Canonical GCS asset download failed.");
+    wrapped.code = "canonical_asset_download_failed";
+    wrapped.statusCode = Number(error?.response?.status || 0) || 502;
+    throw wrapped;
+  }
+}
+
 export async function uploadGcsObjectIfAbsent({ bucketName, objectName, buffer, contentType, metadata = {} }) {
   const bucket = requiredBucket(bucketName);
   const existing = await getGcsObjectMetadata({ bucketName: bucket, objectName });
