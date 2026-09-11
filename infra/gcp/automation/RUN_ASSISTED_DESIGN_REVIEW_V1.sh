@@ -26,6 +26,7 @@ DETAIL_JSON="${AIONE_REVIEW_DETAIL_JSON:-${AIONE_REVIEW_DETAIL:-{}}}"
 [[ "$HUMAN_EMAIL" != "info@miwa-happyhouse.com" ]] || { echo '[AIONE][STOP] Transitional admin identity cannot be used as human review evidence.' >&2; exit 53; }
 
 node -e 'JSON.parse(process.argv[1])' "$DETAIL_JSON" >/dev/null 2>&1 || { echo '[AIONE][STOP] Review detail must be valid JSON.' >&2; exit 57; }
+DETAIL_B64="$(printf '%s' "$DETAIL_JSON" | base64 | tr -d '\n')"
 
 cleanup() {
   gcloud run jobs delete "$JOB" --region="$REGION" --project="$PROJECT_ID" --quiet >/dev/null 2>&1 || true
@@ -44,8 +45,7 @@ gcloud run jobs deploy "$JOB" \
   --project="$PROJECT_ID" \
   --service-account="$RUNTIME_SA" \
   --set-cloudsql-instances="$CONNECTION" \
-  --set-env-vars="DB_USER=${AIONE_DB_USER},DB_NAME=${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/${CONNECTION},NODE_ENV=production,AIONE_REVIEW_TASK_ID=${TASK_ID},AIONE_REVIEW_OUTCOME=${OUTCOME},AIONE_REVIEW_HUMAN_EMAIL=${HUMAN_EMAIL}" \
-  --set-env-vars="AIONE_REVIEW_DETAIL_JSON=${DETAIL_JSON}" \
+  --set-env-vars="DB_USER=${AIONE_DB_USER},DB_NAME=${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/${CONNECTION},NODE_ENV=production,AIONE_REVIEW_TASK_ID=${TASK_ID},AIONE_REVIEW_OUTCOME=${OUTCOME},AIONE_REVIEW_HUMAN_EMAIL=${HUMAN_EMAIL},AIONE_REVIEW_DETAIL_B64=${DETAIL_B64}" \
   --set-secrets="DB_PASS=${AIONE_DB_PASSWORD_SECRET}:latest" \
   --command=npm \
   --args=run,design:review:current \
