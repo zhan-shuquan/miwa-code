@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { recordBusinessEvent } from "./event-service.js";
+import { resolveCurrentCuratedFolder } from "./product-curated-folder-contract.js";
 
 function makeId() {
   return `pmc_${randomUUID()}`;
@@ -57,27 +58,35 @@ async function loadSourceAssets(client, productId, assetIds) {
   return result.rows;
 }
 
-function folderOf(asset) {
-  return String(asset?.metadata?.sourceFolder || asset?.metadata?.source_folder || "").trim();
-}
-
 function validateCuratedFolders(assets) {
-  const allowed = new Set(["01_SKU图", "02_产品图", "03_实拍图"]);
   const folders = new Map();
+  const compatibility = [];
   for (const asset of assets) {
-    const folder = folderOf(asset);
-    if (!allowed.has(folder)) {
-      throw Object.assign(new Error(`SOURCE asset ${asset.id} is not registered under the CURRENT curated Drive contract.`), {
+    const resolved = resolveCurrentCuratedFolder(asset);
+    if (!resolved.folder) {
+      throw Object.assign(new Error(`SOURCE asset ${asset.id} cannot be mapped to the CURRENT curated Drive contract.`), {
         statusCode: 409,
         code: "material_source_folder_invalid",
-        details: { assetId: asset.id, sourceFolder: folder }
+        details: {
+          assetId: asset.id,
+          sourceFolder: asset?.metadata?.sourceFolder || asset?.metadata?.source_folder || null,
+          assetRole: asset?.asset_role || null,
+          resolutionSource: resolved.source
+        }
       });
     }
-    folders.set(folder, (folders.get(folder) || 0) + 1);
+    folders.set(resolved.folder, (folders.get(resolved.folder) || 0) + 1);
+    if (resolved.legacyCompatibility) {
+      compatibility.push({
+        assetId: asset.id,
+        assetRole: asset.asset_role,
+        mappedFolder: resolved.folder
+      });
+    }
   }
   if (!folders.get("01_SKU图")) throw Object.assign(new Error("01_SKU图 is required before material confirmation."), { statusCode: 409, code: "material_sku_images_required" });
   if (!folders.get("02_产品图")) throw Object.assign(new Error("02_产品图 is required before material confirmation."), { statusCode: 409, code: "material_product_images_required" });
-  return Object.fromEntries(folders);
+  return { folderCounts: Object.fromEntries(folders), compatibility };
 }
 
 export async function getCurrentMaterialConfirmation(client, productId) {
@@ -104,7 +113,7 @@ export async function confirmProductMaterial(client, {
   const skus = await loadActiveSkus(client, productId);
   if (!skus.length) throw Object.assign(new Error("At least one active MIWA sales SKU is required before material confirmation."), { statusCode: 409, code: "material_sales_sku_required" });
   const assets = await loadSourceAssets(client, productId, assetIds);
-  const folderCounts = validateCuratedFolders(assets);
+  const curated = validateCuratedFolders(assets);
   const skuSnapshot = skus.map((sku) => ({
     id: sku.id,
     skuCode: sku.sku_code,
@@ -147,7 +156,7 @@ export async function confirmProductMaterial(client, {
      VALUES ($1,$2,$3,'confirmed',$4::jsonb,$5::jsonb,$6,$7,NOW(),$8::jsonb,$7,$7,$9)
      RETURNING *`,
     [id, productId, version, JSON.stringify(skuSnapshot), JSON.stringify(normalizedAssetIds), snapshotHash,
-      context.personId, JSON.stringify({ ...metadata, folderCounts }), context.sourceSystem || "aione"]
+      context.personId, JSON.stringify({ ...metadata, folderCounts: curated.folderCounts, legacyCompatibility: curated.compatibility }), context.sourceSystem || "aione"]
   );
 
   await recordBusinessEvent(client, {
@@ -161,7 +170,8 @@ export async function confirmProductMaterial(client, {
       snapshotHash,
       assetIds: normalizedAssetIds,
       skuCodes: skus.map((sku) => sku.sku_code),
-      folderCounts
+      folderCounts: curated.folderCounts,
+      legacyCompatibility: curated.compatibility
     }
   });
   return { confirmation: result.rows[0], product, assets, skus, reused: false };
