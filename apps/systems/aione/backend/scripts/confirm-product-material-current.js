@@ -1,8 +1,8 @@
 import pool, { withTransaction } from "../db.js";
 import { confirmProductMaterial } from "../src/services/product-material-confirmation-service.js";
+import { CURRENT_CURATED_FOLDERS, resolveCurrentCuratedFolder } from "../src/services/product-curated-folder-contract.js";
 
 const TRANSITIONAL_ADMIN_EMAIL = "info@miwa-happyhouse.com";
-const ALLOWED_FOLDERS = new Set(["01_SKU图", "02_产品图", "03_实拍图"]);
 
 function fail(message, details = {}) {
   const error = new Error(message);
@@ -43,10 +43,6 @@ async function loadSkus(productId) {
   return result.rows;
 }
 
-function sourceFolderOf(asset) {
-  return String(asset?.metadata?.sourceFolder || asset?.metadata?.source_folder || "").trim();
-}
-
 async function loadCuratedSourceAssets(productId) {
   const result = await pool.query(
     `SELECT id, asset_no, asset_type, asset_role, original_name, canonical_name,
@@ -60,23 +56,27 @@ async function loadCuratedSourceAssets(productId) {
   );
 
   const allSource = result.rows;
-  const curated = allSource.filter((asset) => ALLOWED_FOLDERS.has(sourceFolderOf(asset)));
-  const imageCurated = curated.filter((asset) => String(asset.mime_type || "").startsWith("image/"));
+  const resolved = allSource.map((asset) => ({ asset, resolution: resolveCurrentCuratedFolder(asset) }));
+  const imageCurated = resolved
+    .filter(({ asset, resolution }) => resolution.folder && String(asset.mime_type || "").startsWith("image/"))
+    .map(({ asset, resolution }) => ({ ...asset, resolvedFolder: resolution.folder, folderResolutionSource: resolution.source, legacyCompatibility: resolution.legacyCompatibility }));
+
   const folderCounts = imageCurated.reduce((acc, asset) => {
-    const folder = sourceFolderOf(asset);
-    acc[folder] = (acc[folder] || 0) + 1;
+    acc[asset.resolvedFolder] = (acc[asset.resolvedFolder] || 0) + 1;
     return acc;
   }, {});
 
   if (!imageCurated.length) {
-    fail("No CURRENT curated SOURCE images were found under the three-folder contract.", {
+    fail("No SOURCE images can be mapped to the CURRENT three-folder contract.", {
       productId,
       allSourceCount: allSource.length,
-      sourceFolderSamples: allSource.slice(0, 20).map((asset) => ({
+      sourceSamples: resolved.slice(0, 30).map(({ asset, resolution }) => ({
         id: asset.id,
         originalName: asset.original_name,
         role: asset.asset_role,
-        sourceFolder: sourceFolderOf(asset) || null
+        explicitSourceFolder: asset?.metadata?.sourceFolder || asset?.metadata?.source_folder || null,
+        resolvedFolder: resolution.folder,
+        resolutionSource: resolution.source
       }))
     });
   }
@@ -86,7 +86,8 @@ async function loadCuratedSourceAssets(productId) {
   return {
     assets: imageCurated,
     folderCounts,
-    allSourceCount: allSource.length
+    allSourceCount: allSource.length,
+    legacyCompatibilityCount: imageCurated.filter((asset) => asset.legacyCompatibility).length
   };
 }
 
@@ -130,14 +131,16 @@ async function main() {
     productCode: product.product_code,
     productName: product.name || null,
     skuCodes: skus.map((sku) => sku.sku_code),
-    curatedFolderContract: ["01_SKU图", "02_产品图", "03_实拍图"],
+    curatedFolderContract: CURRENT_CURATED_FOLDERS,
     folderCounts: material.folderCounts,
     curatedAssetCount: material.assets.length,
     allSourceAssetCount: material.allSourceCount,
+    legacyCompatibilityCount: material.legacyCompatibilityCount,
     assets: material.assets.map((asset) => ({
       id: asset.id,
       assetNo: asset.asset_no,
-      folder: sourceFolderOf(asset),
+      folder: asset.resolvedFolder,
+      folderResolutionSource: asset.folderResolutionSource,
       role: asset.asset_role,
       originalName: asset.original_name,
       canonicalName: asset.canonical_name
@@ -158,7 +161,8 @@ async function main() {
     metadata: {
       confirmationChannel: "Cloud Shell interactive human gate",
       productCode: product.product_code,
-      curatedFolderContract: ["01_SKU图", "02_产品图", "03_实拍图"]
+      curatedFolderContract: CURRENT_CURATED_FOLDERS,
+      legacyCompatibilityCount: material.legacyCompatibilityCount
     },
     context: {
       personId: human.id,
