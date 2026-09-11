@@ -18,16 +18,18 @@ RUNTIME_SA="${AIONE_RUNTIME_SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceacco
 SHORT_SHA="$(git rev-parse --short=7 HEAD)"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AIONE_ARTIFACT_REPO}/${AIONE_IMAGE_NAME}:main-${SHORT_SHA}"
 CONNECTION="$(gcloud sql instances describe "$AIONE_SQL_INSTANCE" --project="$PROJECT_ID" --format='value(connectionName)')"
+WORKSPACE_PARENT_ID="${AIONE_SELECTION_WORKSPACE_PARENT_FOLDER_ID:-$AIONE_1688_SELECTION_INBOX_FOLDER_ID}"
 
-printf '\n[AIONE] Activate 1688 Selection Drive Inbox V1\n'
-printf 'Main SHA     : %s\n' "$SHORT_SHA"
-printf 'Image        : %s\n' "$IMAGE"
-printf 'Cloud SQL    : %s\n' "$AIONE_SQL_INSTANCE"
-printf 'Drive Inbox  : %s\n' "$AIONE_1688_SELECTION_INBOX_FOLDER_ID"
-printf 'Import Job   : %s\n\n' "$AIONE_SELECTION_IMPORT_JOB"
+printf '\n[AIONE] Activate 1688 Selection Drive Inbox V2\n'
+printf 'Main SHA       : %s\n' "$SHORT_SHA"
+printf 'Image          : %s\n' "$IMAGE"
+printf 'Cloud SQL      : %s\n' "$AIONE_SQL_INSTANCE"
+printf 'Excel Inbox    : %s\n' "$AIONE_1688_SELECTION_INBOX_FOLDER_ID"
+printf 'Workspace Root : %s\n' "$WORKSPACE_PARENT_ID"
+printf 'Import Job     : %s\n\n' "$AIONE_SELECTION_IMPORT_JOB"
 
 gcloud config set project "$PROJECT_ID" >/dev/null
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com cloudscheduler.googleapis.com sqladmin.googleapis.com --project="$PROJECT_ID" >/dev/null
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com cloudscheduler.googleapis.com sqladmin.googleapis.com drive.googleapis.com --project="$PROJECT_ID" >/dev/null
 
 echo '[AIONE] 1/7 Wait for immutable main image built by Cloud Build'
 for i in $(seq 1 60); do
@@ -104,14 +106,14 @@ for i in $(seq 1 120); do
   sleep 10
 done
 
-echo '[AIONE] 5/7 Deploy the single canonical selection import job'
+echo '[AIONE] 5/7 Deploy canonical selection import + workspace job'
 gcloud run jobs deploy "$AIONE_SELECTION_IMPORT_JOB" \
   --image="$IMAGE" \
   --region="$REGION" \
   --project="$PROJECT_ID" \
   --service-account="$RUNTIME_SA" \
   --set-cloudsql-instances="$CONNECTION" \
-  --set-env-vars="DB_USER=${AIONE_DB_USER},DB_NAME=${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/${CONNECTION},NODE_ENV=production,AIONE_DRIVE_PROXY_ENABLED=true,AIONE_SHARED_DRIVE_ID=${AIONE_SHARED_DRIVE_ID},AIONE_1688_SELECTION_INBOX_FOLDER_ID=${AIONE_1688_SELECTION_INBOX_FOLDER_ID}" \
+  --set-env-vars="DB_USER=${AIONE_DB_USER},DB_NAME=${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/${CONNECTION},NODE_ENV=production,AIONE_DRIVE_PROXY_ENABLED=true,AIONE_DRIVE_WRITE_ENABLED=true,AIONE_SHARED_DRIVE_ID=${AIONE_SHARED_DRIVE_ID},AIONE_1688_SELECTION_INBOX_FOLDER_ID=${AIONE_1688_SELECTION_INBOX_FOLDER_ID},AIONE_SELECTION_WORKSPACE_PARENT_FOLDER_ID=${WORKSPACE_PARENT_ID}" \
   --set-secrets="DB_PASS=${AIONE_DB_PASSWORD_SECRET}:latest" \
   --command=npm \
   --args=run,selection:import:1688-drive \
@@ -120,10 +122,10 @@ gcloud run jobs deploy "$AIONE_SELECTION_IMPORT_JOB" \
   --task-timeout=10m \
   --quiet
 
-echo '[AIONE] 6/7 Execute one real import against CURRENT Drive Inbox'
+echo '[AIONE] 6/7 Execute one real Excel import and provision pending selection workspaces'
 gcloud run jobs execute "$AIONE_SELECTION_IMPORT_JOB" --region="$REGION" --project="$PROJECT_ID" --wait >/dev/null
 
-echo '[AIONE] First real Inbox import PASS.'
+echo '[AIONE] First real Excel import/workspace reconciliation PASS.'
 
 echo '[AIONE] 7/7 Install deterministic 10-minute scheduler'
 gcloud run jobs add-iam-policy-binding "$AIONE_SELECTION_IMPORT_JOB" \
@@ -153,8 +155,10 @@ echo '[AIONE] Verify CURRENT resources'
 gcloud run jobs describe "$AIONE_SELECTION_IMPORT_JOB" --region="$REGION" --project="$PROJECT_ID" --format='value(metadata.name,status.conditions[0].state)'
 gcloud scheduler jobs describe "$AIONE_SELECTION_IMPORT_SCHEDULER" --location="$REGION" --project="$PROJECT_ID" --format='value(name,state,schedule,timeZone)'
 
-printf '\n[AIONE] 1688 SELECTION INBOX V1 ACTIVATED\n'
+printf '\n[AIONE] 1688 SELECTION INBOX V2 ACTIVATED\n'
 printf 'Normal employee operation:\n'
-printf '  1688: tag direct when needed -> remark weight(g) -> move to name group -> export Excel + ZIP\n'
-printf '  Drive: drop Excel + ZIP into 01_1688选品提交\n'
-printf '  AIONE: scans every 10 minutes -> imports -> deduplicates -> numbers -> matches ZIP\n'
+printf '  1. 1688: finish selection and export Excel first.\n'
+printf '  2. Drive: put the Excel into 01_1688选品提交.\n'
+printf '  3. AIONE: imports rows -> allocates xp IDs -> creates xp_short-name/01_SKU图/02_产品图/03_实拍图.\n'
+printf '  4. Employee: download supplier images locally in Excel order, curate them, and drag only accepted files into the matching Drive workspace.\n'
+printf '  5. Human Gate: confirm sales SKU/material -> start AI design.\n'
