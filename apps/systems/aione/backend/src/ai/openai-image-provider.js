@@ -1,4 +1,6 @@
 /* OpenAI Image API modality adapter for the existing AIONE OpenAI provider. */
+import { normalizeImagesForOpenAI } from "./image-input-normalizer.js";
+
 const API_BASE = () => String(process.env.OPENAI_API_BASE || "https://api.openai.com/v1").replace(/\/$/, "");
 const IMAGE_MODEL = () => String(process.env.AIONE_AI_IMAGE_MODEL || "gpt-image-2.5-sunburst").trim();
 const ALLOWED_QUALITIES = new Set(["low", "medium", "high", "xhigh", "max", "auto"]);
@@ -19,7 +21,7 @@ function normalizedQuality(value) {
   return ALLOWED_QUALITIES.has(quality) ? quality : "medium";
 }
 
-function normalizedImages(images) {
+function validatedImages(images) {
   const items = Array.isArray(images) ? images : [];
   if (!items.length) {
     const error = new Error("At least one canonical SOURCE image is required for OpenAI image editing.");
@@ -55,7 +57,8 @@ export function getOpenAIImageRuntimeStatus() {
     provider: "openai",
     configured: Boolean(String(process.env.OPENAI_API_KEY || "").trim()),
     model: IMAGE_MODEL(),
-    quality: normalizedQuality()
+    quality: normalizedQuality(),
+    normalizeInputs: String(process.env.AIONE_AI_IMAGE_NORMALIZE_INPUTS ?? "true").toLowerCase() !== "false"
   };
 }
 
@@ -69,7 +72,7 @@ export async function runOpenAIImageEdit({ prompt, images, size = "1024x1536", q
   }
 
   const safePrompt = requiredPrompt(prompt);
-  const safeImages = normalizedImages(images);
+  const safeImages = await normalizeImagesForOpenAI(validatedImages(images));
   const model = IMAGE_MODEL();
   const form = new FormData();
   form.set("model", model);
@@ -116,6 +119,8 @@ export async function runOpenAIImageEdit({ prompt, images, size = "1024x1536", q
     provider: "openai",
     model,
     quality: normalizedQuality(quality),
+    inputCount: safeImages.length,
+    inputsNormalized: safeImages.every((image) => image.normalized !== false),
     createdAt: payload?.created ? new Date(Number(payload.created) * 1000).toISOString() : null,
     usage: payload?.usage || null
   };
