@@ -14,7 +14,7 @@ const execFileAsync = promisify(execFile);
 
 function makeId(prefix) { return `${prefix}_${randomUUID()}`; }
 function sha256(value) { return createHash("sha256").update(value).digest("hex"); }
-function derivedObjectName(productId, taskId, canonicalName) { return `derived/${productId}/${taskId}/v1/${canonicalName}`; }
+function derivedObjectName(productId, executionRef, canonicalName) { return `derived/${productId}/${executionRef}/v1/${canonicalName}`; }
 
 function promptFromTask(task, template) {
   const instructions = task.instruction_snapshot || {};
@@ -38,9 +38,16 @@ function promptFromTask(task, template) {
   ].join("\n");
 }
 
+function assertBenefitFeatureOperation(template) {
+  const allowed = Array.isArray(template.allowed_operations) ? template.allowed_operations : [];
+  if (!allowed.includes("benefit_feature_image")) {
+    throw Object.assign(new Error("Selected DesignTemplate does not allow benefit_feature_image."), { code: "design_operation_not_allowed", statusCode: 409 });
+  }
+}
+
 async function loadSourceAssets(client, task, template) {
   const ids = Array.isArray(task.input_asset_ids) ? [...new Set(task.input_asset_ids.map(String))] : [];
-  if (!ids.length) throw Object.assign(new Error("DesignTask has no input ProductAsset."), { code: "design_input_assets_required", statusCode: 409 });
+  if (!ids.length) throw Object.assign(new Error("Design execution has no input ProductAsset."), { code: "design_input_assets_required", statusCode: 409 });
   const result = await client.query(
     `SELECT * FROM public.product_assets
       WHERE product_id=$1 AND id = ANY($2::text[]) AND archived_at IS NULL
@@ -48,13 +55,13 @@ async function loadSourceAssets(client, task, template) {
     [task.product_id, ids]
   );
   if (result.rowCount !== ids.length) {
-    throw Object.assign(new Error("One or more DesignTask input assets are missing."), { code: "design_input_asset_missing", statusCode: 409 });
+    throw Object.assign(new Error("One or more design input assets are missing."), { code: "design_input_asset_missing", statusCode: 409 });
   }
   for (const asset of result.rows) {
     const metadata = asset.metadata || {};
     if (metadata.layer !== "SOURCE") throw Object.assign(new Error("AI image execution accepts canonical SOURCE assets only."), { code: "design_source_asset_required", statusCode: 409 });
     if (!String(asset.mime_type || "").startsWith("image/")) throw Object.assign(new Error("AI image execution accepts image SOURCE assets only."), { code: "design_source_asset_not_image", statusCode: 409 });
-    if (!metadata.gcsBucket || !metadata.gcsObject) throw Object.assign(new Error("DesignTask input asset has no canonical GCS storage reference."), { code: "canonical_asset_storage_missing", statusCode: 409 });
+    if (!metadata.gcsBucket || !metadata.gcsObject) throw Object.assign(new Error("Design input asset has no canonical GCS storage reference."), { code: "canonical_asset_storage_missing", statusCode: 409 });
   }
   const requiredRoles = Array.isArray(template.required_source_roles) ? template.required_source_roles : [];
   const actualRoles = new Set(result.rows.map((asset) => asset.asset_role));
@@ -91,15 +98,25 @@ async function nextAssetNo(client, productId) {
   return value;
 }
 
-async function startAIExecution(client, task, context, promptHash) {
+async function startAIExecution(client, execution, context, promptHash) {
   const id = makeId("aix");
+  const metadata = {
+    modality: "image",
+    designTaskId: execution.designTaskId || null,
+    templateId: execution.templateId,
+    promptHash,
+    executionMode: execution.executionMode,
+    executionRef: execution.executionRef
+  };
   await client.query(
     `INSERT INTO public.ai_executions
       (id, requested_by_person_id, objective, status, provider, model, started_at, metadata)
      VALUES ($1,$2,$3,'running','openai',$4,NOW(),$5::jsonb)`,
-    [id, context.personId || null, `Generate benefit_feature_image for product ${task.product_id}`, process.env.AIONE_AI_IMAGE_MODEL || "gpt-image-2.5-sunburst", JSON.stringify({ modality: "image", designTaskId: task.id, templateId: task.template_id, promptHash })]
+    [id, context.personId || null, `Generate benefit_feature_image for product ${execution.productId}`, process.env.AIONE_AI_IMAGE_MODEL || "gpt-image-2.5-sunburst", JSON.stringify(metadata)]
   );
-  await client.query("UPDATE public.design_tasks SET ai_execution_id=$2 WHERE id=$1", [task.id, id]);
+  if (execution.designTaskId) {
+    await client.query("UPDATE public.design_tasks SET ai_execution_id=$2 WHERE id=$1", [execution.designTaskId, id]);
+  }
   return id;
 }
 
@@ -122,6 +139,110 @@ async function failAIExecution(client, id, error) {
   ).catch(() => {});
 }
 
+async function generateAndPersistBenefitFeatureImage(client, {
+  productId,
+  template,
+  sourceAssets,
+  prompt,
+  context = {},
+  executionRef,
+  designTaskId = null,
+  executionMode = "production"
+}) {
+  const promptHash = sha256(Buffer.from(prompt, "utf8"));
+  let aiExecutionId = null;
+  try {
+    aiExecutionId = await startAIExecution(client, {
+      productId,
+      templateId: template.id,
+      designTaskId,
+      executionMode,
+      executionRef
+    }, context, promptHash);
+
+    const images = [];
+    for (const asset of sourceAssets) {
+      const canonical = await readGcsObject({ bucketName: asset.metadata.gcsBucket, objectName: asset.metadata.gcsObject });
+      images.push({ bytes: canonical.bytes, contentType: canonical.contentType || asset.mime_type, filename: asset.canonical_name || asset.original_name || `${asset.id}.jpg` });
+    }
+
+    const generated = await runOpenAIImageEdit({ prompt, images, size: "1024x1536" });
+    const outputBytes = await normalizeToTemplate(generated.bytes, Number(template.canvas_width), Number(template.canvas_height));
+    const fileHash = sha256(outputBytes);
+    const product = await client.query("SELECT id, product_code FROM public.products WHERE id=$1 AND archived_at IS NULL LIMIT 1", [productId]);
+    if (!product.rowCount) throw Object.assign(new Error("Product not found during design execution."), { code: "product_not_found", statusCode: 404 });
+
+    const assetNo = await nextAssetNo(client, productId);
+    const canonicalName = `${product.rows[0].product_code}_D${String(assetNo).padStart(2, "0")}.jpg`;
+    const bucketName = sourceAssets[0].metadata.gcsBucket;
+    const gcsObject = derivedObjectName(productId, executionRef, canonicalName);
+    const gcsMetadata = {
+      layer: "DERIVED",
+      productId,
+      designTemplateId: template.id,
+      designTemplateVersion: String(template.version),
+      operationType: "benefit_feature_image",
+      aiExecutionId,
+      aiProvider: generated.provider,
+      aiModel: generated.model,
+      promptHash,
+      fileSha256: fileHash,
+      executionMode,
+      executionRef
+    };
+    if (designTaskId) gcsMetadata.designTaskId = designTaskId;
+
+    const uploaded = await uploadGcsObjectIfAbsent({
+      bucketName,
+      objectName: gcsObject,
+      buffer: outputBytes,
+      contentType: "image/jpeg",
+      metadata: gcsMetadata
+    });
+
+    const provenance = designTaskId ? { designTaskId } : { technicalAcceptanceRef: executionRef };
+    const metadata = {
+      layer: "DERIVED",
+      ...provenance,
+      designTemplateId: template.id,
+      designTemplateVersion: template.version,
+      sourceAssetIds: sourceAssets.map((asset) => asset.id),
+      operationType: "benefit_feature_image",
+      executionType: "ai",
+      executionMode,
+      aiExecutionId,
+      aiProvider: generated.provider,
+      aiModel: generated.model,
+      aiQuality: generated.quality,
+      promptHash,
+      fileSha256: fileHash,
+      byteSize: outputBytes.length,
+      width: Number(template.canvas_width),
+      height: Number(template.canvas_height),
+      gcsBucket: bucketName,
+      gcsObject,
+      validation: {
+        storage: "passed",
+        dimensions: "normalized_to_template",
+        sourceTruthRequired: true,
+        humanReviewRequired: true
+      },
+      review: { status: "pending" }
+    };
+    const inserted = await client.query(
+      `INSERT INTO public.product_assets
+        (id, product_id, asset_no, asset_type, asset_role, source_provider, source_ref, original_name, canonical_name, mime_type, lifecycle_status, metadata, created_by_person_id, updated_by_person_id, source_system)
+       VALUES ($1,$2,$3,'image','derived_detail_image','aione-design',$4,$5,$5,'image/jpeg','formalized',$6::jsonb,$7,$7,$8) RETURNING *`,
+      [makeId("ast"), productId, assetNo, `${executionRef}:benefit_feature_image:v1`, canonicalName, JSON.stringify(metadata), context.personId || null, context.sourceSystem || "aione-ai-assisted-design-v2"]
+    );
+    await finishAIExecution(client, aiExecutionId, generated, inserted.rows[0].id);
+    return { output: inserted.rows[0], aiExecutionId, generated, uploaded };
+  } catch (error) {
+    await failAIExecution(client, aiExecutionId, error);
+    throw error;
+  }
+}
+
 export async function executeBenefitFeatureImage(client, taskId, context = {}) {
   let task = await getDesignTask(client, taskId);
   if (task.task_type !== "benefit_feature_image") throw Object.assign(new Error("This executor only supports benefit_feature_image tasks."), { code: "unsupported_design_task_type", statusCode: 409 });
@@ -132,12 +253,9 @@ export async function executeBenefitFeatureImage(client, taskId, context = {}) {
   if (task.task_status !== "approved") throw Object.assign(new Error("DesignTask must be approved before execution."), { code: "design_task_not_approved", statusCode: 409 });
 
   const template = await getDesignTemplate(client, task.template_id);
-  const allowed = Array.isArray(template.allowed_operations) ? template.allowed_operations : [];
-  if (!allowed.includes("benefit_feature_image")) throw Object.assign(new Error("Selected DesignTemplate does not allow benefit_feature_image."), { code: "design_operation_not_allowed", statusCode: 409 });
-
+  assertBenefitFeatureOperation(template);
   const sourceAssets = await loadSourceAssets(client, task, template);
   const prompt = promptFromTask(task, template);
-  const promptHash = sha256(Buffer.from(prompt, "utf8"));
   const claimed = await client.query(
     `UPDATE public.design_tasks SET task_status='running', started_at=COALESCE(started_at,NOW()), updated_by_person_id=$2, updated_at=NOW(), record_version=record_version+1
       WHERE id=$1 AND task_status='approved' RETURNING *`,
@@ -148,57 +266,110 @@ export async function executeBenefitFeatureImage(client, taskId, context = {}) {
 
   await recordBusinessEvent(client, { eventType: "product.design_execution_started", objectType: "product", objectId: task.product_id, context, payload: { taskId, operationType: "benefit_feature_image", inputAssetIds: sourceAssets.map((asset) => asset.id) } });
 
-  let aiExecutionId = null;
   try {
-    aiExecutionId = await startAIExecution(client, task, context, promptHash);
-    const images = [];
-    for (const asset of sourceAssets) {
-      const canonical = await readGcsObject({ bucketName: asset.metadata.gcsBucket, objectName: asset.metadata.gcsObject });
-      images.push({ bytes: canonical.bytes, contentType: canonical.contentType || asset.mime_type, filename: asset.canonical_name || asset.original_name || `${asset.id}.jpg` });
-    }
-
-    const generated = await runOpenAIImageEdit({ prompt, images, size: "1024x1536" });
-    const outputBytes = await normalizeToTemplate(generated.bytes, Number(template.canvas_width), Number(template.canvas_height));
-    const fileHash = sha256(outputBytes);
-    const product = await client.query("SELECT id, product_code FROM public.products WHERE id=$1 AND archived_at IS NULL LIMIT 1", [task.product_id]);
-    if (!product.rowCount) throw Object.assign(new Error("Product not found during design execution."), { code: "product_not_found", statusCode: 404 });
-
-    const assetNo = await nextAssetNo(client, task.product_id);
-    const canonicalName = `${product.rows[0].product_code}_D${String(assetNo).padStart(2, "0")}.jpg`;
-    const bucketName = sourceAssets[0].metadata.gcsBucket;
-    const gcsObject = derivedObjectName(task.product_id, taskId, canonicalName);
-    const uploaded = await uploadGcsObjectIfAbsent({
-      bucketName, objectName: gcsObject, buffer: outputBytes, contentType: "image/jpeg",
-      metadata: { layer: "DERIVED", productId: task.product_id, designTaskId: taskId, designTemplateId: template.id, designTemplateVersion: template.version, operationType: "benefit_feature_image", aiExecutionId, aiProvider: generated.provider, aiModel: generated.model, promptHash, fileSha256: fileHash }
+    const generatedResult = await generateAndPersistBenefitFeatureImage(client, {
+      productId: task.product_id,
+      template,
+      sourceAssets,
+      prompt,
+      context,
+      executionRef: taskId,
+      designTaskId: taskId,
+      executionMode: "production"
     });
-
-    const metadata = {
-      layer: "DERIVED", designTaskId: taskId, designTemplateId: template.id, designTemplateVersion: template.version,
-      sourceAssetIds: sourceAssets.map((asset) => asset.id), operationType: "benefit_feature_image", executionType: "ai",
-      aiExecutionId, aiProvider: generated.provider, aiModel: generated.model, aiQuality: generated.quality, promptHash,
-      fileSha256: fileHash, byteSize: outputBytes.length, width: Number(template.canvas_width), height: Number(template.canvas_height),
-      gcsBucket: bucketName, gcsObject,
-      validation: { storage: "passed", dimensions: "normalized_to_template", sourceTruthRequired: true, humanReviewRequired: true },
-      review: { status: "pending" }
-    };
-    const inserted = await client.query(
-      `INSERT INTO public.product_assets
-        (id, product_id, asset_no, asset_type, asset_role, source_provider, source_ref, original_name, canonical_name, mime_type, lifecycle_status, metadata, created_by_person_id, updated_by_person_id, source_system)
-       VALUES ($1,$2,$3,'image','derived_detail_image','aione-design',$4,$5,$5,'image/jpeg','formalized',$6::jsonb,$7,$7,$8) RETURNING *`,
-      [makeId("ast"), task.product_id, assetNo, `${taskId}:benefit_feature_image:v1`, canonicalName, JSON.stringify(metadata), context.personId || null, context.sourceSystem || "aione-ai-assisted-design-v2"]
-    );
     const completed = await client.query(
       `UPDATE public.design_tasks SET task_status='completed', completed_at=NOW(), failure_code=NULL, failure_detail=NULL, updated_by_person_id=$2, updated_at=NOW(), record_version=record_version+1 WHERE id=$1 RETURNING *`,
       [taskId, context.personId || null]
     );
-    await finishAIExecution(client, aiExecutionId, generated, inserted.rows[0].id);
-    await recordBusinessEvent(client, { eventType: "product.derived_asset_created", objectType: "product", objectId: task.product_id, context, payload: { taskId, outputAssetId: inserted.rows[0].id, inputAssetIds: sourceAssets.map((asset) => asset.id), operationType: "benefit_feature_image", aiExecutionId, provider: generated.provider, model: generated.model, canvasWidth: Number(template.canvas_width), canvasHeight: Number(template.canvas_height), gcsObject, reusedGcsObject: uploaded.reused } });
-    await recordBusinessEvent(client, { eventType: "product.design_execution_completed", objectType: "product", objectId: task.product_id, context, payload: { taskId, outputAssetId: inserted.rows[0].id, operationType: "benefit_feature_image", aiExecutionId } });
-    return { task: completed.rows[0], outputs: [inserted.rows[0]], reused: false };
+    await recordBusinessEvent(client, { eventType: "product.derived_asset_created", objectType: "product", objectId: task.product_id, context, payload: { taskId, outputAssetId: generatedResult.output.id, inputAssetIds: sourceAssets.map((asset) => asset.id), operationType: "benefit_feature_image", aiExecutionId: generatedResult.aiExecutionId, provider: generatedResult.generated.provider, model: generatedResult.generated.model, canvasWidth: Number(template.canvas_width), canvasHeight: Number(template.canvas_height), gcsObject: generatedResult.output.metadata.gcsObject, reusedGcsObject: generatedResult.uploaded.reused } });
+    await recordBusinessEvent(client, { eventType: "product.design_execution_completed", objectType: "product", objectId: task.product_id, context, payload: { taskId, outputAssetId: generatedResult.output.id, operationType: "benefit_feature_image", aiExecutionId: generatedResult.aiExecutionId } });
+    return { task: completed.rows[0], outputs: [generatedResult.output], reused: false };
   } catch (error) {
-    await failAIExecution(client, aiExecutionId, error);
     await client.query(`UPDATE public.design_tasks SET task_status='failed', failure_code=$2, failure_detail=$3::jsonb, completed_at=NOW(), updated_by_person_id=$4, updated_at=NOW(), record_version=record_version+1 WHERE id=$1 AND task_status='running'`, [taskId, error.code || "design_execution_failed", JSON.stringify({ message: error.message || "Design execution failed.", details: error.details || null }), context.personId || null]);
-    await recordBusinessEvent(client, { eventType: "product.design_execution_failed", objectType: "product", objectId: task.product_id, context, payload: { taskId, code: error.code || "design_execution_failed", operationType: "benefit_feature_image", aiExecutionId } });
+    await recordBusinessEvent(client, { eventType: "product.design_execution_failed", objectType: "product", objectId: task.product_id, context, payload: { taskId, code: error.code || "design_execution_failed", operationType: "benefit_feature_image" } });
+    throw error;
+  }
+}
+
+export async function executeBenefitFeatureImageTechnicalAcceptance(client, {
+  productCode,
+  templateId,
+  prompt
+} = {}, context = {}) {
+  const technicalContext = {
+    ...context,
+    personId: null,
+    actorKind: "system",
+    sourceSystem: context.sourceSystem || "aione-assisted-design-openai-technical-acceptance-v1"
+  };
+  const normalizedProductCode = String(productCode || "").trim();
+  const normalizedTemplateId = String(templateId || "").trim();
+  const authoredPrompt = String(prompt || "").trim();
+  if (!normalizedProductCode) throw Object.assign(new Error("Technical acceptance productCode is required."), { code: "technical_acceptance_product_required", statusCode: 400 });
+  if (!normalizedTemplateId) throw Object.assign(new Error("Technical acceptance templateId is required."), { code: "technical_acceptance_template_required", statusCode: 400 });
+  if (!authoredPrompt) throw Object.assign(new Error("Technical acceptance prompt is required."), { code: "technical_acceptance_prompt_required", statusCode: 400 });
+
+  const productResult = await client.query("SELECT id, product_code, name FROM public.products WHERE product_code=$1 AND archived_at IS NULL LIMIT 2", [normalizedProductCode]);
+  if (productResult.rowCount !== 1) throw Object.assign(new Error("Expected exactly one technical acceptance Product."), { code: "technical_acceptance_product_ambiguous", statusCode: 409, details: { count: productResult.rowCount, productCode: normalizedProductCode } });
+  const product = productResult.rows[0];
+
+  const template = await getDesignTemplate(client, normalizedTemplateId);
+  assertBenefitFeatureOperation(template);
+  const requiredRoles = Array.isArray(template.required_source_roles) ? template.required_source_roles : [];
+  if (!requiredRoles.length) throw Object.assign(new Error("Technical acceptance template must declare required SOURCE roles."), { code: "technical_acceptance_source_roles_required", statusCode: 409 });
+
+  const sourceResult = await client.query(
+    `SELECT * FROM public.product_assets
+      WHERE product_id=$1 AND archived_at IS NULL AND metadata->>'layer'='SOURCE'
+        AND asset_role = ANY($2::text[])
+      ORDER BY asset_no`,
+    [product.id, requiredRoles]
+  );
+  const selected = [];
+  for (const role of requiredRoles) {
+    const asset = sourceResult.rows.find((row) => row.asset_role === role);
+    if (asset) selected.push(asset);
+  }
+  const sourceAssets = await loadSourceAssets(client, { product_id: product.id, input_asset_ids: selected.map((asset) => asset.id) }, template);
+  const fullPrompt = promptFromTask({
+    instruction_snapshot: { prompt: authoredPrompt },
+    input_fact_snapshot: { productCode: product.product_code, productName: product.name || null }
+  }, template);
+  const executionRef = makeId("techaccept");
+
+  await recordBusinessEvent(client, {
+    eventType: "product.design_technical_acceptance_started",
+    objectType: "product",
+    objectId: product.id,
+    context: technicalContext,
+    payload: { executionRef, templateId: template.id, operationType: "benefit_feature_image", inputAssetIds: sourceAssets.map((asset) => asset.id) }
+  });
+
+  try {
+    const generatedResult = await generateAndPersistBenefitFeatureImage(client, {
+      productId: product.id,
+      template,
+      sourceAssets,
+      prompt: fullPrompt,
+      context: technicalContext,
+      executionRef,
+      designTaskId: null,
+      executionMode: "technical_acceptance"
+    });
+    await recordBusinessEvent(client, { eventType: "product.derived_asset_created", objectType: "product", objectId: product.id, context: technicalContext, payload: { technicalAcceptanceRef: executionRef, outputAssetId: generatedResult.output.id, inputAssetIds: sourceAssets.map((asset) => asset.id), operationType: "benefit_feature_image", aiExecutionId: generatedResult.aiExecutionId, provider: generatedResult.generated.provider, model: generatedResult.generated.model, canvasWidth: Number(template.canvas_width), canvasHeight: Number(template.canvas_height), gcsObject: generatedResult.output.metadata.gcsObject, reusedGcsObject: generatedResult.uploaded.reused } });
+    await recordBusinessEvent(client, { eventType: "product.design_technical_acceptance_completed", objectType: "product", objectId: product.id, context: technicalContext, payload: { executionRef, outputAssetId: generatedResult.output.id, operationType: "benefit_feature_image", aiExecutionId: generatedResult.aiExecutionId } });
+    return {
+      product,
+      template,
+      executionRef,
+      output: generatedResult.output,
+      aiExecutionId: generatedResult.aiExecutionId,
+      provider: generatedResult.generated.provider,
+      model: generatedResult.generated.model,
+      reviewStatus: generatedResult.output.metadata?.review?.status || "pending"
+    };
+  } catch (error) {
+    await recordBusinessEvent(client, { eventType: "product.design_technical_acceptance_failed", objectType: "product", objectId: product.id, context: technicalContext, payload: { executionRef, code: error.code || "technical_acceptance_failed", operationType: "benefit_feature_image" } }).catch(() => {});
     throw error;
   }
 }
