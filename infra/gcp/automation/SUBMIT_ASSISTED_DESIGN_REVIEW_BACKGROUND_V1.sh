@@ -36,15 +36,19 @@ printf 'Outcome        : %s\n' "$OUTCOME"
 printf 'Human Email    : %s\n' "$HUMAN_EMAIL"
 printf 'Review Detail  : %s\n\n' "$DETAIL_JSON"
 
-BUILD_ID="$(gcloud builds submit . \
+SUBMIT_OUTPUT="$(mktemp)"
+trap 'rm -f "$SUBMIT_OUTPUT"' EXIT
+
+gcloud builds submit . \
   --project="$AIONE_PROJECT_ID" \
   --region="$AIONE_REGION" \
   --config=infra/gcp/cloudbuild/assisted-design-review-background.yaml \
   --service-account="projects/${AIONE_PROJECT_ID}/serviceAccounts/${DEPLOYER_SA}" \
   --substitutions="_TARGET_SHA=${TARGET_SHA},_TASK_ID=${TASK_ID},_OUTCOME=${OUTCOME},_HUMAN_EMAIL=${HUMAN_EMAIL},_DETAIL_B64=${DETAIL_B64}" \
   --async \
-  --format='value(metadata.build.id)')"
+  --format='value(id)' | tee "$SUBMIT_OUTPUT"
 
+BUILD_ID="$(tail -n 1 "$SUBMIT_OUTPUT" | tr -d '[:space:]')"
 [[ -n "$BUILD_ID" ]] || { echo '[AIONE][STOP] Background Cloud Build submission returned no build id.' >&2; exit 61; }
 printf '[AIONE] BACKGROUND REVIEW SUBMITTED\n'
 printf 'Build ID: %s\n' "$BUILD_ID"
