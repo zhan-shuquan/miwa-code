@@ -27,9 +27,12 @@ export AIONE_SELECTION_IMPORT_SCHEDULER="aione-selection-import-every-10m"
 export AIONE_PRODUCT_ASSET_BUCKET="miwa-aione-product-assets"
 export AIONE_PRODUCT_ASSET_INTAKE_JOB="aione-product-asset-intake-current"
 
+# AIONE unified OpenAI provider runtime.
 export AIONE_AI_MODE="live"
 export AIONE_AI_PROVIDER="openai"
 export AIONE_AI_MODEL="gpt-5.6-sol"
+export AIONE_AI_IMAGE_MODEL="gpt-image-2.5-sunburst"
+export AIONE_AI_IMAGE_QUALITY="medium"
 export AIONE_OPENAI_API_KEY_SECRET="aione-openai-api-key"
 
 export AIONE_GOOGLE_CLIENT_ID="49629089449-5lkfjfnadvq14f9uuid91chqgjjdihmi.apps.googleusercontent.com"
@@ -97,6 +100,14 @@ assert_aione_current_baseline() {
   [[ "${AIONE_PRODUCT_ASSET_INTAKE_JOB:-}" == "aione-product-asset-intake-current" ]] || {
     echo "[AIONE][FATAL] Product asset intake job is not CURRENT" >&2
     exit 103
+  }
+  [[ -n "${AIONE_AI_IMAGE_MODEL:-}" ]] || {
+    echo "[AIONE][FATAL] CURRENT image model must be explicit" >&2
+    exit 104
+  }
+  [[ "${AIONE_AI_IMAGE_QUALITY:-}" =~ ^(low|medium|high|xhigh|max|auto)$ ]] || {
+    echo "[AIONE][FATAL] CURRENT image quality is invalid" >&2
+    exit 105
   }
 
   for bad in "${AIONE_FORBIDDEN_RUNTIME_NAMES[@]}"; do
