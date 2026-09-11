@@ -72,7 +72,11 @@ SHORT_SHA="$(git rev-parse --short=7 HEAD)"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AIONE_ARTIFACT_REPO}/${AIONE_IMAGE_NAME}:gate-c-${SHORT_SHA}"
 CONNECTION="$(gcloud sql instances describe "$AIONE_SQL_INSTANCE" --project="$PROJECT_ID" --format='value(connectionName)')"
 JOB="aione-design-template-set-gate-c"
-PRODUCT_CODE="${AIONE_ACCEPT_IMAGE_PRODUCT_CODE:-MH0000002}"
+PRODUCT_CODE="$(printf '%s' "${AIONE_ACCEPT_IMAGE_PRODUCT_CODE:-}" | xargs)"
+[[ -n "$PRODUCT_CODE" ]] || {
+  echo '[AIONE][STOP] Set AIONE_ACCEPT_IMAGE_PRODUCT_CODE to the exact CURRENT test Product. Gate C will not fall back to an old sample Product.' >&2
+  exit 23
+}
 
 cleanup() {
   gcloud run jobs delete "$JOB" --region="$REGION" --project="$PROJECT_ID" --quiet >/dev/null 2>&1 || true
@@ -127,7 +131,7 @@ if [[ -z "$EXECUTION" ]]; then
 fi
 [[ -n "$EXECUTION" ]] || {
   echo '[AIONE][STOP] Gate C execution id missing.' >&2
-  exit 23
+  exit 24
 }
 
 LOGS=""
@@ -142,12 +146,13 @@ done
 printf '\n[AIONE] authoritative Gate C logs\n%s\n' "$LOGS"
 [[ "$CODE" -eq 0 ]] || {
   echo '[AIONE][STOP] Gate C Cloud Run Job failed. Root-cause logs are printed above.' >&2
-  exit 24
+  exit 25
 }
-grep -q '"ok": true' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C did not return ok=true.' >&2; exit 25; }
-grep -q '"gateC": "live-openai-derived-product-asset-created"' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C proof marker missing.' >&2; exit 26; }
-grep -q '"reviewStatus": "pending"' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C output must remain pending human review.' >&2; exit 27; }
-grep -q '"mainMergeAllowed": false' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C must not authorize merge before human visual review.' >&2; exit 28; }
+grep -q '"ok": true' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C did not return ok=true.' >&2; exit 26; }
+grep -q "\"productCode\": \"${PRODUCT_CODE}\"" <<<"$LOGS" || { echo '[AIONE][STOP] Gate C returned a different Product than requested.' >&2; exit 27; }
+grep -q '"gateC": "live-openai-derived-product-asset-created"' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C proof marker missing.' >&2; exit 28; }
+grep -q '"reviewStatus": "pending"' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C output must remain pending human review.' >&2; exit 29; }
+grep -q '"mainMergeAllowed": false' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C must not authorize merge before human visual review.' >&2; exit 30; }
 
 echo '[AIONE] 4/4 Gate C technical path PASS; human visual review is now the only remaining gate'
 printf '\n[AIONE] DESIGN TEMPLATE SET GATE C TECHNICAL PASS\n'
