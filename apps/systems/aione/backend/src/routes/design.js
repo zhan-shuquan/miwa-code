@@ -10,7 +10,8 @@ import {
   proposeDesignTask,
   reviewDesignTask
 } from "../services/design-task-service.js";
-import { executeNormalizeCanvas, listDesignTaskOutputs } from "../services/design-output-service.js";
+import { listDesignTaskOutputs } from "../services/design-output-service.js";
+import { executeDesignTask } from "../services/design-execution-service.js";
 
 const router = Router();
 
@@ -113,7 +114,7 @@ router.post("/design/tasks/:taskId/approve", requireWriteActor, async (req, res,
 
 router.post("/design/tasks/:taskId/execute", requireWriteActor, async (req, res, next) => {
   try {
-    const result = await executeNormalizeCanvas(
+    const result = await executeDesignTask(
       pool,
       cleanText(req.params.taskId, 240),
       req.aioneContext || {}
