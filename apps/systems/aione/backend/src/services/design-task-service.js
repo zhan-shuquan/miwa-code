@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { getDesignTemplate } from "./design-template-service.js";
+import { requireConfirmedProductMaterial } from "./product-material-confirmation-service.js";
 import { recordBusinessEvent } from "./event-service.js";
 
 function makeId(prefix) {
@@ -78,12 +79,22 @@ export async function createDesignTask(client, {
 
   const assets = await validateAssets(client, productId, inputAssetIds);
   const normalizedAssetIds = assets.map((asset) => asset.id).sort();
+  const materialConfirmation = await requireConfirmedProductMaterial(client, productId, normalizedAssetIds);
+  const confirmedSkuSnapshot = Array.isArray(materialConfirmation.sku_snapshot) ? materialConfirmation.sku_snapshot : [];
+  const enrichedFactSnapshot = {
+    ...(inputFactSnapshot || {}),
+    materialConfirmationId: materialConfirmation.id,
+    materialSnapshotHash: materialConfirmation.snapshot_hash,
+    confirmedSkuSnapshot
+  };
   const inputSnapshot = {
     productId,
     templateId,
     templateVersion: template.version,
+    materialConfirmationId: materialConfirmation.id,
+    materialSnapshotHash: materialConfirmation.snapshot_hash,
     assetIds: normalizedAssetIds,
-    facts: inputFactSnapshot || {}
+    facts: enrichedFactSnapshot
   };
   const inputSnapshotHash = sha256(inputSnapshot);
   const instructionHash = sha256(instructionSnapshot || {});
@@ -96,7 +107,7 @@ export async function createDesignTask(client, {
     [idempotencyKey]
   );
   if (existing.rowCount) {
-    return { task: existing.rows[0], reused: true, product, template, assets };
+    return { task: existing.rows[0], reused: true, product, template, assets, materialConfirmation };
   }
 
   const taskId = makeId("dtk");
@@ -105,8 +116,9 @@ export async function createDesignTask(client, {
       (id, product_id, template_id, task_type, task_status,
        input_asset_ids, input_fact_snapshot, instruction_snapshot,
        input_snapshot_hash, instruction_hash, idempotency_key,
+       material_confirmation_id, material_snapshot_hash,
        created_by_person_id, updated_by_person_id, source_system)
-     VALUES ($1,$2,$3,$4,'draft',$5::jsonb,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$11,$12)
+     VALUES ($1,$2,$3,$4,'draft',$5::jsonb,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13,$13,$14)
      RETURNING *`,
     [
       taskId,
@@ -114,11 +126,13 @@ export async function createDesignTask(client, {
       templateId,
       String(taskType || template.output_type || "design").trim(),
       JSON.stringify(normalizedAssetIds),
-      JSON.stringify(inputFactSnapshot || {}),
+      JSON.stringify(enrichedFactSnapshot),
       JSON.stringify(instructionSnapshot || {}),
       inputSnapshotHash,
       instructionHash,
       idempotencyKey,
+      materialConfirmation.id,
+      materialConfirmation.snapshot_hash,
       context.personId || null,
       context.sourceSystem || "aione"
     ]
@@ -129,10 +143,17 @@ export async function createDesignTask(client, {
     objectType: "product",
     objectId: productId,
     context,
-    payload: { taskId, templateId, templateVersion: template.version, taskType: result.rows[0].task_type }
+    payload: {
+      taskId,
+      templateId,
+      templateVersion: template.version,
+      taskType: result.rows[0].task_type,
+      materialConfirmationId: materialConfirmation.id,
+      materialSnapshotHash: materialConfirmation.snapshot_hash
+    }
   });
 
-  return { task: result.rows[0], reused: false, product, template, assets };
+  return { task: result.rows[0], reused: false, product, template, assets, materialConfirmation };
 }
 
 export async function listProductDesignTasks(client, productId) {
