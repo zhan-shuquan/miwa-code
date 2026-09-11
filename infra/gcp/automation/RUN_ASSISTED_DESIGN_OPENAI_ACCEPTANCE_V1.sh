@@ -12,6 +12,53 @@ assert_aione_current_baseline
 [[ -z "$(git status --porcelain)" ]] || { echo '[AIONE][STOP] Repo must be clean before acceptance.' >&2; exit 21; }
 git pull --ff-only origin main >/dev/null
 
+resolve_gcloud_execution_account() {
+  local requested_email active_account
+  local -a authenticated_accounts=()
+
+  requested_email="$(printf '%s' "${AIONE_ACCEPT_EXECUTION_EMAIL:-${AIONE_ACCEPT_HUMAN_EMAIL:-}}" | tr '[:upper:]' '[:lower:]' | xargs)"
+  active_account="$(gcloud config get-value account 2>/dev/null || true)"
+  active_account="$(printf '%s' "$active_account" | tr '[:upper:]' '[:lower:]' | xargs)"
+  [[ "$active_account" != "(unset)" ]] || active_account=""
+
+  mapfile -t authenticated_accounts < <(
+    gcloud auth list --format='value(account)' 2>/dev/null \
+      | tr '[:upper:]' '[:lower:]' \
+      | sed '/^[[:space:]]*$/d' \
+      | sort -u
+  )
+
+  if [[ -n "$requested_email" ]]; then
+    if ! printf '%s\n' "${authenticated_accounts[@]:-}" | grep -Fxq "$requested_email"; then
+      echo "[AIONE][STOP] Requested execution account is not authenticated in gcloud: $requested_email" >&2
+      exit 24
+    fi
+    if [[ "$active_account" != "$requested_email" ]]; then
+      gcloud config set account "$requested_email" >/dev/null
+      active_account="$requested_email"
+      echo "[AIONE] Selected requested gcloud account: $active_account"
+    fi
+  elif [[ -z "$active_account" ]]; then
+    if [[ "${#authenticated_accounts[@]}" -eq 1 ]]; then
+      active_account="${authenticated_accounts[0]}"
+      gcloud config set account "$active_account" >/dev/null
+      echo "[AIONE] Auto-selected sole authenticated gcloud account: $active_account"
+    elif [[ "${#authenticated_accounts[@]}" -eq 0 ]]; then
+      echo '[AIONE][STOP] No authenticated gcloud account is available. Run gcloud auth login once, then rerun this CURRENT entry.' >&2
+      exit 24
+    else
+      echo '[AIONE][STOP] Multiple gcloud accounts are authenticated but none is active. Set AIONE_ACCEPT_EXECUTION_EMAIL to the intended account and rerun.' >&2
+      printf '[AIONE] Authenticated accounts: %s\n' "${authenticated_accounts[*]}" >&2
+      exit 24
+    fi
+  fi
+
+  [[ -n "$active_account" && "$active_account" == *@* ]] || { echo '[AIONE][STOP] Active Google execution account email could not be resolved.' >&2; exit 24; }
+  EXECUTION_EMAIL="$active_account"
+}
+
+resolve_gcloud_execution_account
+
 PROJECT_ID="$AIONE_PROJECT_ID"
 REGION="$AIONE_REGION"
 RUNTIME_SA="${AIONE_RUNTIME_SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -21,9 +68,6 @@ CONNECTION="$(gcloud sql instances describe "$AIONE_SQL_INSTANCE" --project="$PR
 JOB="aione-assisted-design-openai-acceptance-current"
 BUCKET="$AIONE_PRODUCT_ASSET_BUCKET"
 PRODUCT_CODE="${AIONE_ACCEPT_IMAGE_PRODUCT_CODE:-MH0000002}"
-EXECUTION_EMAIL="$(printf '%s' "${AIONE_ACCEPT_EXECUTION_EMAIL:-${AIONE_ACCEPT_HUMAN_EMAIL:-$(gcloud config get-value account 2>/dev/null)}}" | tr '[:upper:]' '[:lower:]' | xargs)"
-
-[[ -n "$EXECUTION_EMAIL" && "$EXECUTION_EMAIL" == *@* ]] || { echo '[AIONE][STOP] Explicit or active Google execution account email could not be resolved.' >&2; exit 24; }
 
 cleanup() {
   gcloud run jobs delete "$JOB" --region="$REGION" --project="$PROJECT_ID" --quiet >/dev/null 2>&1 || true
