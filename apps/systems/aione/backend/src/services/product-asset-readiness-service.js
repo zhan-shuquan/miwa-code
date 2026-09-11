@@ -1,46 +1,63 @@
 import pool from "../../db.js";
 
-const SOURCE_ROLES = [
-  "source_main_image",
-  "source_sku_image",
-  "source_detail_image",
-  "source_video",
-  "source_other"
-];
+const CURATED_SOURCE_FOLDERS = ["01_SKU图", "02_产品图", "03_实拍图"];
 
-function buildRoleCounts(rows) {
-  const counts = Object.fromEntries(SOURCE_ROLES.map((role) => [role, 0]));
+function sourceFolder(row) {
+  return String(row?.metadata?.sourceFolder || row?.metadata?.source_folder || "").trim();
+}
+
+function buildFolderCounts(rows) {
+  const counts = Object.fromEntries(CURATED_SOURCE_FOLDERS.map((folder) => [folder, 0]));
   for (const row of rows) {
-    const role = String(row.asset_role || "source_other");
-    counts[role] = (counts[role] || 0) + 1;
+    const folder = sourceFolder(row);
+    if (folder in counts) counts[folder] += 1;
   }
   return counts;
 }
 
-export function evaluateProductAssetReadiness(rows) {
+export function evaluateProductAssetReadiness(rows, confirmation = null, skuCount = 0) {
   const assets = Array.isArray(rows) ? rows : [];
   const sourceAssets = assets.filter((row) => row?.metadata?.layer === "SOURCE");
-  const roleCounts = buildRoleCounts(sourceAssets);
+  const folderCounts = buildFolderCounts(sourceAssets);
   const imageCount = sourceAssets.filter((row) => row.asset_type === "image").length;
-  const videoCount = sourceAssets.filter((row) => row.asset_type === "video").length;
   const blocking = [];
   const warnings = [];
 
   if (!sourceAssets.length) blocking.push("source_assets_missing");
-  if (!roleCounts.source_main_image) warnings.push("source_main_image_missing");
-  if (!roleCounts.source_sku_image) warnings.push("source_sku_image_missing");
-  if (!roleCounts.source_detail_image) warnings.push("source_detail_image_missing");
+  if (!folderCounts["01_SKU图"]) blocking.push("curated_sku_images_missing");
+  if (!folderCounts["02_产品图"]) blocking.push("curated_product_images_missing");
+  if (!skuCount) blocking.push("sales_sku_missing");
+  if (!confirmation || confirmation.status !== "confirmed") blocking.push("material_confirmation_required");
+  if (!folderCounts["03_实拍图"]) warnings.push("real_photos_optional_missing");
 
+  const confirmedAssetIds = confirmation && Array.isArray(confirmation.asset_ids)
+    ? confirmation.asset_ids.map(String)
+    : [];
+  const currentSourceIds = new Set(sourceAssets.map((row) => String(row.id)));
+  if (confirmation?.status === "confirmed" && confirmedAssetIds.some((id) => !currentSourceIds.has(id))) {
+    blocking.push("confirmed_asset_missing");
+  }
+
+  const readyForAI = blocking.length === 0;
   return {
-    state: blocking.length ? "source_assets_missing" : "source_assets_indexed",
-    sourceAssetsIndexed: blocking.length === 0,
+    state: readyForAI ? "ready_for_ai" : "human_gate_required",
+    sourceAssetsIndexed: sourceAssets.length > 0,
+    readyForAI,
     readyForPublishPack: false,
     publishReadinessReason: "channel_publish_pack_contract_not_frozen",
+    humanGate: {
+      status: confirmation?.status || "pending",
+      confirmationId: confirmation?.id || null,
+      version: confirmation?.version || null,
+      snapshotHash: confirmation?.snapshot_hash || null,
+      confirmedAt: confirmation?.confirmed_at || null,
+      confirmedByPersonId: confirmation?.confirmed_by_person_id || null
+    },
     counts: {
+      salesSkuCount: Number(skuCount || 0),
       sourceAssetCount: sourceAssets.length,
       imageCount,
-      videoCount,
-      roleCounts
+      folderCounts
     },
     blocking,
     warnings
@@ -49,28 +66,43 @@ export function evaluateProductAssetReadiness(rows) {
 
 export async function getProductAssetReadiness(productId) {
   const normalizedProductId = String(productId || "").trim();
-  if (!normalizedProductId) {
-    throw Object.assign(new Error("productId is required."), { code: "product_asset_product_id_required", statusCode: 400 });
-  }
+  if (!normalizedProductId) throw Object.assign(new Error("productId is required."), { code: "product_asset_product_id_required", statusCode: 400 });
 
   const productResult = await pool.query(
     "SELECT id, product_code, name, lifecycle_status FROM public.products WHERE id=$1 AND archived_at IS NULL",
     [normalizedProductId]
   );
-  if (!productResult.rowCount) {
-    throw Object.assign(new Error("Product not found."), { code: "product_not_found", statusCode: 404 });
-  }
+  if (!productResult.rowCount) throw Object.assign(new Error("Product not found."), { code: "product_not_found", statusCode: 404 });
 
-  const assetsResult = await pool.query(
-    `SELECT id, asset_type, asset_role, lifecycle_status, metadata
-       FROM public.product_assets
-      WHERE product_id=$1 AND archived_at IS NULL
-      ORDER BY asset_no`,
-    [normalizedProductId]
-  );
+  const [assetsResult, skuResult, confirmationResult] = await Promise.all([
+    pool.query(
+      `SELECT id, asset_type, asset_role, lifecycle_status, metadata
+         FROM public.product_assets
+        WHERE product_id=$1 AND archived_at IS NULL
+        ORDER BY asset_no`,
+      [normalizedProductId]
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS count
+         FROM public.product_skus
+        WHERE product_id=$1 AND archived_at IS NULL AND lifecycle_status <> 'retired'`,
+      [normalizedProductId]
+    ),
+    pool.query(
+      `SELECT * FROM public.product_material_confirmations
+        WHERE product_id=$1 AND archived_at IS NULL
+        ORDER BY version DESC, created_at DESC
+        LIMIT 1`,
+      [normalizedProductId]
+    )
+  ]);
 
   return {
     product: productResult.rows[0],
-    readiness: evaluateProductAssetReadiness(assetsResult.rows)
+    readiness: evaluateProductAssetReadiness(
+      assetsResult.rows,
+      confirmationResult.rows[0] || null,
+      Number(skuResult.rows[0]?.count || 0)
+    )
   };
 }
