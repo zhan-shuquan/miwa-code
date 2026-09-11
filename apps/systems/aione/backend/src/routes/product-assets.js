@@ -2,6 +2,7 @@ import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import pool, { withTransaction } from "../../db.js";
 import { requireWriteActor } from "../http/context.js";
+import { readGcsObject } from "../integrations/google-cloud-storage-client.js";
 import { recordBusinessEvent } from "../services/event-service.js";
 
 const router = Router();
@@ -35,6 +36,14 @@ function normalizeExtension(value, mimeType) {
   if (mime === "image/gif") return "gif";
   if (mime === "image/avif") return "avif";
   return "jpg";
+}
+
+function safeContentDispositionFilename(value) {
+  const fallback = cleanText(value, 240)
+    .replace(/[\r\n]/g, "")
+    .replace(/[^A-Za-z0-9._-]+/g, "_")
+    .replace(/^\.+/, "") || "asset";
+  return `inline; filename="${fallback}"`;
 }
 
 async function loadProduct(client, productId) {
@@ -86,6 +95,64 @@ router.get("/products/:productId/assets", async (req, res, next) => {
       [productId]
     );
     res.json({ product, assets: result.rows });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/:assetId/content", async (req, res, next) => {
+  try {
+    const requestedAssetId = cleanText(req.params.assetId, 240);
+    if (!requestedAssetId) {
+      return res.status(400).json({ error: "bad_request", message: "assetId is required." });
+    }
+
+    const result = await pool.query(
+      `SELECT id, product_id, asset_type, canonical_name, mime_type, lifecycle_status, metadata
+         FROM public.product_assets
+        WHERE id=$1 AND archived_at IS NULL
+        LIMIT 1`,
+      [requestedAssetId]
+    );
+    if (!result.rowCount) {
+      return res.status(404).json({ error: "product_asset_not_found", message: "ProductAsset not found." });
+    }
+
+    const asset = result.rows[0];
+    const metadata = asset.metadata && typeof asset.metadata === "object" ? asset.metadata : {};
+    const bucketName = cleanText(metadata.gcsBucket, 512);
+    const objectName = cleanText(metadata.gcsObject, 2048);
+    if (!bucketName || !objectName) {
+      const error = new Error("ProductAsset has no canonical GCS storage reference.");
+      error.statusCode = 409;
+      error.code = "canonical_asset_storage_missing";
+      throw error;
+    }
+
+    const declaredMime = cleanText(asset.mime_type, 120).toLowerCase();
+    if (asset.asset_type !== "image" || (declaredMime && !declaredMime.startsWith("image/"))) {
+      const error = new Error("Inline ProductAsset preview currently supports image assets only.");
+      error.statusCode = 415;
+      error.code = "product_asset_preview_not_supported";
+      throw error;
+    }
+
+    const canonical = await readGcsObject({ bucketName, objectName });
+    const contentType = cleanText(canonical.contentType, 120) || declaredMime || "application/octet-stream";
+    if (!contentType.startsWith("image/")) {
+      const error = new Error("Canonical ProductAsset object is not an image.");
+      error.statusCode = 409;
+      error.code = "canonical_asset_content_type_mismatch";
+      throw error;
+    }
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Length", String(canonical.size));
+    res.setHeader("Content-Disposition", safeContentDispositionFilename(asset.canonical_name));
+    res.setHeader("X-AIONE-Asset-Id", asset.id);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    return res.send(canonical.bytes);
   } catch (error) {
     next(error);
   }
