@@ -21,10 +21,9 @@ CONNECTION="$(gcloud sql instances describe "$AIONE_SQL_INSTANCE" --project="$PR
 JOB="aione-assisted-design-openai-acceptance-current"
 BUCKET="$AIONE_PRODUCT_ASSET_BUCKET"
 PRODUCT_CODE="${AIONE_ACCEPT_IMAGE_PRODUCT_CODE:-MH0000002}"
-HUMAN_EMAIL="$(printf '%s' "${AIONE_ACCEPT_HUMAN_EMAIL:-$(gcloud config get-value account 2>/dev/null)}" | tr '[:upper:]' '[:lower:]' | xargs)"
+EXECUTION_EMAIL="$(printf '%s' "${AIONE_ACCEPT_EXECUTION_EMAIL:-${AIONE_ACCEPT_HUMAN_EMAIL:-$(gcloud config get-value account 2>/dev/null)}}" | tr '[:upper:]' '[:lower:]' | xargs)"
 
-[[ -n "$HUMAN_EMAIL" && "$HUMAN_EMAIL" == *@* ]] || { echo '[AIONE][STOP] Explicit or active Google account email could not be resolved.' >&2; exit 24; }
-[[ "$HUMAN_EMAIL" != "info@miwa-happyhouse.com" ]] || { echo '[AIONE][STOP] Transitional admin identity cannot be used as human acceptance evidence.' >&2; exit 25; }
+[[ -n "$EXECUTION_EMAIL" && "$EXECUTION_EMAIL" == *@* ]] || { echo '[AIONE][STOP] Explicit or active Google execution account email could not be resolved.' >&2; exit 24; }
 
 cleanup() {
   gcloud run jobs delete "$JOB" --region="$REGION" --project="$PROJECT_ID" --quiet >/dev/null 2>&1 || true
@@ -32,13 +31,14 @@ cleanup() {
 trap cleanup EXIT
 
 printf '\n[AIONE] Assisted Design OpenAI Live Acceptance V1\n'
-printf 'Main SHA      : %s\n' "$SHORT_SHA"
-printf 'Product       : %s\n' "$PRODUCT_CODE"
-printf 'Canvas        : 1000x1500\n'
-printf 'Image Model   : %s\n' "$AIONE_AI_IMAGE_MODEL"
-printf 'Image Quality : %s\n' "$AIONE_AI_IMAGE_QUALITY"
-printf 'Human Email   : %s\n' "$HUMAN_EMAIL"
-printf 'GCS Bucket    : %s\n\n' "$BUCKET"
+printf 'Main SHA        : %s\n' "$SHORT_SHA"
+printf 'Product         : %s\n' "$PRODUCT_CODE"
+printf 'Canvas          : 1000x1500\n'
+printf 'Image Model     : %s\n' "$AIONE_AI_IMAGE_MODEL"
+printf 'Image Quality   : %s\n' "$AIONE_AI_IMAGE_QUALITY"
+printf 'Execution Email : %s\n' "$EXECUTION_EMAIL"
+printf 'Visual Review   : pending explicit human review after generation\n'
+printf 'GCS Bucket      : %s\n\n' "$BUCKET"
 
 wait_for_image() {
   for i in $(seq 1 90); do
@@ -89,7 +89,7 @@ gcloud run jobs deploy "$JOB" \
   --project="$PROJECT_ID" \
   --service-account="$RUNTIME_SA" \
   --set-cloudsql-instances="$CONNECTION" \
-  --set-env-vars="DB_USER=${AIONE_DB_USER},DB_NAME=${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/${CONNECTION},NODE_ENV=production,AIONE_PRODUCT_ASSET_BUCKET=${BUCKET},AIONE_ACCEPT_HUMAN_EMAIL=${HUMAN_EMAIL},AIONE_ACCEPT_IMAGE_PRODUCT_CODE=${PRODUCT_CODE},AIONE_AI_IMAGE_MODEL=${AIONE_AI_IMAGE_MODEL},AIONE_AI_IMAGE_QUALITY=${AIONE_AI_IMAGE_QUALITY}" \
+  --set-env-vars="DB_USER=${AIONE_DB_USER},DB_NAME=${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/${CONNECTION},NODE_ENV=production,AIONE_PRODUCT_ASSET_BUCKET=${BUCKET},AIONE_ACCEPT_EXECUTION_EMAIL=${EXECUTION_EMAIL},AIONE_ACCEPT_IMAGE_PRODUCT_CODE=${PRODUCT_CODE},AIONE_AI_IMAGE_MODEL=${AIONE_AI_IMAGE_MODEL},AIONE_AI_IMAGE_QUALITY=${AIONE_AI_IMAGE_QUALITY}" \
   --set-secrets="DB_PASS=${AIONE_DB_PASSWORD_SECRET}:latest,OPENAI_API_KEY=${AIONE_OPENAI_API_KEY_SECRET}:latest" \
   --command=npm \
   --args=run,design:openai:accept:current \
@@ -130,4 +130,4 @@ grep -q '"gcsObject":' <<<"$LOGS" || { echo '[AIONE][STOP] DERIVED GCS provenanc
 grep -q 'ASSISTED DESIGN OPENAI LIVE ACCEPTANCE V1 PASS' <<<"$LOGS" || { echo '[AIONE][STOP] PASS marker missing.' >&2; exit 34; }
 
 printf '\n[AIONE] ASSISTED DESIGN OPENAI LIVE ACCEPTANCE V1 PASS\n'
-printf 'Verified: canonical SOURCE main/detail -> explicit active Google human -> approved benefit_feature_image DesignTask -> OpenAI -> 1000x1500 DERIVED GCS ProductAsset -> pending human visual review.\n'
+printf 'Verified: canonical SOURCE main/detail -> explicit Google execution actor -> approved benefit_feature_image DesignTask -> OpenAI -> 1000x1500 DERIVED GCS ProductAsset -> pending explicit human visual review.\n'

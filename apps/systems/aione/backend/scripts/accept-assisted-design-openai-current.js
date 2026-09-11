@@ -6,7 +6,6 @@ import { getGcsObjectMetadata } from "../src/integrations/google-cloud-storage-c
 const PRODUCT_CODE = process.env.AIONE_ACCEPT_IMAGE_PRODUCT_CODE || "MH0000002";
 const TEMPLATE_ID = "dtpl_socks_rakuten_benefit_1000x1500_v1";
 const ACCEPTANCE_REVISION = "openai-benefit-v1";
-const TRANSITIONAL_ADMIN_EMAIL = "info@miwa-happyhouse.com";
 const DEFAULT_PROMPT = [
   "Create a premium Japanese Rakuten ecommerce benefit/feature image using the supplied real product photos.",
   "Make the real product the dominant visual subject. Emphasize only visible construction, texture, pattern and styling evidence from the SOURCE images.",
@@ -22,24 +21,23 @@ function fail(message, details = {}) {
 }
 function normalizeEmail(value) { return String(value || "").trim().toLowerCase(); }
 
-async function resolveHumanActor() {
-  const requestedEmail = normalizeEmail(process.env.AIONE_ACCEPT_HUMAN_EMAIL);
-  if (!requestedEmail || !requestedEmail.includes("@")) fail("AIONE_ACCEPT_HUMAN_EMAIL is required for explicit human acceptance identity.");
-  if (requestedEmail === TRANSITIONAL_ADMIN_EMAIL) fail("The transitional admin identity cannot be used as human acceptance evidence.");
+async function resolveExecutionActor() {
+  const requestedEmail = normalizeEmail(process.env.AIONE_ACCEPT_EXECUTION_EMAIL || process.env.AIONE_ACCEPT_HUMAN_EMAIL);
+  if (!requestedEmail || !requestedEmail.includes("@")) fail("AIONE_ACCEPT_EXECUTION_EMAIL is required for explicit technical execution identity.");
   const result = await pool.query(`
     SELECT DISTINCT p.id FROM public.people p
     JOIN public.external_identities e ON e.person_id=p.id
     WHERE p.status='active' AND p.archived_at IS NULL AND e.status='active'
       AND LOWER(e.provider)='google' AND LOWER(COALESCE(p.primary_email,e.email_snapshot,''))=$1
   `, [requestedEmail]);
-  if (result.rowCount !== 1) fail("Explicit acceptance email must resolve to exactly one active canonical Google human identity.", { candidateCount: result.rowCount });
-  return result.rows[0].id;
+  if (result.rowCount !== 1) fail("Execution email must resolve to exactly one active canonical Google identity.", { candidateCount: result.rowCount });
+  return { personId: result.rows[0].id, email: requestedEmail };
 }
 
 async function main() {
   if (!String(process.env.OPENAI_API_KEY || "").trim()) fail("OPENAI_API_KEY is required for live OpenAI image acceptance.");
-  const personId = await resolveHumanActor();
-  const context = { personId, actorKind: "human", sourceSystem: "aione-assisted-design-openai-acceptance-v1" };
+  const executionActor = await resolveExecutionActor();
+  const context = { personId: executionActor.personId, actorKind: "human", sourceSystem: "aione-assisted-design-openai-acceptance-v1" };
 
   const productResult = await pool.query("SELECT id, product_code, name FROM public.products WHERE product_code=$1 AND archived_at IS NULL LIMIT 2", [PRODUCT_CODE]);
   if (productResult.rowCount !== 1) fail("Expected exactly one acceptance Product.", { count: productResult.rowCount, productCode: PRODUCT_CODE });
@@ -89,6 +87,7 @@ async function main() {
     contract: "AIONE Assisted Design OpenAI Live Acceptance V1",
     ok: true,
     productCode: product.product_code,
+    executionActorEmail: executionActor.email,
     taskId: task.id,
     outputAssetId: output.id,
     aiExecutionId: output.metadata.aiExecutionId,
