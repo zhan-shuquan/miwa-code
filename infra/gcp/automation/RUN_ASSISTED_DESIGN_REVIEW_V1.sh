@@ -18,7 +18,13 @@ JOB="aione-assisted-design-review-current"
 TASK_ID="${AIONE_REVIEW_TASK_ID:-}"
 OUTCOME="${AIONE_REVIEW_OUTCOME:-}"
 HUMAN_EMAIL="$(printf '%s' "${AIONE_REVIEW_HUMAN_EMAIL:-}" | tr '[:upper:]' '[:lower:]' | xargs)"
-DETAIL_JSON="${AIONE_REVIEW_DETAIL_JSON:-${AIONE_REVIEW_DETAIL:-{}}}"
+DETAIL_JSON="${AIONE_REVIEW_DETAIL_JSON-}"
+if [[ -z "$DETAIL_JSON" ]]; then
+  DETAIL_JSON="${AIONE_REVIEW_DETAIL-}"
+fi
+if [[ -z "$DETAIL_JSON" ]]; then
+  DETAIL_JSON='{}'
+fi
 
 [[ -n "$TASK_ID" ]] || { echo '[AIONE][STOP] AIONE_REVIEW_TASK_ID is required.' >&2; exit 50; }
 [[ "$OUTCOME" == "approve" || "$OUTCOME" == "reject" || "$OUTCOME" == "regenerate" ]] || { echo '[AIONE][STOP] AIONE_REVIEW_OUTCOME must be approve, reject or regenerate.' >&2; exit 51; }
