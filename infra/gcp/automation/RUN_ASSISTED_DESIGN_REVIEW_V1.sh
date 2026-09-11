@@ -18,12 +18,14 @@ JOB="aione-assisted-design-review-current"
 TASK_ID="${AIONE_REVIEW_TASK_ID:-}"
 OUTCOME="${AIONE_REVIEW_OUTCOME:-}"
 HUMAN_EMAIL="$(printf '%s' "${AIONE_REVIEW_HUMAN_EMAIL:-}" | tr '[:upper:]' '[:lower:]' | xargs)"
-DETAIL_JSON="${AIONE_REVIEW_DETAIL_JSON:-{}}"
+DETAIL_JSON="${AIONE_REVIEW_DETAIL_JSON:-${AIONE_REVIEW_DETAIL:-{}}}"
 
 [[ -n "$TASK_ID" ]] || { echo '[AIONE][STOP] AIONE_REVIEW_TASK_ID is required.' >&2; exit 50; }
 [[ "$OUTCOME" == "approve" || "$OUTCOME" == "reject" || "$OUTCOME" == "regenerate" ]] || { echo '[AIONE][STOP] AIONE_REVIEW_OUTCOME must be approve, reject or regenerate.' >&2; exit 51; }
 [[ -n "$HUMAN_EMAIL" && "$HUMAN_EMAIL" == *@* ]] || { echo '[AIONE][STOP] AIONE_REVIEW_HUMAN_EMAIL is required.' >&2; exit 52; }
 [[ "$HUMAN_EMAIL" != "info@miwa-happyhouse.com" ]] || { echo '[AIONE][STOP] Transitional admin identity cannot be used as human review evidence.' >&2; exit 53; }
+
+node -e 'JSON.parse(process.argv[1])' "$DETAIL_JSON" >/dev/null 2>&1 || { echo '[AIONE][STOP] Review detail must be valid JSON.' >&2; exit 57; }
 
 cleanup() {
   gcloud run jobs delete "$JOB" --region="$REGION" --project="$PROJECT_ID" --quiet >/dev/null 2>&1 || true
@@ -33,7 +35,8 @@ trap cleanup EXIT
 printf '\n[AIONE] Assisted Design Explicit Human Review V1\n'
 printf 'Task ID      : %s\n' "$TASK_ID"
 printf 'Outcome      : %s\n' "$OUTCOME"
-printf 'Human Email  : %s\n\n' "$HUMAN_EMAIL"
+printf 'Human Email  : %s\n' "$HUMAN_EMAIL"
+printf 'Review Detail: %s\n\n' "$DETAIL_JSON"
 
 gcloud run jobs deploy "$JOB" \
   --image="$IMAGE" \
@@ -70,4 +73,7 @@ done
 printf '\n[AIONE] authoritative logs\n%s\n' "$LOGS"
 [[ "$CODE" -eq 0 ]] || { echo '[AIONE][STOP] Explicit human review failed.' >&2; exit 55; }
 grep -q 'ASSISTED DESIGN EXPLICIT HUMAN REVIEW V1 PASS' <<<"$LOGS" || { echo '[AIONE][STOP] Human review PASS marker missing.' >&2; exit 56; }
+if [[ "$DETAIL_JSON" != "{}" ]]; then
+  grep -q '"reviewDetail": {' <<<"$LOGS" || { echo '[AIONE][STOP] Review detail evidence missing from authoritative logs.' >&2; exit 58; }
+fi
 printf '\n[AIONE] ASSISTED DESIGN EXPLICIT HUMAN REVIEW V1 PASS\n'
