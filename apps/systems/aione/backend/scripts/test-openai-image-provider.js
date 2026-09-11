@@ -4,6 +4,7 @@ process.env.OPENAI_API_KEY = "test-only-key";
 process.env.OPENAI_API_BASE = "https://example.invalid/v1";
 process.env.AIONE_AI_IMAGE_MODEL = "gpt-image-2.5-sunburst";
 process.env.AIONE_AI_IMAGE_QUALITY = "medium";
+process.env.AIONE_AI_IMAGE_NORMALIZE_INPUTS = "false";
 
 const expectedBytes = Buffer.from("aione-image-test-output", "utf8");
 let captured = null;
@@ -28,6 +29,7 @@ const { getOpenAIImageRuntimeStatus, runOpenAIImageEdit } = await import("../src
 const status = getOpenAIImageRuntimeStatus();
 assert.equal(status.configured, true);
 assert.equal(status.model, "gpt-image-2.5-sunburst");
+assert.equal(status.normalizeInputs, false);
 
 const result = await runOpenAIImageEdit({
   prompt: "Create a Rakuten benefit image from verified product truth.",
@@ -44,6 +46,7 @@ assert.deepEqual(result.bytes, expectedBytes);
 assert.equal(result.provider, "openai");
 assert.equal(result.model, "gpt-image-2.5-sunburst");
 assert.equal(result.quality, "medium");
+assert.equal(result.inputCount, 2);
 assert.equal(result.usage.total_tokens, 123);
 
 process.stdout.write("[AIONE] OPENAI IMAGE PROVIDER CONTRACT PASS\n");
