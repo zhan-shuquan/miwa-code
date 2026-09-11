@@ -9,19 +9,53 @@ Applies to: 美和AIONE一体化工作平台 product selection -> design -> list
 - 人工定义商品，AI完成商品化。
 - AI可以辅助判断，但不得越过商品事实确认。
 - 商品最终销售SKU与有效SOURCE素材必须由人工确认。
-- Google Drive从人工确认好的素材开始作为AIONE系统输入。
+- 1688原始下载素材只保留在本地人工工作区，不进入AIONE长期数据治理。
+- Google Drive从人工确认后的有效素材开始作为AIONE正式素材输入。
 - AIONE不重复开发1688图片下载能力，也不保存人工淘汰的原始图片。
 - 人工完成素材确认后，系统才能进入AI商品分析、AI设计、上架资料生成等自动化。
+
+## Locked 1688 selection operation flow
+
+The forward CURRENT flow is Excel-first. Images may be downloaded after AIONE has imported the selection Excel.
+
+1. 人工在1688完成选品。
+2. 先导出1688选品Excel。
+3. 将Excel放入Google Drive `01_1688选品提交`。
+4. AIONE导入Excel并按原表记录生成唯一选品ID：`xpYYMMDDNNN`。
+5. AIONE自动创建选品工作目录：`<selectionNo>_<shortName>`。
+6. AIONE在该目录内自动创建固定三目录：`01_SKU图`、`02_产品图`、`03_实拍图`。
+7. 员工再按Excel商品顺序使用1688官方一键下载，将原始图片下载到本地工作目录；原始素材允许重复、杂乱、ZIP或普通文件夹，AIONE不管理。
+8. 员工人工确认最终销售SKU/组合并筛选有效图片。
+9. 员工只把确认后的有效图片拖入对应Google Drive选品工作目录的三类目录。
+10. 员工点击“素材确认 / 开始AI设计”。
+11. AIONE记录Product Material Confirmation并进入AI商品化流程。
+12. AI完成商品分析、设计、DERIVED/FINAL、上架资料；人工最终验收后发布。
+
+The Excel and local supplier-image download folders do not need to share a supplier file ID or supplier folder naming convention. The AIONE selection number is the canonical identity after import.
+
+## Selection Drive workspace naming
+
+Canonical identity:
+- Selection: `xpYYMMDDNNN`
+- Product after conversion: `MHNNNNNNN`
+- SKU after Product creation: `MHNNNNNNN-NN`
+
+Drive selection workspace display name:
+- `<selectionNo>_<shortName>`
+- Example: `xp260911001_男士秋冬厚手棉袜`
+
+The selection number is the identity; the short name is only a human-readable label and may evolve. AIONE persists the Google Drive Folder ID in the selection metadata so folder linkage does not depend on the display name.
 
 ## Human / System boundary
 
 Human work before AIONE automation:
-1. 人工选品。
-2. 使用1688官方一键下载。
-3. 人工确认最终销售SKU/组合。
-4. 人工筛选可作为商品事实依据的有效图片。
-5. 上传Google Drive标准素材目录。
-6. 点击“素材确认 / 开始AI设计”。
+1. 人工选品并导出Excel。
+2. Excel进入AIONE后，系统先生成选品ID和Drive标准工作目录。
+3. 人工使用1688官方一键下载，将原始素材保留本地。
+4. 人工确认最终销售SKU/组合。
+5. 人工筛选可作为商品事实依据的有效图片。
+6. 仅将确认后的有效图片放入Google Drive标准素材目录。
+7. 点击“素材确认 / 开始AI设计”。
 
 System work after Human Gate:
 1. SOURCE素材接入与技术校验。
@@ -34,7 +68,7 @@ System work after Human Gate:
 
 ## Google Drive input contract
 
-Each Product accepts only the following business folders as curated input:
+Each selection/Product accepts only the following business folders as curated input:
 
 - `01_SKU图` - required. Visual evidence for the final confirmed sales SKU / combination.
 - `02_产品图` - required. Human-curated supplier product material including main, white-background, color, detail, construction, material and benefit evidence. No further manual sub-classification is required.
@@ -110,6 +144,7 @@ Do not rebuild the existing DesignTask -> AI -> DERIVED -> final human review ch
 ## Deprecated CURRENT assumptions
 
 The following assumptions are no longer CURRENT business truth:
+- downloading 1688 image ZIPs before AIONE selection import is mandatory;
 - 1688 raw ZIP as the primary AIONE product-material input;
 - AIONE automatically deciding final usable product material from supplier raw folders;
 - supplier `主图 / sku图片 / 详情 / 视频` folder structure as the long-term product material contract;
