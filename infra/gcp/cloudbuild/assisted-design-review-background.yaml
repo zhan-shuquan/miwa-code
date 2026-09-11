@@ -1,0 +1,69 @@
+steps:
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: assisted-design-review-background
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        source infra/gcp/cloud-shell/CURRENT_BASELINE.sh
+        assert_aione_current_baseline
+
+        PROJECT_ID="$$AIONE_PROJECT_ID"
+        REGION="$$AIONE_REGION"
+        IMAGE="$${REGION}-docker.pkg.dev/$${PROJECT_ID}/$${AIONE_ARTIFACT_REPO}/$${AIONE_IMAGE_NAME}:main-${_TARGET_SHA}"
+        CONNECTION="$$(gcloud sql instances describe "$$AIONE_SQL_INSTANCE" --project="$$PROJECT_ID" --format='value(connectionName)')"
+        RUNTIME_SA="$${AIONE_RUNTIME_SERVICE_ACCOUNT_NAME}@$${PROJECT_ID}.iam.gserviceaccount.com"
+        JOB="aione-assisted-design-review-current"
+
+        echo "[AIONE] Background review build started"
+        echo "[AIONE] Waiting for immutable CURRENT image: $$IMAGE"
+        for i in $$(seq 1 60); do
+          if gcloud artifacts docker images describe "$$IMAGE" --project="$$PROJECT_ID" >/dev/null 2>&1; then
+            echo '[AIONE] CURRENT image ready.'
+            break
+          fi
+          if [[ "$$i" -eq 60 ]]; then
+            echo '[AIONE][STOP] CURRENT image was not produced within 20 minutes.' >&2
+            exit 60
+          fi
+          sleep 20
+        done
+
+        cleanup() {
+          gcloud run jobs delete "$$JOB" --region="$$REGION" --project="$$PROJECT_ID" --quiet >/dev/null 2>&1 || true
+        }
+        trap cleanup EXIT
+
+        gcloud run jobs deploy "$$JOB" \
+          --image="$$IMAGE" \
+          --region="$$REGION" \
+          --project="$$PROJECT_ID" \
+          --service-account="$$RUNTIME_SA" \
+          --set-cloudsql-instances="$$CONNECTION" \
+          --set-env-vars="DB_USER=$${AIONE_DB_USER},DB_NAME=$${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/$${CONNECTION},NODE_ENV=production,AIONE_REVIEW_TASK_ID=${_TASK_ID},AIONE_REVIEW_OUTCOME=${_OUTCOME},AIONE_REVIEW_HUMAN_EMAIL=${_HUMAN_EMAIL},AIONE_REVIEW_DETAIL_B64=${_DETAIL_B64}" \
+          --set-secrets="DB_PASS=$${AIONE_DB_PASSWORD_SECRET}:latest" \
+          --command=npm \
+          --args=run,design:review:current \
+          --tasks=1 \
+          --max-retries=0 \
+          --task-timeout=10m \
+          --quiet
+
+        EXECUTION="$$(gcloud run jobs execute "$$JOB" --region="$$REGION" --project="$$PROJECT_ID" --wait --format='value(metadata.name)')"
+        test -n "$$EXECUTION"
+        LOGS="$$(gcloud beta run jobs executions logs read "$$EXECUTION" --region="$$REGION" --project="$$PROJECT_ID" --limit=500 2>&1 || true)"
+        printf '%s\n' "$$LOGS"
+        grep -q 'ASSISTED DESIGN EXPLICIT HUMAN REVIEW V1 PASS' <<<"$$LOGS"
+        echo '[AIONE] ASSISTED DESIGN BACKGROUND REVIEW V1 PASS'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1800s
+
+substitutions:
+  _TARGET_SHA: unused
+  _TASK_ID: unused
+  _OUTCOME: unused
+  _HUMAN_EMAIL: unused
+  _DETAIL_B64: e30=
