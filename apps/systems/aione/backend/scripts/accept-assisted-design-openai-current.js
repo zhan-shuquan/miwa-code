@@ -41,7 +41,7 @@ async function main() {
   const personId = await resolveHumanActor();
   const context = { personId, actorKind: "human", sourceSystem: "aione-assisted-design-openai-acceptance-v1" };
 
-  const productResult = await pool.query("SELECT id, product_code, name, metadata FROM public.products WHERE product_code=$1 AND archived_at IS NULL LIMIT 2", [PRODUCT_CODE]);
+  const productResult = await pool.query("SELECT id, product_code, name FROM public.products WHERE product_code=$1 AND archived_at IS NULL LIMIT 2", [PRODUCT_CODE]);
   if (productResult.rowCount !== 1) fail("Expected exactly one acceptance Product.", { count: productResult.rowCount, productCode: PRODUCT_CODE });
   const product = productResult.rows[0];
 
@@ -62,7 +62,7 @@ async function main() {
     templateId: TEMPLATE_ID,
     taskType: "benefit_feature_image",
     inputAssetIds: [mainAsset.id, detailAsset.id],
-    inputFactSnapshot: { productCode: product.product_code, productName: product.name || null, metadata: product.metadata || {} },
+    inputFactSnapshot: { productCode: product.product_code, productName: product.name || null },
     instructionSnapshot: { operation: "benefit_feature_image", acceptanceRevision: ACCEPTANCE_REVISION, prompt },
     context
   }));
