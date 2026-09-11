@@ -13,6 +13,19 @@ function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function parseReviewDetail() {
+  const detailBase64 = String(process.env.AIONE_REVIEW_DETAIL_B64 || "").trim();
+  const detailJson = detailBase64
+    ? Buffer.from(detailBase64, "base64").toString("utf8")
+    : String(process.env.AIONE_REVIEW_DETAIL_JSON || "").trim();
+  if (!detailJson) return {};
+  try {
+    return JSON.parse(detailJson);
+  } catch {
+    fail("AIONE review detail payload must decode to valid JSON.");
+  }
+}
+
 async function resolveHumanActor(email) {
   if (!email || !email.includes("@")) fail("AIONE_REVIEW_HUMAN_EMAIL is required.");
   if (email === TRANSITIONAL_ADMIN_EMAIL) fail("The transitional admin identity cannot be used as human review evidence.");
@@ -39,15 +52,7 @@ async function main() {
   if (!taskId) fail("AIONE_REVIEW_TASK_ID is required.");
   if (!new Set(["approve", "reject", "regenerate"]).has(outcome)) fail("AIONE_REVIEW_OUTCOME must be approve, reject or regenerate.");
 
-  let detail = {};
-  if (process.env.AIONE_REVIEW_DETAIL_JSON) {
-    try {
-      detail = JSON.parse(process.env.AIONE_REVIEW_DETAIL_JSON);
-    } catch {
-      fail("AIONE_REVIEW_DETAIL_JSON must be valid JSON.");
-    }
-  }
-
+  const detail = parseReviewDetail();
   const personId = await resolveHumanActor(email);
   const context = { personId, actorKind: "human", sourceSystem: "aione-assisted-design-explicit-review-v1" };
   const task = await withTransaction((client) => reviewDesignTask(client, taskId, { outcome, detail }, context));
