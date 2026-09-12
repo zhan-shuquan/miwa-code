@@ -7,9 +7,33 @@ import {
 
 const SET_ID = "dtset_mens_socks_rakuten_detail_v1";
 const TRIAL_ITEMS = [
-  ["dtsi_mens_socks_hero_01_v1", 1, "MS-HERO-01", 1000, 1200],
-  ["dtsi_mens_socks_reason1_04_v1", 4, "MS-REASON1-04", 1000, 1500],
-  ["dtsi_mens_socks_size_12_v1", 12, "MS-SIZE-12", 1000, 1500]
+  {
+    itemId: "dtsi_mens_socks_hero_01_v1",
+    pageNo: 1,
+    pageCode: "MS-HERO-01",
+    width: 1000,
+    height: 1000,
+    templateId: "dtpl_unified_product_hero_square_v1",
+    templateStatus: "active"
+  },
+  {
+    itemId: "dtsi_mens_socks_reason1_04_v1",
+    pageNo: 4,
+    pageCode: "MS-REASON1-04",
+    width: 1000,
+    height: 1500,
+    templateId: "dtpl_mens_socks_rakuten_reason1_v1",
+    templateStatus: "draft"
+  },
+  {
+    itemId: "dtsi_mens_socks_size_12_v1",
+    pageNo: 12,
+    pageCode: "MS-SIZE-12",
+    width: 1000,
+    height: 1500,
+    templateId: "dtpl_mens_socks_rakuten_size_v1",
+    templateStatus: "draft"
+  }
 ];
 
 function fail(message, details = {}) {
@@ -36,22 +60,40 @@ async function main() {
     }
 
     const seenCodes = [];
-    for (const [itemId, pageNo, pageCode, width, height] of TRIAL_ITEMS) {
-      const item = await getDesignTemplateSetItem(client, itemId);
+    for (const expected of TRIAL_ITEMS) {
+      const item = await getDesignTemplateSetItem(client, expected.itemId);
       if ((item.item_kind || "dynamic_template") !== "dynamic_template") {
-        fail("Trial page must be dynamic_template.", { itemId, itemKind: item.item_kind });
+        fail("Trial page must be dynamic_template.", { itemId: expected.itemId, itemKind: item.item_kind });
       }
-      if (Number(item.page_no) !== pageNo || item.page_code !== pageCode) {
-        fail("Trial page identity mismatch.", { itemId, pageNo: item.page_no, pageCode: item.page_code });
+      if (Number(item.page_no) !== expected.pageNo || item.page_code !== expected.pageCode) {
+        fail("Trial page identity mismatch.", {
+          itemId: expected.itemId,
+          pageNo: item.page_no,
+          pageCode: item.page_code
+        });
       }
-      if (Number(item.canvas_width) !== width || Number(item.canvas_height) !== height) {
-        fail("Trial page canvas mismatch.", { itemId, width: item.canvas_width, height: item.canvas_height });
+      if (Number(item.canvas_width) !== expected.width || Number(item.canvas_height) !== expected.height) {
+        fail("Trial page canvas mismatch.", {
+          itemId: expected.itemId,
+          width: item.canvas_width,
+          height: item.canvas_height,
+          expectedWidth: expected.width,
+          expectedHeight: expected.height
+        });
       }
-      if (item.template_set_status !== "draft" || item.template_status !== "draft") {
-        fail("Trial foundation must remain non-executable draft before real trial proof.", {
-          itemId,
-          setStatus: item.template_set_status,
-          templateStatus: item.template_status
+      if (item.template_id !== expected.templateId || item.template_status !== expected.templateStatus) {
+        fail("Trial page template binding mismatch.", {
+          itemId: expected.itemId,
+          templateId: item.template_id,
+          templateStatus: item.template_status,
+          expectedTemplateId: expected.templateId,
+          expectedTemplateStatus: expected.templateStatus
+        });
+      }
+      if (item.template_set_status !== "draft") {
+        fail("Trial Template Set must remain draft before real trial proof.", {
+          itemId: expected.itemId,
+          setStatus: item.template_set_status
         });
       }
       let blocked = false;
@@ -61,9 +103,23 @@ async function main() {
         blocked = error?.code === "design_template_set_not_active";
       }
       if (!blocked) {
-        fail("Draft trial page unexpectedly became executable.", { itemId });
+        fail("Draft trial page unexpectedly became executable.", { itemId: expected.itemId });
       }
-      seenCodes.push(pageCode);
+      seenCodes.push(expected.pageCode);
+    }
+
+    const oldHero = await client.query(
+      `SELECT lifecycle_status, metadata
+         FROM public.design_templates
+        WHERE id='dtpl_mens_socks_rakuten_hero_v1'
+          AND archived_at IS NULL
+        LIMIT 1`
+    );
+    if (!oldHero.rowCount || oldHero.rows[0].lifecycle_status !== "deprecated") {
+      fail("Legacy mens-socks hero must remain auditable but deprecated.", { row: oldHero.rows[0] || null });
+    }
+    if (oldHero.rows[0].metadata?.supersededBy !== "dtpl_unified_product_hero_square_v1") {
+      fail("Legacy mens-socks hero supersession metadata mismatch.", { metadata: oldHero.rows[0].metadata });
     }
 
     const tableResult = await client.query(
@@ -94,6 +150,9 @@ async function main() {
       lifecycleStatus: set.lifecycle_status,
       implementationStage: set.metadata?.implementationStage,
       trialPages: seenCodes,
+      heroPageTemplate: "dtpl_unified_product_hero_square_v1",
+      heroCanvas: "1000x1000",
+      legacyHeroDeprecated: true,
       staticPageAssetRegistry: true,
       staticPagesRegistered: false,
       activationBlockedUntilTrialProof: true
