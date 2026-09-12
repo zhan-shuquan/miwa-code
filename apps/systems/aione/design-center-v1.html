@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>美和AIONE一体化工作平台｜设计中心 V1</title>
+  <link rel="stylesheet" href="./css/pages/design-center-v1.css?v=20260913-v1">
+  <style>body{margin:0;background:#f7f8f7}.dc-preview-shell{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid #e3e7e4;background:#fff;font:14px Arial,"Microsoft YaHei",sans-serif;position:sticky;top:0;z-index:10}.dc-preview-shell b{font-size:18px}.dc-preview-shell span{color:#6b7280;font-size:12px}</style>
+</head>
+<body>
+  <header class="dc-preview-shell"><b>AIONE</b><span>设计中心 V1 · 操作验证页</span></header>
+  <main id="app-main-host"></main>
+  <script type="module">
+    import { initDesignCenter } from "./js/pages/design-center-v1.js?v=20260913-v1";
+    const host=document.getElementById("app-main-host");
+    const response=await fetch("./pages/design-center/workbench.html?v=20260913-v1",{cache:"no-store"});
+    host.innerHTML=await response.text();
+    await initDesignCenter();
+  </script>
+</body>
+</html>

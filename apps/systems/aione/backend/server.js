@@ -13,6 +13,7 @@ import productAssetReadinessRouter from "./src/routes/product-asset-readiness.js
 import productMaterialConfirmationRouter from "./src/routes/product-material-confirmation.js";
 import rakutenCanonicalPublishRouter from "./src/routes/rakuten-canonical-publish.js";
 import designRouter from "./src/routes/design.js";
+import designCenterRouter from "./src/routes/design-center.js";
 import { resolveAioneGoogleIdentity } from "./src/http/google-auth.js";
 
 const app = express();
@@ -71,6 +72,7 @@ app.use("/api/v1/product-assets", productAssetReadinessRouter);
 app.use("/api/v1", productMaterialConfirmationRouter);
 app.use("/api/v1", rakutenCanonicalPublishRouter);
 app.use("/api/v1", designRouter);
+app.use("/api/v1", designCenterRouter);
 app.use("/api/v1", coreRouter);
 
 app.use((req, res) => {
