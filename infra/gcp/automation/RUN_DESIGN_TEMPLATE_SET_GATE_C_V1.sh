@@ -51,6 +51,7 @@ IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AIONE_ARTIFACT_REPO}/${AIONE_IMA
 DISCOVERY_JOB="aione-design-gate-c-discovery"
 GATE_C_JOB="aione-design-template-set-gate-c"
 PRODUCT_CODE="${AIONE_ACCEPT_IMAGE_PRODUCT_CODE:-}"
+PASS_MARKER='DESIGN TEMPLATE SET GATE C LIVE OPENAI PASS - VISUAL-ONLY HUMAN REVIEW REQUIRED'
 
 cleanup() {
   gcloud run jobs delete "$DISCOVERY_JOB" --region="$REGION" --project="$PROJECT_ID" --quiet >/dev/null 2>&1 || true
@@ -62,6 +63,8 @@ printf '\n[AIONE] Design Template Set Gate C V1\n'
 printf 'Branch                : %s\n' "$BRANCH"
 printf 'Branch SHA            : %s\n' "$SHORT_SHA"
 printf 'Cloud Control Account : %s\n' "$CLOUD_CONTROL_EMAIL"
+printf 'AI stage              : visual-only (no copy)\n'
+printf 'Copy stage            : deterministic overlay after AI\n'
 printf 'Production traffic    : unchanged\n'
 printf 'Main merge            : forbidden until human visual review\n\n'
 
@@ -107,7 +110,7 @@ fi
 
 echo "[AIONE] 3/5 Selected real Product: $PRODUCT_CODE"
 
-echo '[AIONE] 4/5 Run live Gate C in an ephemeral Cloud Run Job'
+echo '[AIONE] 4/5 Run live visual-only Gate C in an ephemeral Cloud Run Job'
 gcloud run jobs deploy "$GATE_C_JOB" \
   --image="$IMAGE" \
   --region="$REGION" \
@@ -136,7 +139,7 @@ EXECUTION="$(printf '%s\n' "$OUTPUT" | grep -Eo 'aione-design-template-set-gate-
 LOGS=""
 for i in $(seq 1 24); do
   LOGS="$(gcloud beta run jobs executions logs read "$EXECUTION" --region="$REGION" --project="$PROJECT_ID" --limit=1500 2>&1 || true)"
-  if grep -q 'DESIGN TEMPLATE SET GATE C LIVE OPENAI PASS' <<<"$LOGS" || grep -q '"ok": false' <<<"$LOGS"; then
+  if grep -q "$PASS_MARKER" <<<"$LOGS" || grep -q '"ok": false' <<<"$LOGS"; then
     break
   fi
   sleep 5
@@ -145,14 +148,18 @@ printf '\n[AIONE] Gate C authoritative logs\n%s\n' "$LOGS"
 [[ "$CODE" -eq 0 ]] || { echo '[AIONE][STOP] Gate C execution failed. See logs above.' >&2; exit 27; }
 grep -q '"ok": true' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C did not return ok=true.' >&2; exit 28; }
 grep -q "\"productCode\": \"${PRODUCT_CODE}\"" <<<"$LOGS" || { echo '[AIONE][STOP] Gate C used the wrong Product.' >&2; exit 29; }
-grep -q '"reviewStatus": "pending"' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C output must remain pending human visual review.' >&2; exit 30; }
-grep -q 'DESIGN TEMPLATE SET GATE C LIVE OPENAI PASS' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C PASS marker missing.' >&2; exit 31; }
+grep -q '"textPolicy": "visual_only"' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C did not prove visual_only text policy.' >&2; exit 30; }
+grep -q '"copyLayerMode": "deterministic_overlay"' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C did not prove deterministic copy-layer mode.' >&2; exit 31; }
+grep -q '"reviewStatus": "pending"' <<<"$LOGS" || { echo '[AIONE][STOP] Gate C output must remain pending human visual review.' >&2; exit 32; }
+grep -q "$PASS_MARKER" <<<"$LOGS" || { echo '[AIONE][STOP] Visual-only Gate C PASS marker missing.' >&2; exit 33; }
 
-echo '[AIONE] 5/5 Technical Gate C passed. STOP before merge.'
+echo '[AIONE] 5/5 Technical visual-only Gate C passed. STOP before merge.'
 printf '\n[AIONE] RESULT\n'
 printf 'Product        : %s\n' "$PRODUCT_CODE"
 printf 'Branch SHA     : %s\n' "$SHORT_SHA"
+printf 'AI text policy : visual_only\n'
+printf 'Copy layer     : deterministic_overlay\n'
 printf 'Main changed   : NO\n'
 printf 'Traffic changed: NO\n'
-printf 'Next action    : human visual review of the generated DERIVED image\n'
-printf '\n[AIONE] GATE C TECHNICAL PASS - HUMAN VISUAL REVIEW REQUIRED BEFORE MERGE\n'
+printf 'Next action    : human visual review of the generated visual-only DERIVED image\n'
+printf '\n[AIONE] GATE C TECHNICAL PASS - VISUAL-ONLY HUMAN REVIEW REQUIRED BEFORE MERGE\n'
