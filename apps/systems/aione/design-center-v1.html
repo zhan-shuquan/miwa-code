@@ -5,14 +5,107 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>美和AIONE一体化工作平台｜设计中心 V1</title>
-  <link rel="stylesheet" href="./css/pages/design-center-v1.css?v=20260913-v1">
-  <style>body{margin:0;background:#f7f8f7}.dc-preview-shell{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid #e3e7e4;background:#fff;font:14px Arial,"Microsoft YaHei",sans-serif;position:sticky;top:0;z-index:10}.dc-preview-shell b{font-size:18px}.dc-preview-shell span{color:#6b7280;font-size:12px}</style>
+  <link rel="stylesheet" href="./css/pages/design-center-v1.css?v=20260913-v2">
+  <style>
+    body{margin:0;background:#f7f8f7}
+    .dc-preview-shell{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid #e3e7e4;background:#fff;font:14px Arial,"Microsoft YaHei",sans-serif;position:sticky;top:0;z-index:10}
+    .dc-preview-shell b{font-size:18px}
+    .dc-preview-shell span{color:#6b7280;font-size:12px}
+    .dc-snapshot-badge{display:none;margin-left:10px;padding:4px 8px;border-radius:999px;background:#eef5ef;color:#31583a;font-size:11px;font-weight:700}
+    body[data-snapshot="true"] .dc-snapshot-badge{display:inline-block}
+  </style>
 </head>
 <body>
-  <header class="dc-preview-shell"><b>AIONE</b><span>设计中心 V1 · 操作验证页</span></header>
+  <header class="dc-preview-shell">
+    <div><b>AIONE</b><span class="dc-snapshot-badge">MH0000002 · 验收快照 · 不写数据库</span></div>
+    <span>设计中心 V1 · 操作验证页</span>
+  </header>
   <main id="app-main-host"></main>
   <script type="module">
-    import { initDesignCenter } from "./js/pages/design-center-v1.js?v=20260913-v1";
+    const params=new URLSearchParams(window.location.search);
+    const snapshotMode=params.get("snapshot")==="1";
+
+    if(snapshotMode){
+      document.body.dataset.snapshot="true";
+      const nativeFetch=window.fetch.bind(window);
+      let snapshotPayload=null;
+
+      async function getSnapshot(){
+        if(snapshotPayload) return snapshotPayload;
+        const response=await nativeFetch("./pages/design-center/mh0000002-preview.json?v=20260913-v1",{cache:"no-store"});
+        if(!response.ok) throw new Error(`Snapshot load failed: ${response.status}`);
+        snapshotPayload=await response.json();
+        return snapshotPayload;
+      }
+
+      function jsonResponse(value,status=200){
+        return new Response(JSON.stringify(value),{status,headers:{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"}});
+      }
+
+      function requestUrl(input){
+        if(typeof input==="string") return input;
+        if(input instanceof URL) return input.toString();
+        return input?.url || "";
+      }
+
+      window.fetch=async function(input,init={}){
+        const url=requestUrl(input);
+        const method=String(init?.method || input?.method || "GET").toUpperCase();
+
+        if(url.includes("/api/v1/design-center/workbench")){
+          return jsonResponse(await getSnapshot());
+        }
+
+        if(/\/api\/v1\/products\/[^/]+\/design\/tag-card/.test(url) && method==="PATCH"){
+          const snapshot=await getSnapshot();
+          const body=JSON.parse(init.body || "{}");
+          const existing=snapshot.workbench.tagCard || {};
+          snapshot.workbench.tagCard={
+            ...existing,
+            id:existing.id || "tagcard_preview_mh0000002",
+            template_preset_id:body.templatePresetId || "dip_miwa_product_tag_card_v1",
+            brand_name_en:body.brandNameEn || "",
+            brand_subline_en:body.brandSublineEn || "",
+            brand_slogan_ja:body.brandSloganJa || "",
+            color_theme:body.colorTheme || "neutral",
+            usage_scopes:Array.isArray(body.usageScopes)?body.usageScopes:["hero","packaging"],
+            slots:Array.isArray(body.slots)?body.slots:[],
+            lifecycle_status:"draft"
+          };
+          return jsonResponse({tagCard:snapshot.workbench.tagCard,previewSnapshot:true});
+        }
+
+        if(/\/api\/v1\/products\/[^/]+\/design\/hero-spec/.test(url) && method==="PATCH"){
+          const snapshot=await getSnapshot();
+          const body=JSON.parse(init.body || "{}");
+          const existing=snapshot.workbench.heroSpec || {};
+          snapshot.workbench.heroSpec={
+            ...existing,
+            id:existing.id || "herospec_preview_mh0000002",
+            tag_card_id:body.tagCardId || snapshot.workbench.tagCard?.id || null,
+            layout_preset_id:body.layoutPresetId || "dip_unified_hero_square_layout_v1",
+            model_preset_id:body.modelPresetId || null,
+            product_display_preset_id:body.productDisplayPresetId || null,
+            model_asset_id:body.modelAssetId || null,
+            product_display_asset_id:body.productDisplayAssetId || null,
+            sku_asset_ids:Array.isArray(body.skuAssetIds)?body.skuAssetIds:[],
+            product_display_mode:body.productDisplayMode || "flat_lay",
+            primary_selling_point_binding:body.primarySellingPointBinding || {},
+            secondary_selling_point_binding:body.secondarySellingPointBinding || {},
+            lifecycle_status:"draft"
+          };
+          return jsonResponse({heroSpec:snapshot.workbench.heroSpec,previewSnapshot:true});
+        }
+
+        if(/\/api\/v1\/products\/[^/]+\/design\/tasks/.test(url) && method==="POST"){
+          return jsonResponse({task:{id:"preview_task_mh0000002",lifecycleStatus:"draft"},previewSnapshot:true});
+        }
+
+        return nativeFetch(input,init);
+      };
+    }
+
+    const { initDesignCenter } = await import("./js/pages/design-center-v1.js?v=20260913-v2");
     const host=document.getElementById("app-main-host");
     const response=await fetch("./pages/design-center/workbench.html?v=20260913-v1",{cache:"no-store"});
     host.innerHTML=await response.text();
