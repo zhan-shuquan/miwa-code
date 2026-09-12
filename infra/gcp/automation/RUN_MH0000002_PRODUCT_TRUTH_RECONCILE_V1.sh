@@ -59,7 +59,7 @@ printf 'Main change   : NO\n\n'
 echo '[AIONE] 1/4 Build isolated branch image'
 gcloud builds submit . --project="$PROJECT_ID" --tag="$IMAGE" --quiet >/dev/null
 
-echo '[AIONE] 2/4 Reconcile missing confirmed Product Truth only'
+echo '[AIONE] 2/4 Reconcile missing/corrected confirmed Product Truth only'
 gcloud run jobs deploy "$JOB" \
   --image="$IMAGE" \
   --region="$REGION" \
@@ -96,12 +96,12 @@ gcloud run jobs deploy "$JOB" \
 run_job_and_logs 'Post-write read-only audit'
 grep -q "$AUDIT_PASS" <<<"$LAST_LOGS" || { echo '[AIONE][STOP] Post-write audit PASS marker missing.' >&2; exit 35; }
 grep -q '"setCount": 6' <<<"$LAST_LOGS" || { echo '[AIONE][STOP] setCount postcondition missing.' >&2; exit 36; }
-grep -q '"supportedSize": "39–45"' <<<"$LAST_LOGS" || { echo '[AIONE][STOP] supportedSize postcondition missing.' >&2; exit 37; }
+grep -q '"supportedSize": "24–27cm"' <<<"$LAST_LOGS" || { echo '[AIONE][STOP] supportedSize postcondition missing.' >&2; exit 37; }
 grep -q '"approvedPrimaryValue": "秋冬男士中筒条纹6双套装"' <<<"$LAST_LOGS" || { echo '[AIONE][STOP] approvedPrimaryValue postcondition missing.' >&2; exit 38; }
 
 echo '[AIONE] 4/4 COMPLETE - continue Design Center real-product flow'
 printf '\n[AIONE] MH0000002 PRODUCT TRUTH READY FOR DESIGN CENTER\n'
-printf 'Database write : YES - only missing confirmed truth keys; conflicting non-null values abort\n'
+printf 'Database write : YES - only missing confirmed truth keys or explicitly allowed correction of prior size mistake\n'
 printf 'Migration      : NO\n'
 printf 'Image generated: NO\n'
 printf 'Main changed   : NO\n'
