@@ -30,7 +30,10 @@ JOB="aione-design-gate-c-human-review"
 ASSET_ID="$(printf '%s' "${AIONE_REVIEW_ASSET_ID:-}" | xargs)"
 OUTCOME="$(printf '%s' "${AIONE_REVIEW_OUTCOME:-}" | tr '[:upper:]' '[:lower:]' | xargs)"
 HUMAN_EMAIL="$(printf '%s' "${AIONE_REVIEW_HUMAN_EMAIL:-}" | tr '[:upper:]' '[:lower:]' | xargs)"
-DETAIL_JSON="${AIONE_REVIEW_DETAIL_JSON:-{}}"
+DETAIL_JSON="${AIONE_REVIEW_DETAIL_JSON-}"
+if [[ -z "$DETAIL_JSON" ]]; then
+  DETAIL_JSON='{}'
+fi
 
 [[ -n "$ASSET_ID" ]] || { echo '[AIONE][STOP] AIONE_REVIEW_ASSET_ID is required.' >&2; exit 22; }
 [[ "$OUTCOME" == "approve" || "$OUTCOME" == "reject" || "$OUTCOME" == "regenerate" ]] || {
