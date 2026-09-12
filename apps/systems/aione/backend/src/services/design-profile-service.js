@@ -2,10 +2,23 @@ function clean(value) {
   return String(value ?? "").trim();
 }
 
+function productTruthText(product = {}) {
+  const data = product.product_data || {};
+  return [
+    data.approvedPrimaryValue,
+    ...(Array.isArray(data.sellingPoints) ? data.sellingPoints : []),
+    data.productType,
+    data.productName,
+    data.targetGender,
+    data.lengthType
+  ].map(clean).filter(Boolean).join(" ");
+}
+
 function isSockCategory(product = {}) {
   const code = clean(product.category_code).toLowerCase();
   const name = clean(product.category_name);
-  return code.includes("sock") || name.includes("袜");
+  const truth = productTruthText(product).toLowerCase();
+  return code.includes("sock") || name.includes("袜") || truth.includes("袜") || truth.includes("sock");
 }
 
 function genderTheme(product = {}) {
@@ -13,11 +26,12 @@ function genderTheme(product = {}) {
   const name = clean(product.category_name);
   const data = product.product_data || {};
   const gender = clean(data.targetGender).toLowerCase();
+  const truth = productTruthText(product).toLowerCase();
 
-  if (code.includes("women") || name.includes("女袜") || gender.includes("女") || gender.includes("women")) {
+  if (code.includes("women") || name.includes("女袜") || gender.includes("女") || gender.includes("women") || truth.includes("女袜")) {
     return "warm-rose";
   }
-  if (code.includes("men") || name.includes("男袜") || gender.includes("男") || gender.includes("men")) {
+  if (code.includes("men") || name.includes("男袜") || gender.includes("男") || gender.includes("men") || truth.includes("男袜")) {
     return "navy-gold";
   }
   return "neutral";
