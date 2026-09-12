@@ -57,3 +57,6 @@ jobs:
 
       - name: Prove mens socks Template Set foundation
         run: node scripts/accept-mens-socks-template-set-foundation-v1.js
+
+      - name: Prove three-page trial DesignTask path
+        run: node scripts/accept-mens-socks-template-set-trial-execution-v1.js
