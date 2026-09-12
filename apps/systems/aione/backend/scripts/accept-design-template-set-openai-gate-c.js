@@ -16,12 +16,13 @@ const TEMPLATE_SET_ID = "dtset_socks_rakuten_base_v1";
 const TEMPLATE_SET_ITEM_ID = "dtsi_socks_rakuten_base_benefit_v1";
 const TEMPLATE_ID = "dtpl_socks_rakuten_benefit_1000x1500_v1";
 const DEFAULT_PROMPT = [
-  "Create exactly one premium Japanese Rakuten ecommerce benefit/feature image using the supplied real product photos as the visual truth.",
+  "Create exactly one premium Japanese Rakuten ecommerce VISUAL-ONLY composition using the supplied real product photos as the visual truth.",
   "The real socks must remain immediately recognizable: preserve the exact visible sock shape, stripe/rib pattern, colors, knit texture and construction from the SOURCE images.",
   "Do not replace the socks with another pattern, another length, another colorway or another product style.",
   "Use a clean Japanese ecommerce composition with generous spacing and a restrained neutral background.",
-  "Do not add unsupported measurements, materials, certifications, warmth claims, performance claims, logos, accessories or invented product details.",
-  "If text is needed for composition, use only neutral labels such as DETAIL or POINT."
+  "CRITICAL TEXT POLICY: render NO words, NO letters, NO numbers, NO labels, NO badges, NO logos, NO captions, NO typography and NO written claims anywhere in the image.",
+  "Do not add measurements, materials, certifications, warmth claims, performance claims, accessories or invented product details.",
+  "This AI stage creates the visual base only. Product copy will be added later by a deterministic AIONE text layer from approved facts."
 ].join("\n");
 
 function fail(message, details = {}) {
@@ -144,6 +145,16 @@ async function proveSelectedTemplatePageAgainstRealProduct() {
         templateId: item.template_id
       });
     }
+    if (item.instruction_defaults?.textPolicy !== "visual_only") {
+      fail("Gate C requires visual_only text policy for the AI stage.", {
+        textPolicy: item.instruction_defaults?.textPolicy || null
+      });
+    }
+    if (item.instruction_defaults?.copyLayerMode !== "deterministic_overlay") {
+      fail("Gate C requires deterministic_overlay for the copy layer.", {
+        copyLayerMode: item.instruction_defaults?.copyLayerMode || null
+      });
+    }
 
     const product = await loadExactlyOneProduct(client);
     const confirmation = await loadCurrentMaterialConfirmation(client, product.id);
@@ -202,6 +213,8 @@ async function proveSelectedTemplatePageAgainstRealProduct() {
       prompt,
       categoryScope,
       channelScope: channelScope || null,
+      textPolicy: item.instruction_defaults.textPolicy,
+      copyLayerMode: item.instruction_defaults.copyLayerMode,
       templateSetId: TEMPLATE_SET_ID,
       templateSetItemId: TEMPLATE_SET_ITEM_ID,
       pageCode: item.page_code,
@@ -306,6 +319,8 @@ async function main() {
     productName: proof.product.name || null,
     categoryScope: proof.categoryScope,
     channelScope: proof.channelScope,
+    textPolicy: proof.textPolicy,
+    copyLayerMode: proof.copyLayerMode,
     templateSetId: proof.templateSetId,
     templateSetItemId: proof.templateSetItemId,
     pageCode: proof.pageCode,
@@ -326,9 +341,9 @@ async function main() {
     gcsObject: output.metadata.gcsObject,
     reviewStatus: output.metadata.review.status,
     mainMergeAllowed: false,
-    nextRequiredAction: "explicit-human-visual-review"
+    nextRequiredAction: "explicit-human-visual-review-for-visual-only-output"
   }, null, 2)}\n`);
-  process.stdout.write("[AIONE] DESIGN TEMPLATE SET GATE C LIVE OPENAI PASS - HUMAN VISUAL REVIEW REQUIRED\n");
+  process.stdout.write("[AIONE] DESIGN TEMPLATE SET GATE C LIVE OPENAI PASS - VISUAL-ONLY HUMAN REVIEW REQUIRED\n");
 }
 
 main().catch((error) => {
