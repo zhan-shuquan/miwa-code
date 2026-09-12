@@ -1,7 +1,5 @@
 import pool from "../db.js";
 
-const KNOWN_NON_MENS_CODES = new Set(["MH0000002"]);
-
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -88,7 +86,6 @@ async function main() {
         productData: row.product_data || {},
         readinessData: row.readiness_data || {},
         metadata: row.metadata || {},
-        knownNonMensProduct: KNOWN_NON_MENS_CODES.has(String(row.product_code || "").trim()),
         autoSelected: false
       };
     });
@@ -99,15 +96,14 @@ async function main() {
       contract: "AIONE Mens Socks Real Product Discovery V1",
       ok: true,
       readOnly: true,
-      productTruthRule: "Discovery never infers men's-socks identity from product name, folder name, or historical comments. Human confirmation is required before Gate C.",
-      knownNonMensProductCodes: [...KNOWN_NON_MENS_CODES],
+      productTruthRule: "Discovery exposes CURRENT structured Product facts and Human Material Confirmation evidence. It does not hardcode historical chat assumptions about Product identity, and Gate C still requires explicit human confirmation.",
       candidateCount: candidates.length,
       candidates
     }, null, 2)}\n`);
 
     for (const row of candidates) {
       process.stdout.write(
-        `[AIONE_MENS_SOCKS_DISCOVERY] ${row.productCode} | ${row.name || ""} | confirmed=${row.materialConfirmedAt || ""} | source=${row.sourceCount} | knownNonMens=${row.knownNonMensProduct}\n`
+        `[AIONE_MENS_SOCKS_DISCOVERY] ${row.productCode} | ${row.name || ""} | confirmed=${row.materialConfirmedAt || ""} | source=${row.sourceCount}\n`
       );
     }
     process.stdout.write("[AIONE] MENS SOCKS REAL PRODUCT DISCOVERY PASS - HUMAN PRODUCT IDENTITY CONFIRMATION REQUIRED\n");
