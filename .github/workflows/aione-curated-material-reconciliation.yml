@@ -22,7 +22,9 @@ jobs:
 
       - name: Check reconciliation script syntax
         working-directory: apps/systems/aione/backend
-        run: node --check scripts/reconcile-current-curated-material-v1.js
+        run: |
+          node --check scripts/reconcile-current-curated-material-v1.js
+          node --check src/services/product-curated-drive-asset-service.js
 
       - name: Check runner syntax
         run: bash -n infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
@@ -30,13 +32,16 @@ jobs:
       - name: Guard reconciliation contract
         run: |
           grep -Fq 'listDriveFolderFiles' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
+          grep -Fq 'formalizeCuratedDriveImage' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
           grep -Fq 'confirmProductMaterial' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
-          grep -Fq 'readyToConfirm' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
-          grep -Fq 'drive_files_unmatched' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
-          grep -Fq 'drive_files_ambiguous' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
+          grep -Fq 'source_provider=$2' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
+          grep -Fq 'google_drive_curated' apps/systems/aione/backend/src/services/product-curated-drive-asset-service.js
+          grep -Fq 'driveFileId' apps/systems/aione/backend/src/services/product-curated-drive-asset-service.js
+          grep -Fq 'currentCurated: true' apps/systems/aione/backend/src/services/product-curated-drive-asset-service.js
+          grep -Fq 'AIONE_PRODUCT_ASSET_BUCKET=${AIONE_PRODUCT_ASSET_BUCKET}' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
           grep -Fq 'BRANCH="main"' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
           grep -Fq 'AIONE_CURATED_RECONCILE_MODE=${MODE}' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
           grep -Fq 'gcloud run jobs executions list' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
           grep -Fq 'gcloud run jobs executions describe' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
           grep -Fq 'Diagnostics above are authoritative; downstream Gate C remains blocked.' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
-          ! grep -Eq 'OPENAI_API_KEY|runOpenAIImage|executeBenefitFeature|DELETE FROM public.product_assets|UPDATE public.product_assets' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
+          ! grep -Eq 'OPENAI_API_KEY|runOpenAIImage|executeBenefitFeature|DELETE FROM public.product_assets|UPDATE public.product_assets' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js apps/systems/aione/backend/src/services/product-curated-drive-asset-service.js

@@ -25,7 +25,6 @@ SHORT_SHA="$(git rev-parse --short=7 HEAD)"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AIONE_ARTIFACT_REPO}/${AIONE_IMAGE_NAME}:curated-material-reconcile-${SHORT_SHA}"
 JOB="aione-curated-material-reconcile"
 
-# First real acceptance Product. The reusable backend script itself is Product/folder agnostic.
 PRODUCT_CODE="MH0000002"
 SKU_FOLDER_ID="1weX5_2WJlRyxbjl_oY31sf5rszllRZPK"
 PRODUCT_FOLDER_ID="1nro_IKn903LpgWl-gmhOciGxgLxHfbTg"
@@ -37,7 +36,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '\n[AIONE] Current Curated Material Reconciliation V1\n'
+printf '\n[AIONE] Current Curated Material Reconciliation V2\n'
 printf 'Mode            : %s\n' "$MODE"
 printf 'Product Code    : %s\n' "$PRODUCT_CODE"
 printf 'Branch          : %s\n' "$BRANCH"
@@ -45,20 +44,20 @@ printf 'AI generation   : NO\n'
 if [[ "$MODE" == "plan" ]]; then
   printf 'Database write  : NO\n\n'
 else
-  printf 'Database write  : Human Material Confirmation only\n\n'
+  printf 'Database write  : CURRENT curated ProductAssets + Human Material Confirmation\n\n'
 fi
 
 echo '[AIONE] 1/3 Build isolated main image'
 gcloud builds submit . --project="$PROJECT_ID" --tag="$IMAGE" --quiet >/dev/null
 
-echo '[AIONE] 2/3 Reconcile live curated Drive folders against CURRENT ProductAsset provenance'
+echo '[AIONE] 2/3 Formalize/reconcile live curated Drive folders as CURRENT ProductAsset SOURCE'
 gcloud run jobs deploy "$JOB" \
   --image="$IMAGE" \
   --region="$REGION" \
   --project="$PROJECT_ID" \
   --service-account="$RUNTIME_SA" \
   --set-cloudsql-instances="$CONNECTION" \
-  --set-env-vars="DB_USER=${AIONE_DB_USER},DB_NAME=${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/${CONNECTION},NODE_ENV=production,AIONE_DRIVE_PROXY_ENABLED=true,AIONE_PRODUCT_CODE=${PRODUCT_CODE},AIONE_CURATED_RECONCILE_MODE=${MODE},AIONE_CURATED_FOLDER_SKU_ID=${SKU_FOLDER_ID},AIONE_CURATED_FOLDER_PRODUCT_ID=${PRODUCT_FOLDER_ID},AIONE_CURATED_FOLDER_REAL_ID=${REAL_FOLDER_ID},AIONE_HUMAN_PERSON_ID=${HUMAN_PERSON_ID}" \
+  --set-env-vars="DB_USER=${AIONE_DB_USER},DB_NAME=${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/${CONNECTION},NODE_ENV=production,AIONE_DRIVE_PROXY_ENABLED=true,AIONE_PRODUCT_ASSET_BUCKET=${AIONE_PRODUCT_ASSET_BUCKET},AIONE_PRODUCT_CODE=${PRODUCT_CODE},AIONE_CURATED_RECONCILE_MODE=${MODE},AIONE_CURATED_FOLDER_SKU_ID=${SKU_FOLDER_ID},AIONE_CURATED_FOLDER_PRODUCT_ID=${PRODUCT_FOLDER_ID},AIONE_CURATED_FOLDER_REAL_ID=${REAL_FOLDER_ID},AIONE_HUMAN_PERSON_ID=${HUMAN_PERSON_ID}" \
   --set-secrets="DB_PASS=${AIONE_DB_PASSWORD_SECRET}:latest" \
   --command=node \
   --args=scripts/reconcile-current-curated-material-v1.js \
@@ -123,7 +122,7 @@ printf 'AI generation : NO\n'
 printf 'Traffic change: NO\n'
 printf 'Main changed  : NO\n'
 if [[ "$MODE" == "plan" ]]; then
-  printf 'Next action   : if mapping is exact, run the same command with apply\n'
+  printf 'Next action   : run apply to formalize current Drive files and confirm the snapshot\n'
 else
   printf 'Next action   : rerun Trial Gate C preflight; only zero blockers may proceed\n'
 fi
