@@ -1,6 +1,6 @@
 # AIONE Men's Socks Rakuten Template Set V1
 
-Status: VALIDATING Product Freeze
+Status: CURRENT Product Freeze
 Date: 2026-09-12
 Applies to: 美和AIONE一体化工作平台 / men's socks / Rakuten product-detail image generation
 
@@ -18,11 +18,21 @@ The historical SOCKONE men's-socks work repeatedly converged on the same 15-page
 
 Historical prompts are evidence of useful page families and layout patterns only. They are not CURRENT Product Truth, they do not authorize old claims, and their product-specific wording/measurements/colors must not be copied into another Product.
 
-User Product Truth confirmed on 2026-09-12:
+Product Truth confirmed on 2026-09-12:
 
-- page 07 may retain the existing detection/report-style layout as a reusable Page Template;
+- the 15-page order is fixed for V1;
+- page 01 uses 1000 x 1200;
+- pages 02/03/04/08/09/10/11/12/13 use 1000 x 1500;
+- pages 05/06/07 use 1000 x 1000;
+- page 07 retains the existing detection/report-style layout as a reusable Page Template;
 - page 14 is an existing fixed image template and does not need product-by-product redesign;
-- page 15 is an existing fixed image template and does not need product-by-product redesign.
+- page 15 is an existing fixed image template and does not need product-by-product redesign;
+- page 03 supports a `need_pain` default mode and a `benefit_2` safe variant when a pain narrative is weak;
+- page 10 supports a `gift_use` default mode and a `variation_only` safe variant when gift positioning is unsuitable;
+- trial-render pages are fixed as 01 + 04 + 12;
+- dynamic pages use visual-only AI plus deterministic copy overlay;
+- fixed pages 14/15 are appended by versioned static asset reference;
+- missing facts must never be fabricated.
 
 The system therefore separates **layout reuse** from **claim/evidence governance**: keeping a report-looking layout does not authorize unsupported test values, certifications, antibacterial/deodorizing claims or third-party laboratory language.
 
@@ -48,7 +58,7 @@ The system must never jump directly from Product selection to unattended 15-page
 
 ## Template Set identity
 
-Working code: `MEN-SOCKS-RAKUTEN-DETAIL-V1`
+Code: `MEN-SOCKS-RAKUTEN-DETAIL-V1`
 
 V1 scope:
 - category: men's socks
@@ -111,20 +121,20 @@ Pages 14 and 15 are exempt from redesign under this visual system because they a
 
 ## 15-page production matrix
 
-The following sequence is the proposed V1 production order. Page number and page code are canonical logical identity; physical filenames are not the identity.
+The following sequence is the locked V1 production order. Page number and page code are canonical logical identity; physical filenames are not the identity.
 
 | No. | Page code | Business purpose | Canvas | Fixed layout | Copy slots | Visual slots | Required facts | Source pools | Rule |
 | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 01 | `MS-HERO-01` | Main visual: immediately identify brand, product set and strongest verified value | `HERO_1000x1200` | top brand/header + left fact/value block + right/center hero wear/product + lower variation/set strip | brand, eyebrow, headline, key fact/value, set count | hero wear/product, set/variation samples | brand, set count, approved primary value, actual variants | 01/02/03 | REQUIRED |
 | 02 | `MS-VALUE-02` | Core value introduction and seasonal/use positioning | `DETAIL_VERTICAL_1000x1500` | top title + dominant lifestyle/product visual + overlay headline region + small supporting badge/summary | section label, headline, 1-3 support lines | lifestyle/wear hero, optional product detail | season/use positioning, approved primary value | 02/03 | REQUIRED |
-| 03 | `MS-NEED-03` | Explain customer need/problem without inventing performance claims | `DETAIL_VERTICAL_1000x1500` | top question/title + upper scenario visual + lower 3 need cards + transition CTA | headline, 3 need statements, transition line | lifestyle/problem scene or neutral sock-use scene | target use/season; no factual performance claim required | 02/03 | REQUIRED |
+| 03 | `MS-NEED-03` | Explain customer need/problem or, when weak, provide a second evidence-safe benefit page | `DETAIL_VERTICAL_1000x1500` | same stable regions: top title + upper scenario/product visual + lower 3 content cards + transition line | headline, 3 statements, transition line | lifestyle/problem scene or product/benefit scene | target use/season or verified second benefit | 02/03 | REQUIRED; mode=`need_pain` default or `benefit_2` safe variant |
 | 04 | `MS-REASON1-04` | First product-specific purchase reason | `DETAIL_VERTICAL_1000x1500` | top `Reason 1` + main benefit + two point modules + main wear/detail visual + small set strip | reason title, benefit headline, point A, point B, evidence note | wear/detail, cuff/detail, optional set strip | one verified primary feature + supporting facts | 01/02/03 | REQUIRED |
 | 05 | `MS-PHYSICAL-DETAIL-05` | Show physical construction such as heel/toe/cuff/knit | `DETAIL_SQUARE_1000x1000` | two stacked point cards; alternating text/image left-right | point A title/body, point B title/body, optional tolerance note | two close-up product details | only visually/evidentially supported construction facts | 02/03 | REQUIRED; unsupported feature text must fall back to neutral detail description |
 | 06 | `MS-REASON2-06` | Second stable reason: thickness/knit/daily usability or another verified category-relevant benefit | `DETAIL_SQUARE_1000x1000` | top `Reason 2` + center wear/product visual + left/right supporting modules | reason title, headline, left point, right point | center product/wear, two icon/detail supports | verified thickness/knit/use facts; no inferred thermal/antibacterial claims | 02/03 | REQUIRED |
 | 07 | `MS-QUALITY-REPORT-07` | Retain the established detection/report-style presentation for quality/evidence communication | `DETAIL_SQUARE_1000x1000` | existing report-style structure: top quality/report title + left chart/check region + right report/evidence region | title, result/inspection items, evidence note, disclosure; score/grade/test fields only when evidenced | product sample, inspection evidence, approved report image/scan when available | exact evidence for every displayed test/result/grade/certification; internal QC facts allowed when explicitly recorded | 02/03 + evidence object | REQUIRED layout retained; report appearance is allowed, unsupported claims are not |
 | 08 | `MS-SET-08` | Explain multi-pair set value, quantity and daily rotation | `DETAIL_VERTICAL_1000x1500` | top `Reason 3` + full-set display + lower set/value card + stack/detail visual | set headline, pair count, usage copy, value points | complete SKU set, stacked/folded set | exact pair count, actual variants | 01/02 | REQUIRED |
 | 09 | `MS-LENGTH-STYLE-09` | Explain sock length and how it coordinates with trousers/shoes | `DETAIL_VERTICAL_1000x1500` | top `Reason 4` + left length diagram + right/lower styling visual | length headline, style explanation, measurement/name if approved | lower-leg styling, length diagram/product silhouette | sock length type; measurement only if human-confirmed | 02/03 | REQUIRED |
-| 10 | `MS-VARIATION-GIFT-10` | Show actual variations and optional gift/use-scene positioning | `DETAIL_VERTICAL_1000x1500` | top gift/use-scene block + middle variations grid + lower set summary/detail | use/gift headline, variation label(s), set summary, disclaimer | actual variants, set visual, lifestyle/gift-neutral scene | actual color/pattern variants, pair count | 01/02/03 | REQUIRED; no fake gift box/accessory; page 08 owns quantity value, page 10 owns variation/gift positioning |
+| 10 | `MS-VARIATION-GIFT-10` | Show actual variations and, when suitable, gift/use-scene positioning | `DETAIL_VERTICAL_1000x1500` | stable variation regions + optional gift/use-scene region + lower set summary/detail | use/gift headline when enabled, variation labels, set summary, disclaimer | actual variants, set visual, optional lifestyle/gift-neutral scene | actual color/pattern variants, pair count | 01/02/03 | REQUIRED; mode=`gift_use` default or `variation_only` safe variant; no fake gift box/accessory |
 | 11 | `MS-SPEC-11` | Structured Product Specification | `DETAIL_VERTICAL_1000x1500` | top title + product/set visual + fact cards/grid + bottom summary | product code/SKU if approved, spec labels/values, summary | set/hero product visual; icons are system assets | explicit Product facts only | 01/02 | REQUIRED; any missing critical spec blocks the field rather than inventing |
 | 12 | `MS-SIZE-12` | Size and human-confirmed flat measurements | `DETAIL_VERTICAL_1000x1500` | top supported size + large annotated flat-lay + measurement table + optional thickness/stretch + notes | size range, measurement labels/values, notes | flat-lay measurement image, thickness/detail image | supported size, each displayed measurement, unit, measurement method | 02/03 | REQUIRED; high-risk fact page; no AI-inferred dimensions |
 | 13 | `MS-MATERIAL-13` | Material identity and visible fabric/knit explanation | `DETAIL_VERTICAL_1000x1500` | top title + material identity + detail photos + material characteristics + notes | material name/composition if verified, characteristics, caveats | fabric close-up, knit/cuff/product details | supplier/human-verified material facts | 02/03 | REQUIRED; composition percentages only when explicit evidence exists |
@@ -215,7 +225,7 @@ AIONE must choose one of four deterministic outcomes; it must never invent:
 
 1. `render` - required fact exists and is approved.
 2. `collapse_optional_slot` - optional fact/visual missing and layout supports removal.
-3. `use_evidence_safe_mode` - page 07 retains its report-style layout while removing unsupported report/test claims.
+3. `use_safe_variant` - page 03 may use `benefit_2`, page 10 may use `variation_only`, and page 07 may use `evidence_safe`.
 4. `block_for_human` - required fact missing, such as page 12 measurements.
 
 Pages 14 and 15 are resolved by static asset version; missing static assets block the final 15-page package rather than trigger redesign.
@@ -246,38 +256,48 @@ After trial approval:
 - pages 14/15 use already-approved fixed asset versions and are reviewed when their shared asset version changes, not regenerated per Product.
 - only a complete package with approved dynamic outputs and valid fixed-page asset versions may become FINAL/listing assets.
 
-## What remains OPEN before CURRENT Product Freeze
+## Locked V1 decisions
 
-The 15-page structure, order, page 07 report-layout retention, pages 14/15 fixed-page handling, trial pages and high-level slot responsibilities are now defined in this VALIDATING draft.
+The following are CURRENT for V1:
 
-The remaining Product Freeze decisions are deliberately narrower:
-
-- approve or revise the proposed 15-page sequence itself;
-- approve page 01 as 1000x1200 rather than the historical 1000x1000 layout;
-- approve the category visual language for dynamic pages (warm white/soft gray + navy + restrained gold);
-- decide whether page 03 `need/pain` is mandatory for every men's-socks set or may be replaced by a second benefit page for products where a pain narrative is weak;
-- decide whether page 10 gift/use-scene positioning is mandatory or supports a `variation_only` safe variant.
-
-The following are no longer OPEN:
-
-- page 07 detection/report-style template is retained, with evidence governance;
+- 15-page sequence and page codes are fixed;
+- page 01 is 1000 x 1200;
+- pages 02/03/04/08/09/10/11/12/13 are 1000 x 1500;
+- pages 05/06/07 are 1000 x 1000;
+- page 03 defaults to `need_pain` and may safely switch to `benefit_2`;
+- page 07 detection/report-style template is retained with evidence governance;
+- page 10 defaults to `gift_use` and may safely switch to `variation_only`;
 - page 14 existing image template is reused as a fixed shared asset;
 - page 15 existing image template is reused as a fixed shared asset;
-- pages 14/15 are not redesigned or regenerated per Product.
+- pages 14/15 are not redesigned or regenerated per Product;
+- trial pages are fixed as 01 + 04 + 12;
+- dynamic visual language is warm white/soft gray + deep navy + restrained gold;
+- missing facts never authorize inferred values or unsupported claims.
 
 Exact pixel coordinates, font point sizes and rendering implementation remain Technical Design, not Product Truth.
 
-## Product Freeze rule before code
+## Technical Design handoff
 
-Do not implement the production 15-page Template Set migration until the remaining OPEN Product decisions immediately above are explicitly approved.
+The next phase must implement this Product Freeze without altering the locked Product Truth.
 
-After approval, change this document from `VALIDATING Product Freeze` to `CURRENT Product Freeze`, then implement through:
+Technical Design must define:
 
-`Product Freeze -> Technical Design -> branch -> automated checks -> preview/trial evidence -> review -> merge main -> canonical CURRENT deploy`.
+- DesignTemplateSet row and ordered item model for all 15 positions;
+- dynamic Page Template definitions for pages 01-13;
+- static-page asset registry and version references for pages 14-15;
+- page 03 / page 07 / page 10 variant-selection contracts;
+- semantic asset-role mapping from the three curated source folders;
+- deterministic copy-slot geometry and typography tokens;
+- page 12 numeric-fact validation;
+- trial-render gate state transition for pages 01/04/12;
+- final 15-page package manifest and provenance;
+- migration, contract tests, controlled DB checks and Gate C acceptance plan.
+
+No production migration or renderer expansion may reinterpret the Product Freeze during implementation. Any required Product-level change returns to Product Freeze first.
 
 ## Acceptance criteria for V1 Product Freeze
 
-This document can change to `CURRENT Product Freeze` only when:
+This CURRENT Product Freeze is valid because:
 
 - all 15 production page codes and order are accepted;
 - canvas profile for dynamic pages and static-asset handling for pages 14/15 are accepted;
