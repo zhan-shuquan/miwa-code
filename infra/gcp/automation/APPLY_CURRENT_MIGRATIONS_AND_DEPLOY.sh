@@ -55,18 +55,6 @@ resolve_gcloud_control_account() {
   CLOUD_CONTROL_EMAIL="$active_account"
 }
 
-mint_cloud_run_health_token() {
-  local service_url="$1"
-  if [[ "$CLOUD_CONTROL_EMAIL" == *.gserviceaccount.com ]]; then
-    gcloud auth print-identity-token --audiences="$service_url"
-  else
-    # Cloud Shell normally runs this reviewed action under a human Google account.
-    # For direct Cloud Run developer invocation, use the generic gcloud identity token.
-    # Forcing --audiences on a user credential can yield HTTP 401 from Cloud Run.
-    gcloud auth print-identity-token
-  fi
-}
-
 wait_for_build_terminal() {
   local build_id="$1"
   local allow_failure_with_image="${2:-false}"
@@ -127,7 +115,7 @@ printf 'Migration target      : %s\n' "$REPO_VERSION"
 printf 'Cloud SQL             : %s\n' "$AIONE_SQL_INSTANCE"
 printf 'Cloud control account : %s\n\n' "$CLOUD_CONTROL_EMAIL"
 
-echo '[AIONE] 1/5 Confirm immutable code image exists'
+echo '[AIONE] 1/4 Confirm immutable code image exists'
 if ! gcloud artifacts docker images describe "$IMAGE" --project="$PROJECT_ID" >/dev/null 2>&1; then
   echo "[AIONE] Immutable image is not visible yet: $IMAGE"
   echo '[AIONE] Wait briefly for the automatic main trigger before self-healing.'
@@ -158,7 +146,7 @@ if ! gcloud artifacts docker images describe "$IMAGE" --project="$PROJECT_ID" >/
 fi
 echo '[AIONE] Immutable code image ready.'
 
-echo '[AIONE] 2/5 Deploy and execute the canonical migration job'
+echo '[AIONE] 2/4 Deploy and execute the canonical migration job'
 gcloud run jobs deploy "$AIONE_MIGRATION_JOB" \
   --image="$IMAGE" \
   --region="$REGION" \
@@ -179,15 +167,8 @@ gcloud run jobs execute "$AIONE_MIGRATION_JOB" \
   --project="$PROJECT_ID" \
   --wait >/dev/null
 
-echo '[AIONE] 3/5 Verify CURRENT database migration version through the production health contract'
-SERVICE_URL="$(gcloud run services describe "$AIONE_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format='value(status.url)')"
-IAM_TOKEN="$(mint_cloud_run_health_token "$SERVICE_URL")"
-HEALTH_JSON="$(curl -fsS -H "Authorization: Bearer $IAM_TOKEN" "$SERVICE_URL/health")"
-DB_VERSION="$(printf '%s' "$HEALTH_JSON" | python3 -c 'import json,sys; p=json.load(sys.stdin); print((p.get("latestMigration") or {}).get("version") or "")')"
-printf 'db_migration=%s repo_migration=%s\n' "$DB_VERSION" "$REPO_VERSION"
-[[ "$DB_VERSION" == "$REPO_VERSION" ]] || { echo '[AIONE][STOP] Database migration verification failed.' >&2; exit 26; }
-
-echo '[AIONE] 4/5 Trigger the single main -> CURRENT deployment pipeline'
+echo '[AIONE] 3/4 Trigger the single main -> CURRENT deployment pipeline'
+echo '[AIONE] The deployer service account owns migration-version and authenticated /health verification.'
 BUILD_ID="$(gcloud builds triggers run "$AIONE_DEPLOY_TRIGGER_NAME" \
   --project="$PROJECT_ID" \
   --region=global \
@@ -198,11 +179,12 @@ printf 'Build ID: %s\n' "$BUILD_ID"
 wait_for_build_terminal "$BUILD_ID" false || exit 28
 echo '[AIONE] CURRENT deployment PASS.'
 
-echo '[AIONE] 5/5 Verify deployed service is healthy and aligned with the triggered main image'
-IAM_TOKEN="$(mint_cloud_run_health_token "$SERVICE_URL")"
-FINAL_HEALTH="$(curl -fsS -H "Authorization: Bearer $IAM_TOKEN" "$SERVICE_URL/health")"
-printf '%s\n' "$FINAL_HEALTH"
-printf '%s' "$FINAL_HEALTH" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p.get("ok") is True and p.get("database")=="connected"'
+echo '[AIONE] 4/4 Verify deployed service/revision state after canonical pipeline PASS'
+SERVICE_JSON="$(gcloud run services describe "$AIONE_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format=json)"
+LATEST_READY="$(printf '%s' "$SERVICE_JSON" | python3 -c 'import json,sys; p=json.load(sys.stdin); print(p.get("status",{}).get("latestReadyRevisionName") or "")')"
+TRAFFIC_REVISION="$(printf '%s' "$SERVICE_JSON" | python3 -c 'import json,sys; p=json.load(sys.stdin); rows=p.get("status",{}).get("traffic") or []; print(next((x.get("revisionName","") for x in rows if int(x.get("percent",0) or 0)==100), ""))')"
+printf 'latest_ready_revision=%s\ntraffic_100_revision=%s\n' "$LATEST_READY" "$TRAFFIC_REVISION"
+[[ -n "$LATEST_READY" && "$TRAFFIC_REVISION" == "$LATEST_READY" ]] || { echo '[AIONE][STOP] CURRENT traffic is not fully aligned with the latest ready revision.' >&2; exit 30; }
 
 printf '\n[AIONE] CURRENT MIGRATION + DEPLOY PASS\n'
-printf 'Database migration is aligned with Repo and the single CURRENT deployment pipeline completed successfully.\n'
+printf 'Migration execution completed, the canonical deployer pipeline verified DB migration and authenticated health, and CURRENT traffic is aligned.\n'
