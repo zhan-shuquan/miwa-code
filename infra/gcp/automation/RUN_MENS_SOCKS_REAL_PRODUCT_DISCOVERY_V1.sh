@@ -8,7 +8,7 @@ cd "$REPO_ROOT"
 source infra/gcp/cloud-shell/CURRENT_BASELINE.sh
 assert_aione_current_baseline
 
-BRANCH="accept/mens-socks-real-product-trial-v1"
+BRANCH="main"
 CURRENT_BRANCH="$(git branch --show-current)"
 [[ "$CURRENT_BRANCH" == "$BRANCH" ]] || { echo "[AIONE][STOP] Discovery must run from $BRANCH, current=$CURRENT_BRANCH" >&2; exit 20; }
 [[ -z "$(git status --porcelain)" ]] || { echo '[AIONE][STOP] Repo must be clean before discovery.' >&2; exit 21; }
@@ -35,7 +35,7 @@ printf 'Mode               : read-only discovery\n'
 printf 'AI generation      : NO\n'
 printf 'Main traffic change: NO\n\n'
 
-echo '[AIONE] 1/3 Build isolated branch image'
+echo '[AIONE] 1/3 Build isolated main image for read-only discovery'
 gcloud builds submit . --project="$PROJECT_ID" --tag="$IMAGE" --quiet >/dev/null
 
 echo '[AIONE] 2/3 Run read-only discovery against CURRENT database'
