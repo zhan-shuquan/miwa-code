@@ -1,0 +1,39 @@
+name: AIONE Curated Material Reconciliation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  curated-material-reconciliation-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check reconciliation script syntax
+        working-directory: apps/systems/aione/backend
+        run: node --check scripts/reconcile-current-curated-material-v1.js
+
+      - name: Check runner syntax
+        run: bash -n infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
+
+      - name: Guard reconciliation contract
+        run: |
+          grep -Fq 'listDriveFolderFiles' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
+          grep -Fq 'confirmProductMaterial' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
+          grep -Fq 'readyToConfirm' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
+          grep -Fq 'drive_files_unmatched' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
+          grep -Fq 'drive_files_ambiguous' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
+          grep -Fq 'BRANCH="main"' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
+          grep -Fq 'AIONE_CURATED_RECONCILE_MODE=${MODE}' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
+          ! grep -Eq 'OPENAI_API_KEY|runOpenAIImage|executeBenefitFeature|DELETE FROM public.product_assets|UPDATE public.product_assets' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
