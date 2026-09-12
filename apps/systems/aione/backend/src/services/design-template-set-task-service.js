@@ -3,6 +3,7 @@ import {
   assertTemplateSetItemExecutable,
   getDesignTemplateSetItem
 } from "./design-template-set-service.js";
+import { validateTemplatePageInputs } from "./design-template-input-policy-service.js";
 
 function cleanText(value, maxLength = 4000) {
   return String(value ?? "").trim().slice(0, maxLength);
@@ -31,6 +32,13 @@ export async function createDesignTaskFromTemplateSetPage(client, {
     item.instruction_defaults,
     instructionSnapshot
   );
+
+  await validateTemplatePageInputs(client, item, {
+    productId: normalizedProductId,
+    inputAssetIds,
+    inputFactSnapshot,
+    instructionSnapshot: mergedInstructions
+  });
 
   const created = await createDesignTask(client, {
     productId: normalizedProductId,
