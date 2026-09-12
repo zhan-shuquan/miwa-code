@@ -17,7 +17,7 @@ This is not a second template engine. Each template-set page references an exist
 
 For the first validator:
 
-`Product -> confirmed curated material -> choose Template Set -> choose one Template Page -> bind confirmed ProductAssets + facts -> create DesignTask -> human approval -> execute one image -> human visual review`
+`Product -> confirmed curated material -> choose Template Set -> choose one Template Page -> human-select SOURCE assets -> validate page facts/claims/assets -> create DesignTask -> human approval -> execute one image -> human visual review`
 
 Batch generation is explicitly disabled until the first real one-page acceptance succeeds.
 
@@ -94,7 +94,58 @@ The first persisted set is intentionally one page only:
 
 The purpose is to validate architecture and product fidelity, not to claim that this one page is the final men's-sock template set.
 
-## 6. Verification gates
+## 6. Template Page input policy
+
+Each Template Page owns the minimum policy needed to prevent AI from inventing product truth.
+
+### 6.1 Field whitelist
+
+`field_bindings.allowedFacts` defines facts that may enter this page. Unknown page-level facts are rejected before a DesignTask is created.
+
+`field_bindings.requiredFacts` defines facts required by this page.
+
+The first validator allows only the small product/design scope needed for the socks benefit page, including category, material, size, colors, selling points and explicitly approved claims.
+
+### 6.2 Restricted claims
+
+Claims with compliance or evidence risk are never inferred merely from an image or category.
+
+The first validator treats terms such as the following as restricted examples:
+
+- 防臭 / 消臭
+- 抗菌
+- 発熱 / 吸湿発熱 / 遠赤外線
+- 純綿 / 100%綿
+- オーガニックコットン
+- 羊毛100%
+- 医療用
+- 着圧 / 血行促進
+
+If a restricted claim appears in page instructions or selling points, it must also be present in the human-confirmed `approvedClaims` fact. Otherwise task creation is rejected.
+
+This is a page guardrail, not a replacement for formal product evidence. Future evidence objects may further strengthen the approval source.
+
+### 6.3 Human-selected SOURCE assets
+
+The first validator page accepts human-selected SOURCE images only from:
+
+- `02_产品图`
+- `03_实拍图`
+
+The physical Drive structure remains the locked three-folder contract. A page may narrow which of those folders it accepts without creating more folders.
+
+AIONE rejects a selected asset before task creation when it:
+
+- does not belong to the Product;
+- is not a canonical `SOURCE` asset;
+- is not an image;
+- comes from a folder not allowed by the selected Template Page.
+
+### 6.4 Single-page-first rule
+
+The current validator remains one page. One output must pass human visual review before expansion to a larger socks template set or multi-page generation.
+
+## 7. Verification gates
 
 ### Gate A — schema and contract
 
@@ -106,31 +157,54 @@ Must prove:
 - the page references an active existing DesignTemplate;
 - template-set task binding columns exist on DesignTask;
 - CURRENT three-folder material contract is not changed;
-- backend static checks pass.
+- backend static checks pass;
+- page fact/claim policy unit checks pass.
 
 ### Gate B — real task creation
 
-Using one CURRENT real Product and its human-confirmed ProductAssets:
+Using one controlled or CURRENT Product and its human-confirmed ProductAssets:
 
 - operator explicitly selects the template set/page;
+- page input policy validates selected assets and facts;
 - task is created from that selected page;
 - frozen task snapshot records template-set ID/version/page identity;
 - selected assets remain a subset of the confirmed material snapshot;
-- no AI image is generated yet.
+- idempotent task creation is preserved;
+- no AI image is required for Gate B.
 
 ### Gate C — one real AI output
 
 Only after Gate A and B pass:
 
-- execute one approved DesignTask;
-- use the selected real ProductAssets as visual truth;
+- execute one real AI image flow using the selected real ProductAssets as visual truth;
 - output one DERIVED ProductAsset;
 - visually compare against the real product;
 - record approve/reject/regenerate outcome.
 
-If the output materially changes product color, stripe/pattern, length, structure or other visible identity, the validation fails even if the API call technically succeeds.
+Technical generation success and business visual acceptance are separate results.
 
-## 7. Deferred until Gate C passes
+If the output materially changes product color, stripe/pattern, length, structure or other visible identity, or introduces an unsupported product claim, the business visual validation fails even if the AI API call and asset persistence succeed.
+
+## 8. Current validation finding
+
+The first live visual sample proves that the AI image path can generate an ecommerce image, but the sample is **not accepted as a formal product image**.
+
+Observed business-risk pattern:
+
+- AI may reconstruct the product too freely instead of preserving the exact real Product identity;
+- AI may introduce unsupported claims such as `防臭`, `純綿` or similar marketing statements;
+- therefore technical generation success alone must never promote an output to approved/formal status.
+
+Accordingly, the minimum architecture is now locked around four constraints:
+
+1. selectable Template Set / Template Page;
+2. human-selected assets within the locked three-folder material contract;
+3. page-level fact whitelist plus restricted-claim approval;
+4. one-page-first generation followed by explicit human visual review.
+
+This finding does **not** authorize 15-page batch generation yet.
+
+## 9. Deferred until business Gate C passes
 
 Do not implement yet:
 
@@ -142,10 +216,10 @@ Do not implement yet:
 - new material folder levels;
 - parallel media/template/task subsystems.
 
-## 8. Governance
+## 10. Governance
 
 This extension is a **validation candidate**, not yet a merged CURRENT baseline.
 
-Only after branch checks, controlled database preflight and real acceptance should it be eligible for merge into `main`.
+Only after branch checks, controlled database preflight and real business acceptance should it be eligible for merge into `main`.
 
 If validation fails, fix or discard this extension on the branch; do not weaken ProductAsset truth, human confirmation, review or the three-folder material contract to force a pass.
