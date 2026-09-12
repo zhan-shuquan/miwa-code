@@ -3,14 +3,25 @@
 Status: CURRENT engineering rule
 Date: 2026-09-12
 
-For AI design, the raw SOURCE ProductAsset pool is historical provenance and is not itself the CURRENT curated material set.
+For AI design, the raw 1688 SOURCE ProductAsset pool is historical provenance and is not itself the CURRENT curated material set.
 
-CURRENT curated material is the explicit Human Material Confirmation snapshot (`product_material_confirmations.asset_ids`) reconciled against the files currently present in the Product's three curated Google Drive folders:
+The operator-facing CURRENT material source is the Product's three curated Google Drive folders:
 
 - `01_SKU图`
 - `02_产品图`
 - `03_实拍图`
 
-Files removed by the human operator from the curated Drive folders must leave the CURRENT confirmation on the next reconciliation. Historical raw SOURCE ProductAsset records may remain for provenance; they must not be treated as current AI design inputs merely because they still exist and are unarchived.
+Files that remain in these folders after human screening are the exact CURRENT material selection. AIONE formalizes each current Drive image as its own SOURCE ProductAsset with stable Drive provenance (`source_provider=google_drive_curated`, `driveFileId`, folder, filename, hash, and canonical GCS copy), then records those asset IDs in the CURRENT Human Material Confirmation snapshot.
 
-Before Gate C generation, Drive CURRENT files and the Human Material Confirmation snapshot must reconcile one-to-one. Design input assets must be a subset of that CURRENT confirmation.
+The historical 1688 SOURCE records remain immutable provenance. They are not required to match the curated Drive filenames one-to-one and are not AI-design inputs unless they are explicitly represented in the CURRENT curated Drive selection.
+
+If the human operator removes a file from the three curated Drive folders, that file leaves the CURRENT selection on the next reconciliation. Its historical ProductAsset/GCS provenance may remain for audit and traceability.
+
+Before Gate C generation:
+
+1. the current Drive folders must contain at least one `01_SKU图` image and at least one `02_产品图` image;
+2. every current Drive image must be formalized as a `google_drive_curated` SOURCE ProductAsset;
+3. the Human Material Confirmation must contain exactly the current curated asset IDs;
+4. DesignTask input assets must be a subset of that CURRENT confirmation.
+
+This rule intentionally separates historical source provenance from the human-curated CURRENT working set.
