@@ -36,4 +36,7 @@ jobs:
           grep -Fq 'drive_files_ambiguous' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js
           grep -Fq 'BRANCH="main"' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
           grep -Fq 'AIONE_CURATED_RECONCILE_MODE=${MODE}' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
+          grep -Fq 'gcloud run jobs executions list' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
+          grep -Fq 'gcloud run jobs executions describe' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
+          grep -Fq 'Diagnostics above are authoritative; downstream Gate C remains blocked.' infra/gcp/automation/RUN_CURRENT_CURATED_MATERIAL_RECONCILIATION_V1.sh
           ! grep -Eq 'OPENAI_API_KEY|runOpenAIImage|executeBenefitFeature|DELETE FROM public.product_assets|UPDATE public.product_assets' apps/systems/aione/backend/scripts/reconcile-current-curated-material-v1.js

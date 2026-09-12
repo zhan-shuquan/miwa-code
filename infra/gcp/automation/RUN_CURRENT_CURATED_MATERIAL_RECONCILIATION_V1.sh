@@ -68,15 +68,37 @@ gcloud run jobs deploy "$JOB" \
   --quiet >/dev/null
 
 set +e
-EXECUTION="$(gcloud run jobs execute "$JOB" --region="$REGION" --project="$PROJECT_ID" --wait --format='value(metadata.name)')"
+EXECUTE_OUTPUT="$(gcloud run jobs execute "$JOB" --region="$REGION" --project="$PROJECT_ID" --wait --format='value(metadata.name)' 2>&1)"
 EXECUTE_STATUS=$?
 set -e
+
+EXECUTION="$(printf '%s\n' "$EXECUTE_OUTPUT" | awk '/^aione-curated-material-reconcile-[a-z0-9-]+$/ { print; exit }')"
+if [[ -z "$EXECUTION" ]]; then
+  EXECUTION="$(gcloud run jobs executions list \
+    --job="$JOB" \
+    --region="$REGION" \
+    --project="$PROJECT_ID" \
+    --limit=1 \
+    --sort-by='~metadata.creationTimestamp' \
+    --format='value(metadata.name)' 2>/dev/null || true)"
+fi
+
+printf '\n[AIONE] Cloud Run execution command output\n%s\n' "$EXECUTE_OUTPUT"
+
+if [[ -n "$EXECUTION" ]]; then
+  printf '\n[AIONE] Execution\n%s\n' "$EXECUTION"
+  printf '\n[AIONE] Execution status summary\n'
+  gcloud run jobs executions describe "$EXECUTION" \
+    --region="$REGION" \
+    --project="$PROJECT_ID" \
+    --format='yaml(metadata.name,status.conditions,status.failedCount,status.succeededCount,status.completionTime)' 2>&1 || true
+fi
 
 LOGS=""
 if [[ -n "$EXECUTION" ]]; then
   for i in $(seq 1 24); do
     LOGS="$(gcloud beta run jobs executions logs read "$EXECUTION" --region="$REGION" --project="$PROJECT_ID" --limit=3000 2>&1 || true)"
-    if grep -q 'CURATED MATERIAL RECONCILIATION' <<<"$LOGS" || grep -q '"ok": false' <<<"$LOGS"; then
+    if grep -q 'CURATED MATERIAL RECONCILIATION' <<<"$LOGS" || grep -q '"ok": false' <<<"$LOGS" || [[ -n "$LOGS" && "$EXECUTE_STATUS" -ne 0 ]]; then
       break
     fi
     sleep 5
@@ -85,7 +107,7 @@ fi
 printf '\n[AIONE] Curated material authoritative logs\n%s\n' "$LOGS"
 
 if [[ "$EXECUTE_STATUS" -ne 0 ]]; then
-  echo '[AIONE][STOP] Reconciliation job did not complete successfully.' >&2
+  echo '[AIONE][STOP] Reconciliation job did not complete successfully. Diagnostics above are authoritative; downstream Gate C remains blocked.' >&2
   exit "$EXECUTE_STATUS"
 fi
 
