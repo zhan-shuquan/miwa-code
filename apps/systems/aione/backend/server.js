@@ -56,10 +56,40 @@ app.get("/health", async (req, res) => {
   }
 });
 
+function cookieValue(header, name) {
+  const prefix = `${name}=`;
+  for (const part of String(header || "").split(";")) {
+    const item = part.trim();
+    if (item.startsWith(prefix)) return decodeURIComponent(item.slice(prefix.length));
+  }
+  return "";
+}
+
 // Branch Preview only. Production leaves this disabled, so these files are not served.
 const designCenterPreviewEnabled = String(process.env.AIONE_ENABLE_DESIGN_CENTER_PREVIEW || "false").toLowerCase() === "true";
 if (designCenterPreviewEnabled) {
   const previewRoot = String(process.env.AIONE_DESIGN_CENTER_PREVIEW_ROOT || "/app/design-center-preview").trim();
+  const previewAccessToken = String(process.env.AIONE_PREVIEW_ACCESS_TOKEN || "").trim();
+
+  // Direct branch preview may be exposed through an isolated Cloud Run service.
+  // The service can be IAM-public only when this application token gate is configured.
+  // A valid URL token establishes a short-lived secure same-origin cookie so subsequent
+  // static assets and API calls do not need to carry the token in every request.
+  if (previewAccessToken) {
+    app.use((req, res, next) => {
+      const supplied = String(req.query?.preview_key || "").trim();
+      const cookie = cookieValue(req.header("cookie"), "aione_preview_access");
+      const accepted = supplied === previewAccessToken || cookie === previewAccessToken;
+      if (!accepted) {
+        return res.status(401).type("text/plain").send("AIONE Design Center preview access required.");
+      }
+      if (supplied === previewAccessToken && cookie !== previewAccessToken) {
+        res.append("Set-Cookie", `aione_preview_access=${encodeURIComponent(previewAccessToken)}; Path=/; Max-Age=21600; HttpOnly; Secure; SameSite=Lax`);
+      }
+      next();
+    });
+  }
+
   app.get("/", (_req, res) => res.redirect("/design-center-v1.html?product=MH0000002"));
   app.use(express.static(previewRoot, { index: false, fallthrough: true, maxAge: 0 }));
 }
