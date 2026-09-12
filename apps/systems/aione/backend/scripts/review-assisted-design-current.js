@@ -1,5 +1,6 @@
 import pool, { withTransaction } from "../db.js";
 import { reviewDesignTask } from "../src/services/design-task-service.js";
+import { recordBusinessEvent } from "../src/services/event-service.js";
 
 const TRANSITIONAL_ADMIN_EMAIL = "info@miwa-happyhouse.com";
 
@@ -52,6 +53,12 @@ async function reviewDerivedAsset(assetId, outcome, detail, personId) {
     regenerate: "regenerate_requested"
   };
   const reviewStatus = statusMap[outcome];
+  const context = {
+    personId,
+    actorKind: "human",
+    sourceSystem: "aione-assisted-design-explicit-review-v1"
+  };
+
   return withTransaction(async (client) => {
     const assetResult = await client.query(
       `SELECT * FROM public.product_assets
@@ -62,7 +69,13 @@ async function reviewDerivedAsset(assetId, outcome, detail, personId) {
     if (assetResult.rowCount !== 1) fail("Review ProductAsset was not found.", { assetId });
     const asset = assetResult.rows[0];
     const metadata = asset.metadata || {};
-    if (metadata.layer !== "DERIVED") fail("Only DERIVED ProductAssets can be reviewed through asset review mode.", { assetId, layer: metadata.layer || null });
+    if (metadata.layer !== "DERIVED") {
+      fail("Only DERIVED ProductAssets can be reviewed through asset review mode.", {
+        assetId,
+        layer: metadata.layer || null
+      });
+    }
+
     const currentReview = metadata.review && typeof metadata.review === "object" && !Array.isArray(metadata.review)
       ? metadata.review
       : {};
@@ -73,6 +86,7 @@ async function reviewDerivedAsset(assetId, outcome, detail, personId) {
         requestedStatus: reviewStatus
       });
     }
+
     const reviewedAt = new Date().toISOString();
     const nextMetadata = {
       ...metadata,
@@ -84,6 +98,7 @@ async function reviewDerivedAsset(assetId, outcome, detail, personId) {
         detail: detail || {}
       }
     };
+
     const updated = await client.query(
       `UPDATE public.product_assets
           SET metadata=$2::jsonb,
@@ -94,23 +109,21 @@ async function reviewDerivedAsset(assetId, outcome, detail, personId) {
         RETURNING *`,
       [assetId, JSON.stringify(nextMetadata), personId]
     );
+
     const eventType = reviewStatus === "approved"
       ? "product.design_output_asset_approved"
       : reviewStatus === "rejected"
         ? "product.design_output_asset_rejected"
         : "product.design_output_asset_regeneration_requested";
-    await client.query(
-      `INSERT INTO public.business_events
-        (id, event_type, object_type, object_id, actor_person_id, actor_kind, source_system, payload)
-       VALUES ($1,$2,'product',$3,$4,'human','aione-assisted-design-explicit-review-v1',$5::jsonb)`,
-      [
-        `evt_${crypto.randomUUID()}`,
-        eventType,
-        asset.product_id,
-        personId,
-        JSON.stringify({ assetId, reviewStatus, detail: detail || {} })
-      ]
-    );
+
+    await recordBusinessEvent(client, {
+      eventType,
+      objectType: "product",
+      objectId: asset.product_id,
+      context,
+      payload: { assetId, reviewStatus, detail: detail || {} }
+    });
+
     return updated.rows[0];
   });
 }
@@ -122,7 +135,9 @@ async function main() {
   const email = normalizeEmail(process.env.AIONE_REVIEW_HUMAN_EMAIL);
   if (!taskId && !assetId) fail("AIONE_REVIEW_TASK_ID or AIONE_REVIEW_ASSET_ID is required.");
   if (taskId && assetId) fail("Review exactly one target: task or DERIVED ProductAsset.");
-  if (!new Set(["approve", "reject", "regenerate"]).has(outcome)) fail("AIONE_REVIEW_OUTCOME must be approve, reject or regenerate.");
+  if (!new Set(["approve", "reject", "regenerate"]).has(outcome)) {
+    fail("AIONE_REVIEW_OUTCOME must be approve, reject or regenerate.");
+  }
 
   const detail = parseReviewDetail();
   const personId = await resolveHumanActor(email);
@@ -161,7 +176,12 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(JSON.stringify({ ok: false, error: error.code || "assisted_design_review_failed", message: error.message, details: error.details || undefined }, null, 2));
+  console.error(JSON.stringify({
+    ok: false,
+    error: error.code || "assisted_design_review_failed",
+    message: error.message,
+    details: error.details || undefined
+  }, null, 2));
   process.exitCode = 1;
 }).finally(async () => {
   await pool.end().catch(() => {});
