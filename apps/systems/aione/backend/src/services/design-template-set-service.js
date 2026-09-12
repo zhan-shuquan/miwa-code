@@ -38,7 +38,9 @@ export async function listDesignTemplateSets(client, filters = {}) {
                   'pageName', i.page_name,
                   'required', i.required,
                   'defaultEnabled', i.default_enabled,
+                  'itemKind', COALESCE(i.item_kind, 'dynamic_template'),
                   'templateId', i.template_id,
+                  'staticPageAssetId', i.static_page_asset_id,
                   'fieldBindings', i.field_bindings,
                   'assetBindings', i.asset_bindings,
                   'instructionDefaults', i.instruction_defaults,
@@ -47,7 +49,15 @@ export async function listDesignTemplateSets(client, filters = {}) {
                   'templateVersion', t.version,
                   'outputType', t.output_type,
                   'canvasWidth', t.canvas_width,
-                  'canvasHeight', t.canvas_height
+                  'canvasHeight', t.canvas_height,
+                  'staticAssetCode', a.asset_code,
+                  'staticAssetName', a.name,
+                  'staticAssetVersion', a.version,
+                  'staticAssetStatus', a.lifecycle_status,
+                  'staticAssetStorageRef', a.storage_ref,
+                  'staticAssetWidth', a.width,
+                  'staticAssetHeight', a.height,
+                  'staticAssetMimeType', a.mime_type
                 ) ORDER BY i.page_no
               ) FILTER (WHERE i.id IS NOT NULL),
               '[]'::jsonb
@@ -57,6 +67,8 @@ export async function listDesignTemplateSets(client, filters = {}) {
          ON i.template_set_id=s.id AND i.archived_at IS NULL
        LEFT JOIN public.design_templates t
          ON t.id=i.template_id AND t.archived_at IS NULL
+       LEFT JOIN public.design_static_page_assets a
+         ON a.id=i.static_page_asset_id AND a.archived_at IS NULL
       WHERE ${where.join(" AND ")}
       GROUP BY s.id
       ORDER BY s.set_code, s.version DESC`,
@@ -78,7 +90,9 @@ export async function getDesignTemplateSet(client, templateSetId) {
                   'pageName', i.page_name,
                   'required', i.required,
                   'defaultEnabled', i.default_enabled,
+                  'itemKind', COALESCE(i.item_kind, 'dynamic_template'),
                   'templateId', i.template_id,
+                  'staticPageAssetId', i.static_page_asset_id,
                   'fieldBindings', i.field_bindings,
                   'assetBindings', i.asset_bindings,
                   'instructionDefaults', i.instruction_defaults,
@@ -90,7 +104,16 @@ export async function getDesignTemplateSet(client, templateSetId) {
                   'canvasHeight', t.canvas_height,
                   'requiredSourceRoles', t.required_source_roles,
                   'requiredProductFacts', t.required_product_facts,
-                  'validationRules', t.validation_rules
+                  'validationRules', t.validation_rules,
+                  'staticAssetCode', a.asset_code,
+                  'staticAssetName', a.name,
+                  'staticAssetVersion', a.version,
+                  'staticAssetStatus', a.lifecycle_status,
+                  'staticAssetStorageRef', a.storage_ref,
+                  'staticAssetWidth', a.width,
+                  'staticAssetHeight', a.height,
+                  'staticAssetMimeType', a.mime_type,
+                  'staticAssetContentSha256', a.content_sha256
                 ) ORDER BY i.page_no
               ) FILTER (WHERE i.id IS NOT NULL),
               '[]'::jsonb
@@ -100,6 +123,8 @@ export async function getDesignTemplateSet(client, templateSetId) {
          ON i.template_set_id=s.id AND i.archived_at IS NULL
        LEFT JOIN public.design_templates t
          ON t.id=i.template_id AND t.archived_at IS NULL
+       LEFT JOIN public.design_static_page_assets a
+         ON a.id=i.static_page_asset_id AND a.archived_at IS NULL
       WHERE s.id=$1 AND s.archived_at IS NULL
       GROUP BY s.id
       LIMIT 1`,
@@ -122,14 +147,19 @@ export async function getDesignTemplateSetItem(client, templateSetItemId) {
             s.channel_scope AS template_set_channel_scope,
             s.lifecycle_status AS template_set_status,
             t.template_code, t.name AS template_name, t.version AS template_version,
-            t.output_type, t.canvas_width, t.canvas_height, t.lifecycle_status AS template_status
+            t.output_type, t.canvas_width, t.canvas_height, t.lifecycle_status AS template_status,
+            a.asset_code AS static_asset_code, a.name AS static_asset_name,
+            a.version AS static_asset_version, a.lifecycle_status AS static_asset_status,
+            a.storage_ref AS static_asset_storage_ref, a.width AS static_asset_width,
+            a.height AS static_asset_height, a.mime_type AS static_asset_mime_type,
+            a.content_sha256 AS static_asset_content_sha256
        FROM public.design_template_set_items i
        JOIN public.design_template_sets s ON s.id=i.template_set_id
-       JOIN public.design_templates t ON t.id=i.template_id
+       LEFT JOIN public.design_templates t ON t.id=i.template_id AND t.archived_at IS NULL
+       LEFT JOIN public.design_static_page_assets a ON a.id=i.static_page_asset_id AND a.archived_at IS NULL
       WHERE i.id=$1
         AND i.archived_at IS NULL
         AND s.archived_at IS NULL
-        AND t.archived_at IS NULL
       LIMIT 1`,
     [id]
   );
@@ -149,7 +179,14 @@ export function assertTemplateSetItemExecutable(item) {
     error.code = "design_template_set_not_active";
     throw error;
   }
-  if (item.template_status !== "active") {
+  const itemKind = cleanText(item.item_kind || "dynamic_template", 40);
+  if (itemKind !== "dynamic_template") {
+    const error = new Error("Static template-set pages are resolved as shared assets and cannot create DesignTasks.");
+    error.statusCode = 409;
+    error.code = "design_template_set_static_page_not_executable";
+    throw error;
+  }
+  if (!item.template_id || item.template_status !== "active") {
     const error = new Error("Design template page must reference an active DesignTemplate.");
     error.statusCode = 409;
     error.code = "design_template_not_active";
