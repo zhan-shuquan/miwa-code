@@ -8,7 +8,14 @@ const EXPECTED_TRUTH = Object.freeze({
   actualVariants: ["白色", "米色", "卡其", "军绿", "深灰", "黑色"],
   approvedPrimaryValue: "秋冬男士中筒条纹6双套装",
   sellingPoints: ["6双6色组合", "中筒条纹设计", "高弹袜口", "Y形/拼色后跟", "秋冬男袜"],
-  supportedSize: "39–45"
+  supportedSize: "24–27cm"
+});
+
+// The earlier Design Center trial incorrectly promoted the supplier's 39–45
+// shoe-size notation into canonical Japanese sock supportedSize. That value is
+// allowed to be corrected exactly once; all other non-null conflicts still stop.
+const ALLOWED_CORRECTIONS = Object.freeze({
+  supportedSize: ["39–45", "39-45"]
 });
 
 function equalJson(left, right) {
@@ -60,6 +67,7 @@ async function main() {
     const before = product.product_data && typeof product.product_data === "object" ? product.product_data : {};
     const patch = {};
     const alreadyCorrect = [];
+    const correctedKeys = [];
     const conflicts = [];
 
     for (const [key, expected] of Object.entries(EXPECTED_TRUTH)) {
@@ -68,6 +76,9 @@ async function main() {
         patch[key] = expected;
       } else if (equalJson(current, expected)) {
         alreadyCorrect.push(key);
+      } else if ((ALLOWED_CORRECTIONS[key] || []).some((legacy) => equalJson(current, legacy))) {
+        patch[key] = expected;
+        correctedKeys.push({ key, from: current, to: expected });
       } else {
         conflicts.push({ key, current, expected });
       }
@@ -104,8 +115,11 @@ async function main() {
         payload: {
           productCode: PRODUCT_CODE,
           writtenKeys,
+          correctedKeys,
           preservedExistingKeys: Object.keys(before).filter((key) => !writtenKeys.includes(key)),
-          reason: "confirmed real-product truth required by Design Center V1"
+          reason: correctedKeys.length
+            ? "correct previously misclassified supplier shoe-size notation to confirmed Japanese sock supported size"
+            : "confirmed real-product truth required by Design Center V1"
         }
       });
     }
@@ -121,8 +135,9 @@ async function main() {
       ok: true,
       productCode: PRODUCT_CODE,
       productId: product.id,
-      mode: writtenKeys.length ? "WRITE_MISSING_CONFIRMED_FACTS" : "IDEMPOTENT_NO_CHANGE",
+      mode: writtenKeys.length ? (correctedKeys.length ? "CORRECT_CONFIRMED_FACTS" : "WRITE_MISSING_CONFIRMED_FACTS") : "IDEMPOTENT_NO_CHANGE",
       writtenKeys,
+      correctedKeys,
       alreadyCorrect,
       recordVersion,
       coreFacts: coreFacts(after),
