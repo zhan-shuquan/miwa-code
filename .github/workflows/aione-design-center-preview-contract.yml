@@ -1,0 +1,54 @@
+name: AIONE Design Center Preview Contract
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  preview-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Syntax checks
+        run: |
+          node --check apps/systems/aione/backend/server.js
+          node --check apps/systems/aione/backend/src/services/design-profile-service.js
+          node --check apps/systems/aione/backend/scripts/apply-target-migration.js
+          node --check apps/systems/aione/backend/scripts/bootstrap-mh0000002-design-center-v1.js
+          bash -n infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+          bash -n infra/gcp/automation/START_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+
+      - name: Prove SOCKONE profile defaults
+        run: |
+          node --input-type=module <<'NODE'
+          import { resolveDesignProfile } from './apps/systems/aione/backend/src/services/design-profile-service.js';
+          const p = resolveDesignProfile({ category_name:'男袜', product_data:{ setCount:6, actualVariants:['白','米','卡其','军绿','深灰','黑'] } });
+          if (p.profileCode !== 'SOCKONE-SOCKS-DESIGN-V1') process.exit(2);
+          if (p.tagCardDefaults.brandNameEn !== 'SOCKONE') process.exit(3);
+          if (p.heroDefaults.primarySellingPointBinding.textOverride !== '6足6色') process.exit(4);
+          console.log('SOCKONE profile PASS');
+          NODE
+
+      - name: Guard preview isolation
+        run: |
+          grep -Fq 'PREVIEW_SERVICE="aione-design-center-preview"' infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+          grep -Fq -- '--no-allow-unauthenticated' infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+          grep -Fq 'AIONE_MIGRATION_VERSION=0100' infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+          grep -Fq 'Image generate : NO' infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+          ! grep -Eq 'update-traffic|AIONE_RUN_SERVICE|--allow-unauthenticated' infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+
+      - name: Guard preview static assets
+        run: |
+          grep -Fq 'AIONE_ENABLE_DESIGN_CENTER_PREVIEW' apps/systems/aione/backend/server.js
+          grep -Fq '/app/design-center-preview/design-center-v1.html' Dockerfile

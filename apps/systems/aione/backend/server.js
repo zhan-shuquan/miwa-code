@@ -56,6 +56,14 @@ app.get("/health", async (req, res) => {
   }
 });
 
+// Branch Preview only. Production leaves this disabled, so these files are not served.
+const designCenterPreviewEnabled = String(process.env.AIONE_ENABLE_DESIGN_CENTER_PREVIEW || "false").toLowerCase() === "true";
+if (designCenterPreviewEnabled) {
+  const previewRoot = String(process.env.AIONE_DESIGN_CENTER_PREVIEW_ROOT || "/app/design-center-preview").trim();
+  app.get("/", (_req, res) => res.redirect("/design-center-v1.html?product=MH0000002"));
+  app.use(express.static(previewRoot, { index: false, fallthrough: true, maxAge: 0 }));
+}
+
 // Production API requests must resolve a real Google identity server-side.
 // Cloud Run IAM remains a separate service-to-service boundary in front of this middleware.
 app.use(resolveAioneGoogleIdentity);
