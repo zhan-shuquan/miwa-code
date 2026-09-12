@@ -105,6 +105,13 @@ jobs:
       - name: Migrate controlled database from current migration set
         run: npm run db:migrate
 
+      - name: Run Design Template Set Gate A/B acceptance
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p preflight-output
+          node scripts/accept-design-template-set-current.js | tee preflight-output/design-template-set-gate-ab.log
+
       - name: Prove PostgreSQL rejects writes in read-only transaction
         shell: bash
         run: |

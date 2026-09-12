@@ -3,6 +3,14 @@ import pool, { withTransaction } from "../../db.js";
 import { requireWriteActor } from "../http/context.js";
 import { getDesignTemplate, listDesignTemplates } from "../services/design-template-service.js";
 import {
+  getDesignTemplateSet,
+  listDesignTemplateSets
+} from "../services/design-template-set-service.js";
+import {
+  createDesignTaskFromTemplateSetPage,
+  listTemplateSetTasksForProduct
+} from "../services/design-template-set-task-service.js";
+import {
   approveDesignTask,
   createDesignTask,
   getDesignTask,
@@ -36,6 +44,58 @@ router.get("/design/templates/:id", async (req, res, next) => {
   try {
     const template = await getDesignTemplate(pool, cleanText(req.params.id, 240));
     res.json({ template });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/design/template-sets", async (req, res, next) => {
+  try {
+    const templateSets = await listDesignTemplateSets(pool, {
+      categoryScope: req.query.categoryScope,
+      channelScope: req.query.channelScope,
+      lifecycleStatus: req.query.lifecycleStatus
+    });
+    res.json({ templateSets });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/design/template-sets/:id", async (req, res, next) => {
+  try {
+    const templateSet = await getDesignTemplateSet(pool, cleanText(req.params.id, 240));
+    res.json({ templateSet });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/products/:productId/design/template-set-tasks", requireWriteActor, async (req, res, next) => {
+  try {
+    const context = req.aioneContext || {};
+    const result = await withTransaction((client) => createDesignTaskFromTemplateSetPage(client, {
+      productId: cleanText(req.params.productId, 240),
+      templateSetItemId: cleanText(req.body?.templateSetItemId, 240),
+      inputAssetIds: Array.isArray(req.body?.inputAssetIds) ? req.body.inputAssetIds : [],
+      inputFactSnapshot: req.body?.inputFactSnapshot && typeof req.body.inputFactSnapshot === "object" ? req.body.inputFactSnapshot : {},
+      instructionSnapshot: req.body?.instructionSnapshot && typeof req.body.instructionSnapshot === "object" ? req.body.instructionSnapshot : {},
+      context
+    }));
+    res.status(result.reused ? 200 : 201).json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/products/:productId/design/template-set-tasks", async (req, res, next) => {
+  try {
+    const tasks = await listTemplateSetTasksForProduct(
+      pool,
+      cleanText(req.params.productId, 240),
+      cleanText(req.query.templateSetId, 240)
+    );
+    res.json({ tasks });
   } catch (error) {
     next(error);
   }
