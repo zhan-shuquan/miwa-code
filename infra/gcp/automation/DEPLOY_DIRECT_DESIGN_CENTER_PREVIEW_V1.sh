@@ -11,6 +11,7 @@ assert_aione_current_baseline
 BRANCH="feat/design-center-tag-card-hero-v1"
 PREVIEW_SERVICE="aione-design-center-preview"
 PRODUCT_CODE="MH0000002"
+URL_FILE="$HOME/aione_design_center_direct_url.txt"
 
 [[ "$(git branch --show-current)" == "$BRANCH" ]] || { echo "[AIONE][STOP] Direct preview must run from $BRANCH" >&2; exit 20; }
 [[ -z "$(git status --porcelain)" ]] || { echo '[AIONE][STOP] Repo must be clean before direct preview deploy.' >&2; exit 21; }
@@ -29,6 +30,8 @@ print(secrets.token_urlsafe(24))
 PY
 )"
 
+rm -f "$URL_FILE"
+
 echo '[AIONE] 1/3 Build latest branch image only'
 gcloud builds submit . --project="$PROJECT_ID" --tag="$IMAGE" --quiet >/dev/null
 
@@ -45,9 +48,6 @@ gcloud run deploy "$PREVIEW_SERVICE" \
   --quiet >/dev/null
 
 SERVICE_URL="$(gcloud run services describe "$PREVIEW_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format='value(status.url)')"
-
-# The first request includes preview_key and receives the secure same-origin cookie.
-# All subsequent static/API requests use that cookie.
 DIRECT_URL="${SERVICE_URL}/design-center-v1.html?product=${PRODUCT_CODE}&preview_key=${TOKEN}"
 
 echo '[AIONE] 3/3 Verify direct access path'
@@ -56,8 +56,12 @@ grep -Fq '设计中心 V1' <<<"$BODY"
 API="$(curl -fsS -b /tmp/aione-preview-cookie.txt "${SERVICE_URL}/api/v1/design-center/workbench?product=${PRODUCT_CODE}")"
 printf '%s' "$API" | python3 -c 'import json,sys; p=json.load(sys.stdin)["workbench"]; assert p["product"]["productCode"]=="MH0000002"; assert p["product"]["productData"]["supportedSize"]=="24–27cm"; assert p["tagCard"]["brand_name_en"]=="SOCKONE"; print("[AIONE] Direct workbench PASS")'
 
+printf '%s\n' "$DIRECT_URL" > "$URL_FILE"
+chmod 600 "$URL_FILE"
+
 printf '\n[AIONE] DIRECT DESIGN CENTER PREVIEW READY\n'
 printf 'URL           : %s\n' "$DIRECT_URL"
+printf 'URL file      : %s\n' "$URL_FILE"
 printf 'Main service  : UNCHANGED\n'
 printf 'Migration     : NO\n'
 printf 'Image generate: NO\n'
