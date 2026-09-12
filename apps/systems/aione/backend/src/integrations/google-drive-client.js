@@ -51,11 +51,11 @@ function driveExportUrl(fileId, mimeType) {
 }
 
 function applySharedDriveParams(params, driveId) {
+  params.set("includeItemsFromAllDrives", "true");
+  params.set("supportsAllDrives", "true");
   if (!driveId) return;
   params.set("corpora", "drive");
   params.set("driveId", String(driveId));
-  params.set("includeItemsFromAllDrives", "true");
-  params.set("supportsAllDrives", "true");
 }
 
 function normalizeDriveError(error, operation) {
