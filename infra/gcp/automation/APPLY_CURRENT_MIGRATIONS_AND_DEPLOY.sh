@@ -55,6 +55,18 @@ resolve_gcloud_control_account() {
   CLOUD_CONTROL_EMAIL="$active_account"
 }
 
+mint_cloud_run_health_token() {
+  local service_url="$1"
+  if [[ "$CLOUD_CONTROL_EMAIL" == *.gserviceaccount.com ]]; then
+    gcloud auth print-identity-token --audiences="$service_url"
+  else
+    # Cloud Shell normally runs this reviewed action under a human Google account.
+    # For direct Cloud Run developer invocation, use the generic gcloud identity token.
+    # Forcing --audiences on a user credential can yield HTTP 401 from Cloud Run.
+    gcloud auth print-identity-token
+  fi
+}
+
 wait_for_build_terminal() {
   local build_id="$1"
   local allow_failure_with_image="${2:-false}"
@@ -169,7 +181,7 @@ gcloud run jobs execute "$AIONE_MIGRATION_JOB" \
 
 echo '[AIONE] 3/5 Verify CURRENT database migration version through the production health contract'
 SERVICE_URL="$(gcloud run services describe "$AIONE_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format='value(status.url)')"
-IAM_TOKEN="$(gcloud auth print-identity-token --audiences="$SERVICE_URL")"
+IAM_TOKEN="$(mint_cloud_run_health_token "$SERVICE_URL")"
 HEALTH_JSON="$(curl -fsS -H "Authorization: Bearer $IAM_TOKEN" "$SERVICE_URL/health")"
 DB_VERSION="$(printf '%s' "$HEALTH_JSON" | python3 -c 'import json,sys; p=json.load(sys.stdin); print((p.get("latestMigration") or {}).get("version") or "")')"
 printf 'db_migration=%s repo_migration=%s\n' "$DB_VERSION" "$REPO_VERSION"
@@ -187,6 +199,7 @@ wait_for_build_terminal "$BUILD_ID" false || exit 28
 echo '[AIONE] CURRENT deployment PASS.'
 
 echo '[AIONE] 5/5 Verify deployed service is healthy and aligned with the triggered main image'
+IAM_TOKEN="$(mint_cloud_run_health_token "$SERVICE_URL")"
 FINAL_HEALTH="$(curl -fsS -H "Authorization: Bearer $IAM_TOKEN" "$SERVICE_URL/health")"
 printf '%s\n' "$FINAL_HEALTH"
 printf '%s' "$FINAL_HEALTH" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p.get("ok") is True and p.get("database")=="connected"'
