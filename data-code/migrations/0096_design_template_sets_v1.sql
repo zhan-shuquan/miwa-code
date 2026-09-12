@@ -109,8 +109,8 @@ SELECT
   TRUE,
   '{"scope":"template-required-product-facts","allowedFacts":["productCode","productName","category","targetChannel","material","size","colors","sellingPoints","approvedClaims","validationPurpose"],"requiredFacts":["category"],"restrictedClaims":["防臭","抗菌","消臭","発熱","吸湿発熱","遠赤外線","純綿","100%綿","オーガニックコットン","羊毛100%","医療用","着圧","血行促進"]}'::jsonb,
   '{"selection":"human-curated","allowedFolders":["02_产品图","03_实拍图"],"preferredFolders":["02_产品图","03_实拍图"],"filenameHints":["主图","详情图","细节图"],"humanSelectionRequired":true,"sourceLayerRequired":"SOURCE"}'::jsonb,
-  '{"sourceTruthRequired":true,"humanReviewRequired":true,"singlePageFirst":true,"claimPolicy":"restricted-claims-require-approvedClaims"}'::jsonb,
-  '{"purpose":"prove-template-set-selection-before-generation","validationStage":"single-page-first"}'::jsonb,
+  '{"sourceTruthRequired":true,"humanReviewRequired":true,"singlePageFirst":true,"claimPolicy":"restricted-claims-require-approvedClaims","textPolicy":"visual_only","copyLayerMode":"deterministic_overlay"}'::jsonb,
+  '{"purpose":"prove-template-set-selection-before-generation","validationStage":"single-page-first","aiStage":"visual-only","copyStage":"deterministic-overlay-after-ai"}'::jsonb,
   'aione-ai-assisted-design-template-set-v1'
 FROM public.design_templates dt
 WHERE dt.id='dtpl_socks_rakuten_benefit_1000x1500_v1'
