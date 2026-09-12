@@ -44,7 +44,7 @@ jobs:
           node --check ../js/pages/design-center-v1.js
 
       - name: Check Design Center CURRENT input audit runner syntax
-        working-directory: ../../../..
+        working-directory: .
         run: bash -n infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_INPUT_AUDIT_V1.sh
 
       - name: Check deterministic copy overlay service syntax
