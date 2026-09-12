@@ -1,0 +1,35 @@
+name: AIONE Mens Socks Real Product Discovery
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  discovery-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check read-only discovery script syntax
+        working-directory: apps/systems/aione/backend
+        run: node --check scripts/discover-mens-socks-trial-products.js
+
+      - name: Check discovery runner syntax
+        run: bash -n infra/gcp/automation/RUN_MENS_SOCKS_REAL_PRODUCT_DISCOVERY_V1.sh
+
+      - name: Guard discovery against generation or mutation wiring
+        run: |
+          ! grep -Eq 'OPENAI_API_KEY|design:template-set:gate-c|executeBenefitFeature|runOpenAIImage|INSERT INTO|UPDATE public|DELETE FROM' apps/systems/aione/backend/scripts/discover-mens-socks-trial-products.js
+          ! grep -Eq 'OPENAI_API_KEY|AIONE_OPENAI_API_KEY_SECRET|design:template-set:gate-c' infra/gcp/automation/RUN_MENS_SOCKS_REAL_PRODUCT_DISCOVERY_V1.sh
+          grep -Fq 'BEGIN READ ONLY' apps/systems/aione/backend/scripts/discover-mens-socks-trial-products.js
+          grep -Fq 'MH0000002' apps/systems/aione/backend/scripts/discover-mens-socks-trial-products.js
