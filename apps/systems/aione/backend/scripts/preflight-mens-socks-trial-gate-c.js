@@ -16,14 +16,12 @@ function asArray(value) {
 
 function pickFact(productData, keys) {
   for (const key of keys) {
-    if (productData?.[key] !== undefined && productData?.[key] !== null && productData?.[key] !== "") {
-      return { key, value: productData[key] };
-    }
+    if (productData?.[key] !== undefined && productData?.[key] !== null && productData?.[key] !== "") return { key, value: productData[key] };
   }
   return null;
 }
 
-function sourceDescriptor(asset, confirmedIds) {
+function sourceDescriptor(asset) {
   return {
     id: asset.id,
     assetNo: asset.asset_no,
@@ -31,8 +29,9 @@ function sourceDescriptor(asset, confirmedIds) {
     canonicalName: asset.canonical_name,
     originalName: asset.original_name,
     sourceFolder: asset.metadata?.sourceFolder || asset.metadata?.source_folder || null,
-    relativePath: asset.metadata?.relativePath || null,
-    humanConfirmed: confirmedIds.has(String(asset.id))
+    driveFileId: asset.metadata?.driveFileId || null,
+    sourceProvider: asset.source_provider,
+    humanConfirmed: true
   };
 }
 
@@ -50,27 +49,21 @@ async function main() {
         LIMIT 2`,
       [PRODUCT_CODE]
     );
-    if (productResult.rowCount !== 1) {
-      fail("Trial Gate C preflight requires exactly one Product.", { productCode: PRODUCT_CODE, count: productResult.rowCount });
-    }
+    if (productResult.rowCount !== 1) fail("Trial Gate C preflight requires exactly one Product.", { productCode: PRODUCT_CODE, count: productResult.rowCount });
     const product = productResult.rows[0];
 
     const confirmationResult = await client.query(
-      `SELECT id, version, confirmed_at, asset_ids, snapshot_hash, confirmed_by_person_id
+      `SELECT id, version, confirmed_at, asset_ids, snapshot_hash, confirmed_by_person_id, metadata
          FROM public.product_material_confirmations
         WHERE product_id=$1 AND status='confirmed' AND archived_at IS NULL
         ORDER BY version DESC
         LIMIT 2`,
       [product.id]
     );
-    if (confirmationResult.rowCount !== 1) {
-      fail("Trial Gate C preflight requires exactly one CURRENT human-confirmed material snapshot.", {
-        productCode: PRODUCT_CODE,
-        count: confirmationResult.rowCount
-      });
-    }
+    if (confirmationResult.rowCount !== 1) fail("Trial Gate C preflight requires exactly one CURRENT human-confirmed material snapshot.", { productCode: PRODUCT_CODE, count: confirmationResult.rowCount });
     const confirmation = confirmationResult.rows[0];
-    const confirmedIds = new Set(asArray(confirmation.asset_ids).map(String));
+    const confirmedIds = asArray(confirmation.asset_ids).map(String);
+    if (!confirmedIds.length) fail("CURRENT human-confirmed material snapshot contains no assets.");
 
     const setResult = await client.query(
       `SELECT id, set_code, name, version, category_scope, channel_scope, lifecycle_status, metadata
@@ -96,22 +89,26 @@ async function main() {
         ORDER BY i.page_no`,
       [TEMPLATE_SET_ID, TRIAL_PAGE_CODES]
     );
-    if (pageResult.rowCount !== 3) {
-      fail("Trial Gate C preflight requires exactly three trial pages.", { count: pageResult.rowCount });
-    }
+    if (pageResult.rowCount !== 3) fail("Trial Gate C preflight requires exactly three trial pages.", { count: pageResult.rowCount });
 
     const assetResult = await client.query(
-      `SELECT id, asset_no, asset_role, canonical_name, original_name, mime_type, lifecycle_status, metadata
+      `SELECT id, asset_no, asset_role, canonical_name, original_name, mime_type, lifecycle_status, metadata, source_provider
          FROM public.product_assets
         WHERE product_id=$1
+          AND id = ANY($2::text[])
           AND archived_at IS NULL
           AND metadata->>'layer'='SOURCE'
           AND mime_type LIKE 'image/%'
         ORDER BY asset_no`,
-      [product.id]
+      [product.id, confirmedIds]
     );
-    const assets = assetResult.rows.map((asset) => sourceDescriptor(asset, confirmedIds));
-    const unconfirmed = assets.filter((asset) => !asset.humanConfirmed);
+    if (assetResult.rowCount !== confirmedIds.length) {
+      fail("CURRENT human-confirmed material snapshot references missing or non-SOURCE image assets.", {
+        confirmedAssetCount: confirmedIds.length,
+        resolvedAssetCount: assetResult.rowCount
+      });
+    }
+    const assets = assetResult.rows.map(sourceDescriptor);
 
     const productData = product.product_data || {};
     const factEvidence = {
@@ -144,7 +141,7 @@ async function main() {
         textPolicy: page.instruction_defaults?.textPolicy || page.validation_rules?.textPolicy || null,
         copyLayerMode: page.instruction_defaults?.copyLayerMode || page.validation_rules?.copyLayerMode || null,
         highRiskNumericFacts: Boolean(page.instruction_defaults?.highRiskNumericFacts || page.metadata?.highRiskFacts),
-        executableNow: templateSet.lifecycle_status === "active" && page.template_status === "active" && missingFacts.length === 0
+        executableNow: false
       };
     });
 
@@ -152,13 +149,12 @@ async function main() {
 
     const blockers = [];
     if (templateSet.lifecycle_status !== "draft") blockers.push(`unexpected_template_set_status:${templateSet.lifecycle_status}`);
-    if (unconfirmed.length) blockers.push(`source_assets_outside_current_confirmation:${unconfirmed.length}`);
     for (const page of pagePreflight) {
       for (const missing of page.missingFacts) blockers.push(`${page.pageCode}:missing_fact:${missing}`);
     }
 
     const payload = {
-      contract: "AIONE Mens Socks Trial Gate C Preflight V1",
+      contract: "AIONE Mens Socks Trial Gate C Preflight V2",
       ok: blockers.length === 0,
       readOnly: true,
       product: {
@@ -176,10 +172,11 @@ async function main() {
         confirmedAt: confirmation.confirmed_at,
         confirmedByPersonId: confirmation.confirmed_by_person_id,
         snapshotHash: confirmation.snapshot_hash,
-        confirmedAssetCount: confirmedIds.size
+        confirmedAssetCount: confirmedIds.length,
+        metadata: confirmation.metadata || {}
       },
-      sourceAssetCount: assets.length,
-      sourceAssets: assets,
+      currentConfirmedSourceAssetCount: assets.length,
+      currentConfirmedSourceAssets: assets,
       factEvidence,
       templateSet: {
         id: templateSet.id,
@@ -189,24 +186,20 @@ async function main() {
       },
       trialPages: pagePreflight,
       blockers,
-      nextAction: blockers.length
-        ? "resolve-current-product-truth-blockers-before-any-image-generation"
-        : "human-and-engineering-review-before-any-image-generation"
+      nextAction: blockers.length ? "resolve-current-product-truth-blockers-before-any-image-generation" : "resolve-semantic-asset-bindings-and-execution-mode-before-gate-c"
     };
 
     process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-
     for (const page of pagePreflight) {
       process.stdout.write(`[AIONE_MENS_SOCKS_TRIAL] ${page.pageCode} | ${page.canvas} | missingFacts=${page.missingFacts.join(",") || "none"} | semanticRoles=${page.semanticAssetRoles.join(",") || "none"}\n`);
     }
-    process.stdout.write(`[AIONE_MENS_SOCKS_TRIAL] sourceAssets=${assets.length} confirmed=${assets.length - unconfirmed.length} unconfirmed=${unconfirmed.length}\n`);
+    process.stdout.write(`[AIONE_MENS_SOCKS_TRIAL] currentConfirmedSourceAssets=${assets.length}\n`);
 
     if (blockers.length) {
       process.stdout.write(`[AIONE] MENS SOCKS TRIAL GATE C PREFLIGHT BLOCKED - ${blockers.length} BLOCKER(S)\n`);
       process.exitCode = 2;
       return;
     }
-
     process.stdout.write("[AIONE] MENS SOCKS TRIAL GATE C PREFLIGHT PASS - NO IMAGE GENERATED\n");
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
@@ -217,12 +210,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(JSON.stringify({
-    ok: false,
-    error: error.code || "mens_socks_trial_gate_c_preflight_failed",
-    message: error.message,
-    details: error.details || undefined
-  }, null, 2));
+  console.error(JSON.stringify({ ok: false, error: error.code || "mens_socks_trial_gate_c_preflight_failed", message: error.message, details: error.details || undefined }, null, 2));
   process.exitCode = 1;
 }).finally(async () => {
   await pool.end().catch(() => {});
