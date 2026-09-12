@@ -1,0 +1,40 @@
+name: AIONE MH0000002 Product Truth Reconcile
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  product-truth-reconcile-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check reconcile script syntax
+        working-directory: apps/systems/aione/backend
+        run: node --check scripts/reconcile-mh0000002-product-truth-v1.js
+
+      - name: Check runner syntax
+        run: bash -n infra/gcp/automation/RUN_MH0000002_PRODUCT_TRUTH_RECONCILE_V1.sh
+
+      - name: Guard narrow write contract
+        run: |
+          grep -Fq 'const PRODUCT_CODE = "MH0000002"' apps/systems/aione/backend/scripts/reconcile-mh0000002-product-truth-v1.js
+          grep -Fq 'AIONE_ALLOW_MH0000002_TRUTH_RECONCILE' apps/systems/aione/backend/scripts/reconcile-mh0000002-product-truth-v1.js
+          grep -Fq 'FOR UPDATE' apps/systems/aione/backend/scripts/reconcile-mh0000002-product-truth-v1.js
+          grep -Fq 'confirmed_product_truth_conflict' apps/systems/aione/backend/scripts/reconcile-mh0000002-product-truth-v1.js
+          grep -Fq 'record_version=record_version+1' apps/systems/aione/backend/scripts/reconcile-mh0000002-product-truth-v1.js
+          grep -Fq 'product.truth_reconciled' apps/systems/aione/backend/scripts/reconcile-mh0000002-product-truth-v1.js
+          grep -Fq 'BRANCH="feat/design-center-tag-card-hero-v1"' infra/gcp/automation/RUN_MH0000002_PRODUCT_TRUTH_RECONCILE_V1.sh
+          grep -Fq 'scripts/audit-design-center-current-inputs.js' infra/gcp/automation/RUN_MH0000002_PRODUCT_TRUTH_RECONCILE_V1.sh
+          ! grep -Eq 'DELETE FROM|TRUNCATE|db:migrate|OPENAI_API_KEY|runOpenAIImage' apps/systems/aione/backend/scripts/reconcile-mh0000002-product-truth-v1.js infra/gcp/automation/RUN_MH0000002_PRODUCT_TRUTH_RECONCILE_V1.sh
