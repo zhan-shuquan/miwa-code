@@ -6,6 +6,7 @@ import { getDesignTemplate } from "../src/services/design-template-service.js";
 import { getDesignTemplateSetItem } from "../src/services/design-template-set-service.js";
 import { createDesignTaskFromTemplateSetPage } from "../src/services/design-template-set-task-service.js";
 import { executeBenefitFeatureImageTechnicalAcceptance } from "../src/services/design-ai-output-service.js";
+import { resolveCurrentCuratedFolder } from "../src/services/product-curated-folder-contract.js";
 import { getGcsObjectMetadata } from "../src/integrations/google-cloud-storage-client.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -151,6 +152,10 @@ async function proveSelectedTemplatePageAgainstRealProduct() {
     const prompt = String(process.env.AIONE_ACCEPT_IMAGE_PROMPT || DEFAULT_PROMPT).trim();
     if (!prompt) fail("Gate C prompt is empty.");
 
+    const categoryScope = String(item.template_set_category_scope || "").trim();
+    const channelScope = String(item.template_set_channel_scope || "").trim();
+    if (!categoryScope) fail("Gate C selected Template Set has no category scope.");
+
     const context = {
       personId: null,
       actorKind: "system",
@@ -165,6 +170,8 @@ async function proveSelectedTemplatePageAgainstRealProduct() {
       inputFactSnapshot: {
         productCode: product.product_code,
         productName: product.name || null,
+        category: categoryScope,
+        targetChannel: channelScope || null,
         validationPurpose: "design-template-set-gate-c"
       },
       instructionSnapshot: { prompt },
@@ -193,6 +200,8 @@ async function proveSelectedTemplatePageAgainstRealProduct() {
     proof = {
       product,
       prompt,
+      categoryScope,
+      channelScope: channelScope || null,
       templateSetId: TEMPLATE_SET_ID,
       templateSetItemId: TEMPLATE_SET_ITEM_ID,
       pageCode: item.page_code,
@@ -202,12 +211,16 @@ async function proveSelectedTemplatePageAgainstRealProduct() {
       materialSnapshotHash: confirmation.snapshot_hash,
       ephemeralTaskId: task.id,
       ephemeralTaskStatus: task.task_status,
-      sourceAssets: sourceAssets.map((asset) => ({
-        id: asset.id,
-        role: asset.asset_role,
-        canonicalName: asset.canonical_name,
-        sourceFolder: asset.metadata?.sourceFolder || null
-      }))
+      sourceAssets: sourceAssets.map((asset) => {
+        const folderResolution = resolveCurrentCuratedFolder(asset);
+        return {
+          id: asset.id,
+          role: asset.asset_role,
+          canonicalName: asset.canonical_name,
+          sourceFolder: folderResolution.folder,
+          folderResolutionSource: folderResolution.source
+        };
+      })
     };
 
     await client.query("ROLLBACK");
@@ -291,6 +304,8 @@ async function main() {
     gateC: "live-openai-derived-product-asset-created",
     productCode: proof.product.product_code,
     productName: proof.product.name || null,
+    categoryScope: proof.categoryScope,
+    channelScope: proof.channelScope,
     templateSetId: proof.templateSetId,
     templateSetItemId: proof.templateSetItemId,
     pageCode: proof.pageCode,
