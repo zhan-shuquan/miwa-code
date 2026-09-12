@@ -21,6 +21,7 @@ CONNECTION="$(gcloud sql instances describe "$AIONE_SQL_INSTANCE" --project="$PR
 SHORT_SHA="$(git rev-parse --short=7 HEAD)"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AIONE_ARTIFACT_REPO}/${AIONE_IMAGE_NAME}:mens-socks-discovery-${SHORT_SHA}"
 JOB="aione-mens-socks-product-discovery"
+PASS_MARKER='MENS SOCKS REAL PRODUCT DISCOVERY PASS'
 
 cleanup() {
   gcloud run jobs delete "$JOB" --region="$REGION" --project="$PROJECT_ID" --quiet >/dev/null 2>&1 || true
@@ -55,9 +56,16 @@ gcloud run jobs deploy "$JOB" \
   --quiet >/dev/null
 
 EXECUTION="$(gcloud run jobs execute "$JOB" --region="$REGION" --project="$PROJECT_ID" --wait --format='value(metadata.name)')"
-LOGS="$(gcloud beta run jobs executions logs read "$EXECUTION" --region="$REGION" --project="$PROJECT_ID" --limit=2000 2>&1 || true)"
+LOGS=""
+for i in $(seq 1 24); do
+  LOGS="$(gcloud beta run jobs executions logs read "$EXECUTION" --region="$REGION" --project="$PROJECT_ID" --limit=3000 2>&1 || true)"
+  if grep -q "$PASS_MARKER" <<<"$LOGS" || grep -q '"ok": false' <<<"$LOGS"; then
+    break
+  fi
+  sleep 5
+done
 printf '\n[AIONE] Discovery result\n%s\n' "$LOGS"
-grep -q 'MENS SOCKS REAL PRODUCT DISCOVERY PASS' <<<"$LOGS" || { echo '[AIONE][STOP] Discovery did not finish with PASS marker.' >&2; exit 22; }
+grep -q "$PASS_MARKER" <<<"$LOGS" || { echo '[AIONE][STOP] Discovery execution completed, but the authoritative PASS marker was not visible in Cloud Logging before timeout.' >&2; exit 22; }
 
 echo '[AIONE] 3/3 STOP before any Gate C generation'
 printf '\n[AIONE] RESULT\n'
