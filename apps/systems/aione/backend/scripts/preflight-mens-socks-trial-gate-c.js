@@ -157,9 +157,9 @@ async function main() {
       for (const missing of page.missingFacts) blockers.push(`${page.pageCode}:missing_fact:${missing}`);
     }
 
-    process.stdout.write(`${JSON.stringify({
+    const payload = {
       contract: "AIONE Mens Socks Trial Gate C Preflight V1",
-      ok: true,
+      ok: blockers.length === 0,
       readOnly: true,
       product: {
         id: product.id,
@@ -189,13 +189,24 @@ async function main() {
       },
       trialPages: pagePreflight,
       blockers,
-      nextAction: "human-and-engineering-review-before-any-image-generation"
-    }, null, 2)}\n`);
+      nextAction: blockers.length
+        ? "resolve-current-product-truth-blockers-before-any-image-generation"
+        : "human-and-engineering-review-before-any-image-generation"
+    };
+
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
 
     for (const page of pagePreflight) {
       process.stdout.write(`[AIONE_MENS_SOCKS_TRIAL] ${page.pageCode} | ${page.canvas} | missingFacts=${page.missingFacts.join(",") || "none"} | semanticRoles=${page.semanticAssetRoles.join(",") || "none"}\n`);
     }
     process.stdout.write(`[AIONE_MENS_SOCKS_TRIAL] sourceAssets=${assets.length} confirmed=${assets.length - unconfirmed.length} unconfirmed=${unconfirmed.length}\n`);
+
+    if (blockers.length) {
+      process.stdout.write(`[AIONE] MENS SOCKS TRIAL GATE C PREFLIGHT BLOCKED - ${blockers.length} BLOCKER(S)\n`);
+      process.exitCode = 2;
+      return;
+    }
+
     process.stdout.write("[AIONE] MENS SOCKS TRIAL GATE C PREFLIGHT PASS - NO IMAGE GENERATED\n");
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});

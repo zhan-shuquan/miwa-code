@@ -36,5 +36,7 @@ jobs:
           grep -Fq 'MS-SIZE-12' apps/systems/aione/backend/scripts/preflight-mens-socks-trial-gate-c.js
           grep -Fq 'BRANCH="main"' infra/gcp/automation/RUN_MENS_SOCKS_TRIAL_GATE_C_PREFLIGHT_V1.sh
           ! grep -Fq 'accept/mens-socks-trial-preflight-v1' infra/gcp/automation/RUN_MENS_SOCKS_TRIAL_GATE_C_PREFLIGHT_V1.sh
+          grep -Fq 'ok: blockers.length === 0' apps/systems/aione/backend/scripts/preflight-mens-socks-trial-gate-c.js
+          grep -Fq 'MENS SOCKS TRIAL GATE C PREFLIGHT BLOCKED' apps/systems/aione/backend/scripts/preflight-mens-socks-trial-gate-c.js
           ! grep -Eq 'OPENAI_API_KEY|runOpenAIImage|executeBenefitFeature|INSERT INTO|UPDATE public|DELETE FROM|lifecycle_status=.active.' apps/systems/aione/backend/scripts/preflight-mens-socks-trial-gate-c.js
           ! grep -Eq 'OPENAI_API_KEY|AIONE_OPENAI_API_KEY_SECRET|design:template-set:gate-c' infra/gcp/automation/RUN_MENS_SOCKS_TRIAL_GATE_C_PREFLIGHT_V1.sh
