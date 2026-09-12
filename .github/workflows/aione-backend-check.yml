@@ -32,6 +32,21 @@ jobs:
       - name: Syntax check
         run: npm run check
 
+      - name: Check Design Center V1 syntax
+        run: |
+          node --check src/services/design-product-resolver.js
+          node --check src/services/product-tag-card-service.js
+          node --check src/services/product-hero-spec-service.js
+          node --check src/services/design-center-workbench-service.js
+          node --check src/routes/design-center.js
+          node --check scripts/accept-design-center-tag-card-hero-v1.js
+          node --check scripts/audit-design-center-current-inputs.js
+          node --check ../js/pages/design-center-v1.js
+
+      - name: Check Design Center CURRENT input audit runner syntax
+        working-directory: ../../..
+        run: bash -n infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_INPUT_AUDIT_V1.sh
+
       - name: Check deterministic copy overlay service syntax
         run: node --check src/services/design-copy-overlay-service.js && node --check scripts/test-design-copy-overlay-contract.js
 
@@ -110,6 +125,13 @@ jobs:
 
       - name: Migrate controlled database from current migration set
         run: npm run db:migrate
+
+      - name: Run Design Center Product Tag Card + Hero V1 acceptance
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p preflight-output
+          node scripts/accept-design-center-tag-card-hero-v1.js | tee preflight-output/design-center-tag-card-hero-v1.log
 
       - name: Run Design Template Set Gate A/B acceptance
         shell: bash
