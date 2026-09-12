@@ -1,3 +1,5 @@
+import { resolveCurrentCuratedFolder } from "./product-curated-folder-contract.js";
+
 function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
@@ -123,7 +125,8 @@ export async function validateTemplatePageAssets(client, item, { productId, inpu
   const violations = [];
   for (const asset of result.rows) {
     const metadata = asObject(asset.metadata);
-    const sourceFolder = cleanText(metadata.sourceFolder || metadata.source_folder, 120);
+    const folderResolution = resolveCurrentCuratedFolder(asset);
+    const sourceFolder = cleanText(folderResolution.folder, 120);
     if (metadata.layer !== "SOURCE") {
       violations.push({ assetId: asset.id, reason: "not_source", layer: metadata.layer || null });
       continue;
@@ -133,7 +136,12 @@ export async function validateTemplatePageAssets(client, item, { productId, inpu
       continue;
     }
     if (allowedFolders.size && !allowedFolders.has(sourceFolder)) {
-      violations.push({ assetId: asset.id, reason: "folder_not_allowed", sourceFolder: sourceFolder || null });
+      violations.push({
+        assetId: asset.id,
+        reason: "folder_not_allowed",
+        sourceFolder: sourceFolder || null,
+        folderResolutionSource: folderResolution.source
+      });
     }
   }
   if (violations.length) {
