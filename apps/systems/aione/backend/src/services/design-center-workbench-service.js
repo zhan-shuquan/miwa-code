@@ -1,6 +1,7 @@
 import { resolveDesignProduct } from "./design-product-resolver.js";
 import { getProductTagCard } from "./product-tag-card-service.js";
 import { getProductHeroSpec, listInstructionPresets } from "./product-hero-spec-service.js";
+import { resolveDesignProfile } from "./design-profile-service.js";
 
 function cleanText(value, maxLength = 4000) {
   return String(value ?? "").trim().slice(0, maxLength);
@@ -78,16 +79,19 @@ export async function getDesignCenterWorkbench(client, productRef) {
     )
   ]);
 
+  const productView = {
+    id: product.id,
+    productCode: product.product_code,
+    name: product.name,
+    lifecycleStatus: product.lifecycle_status,
+    categoryCode: product.category_code,
+    categoryName: product.category_name,
+    productData: product.product_data || {}
+  };
+
   return {
-    product: {
-      id: product.id,
-      productCode: product.product_code,
-      name: product.name,
-      lifecycleStatus: product.lifecycle_status,
-      categoryCode: product.category_code,
-      categoryName: product.category_name,
-      productData: product.product_data || {}
-    },
+    product: productView,
+    designProfile: resolveDesignProfile(product),
     materialConfirmation: confirmation.rows[0] || null,
     materials: summarizeMaterials(assets),
     tagCard,
