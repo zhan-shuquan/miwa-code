@@ -173,16 +173,17 @@ function refreshTagPreview() {
 
 function populateTagForm() {
   const form = $form("tag-card");
-  const card = state.workbench?.tagCard || {};
+  const card = state.workbench?.tagCard;
+  const defaults = state.workbench?.designProfile?.tagCardDefaults || {};
   if (!form) return;
-  form.elements.brandNameEn.value = card.brand_name_en || "";
-  form.elements.brandSublineEn.value = card.brand_subline_en || "";
-  form.elements.brandSloganJa.value = card.brand_slogan_ja || "";
-  form.elements.colorTheme.value = card.color_theme || "neutral";
-  const scopes = Array.isArray(card.usage_scopes) ? card.usage_scopes : ["hero","packaging"];
+  form.elements.brandNameEn.value = card?.brand_name_en || defaults.brandNameEn || "";
+  form.elements.brandSublineEn.value = card?.brand_subline_en || defaults.brandSublineEn || "";
+  form.elements.brandSloganJa.value = card?.brand_slogan_ja || defaults.brandSloganJa || "";
+  form.elements.colorTheme.value = card?.color_theme || defaults.colorTheme || "neutral";
+  const scopes = Array.isArray(card?.usage_scopes) ? card.usage_scopes : (Array.isArray(defaults.usageScopes) ? defaults.usageScopes : ["hero","packaging"]);
   form.elements.useHero.checked = scopes.includes("hero");
   form.elements.usePackaging.checked = scopes.includes("packaging");
-  const slots = normalizeSlots(card.slots);
+  const slots = normalizeSlots(card?.slots || defaults.slots);
   const host = $ui("slot-editors");
   if (host) host.innerHTML = slots.map(slotEditor).join("");
   refreshTagPreview();
@@ -202,17 +203,21 @@ function renderHeroAssets() {
   const form = $form("hero-spec");
   const materials = state.workbench?.materials || {};
   const spec = state.workbench?.heroSpec || {};
+  const defaults = state.workbench?.designProfile?.heroDefaults || {};
+  const modelPresetId = spec.model_preset_id || defaults.modelPresetId || "";
+  const displayPresetId = spec.product_display_preset_id || defaults.productDisplayPresetId || "";
   const modelSelect = $ui("model-presets");
   const displaySelect = $ui("display-presets");
-  if (modelSelect) modelSelect.innerHTML = `<option value="">请选择</option>${presetOptions("model_generation", spec.model_preset_id || "")}`;
-  if (displaySelect) displaySelect.innerHTML = `<option value="">请选择</option>${presetOptions("product_display", spec.product_display_preset_id || "")}`;
+  if (modelSelect) modelSelect.innerHTML = `<option value="">请选择</option>${presetOptions("model_generation", modelPresetId)}`;
+  if (displaySelect) displaySelect.innerHTML = `<option value="">请选择</option>${presetOptions("product_display", displayPresetId)}`;
 
   const white = Array.isArray(materials.whiteBackground) ? materials.whiteBackground : [];
   const products = Array.isArray(materials.product) ? materials.product : [];
   const candidates = white.length ? white : products;
+  const selectedProductAssetId = spec.product_display_asset_id || white[0]?.id || "";
   const productSelect = $ui("product-display-assets");
   if (productSelect) {
-    productSelect.innerHTML = `<option value="">${white.length ? "请选择白底商品素材" : "白底未识别：请从产品图人工选择"}</option>` + candidates.map((asset) => `<option value="${escapeHtml(asset.id)}" ${asset.id === spec.product_display_asset_id ? "selected" : ""}>${escapeHtml(asset.original_name || asset.canonical_name || asset.id)}</option>`).join("");
+    productSelect.innerHTML = `<option value="">${white.length ? "请选择白底商品素材" : "白底未识别：请从产品图人工选择"}</option>` + candidates.map((asset) => `<option value="${escapeHtml(asset.id)}" ${asset.id === selectedProductAssetId ? "selected" : ""}>${escapeHtml(asset.original_name || asset.canonical_name || asset.id)}</option>`).join("");
   }
 
   const skuHost = $ui("sku-assets");
@@ -222,11 +227,11 @@ function renderHeroAssets() {
   }
 
   if (form) {
-    form.elements.productDisplayMode.value = spec.product_display_mode || "flat_lay";
-    form.elements.primarySourceFactPath.value = spec.primary_selling_point_binding?.sourceFactPath || "";
-    form.elements.primaryTextOverride.value = spec.primary_selling_point_binding?.textOverride || "";
-    form.elements.secondarySourceFactPath.value = spec.secondary_selling_point_binding?.sourceFactPath || "";
-    form.elements.secondaryTextOverride.value = spec.secondary_selling_point_binding?.textOverride || "";
+    form.elements.productDisplayMode.value = spec.product_display_mode || defaults.productDisplayMode || "flat_lay";
+    form.elements.primarySourceFactPath.value = spec.primary_selling_point_binding?.sourceFactPath || defaults.primarySellingPointBinding?.sourceFactPath || "";
+    form.elements.primaryTextOverride.value = spec.primary_selling_point_binding?.textOverride || defaults.primarySellingPointBinding?.textOverride || "";
+    form.elements.secondarySourceFactPath.value = spec.secondary_selling_point_binding?.sourceFactPath || defaults.secondarySellingPointBinding?.sourceFactPath || "";
+    form.elements.secondaryTextOverride.value = spec.secondary_selling_point_binding?.textOverride || defaults.secondarySellingPointBinding?.textOverride || "";
   }
   refreshHeroPreview();
 }
@@ -281,7 +286,7 @@ function updateHeroReadiness() {
   const hasProduct = Boolean(form?.elements.productDisplayAssetId?.value);
   const hasModelPreset = Boolean(form?.elements.modelPresetId?.value);
   const ready = hasTag && skuCount > 0 && hasProduct && hasModelPreset;
-  status.textContent = ready ? "主图规范可创建任务" : "请补齐关键输入";
+  status.textContent = ready ? "主图规范可创建任务" : hasTag ? "关键输入已自动带出，请确认" : "SOCKONE默认值已带出，请先保存标签卡";
   status.classList.toggle("dc-status--ready", ready);
 }
 
@@ -302,7 +307,8 @@ async function loadWorkbench(productRef) {
     populateTagForm();
     renderHeroAssets();
     renderPresets();
-    showMessage(`已读取 ${state.workbench.product.productCode || productRef}。标签卡和主图使用同一 CURRENT Product Truth。`);
+    const profile = state.workbench.designProfile?.profileCode;
+    showMessage(`已读取 ${state.workbench.product.productCode || productRef}。${profile === "SOCKONE-SOCKS-DESIGN-V1" ? "SOCKONE袜类默认设计已自动带出；" : ""}标签卡和主图使用同一 CURRENT Product Truth。`);
   } catch (error) {
     state.workbench = null;
     showMessage(error.message || "设计中心读取失败。", true);
@@ -351,7 +357,7 @@ async function createHeroTask() {
         taskType:"compose_product_hero",
         inputAssetIds,
         inputFactSnapshot:product.productData || {},
-        instructionSnapshot:{ heroSpec:spec, tagCard:collectTagForm(), contract:"AIONE Unified Hero Five Slot V1" }
+        instructionSnapshot:{ heroSpec:spec, tagCard:collectTagForm(), designProfile:state.workbench?.designProfile || null, contract:"AIONE Unified Hero Five Slot V1" }
       })
     });
     showMessage(`主图设计任务已创建：${payload.task?.id || "已复用现有任务"}。当前先停在草稿，不会绕过审核直接生图。`);
