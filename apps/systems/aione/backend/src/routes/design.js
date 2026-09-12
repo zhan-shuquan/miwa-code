@@ -18,6 +18,7 @@ import {
   proposeDesignTask,
   reviewDesignTask
 } from "../services/design-task-service.js";
+import { createDeterministicCopyOverlayTask } from "../services/design-copy-overlay-service.js";
 import { listDesignTaskOutputs } from "../services/design-output-service.js";
 import { executeDesignTask } from "../services/design-execution-service.js";
 
@@ -96,6 +97,25 @@ router.get("/products/:productId/design/template-set-tasks", async (req, res, ne
       cleanText(req.query.templateSetId, 240)
     );
     res.json({ tasks });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/products/:productId/design/copy-overlay-tasks", requireWriteActor, async (req, res, next) => {
+  try {
+    const context = req.aioneContext || {};
+    const result = await withTransaction((client) => createDeterministicCopyOverlayTask(client, {
+      productId: cleanText(req.params.productId, 240),
+      templateId: cleanText(req.body?.templateId, 240),
+      sourceAssetId: cleanText(req.body?.sourceAssetId, 240),
+      copyValues: req.body?.copyValues && typeof req.body.copyValues === "object" && !Array.isArray(req.body.copyValues)
+        ? req.body.copyValues
+        : {},
+      approvedClaims: Array.isArray(req.body?.approvedClaims) ? req.body.approvedClaims : [],
+      context
+    }));
+    res.status(result.reused ? 200 : 201).json(result);
   } catch (error) {
     next(error);
   }

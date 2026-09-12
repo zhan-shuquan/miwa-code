@@ -32,6 +32,12 @@ jobs:
       - name: Syntax check
         run: npm run check
 
+      - name: Check deterministic copy overlay service syntax
+        run: node --check src/services/design-copy-overlay-service.js && node --check scripts/test-design-copy-overlay-contract.js
+
+      - name: Run deterministic copy overlay contract
+        run: node scripts/test-design-copy-overlay-contract.js
+
       - name: Report lockfile drift
         run: |
           node -e "const p=require('./package.json'); const l=require('./package-lock.json'); const pd=p.dependencies||{}; const ld=(l.packages&&l.packages['']&&l.packages[''].dependencies)||{}; const missing=Object.keys(pd).filter(k=>pd[k]!==ld[k]); if(missing.length){console.error('package-lock drift:', missing.join(',')); process.exitCode=2}else{console.log('package-lock aligned')}"
@@ -111,6 +117,19 @@ jobs:
           set -o pipefail
           mkdir -p preflight-output
           node scripts/accept-design-template-set-current.js | tee preflight-output/design-template-set-gate-ab.log
+
+      - name: Prove deterministic copy overlay migration contract
+        shell: bash
+        run: |
+          PGPASSWORD=aione_test psql -h 127.0.0.1 -U aione_test -d aione_test -v ON_ERROR_STOP=1 -Atc "
+            SELECT CASE WHEN
+              allowed_operations @> '[\"deterministic_copy_overlay\"]'::jsonb
+              AND layout_spec ? 'copyOverlay'
+              AND validation_rules->>'copyRequiresApprovedDerivedSource'='true'
+            THEN 'PASS' ELSE 'FAIL' END
+            FROM public.design_templates
+            WHERE id='dtpl_socks_rakuten_benefit_1000x1500_v1';
+          " | grep -Fx PASS
 
       - name: Prove PostgreSQL rejects writes in read-only transaction
         shell: bash
