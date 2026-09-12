@@ -55,6 +55,35 @@ resolve_gcloud_control_account() {
   CLOUD_CONTROL_EMAIL="$active_account"
 }
 
+wait_for_build_terminal() {
+  local build_id="$1"
+  local allow_failure_with_image="${2:-false}"
+  local status=""
+
+  for i in $(seq 1 120); do
+    status="$(gcloud builds describe "$build_id" --project="$PROJECT_ID" --region=global --format='value(status)' 2>/dev/null || true)"
+    case "$status" in
+      SUCCESS)
+        return 0
+        ;;
+      FAILURE|CANCELLED|EXPIRED|TIMEOUT|INTERNAL_ERROR)
+        if [[ "$allow_failure_with_image" == "true" ]] && gcloud artifacts docker images describe "$IMAGE" --project="$PROJECT_ID" >/dev/null 2>&1; then
+          echo "[AIONE] Bootstrap build ended with ${status} after publishing the required immutable image."
+          echo '[AIONE] This is allowed before migration because the deployment migration gate can intentionally stop on DB/Repo version mismatch.'
+          return 0
+        fi
+        echo "[AIONE][STOP] Cloud Build failed before the required state was reached: $status" >&2
+        return 1
+        ;;
+    esac
+    if [[ "$i" -eq 120 ]]; then
+      echo '[AIONE][STOP] Cloud Build did not finish within 20 minutes.' >&2
+      return 1
+    fi
+    sleep 10
+  done
+}
+
 resolve_gcloud_control_account
 
 gcloud config set project "$AIONE_PROJECT_ID" >/dev/null
@@ -66,16 +95,17 @@ CONNECTION="$(gcloud sql instances describe "$AIONE_SQL_INSTANCE" --project="$PR
 REPO_VERSION="$(find data-code/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]_*.sql' -printf '%f\n' | sort | tail -n1 | cut -d_ -f1)"
 [[ -n "$REPO_VERSION" ]] || { echo '[AIONE][STOP] Could not resolve Repo migration version.' >&2; exit 23; }
 
-# This script lives outside the auto-deploy include filter. Resolve the newest
-# code-bearing commit so a script-only merge does not require a nonexistent image.
-CODE_SHA="$(git log -1 --format=%h -- \
+# Resolve the newest code-bearing commit. Automation-only changes must not
+# change the immutable application image identity.
+CODE_FULL_SHA="$(git log -1 --format=%H -- \
   apps/systems/aione/backend \
   data-code/migrations \
   data-code/current \
   Dockerfile \
   infra/gcp/cloudbuild/deploy-current.yaml \
   infra/gcp/cloud-shell/CURRENT_BASELINE.sh)"
-[[ -n "$CODE_SHA" ]] || { echo '[AIONE][STOP] Could not resolve CURRENT code-bearing SHA.' >&2; exit 24; }
+[[ -n "$CODE_FULL_SHA" ]] || { echo '[AIONE][STOP] Could not resolve CURRENT code-bearing SHA.' >&2; exit 24; }
+CODE_SHA="${CODE_FULL_SHA:0:7}"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AIONE_ARTIFACT_REPO}/${AIONE_IMAGE_NAME}:main-${CODE_SHA}"
 
 printf '\n[AIONE] Apply reviewed CURRENT migrations and redeploy\n'
@@ -87,10 +117,34 @@ printf 'Cloud control account : %s\n\n' "$CLOUD_CONTROL_EMAIL"
 
 echo '[AIONE] 1/5 Confirm immutable code image exists'
 if ! gcloud artifacts docker images describe "$IMAGE" --project="$PROJECT_ID" >/dev/null 2>&1; then
-  echo "[AIONE][STOP] Required immutable image does not exist: $IMAGE" >&2
-  echo '[AIONE][STOP] Resolve the failed/current build before applying migrations.' >&2
+  echo "[AIONE] Immutable image is not visible yet: $IMAGE"
+  echo '[AIONE] Wait briefly for the automatic main trigger before self-healing.'
+  for i in $(seq 1 18); do
+    if gcloud artifacts docker images describe "$IMAGE" --project="$PROJECT_ID" >/dev/null 2>&1; then
+      echo '[AIONE] Automatic main build published the immutable image.'
+      break
+    fi
+    sleep 10
+  done
+fi
+
+if ! gcloud artifacts docker images describe "$IMAGE" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  echo '[AIONE] Immutable image is still missing; run the canonical deployment trigger for the exact code-bearing commit.'
+  BOOTSTRAP_BUILD_ID="$(gcloud builds triggers run "$AIONE_DEPLOY_TRIGGER_NAME" \
+    --project="$PROJECT_ID" \
+    --region=global \
+    --sha="$CODE_FULL_SHA" \
+    --format='value(metadata.build.id)')"
+  [[ -n "$BOOTSTRAP_BUILD_ID" ]] || { echo '[AIONE][STOP] Could not resolve bootstrap build id.' >&2; exit 25; }
+  printf 'Bootstrap Build ID: %s\n' "$BOOTSTRAP_BUILD_ID"
+  wait_for_build_terminal "$BOOTSTRAP_BUILD_ID" true || exit 25
+fi
+
+if ! gcloud artifacts docker images describe "$IMAGE" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  echo "[AIONE][STOP] Required immutable image still does not exist: $IMAGE" >&2
   exit 25
 fi
+echo '[AIONE] Immutable code image ready.'
 
 echo '[AIONE] 2/5 Deploy and execute the canonical migration job'
 gcloud run jobs deploy "$AIONE_MIGRATION_JOB" \
@@ -129,25 +183,8 @@ BUILD_ID="$(gcloud builds triggers run "$AIONE_DEPLOY_TRIGGER_NAME" \
   --format='value(metadata.build.id)')"
 [[ -n "$BUILD_ID" ]] || { echo '[AIONE][STOP] Could not resolve triggered build id.' >&2; exit 27; }
 printf 'Build ID: %s\n' "$BUILD_ID"
-
-for i in $(seq 1 120); do
-  STATUS="$(gcloud builds describe "$BUILD_ID" --project="$PROJECT_ID" --region=global --format='value(status)')"
-  case "$STATUS" in
-    SUCCESS)
-      echo '[AIONE] CURRENT deployment PASS.'
-      break
-      ;;
-    FAILURE|CANCELLED|EXPIRED|TIMEOUT|INTERNAL_ERROR)
-      echo "[AIONE][STOP] CURRENT deployment failed: $STATUS" >&2
-      exit 28
-      ;;
-  esac
-  if [[ "$i" -eq 120 ]]; then
-    echo '[AIONE][STOP] CURRENT deployment did not finish within 20 minutes.' >&2
-    exit 29
-  fi
-  sleep 10
-done
+wait_for_build_terminal "$BUILD_ID" false || exit 28
+echo '[AIONE] CURRENT deployment PASS.'
 
 echo '[AIONE] 5/5 Verify deployed service is healthy and aligned with the triggered main image'
 FINAL_HEALTH="$(curl -fsS -H "Authorization: Bearer $IAM_TOKEN" "$SERVICE_URL/health")"
