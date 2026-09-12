@@ -27,9 +27,10 @@ jobs:
       - name: Check discovery runner syntax
         run: bash -n infra/gcp/automation/RUN_MENS_SOCKS_REAL_PRODUCT_DISCOVERY_V1.sh
 
-      - name: Guard discovery against generation or mutation wiring
+      - name: Guard discovery against generation, mutation, or stale Product identity hardcoding
         run: |
           ! grep -Eq 'OPENAI_API_KEY|design:template-set:gate-c|executeBenefitFeature|runOpenAIImage|INSERT INTO|UPDATE public|DELETE FROM' apps/systems/aione/backend/scripts/discover-mens-socks-trial-products.js
           ! grep -Eq 'OPENAI_API_KEY|AIONE_OPENAI_API_KEY_SECRET|design:template-set:gate-c' infra/gcp/automation/RUN_MENS_SOCKS_REAL_PRODUCT_DISCOVERY_V1.sh
           grep -Fq 'BEGIN READ ONLY' apps/systems/aione/backend/scripts/discover-mens-socks-trial-products.js
-          grep -Fq 'MH0000002' apps/systems/aione/backend/scripts/discover-mens-socks-trial-products.js
+          ! grep -Fq 'KNOWN_NON_MENS_CODES' apps/systems/aione/backend/scripts/discover-mens-socks-trial-products.js
+          ! grep -Fq 'knownNonMensProduct' apps/systems/aione/backend/scripts/discover-mens-socks-trial-products.js
