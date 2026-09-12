@@ -16,11 +16,13 @@ function expectCode(fn, expectedCode) {
 }
 
 const activeItem = {
+  item_kind: "dynamic_template",
+  template_id: "dtpl_contract_fixture",
   template_set_status: "active",
   template_status: "active"
 };
 
-assert(assertTemplateSetItemExecutable(activeItem) === activeItem, "Active template-set page must be executable.");
+assert(assertTemplateSetItemExecutable(activeItem) === activeItem, "Active dynamic template-set page must be executable.");
 
 expectCode(
   () => assertTemplateSetItemExecutable({ ...activeItem, template_set_status: "draft" }),
@@ -30,6 +32,16 @@ expectCode(
 expectCode(
   () => assertTemplateSetItemExecutable({ ...activeItem, template_status: "deprecated" }),
   "design_template_not_active"
+);
+
+expectCode(
+  () => assertTemplateSetItemExecutable({
+    item_kind: "static_page_asset",
+    template_set_status: "active",
+    static_page_asset_id: "dspa_contract_fixture",
+    static_asset_status: "active"
+  }),
+  "design_template_set_static_page_not_executable"
 );
 
 const policyItem = {

@@ -1,0 +1,62 @@
+name: AIONE Mens Socks Template Set Foundation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  foundation-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aione_test
+          POSTGRES_PASSWORD: aione_test
+          POSTGRES_DB: aione_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aione_test -d aione_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://aione_test:aione_test@127.0.0.1:5432/aione_test
+      AIONE_ENV: controlled-ci
+    defaults:
+      run:
+        working-directory: apps/systems/aione/backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install --package-lock=false --no-audit --no-fund
+
+      - name: Create canonical baseline fixture tables
+        run: |
+          PGPASSWORD=aione_test psql -h 127.0.0.1 -U aione_test -d aione_test -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE TABLE public.people (id TEXT PRIMARY KEY, name TEXT, status TEXT DEFAULT 'active');
+          CREATE TABLE public.external_identities (id TEXT PRIMARY KEY, provider TEXT NOT NULL, subject TEXT NOT NULL, person_id TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(provider, subject));
+          CREATE TABLE public.product_opportunities (id TEXT PRIMARY KEY, status TEXT DEFAULT 'draft');
+          CREATE TABLE public.activity_logs (id TEXT PRIMARY KEY, object_type TEXT, object_id TEXT, event_type TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+          SQL
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      - name: Prove mens socks Template Set foundation
+        run: node scripts/accept-mens-socks-template-set-foundation-v1.js
+
+      - name: Prove three-page trial DesignTask path
+        run: node scripts/accept-mens-socks-template-set-trial-execution-v1.js
