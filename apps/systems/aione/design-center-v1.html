@@ -12,6 +12,9 @@
     .dc-preview-shell b{font-size:18px}.dc-preview-shell span{color:#6b7280;font-size:12px}
     .dc-snapshot-badge{display:none;margin-left:10px;padding:4px 8px;border-radius:999px;background:#eef5ef;color:#31583a;font-size:11px;font-weight:700}
     body[data-snapshot="true"] .dc-snapshot-badge{display:inline-block}
+    body[data-embed="true"]{background:#fff}
+    body[data-embed="true"] .dc-preview-shell{display:none}
+    body[data-embed="true"] #app-main-host{min-height:100vh}
   </style>
 </head>
 <body>
@@ -23,6 +26,8 @@
   <script type="module">
     const params=new URLSearchParams(window.location.search);
     const snapshotMode=params.get("snapshot")==="1";
+    const embedMode=params.get("embed")==="1";
+    if(embedMode) document.body.dataset.embed="true";
 
     if(snapshotMode){
       document.body.dataset.snapshot="true";
