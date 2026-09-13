@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>美和AIONE一体化工作平台｜设计中心 V2</title>
-  <link rel="stylesheet" href="./css/pages/design-center-v1.css?v=20260913-v4">
+  <link rel="stylesheet" href="./css/pages/design-center-v1.css?v=20260913-v5">
   <style>
     body{margin:0;background:#f7f8f7}
     .dc-preview-shell{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid #e3e7e4;background:#fff;font:14px Arial,"Microsoft YaHei",sans-serif;position:sticky;top:0;z-index:10}
@@ -17,7 +17,7 @@
 <body>
   <header class="dc-preview-shell">
     <div><b>AIONE</b><span class="dc-snapshot-badge">MH0000002 · 验收快照 · 不写数据库</span></div>
-    <span>设计中心 V2 · 图片规划 + 主图微调</span>
+    <span>设计中心 V2 · 8类图片工作流 + Design Engine</span>
   </header>
   <main id="app-main-host"></main>
   <script type="module">
@@ -29,10 +29,11 @@
       const nativeFetch=window.fetch.bind(window);
       let snapshotPayload=null;
       let layoutTemplate=null;
+      const pageSpecs=new Map();
 
       async function getSnapshot(){
         if(snapshotPayload) return snapshotPayload;
-        const response=await nativeFetch("./pages/design-center/mh0000002-preview.json?v=20260913-v2",{cache:"no-store"});
+        const response=await nativeFetch("./pages/design-center/mh0000002-preview.json?v=20260913-v3",{cache:"no-store"});
         if(!response.ok) throw new Error(`Snapshot load failed: ${response.status}`);
         snapshotPayload=await response.json();
         if(snapshotPayload?.workbench?.heroSpec && !snapshotPayload.workbench.heroSpec.layout_adjustments){
@@ -43,6 +44,7 @@
 
       function jsonResponse(value,status=200){return new Response(JSON.stringify(value),{status,headers:{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"}})}
       function requestUrl(input){if(typeof input==="string") return input;if(input instanceof URL) return input.toString();return input?.url || ""}
+      function pageTypeFromUrl(url){const match=url.match(/\/design\/pages\/([^/?#]+)/);return match?decodeURIComponent(match[1]):null}
 
       window.fetch=async function(input,init={}){
         const url=requestUrl(input);
@@ -64,23 +66,48 @@
           snapshot.workbench.heroSpec={...existing,id:existing.id || "herospec_preview_mh0000002",tag_card_id:body.tagCardId || snapshot.workbench.tagCard?.id || null,layout_preset_id:body.layoutPresetId || "dip_unified_hero_square_layout_v1",model_preset_id:body.modelPresetId || null,product_display_preset_id:body.productDisplayPresetId || null,model_asset_id:body.modelAssetId || null,product_display_asset_id:body.productDisplayAssetId || null,sku_asset_ids:Array.isArray(body.skuAssetIds)?body.skuAssetIds:[],product_display_mode:body.productDisplayMode || "flat_lay",primary_selling_point_binding:body.primarySellingPointBinding || {},secondary_selling_point_binding:body.secondarySellingPointBinding || {},layout_adjustments:body.layoutAdjustments || existing.layout_adjustments || {},lifecycle_status:"draft"};
           return jsonResponse({heroSpec:snapshot.workbench.heroSpec,previewSnapshot:true});
         }
+        if(/\/api\/v1\/products\/[^/]+\/design\/pages\//.test(url)){
+          const pageType=pageTypeFromUrl(url);
+          if(method==="GET") return jsonResponse({pageSpec:pageSpecs.get(pageType)||null,previewSnapshot:true});
+          if(method==="PATCH"){
+            const body=JSON.parse(init.body || "{}");
+            const spec={id:`pagespec_preview_${pageType}`,page_type:pageType,template_id:body.templateId||null,field_bindings:body.fieldBindings||{},asset_ids:Array.isArray(body.assetIds)?body.assetIds:[],layout_adjustments:body.layoutAdjustments||{},presentation:body.presentation||{},lifecycle_status:body.lifecycleStatus||"draft",metadata:body.metadata||{}};
+            pageSpecs.set(pageType,spec);
+            return jsonResponse({pageSpec:spec,previewSnapshot:true});
+          }
+        }
         if(/\/api\/v1\/products\/[^/]+\/design\/tasks/.test(url) && method==="POST"){
           const body=JSON.parse(init.body || "{}");
-          return jsonResponse({task:{id:"preview_task_mh0000002",lifecycleStatus:"draft",instructionSnapshot:body.instructionSnapshot||{}},previewSnapshot:true});
+          return jsonResponse({task:{id:`preview_task_${body.taskType||"design"}`,task_type:body.taskType||null,task_status:"draft",instruction_snapshot:body.instructionSnapshot||{}},previewSnapshot:true});
         }
         return nativeFetch(input,init);
       };
     }
 
     const host=document.getElementById("app-main-host");
-    const response=await fetch("./pages/design-center/workbench.html?v=20260913-v3",{cache:"no-store"});
+    const response=await fetch("./pages/design-center/workbench.html?v=20260913-v4",{cache:"no-store"});
     host.innerHTML=await response.text();
-    const { initDesignCenter } = await import("./js/pages/design-center-v1.js?v=20260913-v4");
+
+    const { initDesignCenter } = await import("./js/pages/design-center-v1.js?v=20260913-v5");
     await initDesignCenter();
-    const { initDesignCenterPagePlan } = await import("./js/pages/design-center-page-plan-v1.js?v=20260913-v2");
+    const { initDesignCenterPagePlan } = await import("./js/pages/design-center-page-plan-v1.js?v=20260913-v3");
     initDesignCenterPagePlan();
-    const { initDesignCenterLayoutAdjustments } = await import("./js/pages/design-center-layout-v1.js?v=20260913-v1");
+    const { initDesignCenterLayoutAdjustments } = await import("./js/pages/design-center-layout-v1.js?v=20260913-v2");
     await initDesignCenterLayoutAdjustments();
+
+    const modules=[
+      ["./js/pages/design-center-sku-v1.js?v=20260913-v1","initDesignCenterSkuV1"],
+      ["./js/pages/design-center-white-bg-v1.js?v=20260913-v1","initDesignCenterWhiteBgV1"],
+      ["./js/pages/design-center-model-v1.js?v=20260913-v1","initDesignCenterModelV1"],
+      ["./js/pages/design-center-material-v1.js?v=20260913-v1","initDesignCenterMaterialV1"],
+      ["./js/pages/design-center-size-v1.js?v=20260913-v1","initDesignCenterSizeV1"],
+      ["./js/pages/design-center-spec-v1.js?v=20260913-v1","initDesignCenterSpecV1"],
+      ["./js/pages/design-center-detail-v1.js?v=20260913-v1","initDesignCenterDetailV1"]
+    ];
+    for(const [path,fn] of modules){
+      const mod=await import(path);
+      if(typeof mod[fn]==="function") await mod[fn]();
+    }
   </script>
 </body>
 </html>
