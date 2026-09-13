@@ -12,6 +12,10 @@ import {
   createDesignLayoutTemplate,
   listDesignLayoutTemplates
 } from "../services/design-layout-template-service.js";
+import {
+  getProductDesignPageSpec,
+  upsertProductDesignPageSpec
+} from "../services/design-page-spec-service.js";
 
 const router = Router();
 
@@ -101,6 +105,32 @@ router.patch("/products/:productRef/design/hero-spec", requireWriteActor, async 
   try {
     const result = await withTransaction((client) => upsertProductHeroSpec(client, {
       productRef: cleanText(req.params.productRef, 240),
+      input: req.body && typeof req.body === "object" ? req.body : {},
+      context: req.aioneContext || {}
+    }));
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/products/:productRef/design/pages/:pageType", async (req, res, next) => {
+  try {
+    const result = await getProductDesignPageSpec(pool, {
+      productRef: cleanText(req.params.productRef, 240),
+      pageType: cleanText(req.params.pageType, 80)
+    });
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/products/:productRef/design/pages/:pageType", requireWriteActor, async (req, res, next) => {
+  try {
+    const result = await withTransaction((client) => upsertProductDesignPageSpec(client, {
+      productRef: cleanText(req.params.productRef, 240),
+      pageType: cleanText(req.params.pageType, 80),
       input: req.body && typeof req.body === "object" ? req.body : {},
       context: req.aioneContext || {}
     }));
