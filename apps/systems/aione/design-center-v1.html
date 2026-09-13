@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>美和AIONE一体化工作平台｜设计中心 V1</title>
-  <link rel="stylesheet" href="./css/pages/design-center-v1.css?v=20260913-v2">
+  <title>美和AIONE一体化工作平台｜设计中心 V2</title>
+  <link rel="stylesheet" href="./css/pages/design-center-v1.css?v=20260913-v3">
   <style>
     body{margin:0;background:#f7f8f7}
     .dc-preview-shell{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid #e3e7e4;background:#fff;font:14px Arial,"Microsoft YaHei",sans-serif;position:sticky;top:0;z-index:10}
@@ -18,7 +18,7 @@
 <body>
   <header class="dc-preview-shell">
     <div><b>AIONE</b><span class="dc-snapshot-badge">MH0000002 · 验收快照 · 不写数据库</span></div>
-    <span>设计中心 V1 · 操作验证页</span>
+    <span>设计中心 V2 · 操作验证页</span>
   </header>
   <main id="app-main-host"></main>
   <script type="module">
@@ -52,9 +52,7 @@
         const url=requestUrl(input);
         const method=String(init?.method || input?.method || "GET").toUpperCase();
 
-        if(url.includes("/api/v1/design-center/workbench")){
-          return jsonResponse(await getSnapshot());
-        }
+        if(url.includes("/api/v1/design-center/workbench")) return jsonResponse(await getSnapshot());
 
         if(/\/api\/v1\/products\/[^/]+\/design\/tag-card/.test(url) && method==="PATCH"){
           const snapshot=await getSnapshot();
@@ -105,9 +103,9 @@
       };
     }
 
-    const { initDesignCenter } = await import("./js/pages/design-center-v1.js?v=20260913-v2");
+    const { initDesignCenter } = await import("./js/pages/design-center-v1.js?v=20260913-v3");
     const host=document.getElementById("app-main-host");
-    const response=await fetch("./pages/design-center/workbench.html?v=20260913-v1",{cache:"no-store"});
+    const response=await fetch("./pages/design-center/workbench.html?v=20260913-v2",{cache:"no-store"});
     host.innerHTML=await response.text();
     await initDesignCenter();
   </script>
