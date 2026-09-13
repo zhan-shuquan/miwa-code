@@ -1,6 +1,6 @@
 const PAGE_TYPES = [
   { code:"hero", name:"主图", required:true, output:"1000×1000", status:"ready", fields:["品牌","套数/双数","适用尺码","长度/类型","第一卖点","第二卖点"], assets:["SKU图","白底商品图","模特/实拍参考"], note:"已接入标签卡、卖点绑定、布局微调和主图设计任务。" },
-  { code:"sku", name:"SKU / 颜色图", required:true, output:"1000×1000", status:"planned", fields:["实际颜色/花型","套数/组合关系","SKU关系"], assets:["SKU图","白底图"], note:"重点保证真实颜色、花型、套数组合，不生成不存在的变体。" },
+  { code:"sku", name:"SKU / 颜色图", required:true, output:"1000×1000", status:"ready", fields:["实际颜色/花型","套数/组合关系","SKU关系"], assets:["SKU图","白底图"], note:"已接入真实变体字段、SKU素材选择、实时预览、布局微调和设计任务。" },
   { code:"white_bg", name:"白底商品图", required:true, output:"1000×1000", status:"planned", fields:["商品主体","实际颜色/花型"], assets:["产品图","SKU图"], note:"用于主图、发布和后续设计的标准商品主体素材。" },
   { code:"model", name:"模特 / 穿着图", required:false, output:"1000×1500", status:"planned", fields:["适用人群","季节","长度/类型","搭配方向"], assets:["产品图","实拍图","SKU图"], note:"可由AI标准化模特角度，但商品颜色、花型、长度和结构必须忠于实物。" },
   { code:"material", name:"材质 / 质地图", required:true, output:"1000×1500", status:"planned", fields:["已确认材质","材质特征文案"], assets:["细节图","产品图"], note:"只有已确认材质事实才可进入正式文案；没有事实时保留待确认。" },
@@ -36,12 +36,17 @@ function ensureStyles() {
 }
 
 function renderPagePlanCard(type) {
+  const action = type.code === "hero"
+    ? '<button type="button" class="dc-button dc-button--primary" data-action="jump-hero">进入设计</button>'
+    : type.code === "sku"
+      ? '<button type="button" class="dc-button dc-button--primary" data-action="jump-sku">进入设计</button>'
+      : '<button type="button" class="dc-button" disabled>待接入</button>';
   return `<article class="dc-page-plan-card" data-page-type="${escapeHtml(type.code)}">
     <div class="dc-page-plan-card__head"><div><strong>${escapeHtml(type.name)}</strong><span>${escapeHtml(type.output)}</span></div><em class="dc-page-plan-status dc-page-plan-status--${escapeHtml(type.status)}">${escapeHtml(STATUS_LABELS[type.status] || type.status)}</em></div>
     <div class="dc-page-plan-card__meta"><b>需要字段</b><span>${escapeHtml(type.fields.join(" · "))}</span></div>
     <div class="dc-page-plan-card__meta"><b>需要素材</b><span>${escapeHtml(type.assets.join(" · "))}</span></div>
     <p>${escapeHtml(type.note)}</p>
-    <div class="dc-page-plan-card__foot"><span>${type.required ? "通用必备" : "按分类/商品启用"}</span>${type.code === "hero" ? '<button type="button" class="dc-button dc-button--primary" data-action="jump-hero">进入设计</button>' : '<button type="button" class="dc-button" disabled>待接入</button>'}</div>
+    <div class="dc-page-plan-card__foot"><span>${type.required ? "通用必备" : "按分类/商品启用"}</span>${action}</div>
   </article>`;
 }
 
@@ -49,7 +54,7 @@ function createSection() {
   const section = document.createElement("section");
   section.className = "dc-card dc-page-plan";
   section.dataset.ui = "page-plan";
-  section.innerHTML = `<div class="dc-page-plan__intro"><div><h2>图片设计规划</h2><p>先确定这件商品需要设计哪些图片、每张图读取哪些字段、使用哪些素材。主图已经可操作，其余类型按同一底层逐张接入。</p></div><div class="dc-page-plan__legend"><span>字段来自 Product Truth</span><span>素材来自 01 / 02 / 03</span><span>设计中心只管呈现</span></div></div><div class="dc-page-plan-grid" data-ui="page-plan-grid"></div>`;
+  section.innerHTML = `<div class="dc-page-plan__intro"><div><h2>图片设计规划</h2><p>先确定这件商品需要设计哪些图片、每张图读取哪些字段、使用哪些素材。主图与 SKU/颜色图已经可操作，其余类型按同一底层逐张接入。</p></div><div class="dc-page-plan__legend"><span>字段来自 Product Truth</span><span>素材来自 01 / 02 / 03</span><span>设计中心只管呈现</span></div></div><div class="dc-page-plan-grid" data-ui="page-plan-grid"></div>`;
   return section;
 }
 
@@ -68,6 +73,12 @@ export function initDesignCenterPagePlan() {
   section.querySelector('[data-action="jump-hero"]')?.addEventListener("click", () => {
     const heroHeading = [...root.querySelectorAll("h2")].find((node) => node.textContent.includes("1:1 主图设计"));
     heroHeading?.closest(".dc-card")?.scrollIntoView({ behavior:"smooth", block:"start" });
+  });
+  import("./design-center-sku-v1.js?v=20260913-v2").then(async ({ initDesignCenterSkuV1 }) => {
+    await initDesignCenterSkuV1();
+    section.querySelector('[data-action="jump-sku"]')?.addEventListener("click", () => {
+      root.querySelector('[data-section="sku-design"]')?.scrollIntoView({ behavior:"smooth", block:"start" });
+    });
   });
 }
 
