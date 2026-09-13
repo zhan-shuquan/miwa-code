@@ -9,6 +9,10 @@ import {
   resolveWhiteBackgroundExecutionMode
 } from "../src/services/design-white-background-output-service.js";
 import { buildModelWearPrompt } from "../src/services/design-model-wear-output-service.js";
+import {
+  buildTruthfulSizeGuideSvg,
+  buildProductSpecSvg
+} from "../src/services/design-deterministic-page-output-service.js";
 
 const expected = {
   normalize_canvas: ["deterministic", "implemented"],
@@ -18,8 +22,8 @@ const expected = {
   compose_white_background_product: ["hybrid", "implemented"],
   generate_source_anchored_model_wear: ["ai_image_edit", "implemented"],
   compose_material_texture_image: ["deterministic", "planned"],
-  compose_truthful_size_guide: ["deterministic", "planned"],
-  compose_deterministic_product_spec: ["deterministic", "planned"],
+  compose_truthful_size_guide: ["deterministic", "implemented"],
+  compose_deterministic_product_spec: ["deterministic", "implemented"],
   compose_detail_structure_image: ["hybrid", "planned"]
 };
 
@@ -102,9 +106,54 @@ const preserveTask = structuredClone(whiteTask);
 preserveTask.instruction_snapshot.pageSpec.presentation.cleanupMode = "preserve";
 assert.equal(resolveWhiteBackgroundExecutionMode(preserveTask), "deterministic");
 
+const sizeSvg = buildTruthfulSizeGuideSvg({
+  facts: { supportedSize: "24–27cm" }
+});
+assert.match(sizeSvg, /24–27cm/);
+assert.match(sizeSvg, /実測サイズは未確認/);
+assert.doesNotMatch(sizeSvg, /20cm|23cm|7\.5cm/);
+assert.equal(getDesignExecutionCapability("compose_truthful_size_guide").status, "implemented");
+
+const sizeWithMeasurements = buildTruthfulSizeGuideSvg({
+  facts: {
+    supportedSize: "24–27cm",
+    measurements: [
+      { label: "後踵から履き口", value: "20", unit: "cm" },
+      { label: "足底", value: "23", unit: "cm" }
+    ]
+  }
+});
+assert.match(sizeWithMeasurements, /後踵から履き口/);
+assert.match(sizeWithMeasurements, /20 cm/);
+assert.match(sizeWithMeasurements, /23 cm/);
+
+assert.throws(
+  () => buildTruthfulSizeGuideSvg({ facts: {} }),
+  (error) => error?.code === "supported_size_required"
+);
+
+const specSvg = buildProductSpecSvg({
+  productCode: "MH0000002",
+  facts: {
+    supportedSize: "24–27cm",
+    actualVariants: ["白色", "米色", "卡其", "军绿", "深灰", "黑色"],
+    season: "秋冬",
+    lengthType: "中筒",
+    setCount: 6
+  }
+});
+assert.match(specSvg, /MH0000002/);
+assert.match(specSvg, /24–27cm/);
+assert.match(specSvg, /秋冬/);
+assert.match(specSvg, /中筒/);
+assert.doesNotMatch(specSvg, /素材<\/text>[\s\S]*綿|生産国<\/text>[\s\S]*中国/);
+assert.equal(getDesignExecutionCapability("compose_deterministic_product_spec").status, "implemented");
+
 const listed = listDesignExecutionCapabilities();
 assert.equal(listed.length, Object.keys(expected).length);
 
 console.log("[AIONE] DESIGN ENGINE EXECUTION REGISTRY PASS");
 console.log("[AIONE] WHITE BACKGROUND EXECUTOR CONTRACT PASS");
 console.log("[AIONE] MODEL WEAR EXECUTOR CONTRACT PASS");
+console.log("[AIONE] TRUTHFUL SIZE GUIDE RENDERER CONTRACT PASS");
+console.log("[AIONE] PRODUCT SPEC RENDERER CONTRACT PASS");

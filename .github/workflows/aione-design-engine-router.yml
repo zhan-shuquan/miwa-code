@@ -29,12 +29,18 @@ jobs:
       - name: Install dependencies
         run: npm install --package-lock=false --no-audit --no-fund
 
+      - name: Install deterministic renderer dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick fonts-noto-cjk
+
       - name: Syntax check Design Engine router
         run: |
           node --check src/services/design-engine-router-service.js
           node --check src/services/design-execution-service.js
           node --check src/services/design-white-background-output-service.js
           node --check src/services/design-model-wear-output-service.js
+          node --check src/services/design-deterministic-page-output-service.js
           node --check src/routes/design.js
           node --check scripts/test-design-engine-router.js
 
