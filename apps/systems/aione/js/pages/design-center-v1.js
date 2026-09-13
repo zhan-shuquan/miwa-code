@@ -1,6 +1,29 @@
 import { aioneApi } from "../services/aione-api-client.js";
 
 const SLOT_COUNT = 4;
+const SLOT_TYPE_LABELS = {
+  feature: "卖点",
+  setCount: "套数/双数",
+  size: "尺码",
+  material: "材质",
+  style: "长度/类型",
+  custom: "自定义"
+};
+const FACT_LABELS = {
+  setCount: "套数/双数",
+  supportedSize: "适用尺码",
+  season: "季节",
+  targetGender: "适用人群",
+  lengthType: "长度/类型",
+  approvedPrimaryValue: "商品主标题",
+  actualVariants: "实际颜色",
+  sellingPoints: "核心卖点",
+  "sellingPoints.0": "核心卖点 1",
+  "sellingPoints.1": "核心卖点 2",
+  "sellingPoints.2": "核心卖点 3",
+  "sellingPoints.3": "核心卖点 4",
+  "sellingPoints.4": "核心卖点 5"
+};
 let state = { workbench: null };
 
 function root() { return document.querySelector("[data-design-center-root]"); }
@@ -64,14 +87,24 @@ function topLevelFactPaths(value, prefix = "", depth = 0) {
   return paths;
 }
 
+function factLabel(path) {
+  return FACT_LABELS[path] || path;
+}
+
+function factOptions(selected = "", includeBlank = true) {
+  const paths = topLevelFactPaths(state.workbench?.product?.productData || {}).sort();
+  const blank = includeBlank ? `<option value="">不绑定 · 直接使用显示文案</option>` : "";
+  return blank + paths.map((path) => `<option value="${escapeHtml(path)}" ${path === selected ? "selected" : ""}>${escapeHtml(factLabel(path))}</option>`).join("");
+}
+
 function renderProductSummary() {
   const host = $ui("product-summary");
   const product = state.workbench?.product;
   if (!host || !product) return;
   const data = product.productData || {};
   const preferred = ["setCount","supportedSize","season","targetGender","lengthType","approvedPrimaryValue"];
-  const chips = preferred.filter((key) => data[key] !== undefined && data[key] !== null && data[key] !== "").map((key) => `<span class="dc-fact-chip">${escapeHtml(key)} · ${escapeHtml(displayValue(data[key]))}</span>`).join("");
-  host.innerHTML = `<div class="dc-product-summary__row"><div class="dc-product-summary__identity"><strong>${escapeHtml(product.productCode || product.id)} · ${escapeHtml(product.name)}</strong><span>${escapeHtml(product.categoryName || product.categoryCode || "分类待确认")} · ${escapeHtml(product.lifecycleStatus)}</span></div><div class="dc-fact-chips">${chips || '<span class="dc-fact-chip">Product Truth 待补</span>'}</div></div>`;
+  const chips = preferred.filter((key) => data[key] !== undefined && data[key] !== null && data[key] !== "").map((key) => `<span class="dc-fact-chip">${escapeHtml(factLabel(key))} · ${escapeHtml(displayValue(data[key]))}</span>`).join("");
+  host.innerHTML = `<div class="dc-product-summary__row"><div class="dc-product-summary__identity"><strong>${escapeHtml(product.productCode || product.id)} · ${escapeHtml(product.name)}</strong><span>${escapeHtml(product.categoryName || product.categoryCode || "分类待确认")} · ${escapeHtml(product.lifecycleStatus || "当前商品")}</span></div><div class="dc-fact-chips">${chips || '<span class="dc-fact-chip">商品信息待补</span>'}</div></div>`;
 }
 
 function materialCard(title, count, detail, stateName) {
@@ -86,9 +119,9 @@ function renderMaterials() {
   const c = materials.counts || {};
   host.innerHTML = [
     materialCard("SKU图", c.sku || 0, "确认真实颜色、花型、套数和SKU关系", c.sku ? "ready" : "warning"),
-    materialCard("白底图", c.whiteBackgroundCandidates || 0, "仍存放在02_产品图；用于主体、主图与抠图", c.whiteBackgroundCandidates ? "ready" : "warning"),
-    materialCard("细节图", c.detailCandidates || 0, "用于卖点、结构和真实性校验", c.detailCandidates ? "ready" : ""),
-    materialCard("实拍图", c.real || 0, "没有不阻断；模特/场景可由AI补视觉", c.real ? "ready" : "")
+    materialCard("白底图", c.whiteBackgroundCandidates || 0, "用于商品主体、主图与抠图", c.whiteBackgroundCandidates ? "ready" : "warning"),
+    materialCard("细节图", c.detailCandidates || 0, "用于卖点、结构和局部展示", c.detailCandidates ? "ready" : ""),
+    materialCard("实拍图", c.real || 0, "可用于模特、场景和真实感补充", c.real ? "ready" : "")
   ].join("");
   const status = $ui("material-status");
   if (status) {
@@ -110,11 +143,11 @@ function normalizeSlots(slots) {
 function slotEditor(slot, index) {
   return `<div class="dc-slot-row" data-slot-index="${index}">
     <div class="dc-slot-number">${index + 1}</div>
-    <label>类型<select data-slot-field="type">
-      ${["feature","setCount","size","material","style","custom"].map((value) => `<option value="${value}" ${slot.type === value ? "selected" : ""}>${value}</option>`).join("")}
+    <label>槽位类型<select data-slot-field="type">
+      ${Object.entries(SLOT_TYPE_LABELS).map(([value,label]) => `<option value="${value}" ${slot.type === value ? "selected" : ""}>${label}</option>`).join("")}
     </select></label>
-    <label>Product Truth 路径<input data-slot-field="sourceFactPath" list="product-fact-paths" value="${escapeHtml(slot.sourceFactPath)}" placeholder="supportedSize"></label>
-    <label>显示文案<input data-slot-field="textOverride" value="${escapeHtml(slot.textOverride)}" placeholder="无事实绑定时使用"></label>
+    <label>绑定字段<select data-slot-field="sourceFactPath">${factOptions(slot.sourceFactPath)}</select></label>
+    <label>显示文案<input data-slot-field="textOverride" value="${escapeHtml(slot.textOverride)}" placeholder="可直接手动填写"></label>
     <label class="dc-slot-prefix">前缀<input data-slot-field="prefix" value="${escapeHtml(slot.prefix)}"></label>
     <label class="dc-slot-suffix">后缀<input data-slot-field="suffix" value="${escapeHtml(slot.suffix)}"></label>
     <label class="dc-slot-visible"><input data-slot-field="visible" type="checkbox" ${slot.visible !== false ? "checked" : ""}>显示</label>
@@ -156,7 +189,7 @@ function tagPreviewMarkup(tag) {
     <div class="product-tag-card__brand">${escapeHtml(tag.brandNameEn || "BRAND")}</div>
     <div class="product-tag-card__subline">${escapeHtml(tag.brandSublineEn || "Product Line")}</div>
     <div class="product-tag-card__slots">${slots.map((slot) => {
-      const resolved = resolveLocalBinding(slot);
+      const resolved = slot.visible === false ? "" : resolveLocalBinding(slot);
       return `<div class="product-tag-card__slot ${resolved ? "" : "is-empty"}">${escapeHtml(resolved || "—")}</div>`;
     }).join("")}</div>
     <div class="product-tag-card__slogan">${escapeHtml(tag.brandSloganJa || "ブランドメッセージ")}</div>
@@ -192,7 +225,11 @@ function populateTagForm() {
 function renderFactPaths() {
   const host = $ui("fact-paths");
   const paths = topLevelFactPaths(state.workbench?.product?.productData || {}).sort();
-  if (host) host.innerHTML = paths.map((path) => `<option value="${escapeHtml(path)}"></option>`).join("");
+  if (host) host.innerHTML = paths.map((path) => `<option value="${escapeHtml(path)}">${escapeHtml(factLabel(path))}</option>`).join("");
+  const primary = $ui("primary-fact-options");
+  const secondary = $ui("secondary-fact-options");
+  if (primary) primary.innerHTML = factOptions(primary.value || "");
+  if (secondary) secondary.innerHTML = factOptions(secondary.value || "");
 }
 
 function presetOptions(kind, selectedId = "") {
@@ -217,20 +254,24 @@ function renderHeroAssets() {
   const selectedProductAssetId = spec.product_display_asset_id || white[0]?.id || "";
   const productSelect = $ui("product-display-assets");
   if (productSelect) {
-    productSelect.innerHTML = `<option value="">${white.length ? "请选择白底商品素材" : "白底未识别：请从产品图人工选择"}</option>` + candidates.map((asset) => `<option value="${escapeHtml(asset.id)}" ${asset.id === selectedProductAssetId ? "selected" : ""}>${escapeHtml(asset.original_name || asset.canonical_name || asset.id)}</option>`).join("");
+    productSelect.innerHTML = `<option value="">${white.length ? "请选择白底商品素材" : "请从产品图人工选择"}</option>` + candidates.map((asset) => `<option value="${escapeHtml(asset.id)}" ${asset.id === selectedProductAssetId ? "selected" : ""}>${escapeHtml(asset.original_name || asset.canonical_name || asset.id)}</option>`).join("");
   }
 
   const skuHost = $ui("sku-assets");
   const selectedSku = new Set(Array.isArray(spec.sku_asset_ids) && spec.sku_asset_ids.length ? spec.sku_asset_ids : (materials.sku || []).map((asset) => asset.id));
   if (skuHost) {
-    skuHost.innerHTML = `<div class="dc-sku-list">${(materials.sku || []).map((asset) => `<label class="dc-sku-item"><input type="checkbox" value="${escapeHtml(asset.id)}" ${selectedSku.has(asset.id) ? "checked" : ""}>${escapeHtml(asset.original_name || asset.canonical_name || asset.id)}</label>`).join("") || '<span class="dc-empty">CURRENT 素材中尚未识别 SKU 图</span>'}</div>`;
+    skuHost.innerHTML = `<div class="dc-sku-list">${(materials.sku || []).map((asset) => `<label class="dc-sku-item"><input type="checkbox" value="${escapeHtml(asset.id)}" ${selectedSku.has(asset.id) ? "checked" : ""}>${escapeHtml(asset.original_name || asset.canonical_name || asset.id)}</label>`).join("") || '<span class="dc-empty">尚未识别 SKU 图</span>'}</div>`;
   }
 
   if (form) {
     form.elements.productDisplayMode.value = spec.product_display_mode || defaults.productDisplayMode || "flat_lay";
-    form.elements.primarySourceFactPath.value = spec.primary_selling_point_binding?.sourceFactPath || defaults.primarySellingPointBinding?.sourceFactPath || "";
+    const primaryPath = spec.primary_selling_point_binding?.sourceFactPath || defaults.primarySellingPointBinding?.sourceFactPath || "";
+    const secondaryPath = spec.secondary_selling_point_binding?.sourceFactPath || defaults.secondarySellingPointBinding?.sourceFactPath || "";
+    form.elements.primarySourceFactPath.innerHTML = factOptions(primaryPath);
+    form.elements.primarySourceFactPath.value = primaryPath;
     form.elements.primaryTextOverride.value = spec.primary_selling_point_binding?.textOverride || defaults.primarySellingPointBinding?.textOverride || "";
-    form.elements.secondarySourceFactPath.value = spec.secondary_selling_point_binding?.sourceFactPath || defaults.secondarySellingPointBinding?.sourceFactPath || "";
+    form.elements.secondarySourceFactPath.innerHTML = factOptions(secondaryPath);
+    form.elements.secondarySourceFactPath.value = secondaryPath;
     form.elements.secondaryTextOverride.value = spec.secondary_selling_point_binding?.textOverride || defaults.secondarySellingPointBinding?.textOverride || "";
   }
   refreshHeroPreview();
@@ -248,14 +289,8 @@ function collectHeroForm() {
     modelAssetId: state.workbench?.heroSpec?.model_asset_id || null,
     skuAssetIds,
     productDisplayMode: form?.elements.productDisplayMode?.value || "flat_lay",
-    primarySellingPointBinding: {
-      sourceFactPath: text(form?.elements.primarySourceFactPath?.value),
-      textOverride: text(form?.elements.primaryTextOverride?.value), prefix:"", suffix:""
-    },
-    secondarySellingPointBinding: {
-      sourceFactPath: text(form?.elements.secondarySourceFactPath?.value),
-      textOverride: text(form?.elements.secondaryTextOverride?.value), prefix:"", suffix:""
-    },
+    primarySellingPointBinding: { sourceFactPath:text(form?.elements.primarySourceFactPath?.value), textOverride:text(form?.elements.primaryTextOverride?.value), prefix:"", suffix:"" },
+    secondarySellingPointBinding: { sourceFactPath:text(form?.elements.secondarySourceFactPath?.value), textOverride:text(form?.elements.secondaryTextOverride?.value), prefix:"", suffix:"" },
     lifecycleStatus: "draft"
   };
 }
@@ -267,7 +302,7 @@ function refreshHeroPreview() {
   const secondary = resolveLocalBinding({ sourceFactPath:form.elements.secondarySourceFactPath.value, textOverride:form.elements.secondaryTextOverride.value });
   const p = root()?.querySelector('[data-preview="primary"]');
   const s = root()?.querySelector('[data-preview="secondary"]');
-  if (p) p.textContent = primary || "最强卖点";
+  if (p) p.textContent = primary || "第一卖点";
   if (s) s.textContent = secondary || "第二卖点";
   const display = $ui("hero-product-display");
   if (display) {
@@ -286,29 +321,30 @@ function updateHeroReadiness() {
   const hasProduct = Boolean(form?.elements.productDisplayAssetId?.value);
   const hasModelPreset = Boolean(form?.elements.modelPresetId?.value);
   const ready = hasTag && skuCount > 0 && hasProduct && hasModelPreset;
-  status.textContent = ready ? "主图规范可创建任务" : hasTag ? "关键输入已自动带出，请确认" : "SOCKONE默认值已带出，请先保存标签卡";
+  status.textContent = ready ? "主图设置已就绪" : hasTag ? "关键输入已自动带出，请确认" : "请先保存标签卡";
   status.classList.toggle("dc-status--ready", ready);
 }
 
 function renderPresets() {
   const host = $ui("preset-list");
   if (!host) return;
-  host.innerHTML = (state.workbench?.instructionPresets || []).map((preset) => `<div class="dc-preset"><b>${escapeHtml(preset.name)}</b><code>${escapeHtml(preset.preset_code)}</code><p>${escapeHtml(preset.instruction_kind)}${preset.category_scope ? ` · ${escapeHtml(preset.category_scope)}` : " · 通用"}</p></div>`).join("") || '<div class="dc-empty">暂无可用指令预设</div>';
+  const kindLabels = { tag_card:"标签卡", hero_layout:"主图布局", model_generation:"模特图", product_display:"商品展示" };
+  host.innerHTML = (state.workbench?.instructionPresets || []).map((preset) => `<div class="dc-preset"><b>${escapeHtml(preset.name)}</b><code>${escapeHtml(preset.preset_code)}</code><p>${escapeHtml(kindLabels[preset.instruction_kind] || preset.instruction_kind)}${preset.category_scope ? ` · ${escapeHtml(preset.category_scope)}` : " · 通用"}</p></div>`).join("") || '<div class="dc-empty">暂无可用指令预设</div>';
 }
 
 async function loadWorkbench(productRef) {
-  showMessage("正在读取 CURRENT 商品事实和已确认素材…");
+  showMessage("正在读取当前商品信息和素材…");
   try {
     const payload = await aioneApi(`/api/v1/design-center/workbench?product=${encodeURIComponent(productRef)}`);
     state.workbench = payload.workbench;
     renderProductSummary();
     renderMaterials();
-    renderFactPaths();
     populateTagForm();
+    renderFactPaths();
     renderHeroAssets();
     renderPresets();
     const profile = state.workbench.designProfile?.profileCode;
-    showMessage(`已读取 ${state.workbench.product.productCode || productRef}。${profile === "SOCKONE-SOCKS-DESIGN-V1" ? "SOCKONE袜类默认设计已自动带出；" : ""}标签卡和主图使用同一 CURRENT Product Truth。`);
+    showMessage(`已读取 ${state.workbench.product.productCode || productRef}。${profile === "SOCKONE-SOCKS-DESIGN-V1" ? "SOCKONE 袜类默认设计已自动带出。" : ""}`);
   } catch (error) {
     state.workbench = null;
     showMessage(error.message || "设计中心读取失败。", true);
@@ -319,13 +355,11 @@ async function saveTagCard(event) {
   event.preventDefault();
   if (!state.workbench?.product?.id) return;
   try {
-    const result = await aioneApi(`/api/v1/products/${encodeURIComponent(state.workbench.product.id)}/design/tag-card`, {
-      method:"PATCH", body:JSON.stringify(collectTagForm())
-    });
+    const result = await aioneApi(`/api/v1/products/${encodeURIComponent(state.workbench.product.id)}/design/tag-card`, { method:"PATCH", body:JSON.stringify(collectTagForm()) });
     state.workbench.tagCard = result.tagCard;
     populateTagForm();
     updateHeroReadiness();
-    showMessage("商品标签卡已保存。主图与未来包装都引用这一套结构。 ");
+    showMessage("商品标签卡已保存。主图和包装继续引用同一张标签卡。");
   } catch (error) { showMessage(error.message || "标签卡保存失败。", true); }
 }
 
@@ -333,13 +367,11 @@ async function saveHeroSpec(event) {
   event.preventDefault();
   if (!state.workbench?.product?.id) return;
   try {
-    const result = await aioneApi(`/api/v1/products/${encodeURIComponent(state.workbench.product.id)}/design/hero-spec`, {
-      method:"PATCH", body:JSON.stringify(collectHeroForm())
-    });
+    const result = await aioneApi(`/api/v1/products/${encodeURIComponent(state.workbench.product.id)}/design/hero-spec`, { method:"PATCH", body:JSON.stringify(collectHeroForm()) });
     state.workbench.heroSpec = result.heroSpec;
     renderHeroAssets();
-    showMessage("1:1 主图规范已保存。商品标签卡、SKU、白底商品图和两级卖点已进入同一个 Hero Spec。 ");
-  } catch (error) { showMessage(error.message || "主图规范保存失败。", true); }
+    showMessage("1:1 主图设置已保存。");
+  } catch (error) { showMessage(error.message || "主图设置保存失败。", true); }
 }
 
 async function createHeroTask() {
@@ -348,19 +380,13 @@ async function createHeroTask() {
   const spec = collectHeroForm();
   if (!state.workbench.tagCard?.id) return showMessage("请先保存商品标签卡。", true);
   const inputAssetIds = [...new Set([...(spec.skuAssetIds || []), spec.productDisplayAssetId].filter(Boolean))];
-  if (!inputAssetIds.length) return showMessage("主图任务至少需要一个 CURRENT 商品素材。", true);
+  if (!inputAssetIds.length) return showMessage("请至少选择一个商品素材。", true);
   try {
     const payload = await aioneApi(`/api/v1/products/${encodeURIComponent(product.id)}/design/tasks`, {
       method:"POST",
-      body:JSON.stringify({
-        templateId:"dtpl_unified_product_hero_square_v1",
-        taskType:"compose_product_hero",
-        inputAssetIds,
-        inputFactSnapshot:product.productData || {},
-        instructionSnapshot:{ heroSpec:spec, tagCard:collectTagForm(), designProfile:state.workbench?.designProfile || null, contract:"AIONE Unified Hero Five Slot V1" }
-      })
+      body:JSON.stringify({ templateId:"dtpl_unified_product_hero_square_v1", taskType:"compose_product_hero", inputAssetIds, inputFactSnapshot:product.productData || {}, instructionSnapshot:{ heroSpec:spec, tagCard:collectTagForm(), designProfile:state.workbench?.designProfile || null, contract:"AIONE Unified Hero Five Slot V1" } })
     });
-    showMessage(`主图设计任务已创建：${payload.task?.id || "已复用现有任务"}。当前先停在草稿，不会绕过审核直接生图。`);
+    showMessage(`主图设计任务已创建：${payload.task?.id || "已复用现有任务"}。`);
   } catch (error) { showMessage(error.message || "主图设计任务创建失败。", true); }
 }
 
