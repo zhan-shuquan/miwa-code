@@ -70,10 +70,10 @@ export function initDesignCenterPagePlan() {
   }
   const host = section.querySelector('[data-ui="page-plan-grid"]');
   if (host) host.innerHTML = PAGE_TYPES.map(renderPagePlanCard).join("");
-  section.querySelector('[data-action="jump-hero"]')?.addEventListener("click", () => {
-    const heroHeading = [...root.querySelectorAll("h2")].find((node) => node.textContent.includes("1:1 主图设计"));
-    heroHeading?.closest(".dc-card")?.scrollIntoView({ behavior:"smooth", block:"start" });
-  });
+  const heroHeading = [...root.querySelectorAll("h2")].find((node) => node.textContent.includes("1:1 主图设计"));
+  const heroCard = heroHeading?.closest(".dc-card");
+  if (heroCard) heroCard.dataset.section = "hero-design";
+  section.querySelector('[data-action="jump-hero"]')?.addEventListener("click", () => heroCard?.scrollIntoView({ behavior:"smooth", block:"start" }));
   import("./design-center-sku-v1.js?v=20260913-v2").then(async ({ initDesignCenterSkuV1 }) => {
     await initDesignCenterSkuV1();
     section.querySelector('[data-action="jump-sku"]')?.addEventListener("click", () => {
