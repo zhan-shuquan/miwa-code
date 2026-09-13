@@ -37,12 +37,12 @@ const EXECUTION_REGISTRY = Object.freeze({
   compose_truthful_size_guide: {
     engine: "deterministic",
     executor: "truthful_size_guide_renderer",
-    status: "planned"
+    status: "implemented"
   },
   compose_deterministic_product_spec: {
     engine: "deterministic",
     executor: "product_spec_renderer",
-    status: "planned"
+    status: "implemented"
   },
   compose_detail_structure_image: {
     engine: "hybrid",

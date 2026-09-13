@@ -4,6 +4,10 @@ import { executeBenefitFeatureImage } from "./design-ai-output-service.js";
 import { executeDeterministicCopyOverlay } from "./design-copy-overlay-service.js";
 import { executeWhiteBackgroundProduct } from "./design-white-background-output-service.js";
 import { executeSourceAnchoredModelWear } from "./design-model-wear-output-service.js";
+import {
+  executeTruthfulSizeGuide,
+  executeDeterministicProductSpec
+} from "./design-deterministic-page-output-service.js";
 import { getDesignExecutionPlan } from "./design-engine-router-service.js";
 
 const EXECUTORS = Object.freeze({
@@ -11,7 +15,9 @@ const EXECUTORS = Object.freeze({
   benefit_feature_image: executeBenefitFeatureImage,
   deterministic_copy_overlay: executeDeterministicCopyOverlay,
   white_background_renderer: executeWhiteBackgroundProduct,
-  source_anchored_model_wear: executeSourceAnchoredModelWear
+  source_anchored_model_wear: executeSourceAnchoredModelWear,
+  truthful_size_guide_renderer: executeTruthfulSizeGuide,
+  product_spec_renderer: executeDeterministicProductSpec
 });
 
 export async function getDesignTaskExecutionPlan(client, taskId) {
