@@ -1,0 +1,37 @@
+name: AIONE Design Engine Router
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  design-engine-router:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/systems/aione/backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Syntax check Design Engine router
+        run: |
+          node --check src/services/design-engine-router-service.js
+          node --check src/services/design-execution-service.js
+          node --check src/routes/design.js
+          node --check scripts/test-design-engine-router.js
+
+      - name: Prove Design Engine execution registry contract
+        run: node scripts/test-design-engine-router.js
