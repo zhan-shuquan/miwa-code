@@ -22,7 +22,7 @@ const EXECUTION_REGISTRY = Object.freeze({
   compose_white_background_product: {
     engine: "hybrid",
     executor: "white_background_renderer",
-    status: "planned"
+    status: "implemented"
   },
   generate_source_anchored_model_wear: {
     engine: "ai_image_edit",
