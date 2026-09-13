@@ -27,7 +27,7 @@ const EXECUTION_REGISTRY = Object.freeze({
   generate_source_anchored_model_wear: {
     engine: "ai_image_edit",
     executor: "source_anchored_model_wear",
-    status: "planned"
+    status: "implemented"
   },
   compose_material_texture_image: {
     engine: "deterministic",
