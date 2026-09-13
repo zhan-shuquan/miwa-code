@@ -44,58 +44,32 @@ INSERT INTO public.design_templates (
 )
 VALUES
 (
-  'dtpl_unified_sku_color_square_v1',
-  'UNIFIED-SKU-COLOR-1000X1000',
-  'Unified SKU Color 1000x1000',
-  '1.0',
-  'sku_color_image',
-  NULL, NULL, NULL,
-  1000, 1000,
+  'dtpl_unified_sku_color_square_v1','UNIFIED-SKU-COLOR-1000X1000','Unified SKU Color 1000x1000','1.0','sku_color_image',NULL,NULL,NULL,1000,1000,
   '{"family":"sku_color","slots":{"title":{"x":"5%","y":"5%","w":"90%","h":"12%"},"product_display":{"x":"8%","y":"20%","w":"84%","h":"62%"},"variant_labels":{"x":"7%","y":"84%","w":"86%","h":"10%"}},"technicalDesignStatus":"operator-adjustable-v1"}'::jsonb,
-  '["sku_set"]'::jsonb,
-  '["actualVariants"]'::jsonb,
-  '["normalize_canvas","compose_sku_color_image","deterministic_copy_overlay"]'::jsonb,
+  '["sku_set"]'::jsonb,'["actualVariants"]'::jsonb,'["normalize_canvas","compose_sku_color_image","deterministic_copy_overlay"]'::jsonb,
   '{"sourceTruthRequired":true,"humanReviewRequired":true,"doNotInventVariants":true,"doNotInventSetCount":true,"textPolicy":"deterministic_overlay"}'::jsonb,
-  'UNIFIED-SKU-COLOR-1000X1000',
-  'active',
-  '{"current":true,"stage":"design-center-page-type-v1","pageType":"sku","operatorAdjustable":true}'::jsonb,
-  'aione-design-center-v1'
+  'UNIFIED-SKU-COLOR-1000X1000','active','{"current":true,"stage":"design-center-page-type-v1","pageType":"sku","operatorAdjustable":true}'::jsonb,'aione-design-center-v1'
 ),
 (
-  'dtpl_unified_white_bg_square_v1',
-  'UNIFIED-WHITE-BG-1000X1000',
-  'Unified White Background Product 1000x1000',
-  '1.0',
-  'white_background_product_image',
-  NULL, NULL, NULL,
-  1000, 1000,
+  'dtpl_unified_white_bg_square_v1','UNIFIED-WHITE-BG-1000X1000','Unified White Background Product 1000x1000','1.0','white_background_product_image',NULL,NULL,NULL,1000,1000,
   '{"family":"white_background","canvas":{"background":"#FFFFFF"},"slots":{"product":{"x":"10%","y":"10%","w":"80%","h":"80%"}},"technicalDesignStatus":"operator-adjustable-v1"}'::jsonb,
-  '["product_source"]'::jsonb,
-  '["actualVariants"]'::jsonb,
-  '["normalize_canvas","background_cleanup","source_anchored_edit","compose_white_background_product"]'::jsonb,
+  '["product_source"]'::jsonb,'["actualVariants"]'::jsonb,'["normalize_canvas","background_cleanup","source_anchored_edit","compose_white_background_product"]'::jsonb,
   '{"sourceTruthRequired":true,"humanReviewRequired":true,"backgroundMustBeWhite":true,"preserveProductGeometry":true,"preserveActualColors":true,"preservePatternAndLogo":true,"doNotInventVariants":true}'::jsonb,
-  'UNIFIED-WHITE-BG-1000X1000',
-  'active',
-  '{"current":true,"stage":"design-center-page-type-v1","pageType":"white_bg","operatorAdjustable":true,"sourceAnchored":true}'::jsonb,
-  'aione-design-center-v1'
+  'UNIFIED-WHITE-BG-1000X1000','active','{"current":true,"stage":"design-center-page-type-v1","pageType":"white_bg","operatorAdjustable":true,"sourceAnchored":true}'::jsonb,'aione-design-center-v1'
 ),
 (
-  'dtpl_unified_model_wear_vertical_v1',
-  'UNIFIED-MODEL-WEAR-1000X1500',
-  'Unified Source-Anchored Model Wear 1000x1500',
-  '1.0',
-  'model_wear_image',
-  NULL, NULL, NULL,
-  1000, 1500,
+  'dtpl_unified_model_wear_vertical_v1','UNIFIED-MODEL-WEAR-1000X1500','Unified Source-Anchored Model Wear 1000x1500','1.0','model_wear_image',NULL,NULL,NULL,1000,1500,
   '{"family":"model_wear","slots":{"model":{"x":"8%","y":"6%","w":"84%","h":"82%"},"product_anchor":{"x":"15%","y":"64%","w":"70%","h":"24%"}},"technicalDesignStatus":"operator-adjustable-v1"}'::jsonb,
-  '["product_source"]'::jsonb,
-  '["targetGender","season","lengthType"]'::jsonb,
-  '["source_anchored_edit","generate_model_pose","generate_styling_context","generate_background"]'::jsonb,
+  '["product_source"]'::jsonb,'["targetGender","season","lengthType"]'::jsonb,'["source_anchored_edit","generate_model_pose","generate_styling_context","generate_background"]'::jsonb,
   '{"sourceTruthRequired":true,"humanReviewRequired":true,"preserveActualColors":true,"preservePatternAndLogo":true,"preserveLength":true,"preserveCuff":true,"preserveStructure":true,"doNotRedesignProduct":true}'::jsonb,
-  'UNIFIED-MODEL-WEAR-1000X1500',
-  'active',
-  '{"current":true,"stage":"design-center-page-type-v1","pageType":"model","operatorAdjustable":true,"sourceAnchored":true,"aiGeneratedSubject":true}'::jsonb,
-  'aione-design-center-v1'
+  'UNIFIED-MODEL-WEAR-1000X1500','active','{"current":true,"stage":"design-center-page-type-v1","pageType":"model","operatorAdjustable":true,"sourceAnchored":true,"aiGeneratedSubject":true}'::jsonb,'aione-design-center-v1'
+),
+(
+  'dtpl_unified_material_vertical_v1','UNIFIED-MATERIAL-1000X1500','Unified Material Texture 1000x1500','1.0','material_texture_image',NULL,NULL,NULL,1000,1500,
+  '{"family":"material_texture","slots":{"title":{"x":"8%","y":"5%","w":"84%","h":"10%"},"texture":{"x":"8%","y":"18%","w":"84%","h":"58%"},"facts":{"x":"8%","y":"80%","w":"84%","h":"14%"}},"technicalDesignStatus":"operator-adjustable-v1"}'::jsonb,
+  '["detail_source"]'::jsonb,'[]'::jsonb,'["compose_material_texture_image","deterministic_copy_overlay","source_anchored_crop"]'::jsonb,
+  '{"sourceTruthRequired":true,"humanReviewRequired":true,"confirmedFactsOnly":true,"doNotInventMaterial":true,"doNotInventTexture":true}'::jsonb,
+  'UNIFIED-MATERIAL-1000X1500','active','{"current":true,"stage":"design-center-page-type-v1","pageType":"material","operatorAdjustable":true,"confirmedFactsOnly":true}'::jsonb,'aione-design-center-v1'
 )
 ON CONFLICT (template_code, version) DO NOTHING;
 
