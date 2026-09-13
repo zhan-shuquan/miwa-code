@@ -26,6 +26,8 @@ jobs:
           node --check apps/systems/aione/backend/src/services/design-profile-service.js
           node --check apps/systems/aione/backend/scripts/apply-target-migration.js
           node --check apps/systems/aione/backend/scripts/bootstrap-mh0000002-design-center-v1.js
+          node --check apps/systems/aione/js/pages/design-center-generation-review-v1.js
+          node --check apps/systems/aione/js/pages/design-center-live-asset-preview-v1.js
           bash -n infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
           bash -n infra/gcp/automation/START_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
 
@@ -52,3 +54,13 @@ jobs:
         run: |
           grep -Fq 'AIONE_ENABLE_DESIGN_CENTER_PREVIEW' apps/systems/aione/backend/server.js
           grep -Fq '/app/design-center-preview/design-center-v1.html' Dockerfile
+          grep -Fq 'design-center-generation-review-v1.js' apps/systems/aione/design-center-v1.html
+          grep -Fq 'design-center-live-asset-preview-v1.js' apps/systems/aione/design-center-v1.html
+          grep -Fq '确认并生成' apps/systems/aione/js/pages/design-center-generation-review-v1.js
+          grep -Fq '/review' apps/systems/aione/js/pages/design-center-generation-review-v1.js
+          grep -Fq '/api/v1/product-assets/' apps/systems/aione/js/pages/design-center-live-asset-preview-v1.js
+          grep -Fq 'model-design' apps/systems/aione/js/pages/design-center-live-asset-preview-v1.js
+          grep -Fq 'material-design' apps/systems/aione/js/pages/design-center-live-asset-preview-v1.js
+          grep -Fq 'size-design' apps/systems/aione/js/pages/design-center-live-asset-preview-v1.js
+          grep -Fq 'spec-design' apps/systems/aione/js/pages/design-center-live-asset-preview-v1.js
+          grep -Fq 'detail-design' apps/systems/aione/js/pages/design-center-live-asset-preview-v1.js

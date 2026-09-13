@@ -17,7 +17,7 @@
 <body>
   <header class="dc-preview-shell">
     <div><b>AIONE</b><span class="dc-snapshot-badge">MH0000002 · 验收快照 · 不写数据库</span></div>
-    <span>设计中心 V2 · 8类图片工作流 + Design Engine</span>
+    <span>设计中心 V2 · 8类图片工作流 + Design Engine + 人工验收</span>
   </header>
   <main id="app-main-host"></main>
   <script type="module">
@@ -102,12 +102,15 @@
       ["./js/pages/design-center-material-v1.js?v=20260913-v1","initDesignCenterMaterialV1"],
       ["./js/pages/design-center-size-v1.js?v=20260913-v1","initDesignCenterSizeV1"],
       ["./js/pages/design-center-spec-v1.js?v=20260913-v1","initDesignCenterSpecV1"],
-      ["./js/pages/design-center-detail-v1.js?v=20260913-v1","initDesignCenterDetailV1"]
+      ["./js/pages/design-center-detail-v1.js?v=20260913-v1","initDesignCenterDetailV1"],
+      ["./js/pages/design-center-generation-review-v1.js?v=20260913-v1","initDesignCenterGenerationReviewV1"]
     ];
     for(const [path,fn] of modules){
       const mod=await import(path);
       if(typeof mod[fn]==="function") await mod[fn]();
     }
+    const { initDesignCenterLiveAssetPreviewV1 } = await import("./js/pages/design-center-live-asset-preview-v1.js?v=20260913-v1");
+    initDesignCenterLiveAssetPreviewV1();
   </script>
 </body>
 </html>
