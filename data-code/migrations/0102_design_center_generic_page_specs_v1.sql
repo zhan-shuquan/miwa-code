@@ -78,6 +78,24 @@ VALUES
   'active',
   '{"current":true,"stage":"design-center-page-type-v1","pageType":"white_bg","operatorAdjustable":true,"sourceAnchored":true}'::jsonb,
   'aione-design-center-v1'
+),
+(
+  'dtpl_unified_model_wear_vertical_v1',
+  'UNIFIED-MODEL-WEAR-1000X1500',
+  'Unified Source-Anchored Model Wear 1000x1500',
+  '1.0',
+  'model_wear_image',
+  NULL, NULL, NULL,
+  1000, 1500,
+  '{"family":"model_wear","slots":{"model":{"x":"8%","y":"6%","w":"84%","h":"82%"},"product_anchor":{"x":"15%","y":"64%","w":"70%","h":"24%"}},"technicalDesignStatus":"operator-adjustable-v1"}'::jsonb,
+  '["product_source"]'::jsonb,
+  '["targetGender","season","lengthType"]'::jsonb,
+  '["source_anchored_edit","generate_model_pose","generate_styling_context","generate_background"]'::jsonb,
+  '{"sourceTruthRequired":true,"humanReviewRequired":true,"preserveActualColors":true,"preservePatternAndLogo":true,"preserveLength":true,"preserveCuff":true,"preserveStructure":true,"doNotRedesignProduct":true}'::jsonb,
+  'UNIFIED-MODEL-WEAR-1000X1500',
+  'active',
+  '{"current":true,"stage":"design-center-page-type-v1","pageType":"model","operatorAdjustable":true,"sourceAnchored":true,"aiGeneratedSubject":true}'::jsonb,
+  'aione-design-center-v1'
 )
 ON CONFLICT (template_code, version) DO NOTHING;
 
