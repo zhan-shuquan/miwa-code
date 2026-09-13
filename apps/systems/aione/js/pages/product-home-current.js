@@ -83,6 +83,17 @@ function totalSourceCount(materials){
   return ids.size;
 }
 
+function designCenterMarkup(productRef){
+  const src=`./design-center-v1.html?product=${encodeURIComponent(productRef)}&embed=1`;
+  return `<div class="phc-design-live">
+    <div class="phc-design-live__head">
+      <div><span class="phc-eyebrow">LIVE DESIGN WORKSPACE</span><h2>设计中心</h2><p>直接在商品之家内操作真实 ProductAsset、Page Spec、DesignTask、生成结果和人工验收。</p></div>
+      <a class="phc-link-button phc-link-button--secondary" href="${src.replace("&embed=1","")}" target="_blank" rel="noopener">新窗口打开</a>
+    </div>
+    <div class="phc-design-frame-wrap"><iframe class="phc-design-frame" src="${src}" title="${escapeHtml(productRef)} 设计中心" loading="eager"></iframe></div>
+  </div>`;
+}
+
 function productSectionMarkup(section,workbench){
   const product=workbench.product||{};
   const data=product.productData||{};
@@ -96,7 +107,7 @@ function productSectionMarkup(section,workbench){
     return `<div class="phc-work-panel"><div class="phc-panel-head"><div><h2>商品素材</h2><p>正式素材只认 ProductAsset；Google Drive 是来源，不在前端维护第二套事实。</p></div><span class="phc-state phc-state--ready">${totalSourceCount(materials)} 个素材</span></div><div class="phc-metric-grid"><div><b>${materialCount(materials,"sku")}</b><span>SKU图</span></div><div><b>${materialCount(materials,"product")+materialCount(materials,"whiteBackground")}</b><span>产品图 / 白底图</span></div><div><b>${materialCount(materials,"real")}</b><span>实拍图</span></div><div><b>${materialCount(materials,"detail")}</b><span>细节候选</span></div></div><p class="phc-note">CURRENT 素材目录仍保持：01_SKU图 / 02_产品图 / 03_实拍图。</p></div>`;
   }
   if(section==="design"){
-    return `<div class="phc-work-panel phc-design-entry"><div class="phc-panel-head"><div><h2>设计中心</h2><p>同一商品事实与 ProductAsset 进入 Page Spec → DesignTask → Design Engine → DERIVED ProductAsset。</p></div><span class="phc-state phc-state--progress">联调中</span></div><div class="phc-action-card"><div><strong>8 类商品图片工作流</strong><span>主图 · SKU · 白底 · 模特 · 材质 · 尺寸 · 商品仕様 · 细节</span></div><a class="phc-primary phc-link-button" href="./design-center-v1.html?product=${encodeURIComponent(productRef)}">进入设计中心</a></div></div>`;
+    return designCenterMarkup(productRef);
   }
   if(section==="publish"){
     return `<div class="phc-work-panel"><div class="phc-panel-head"><div><h2>发布状态</h2><p>Approved DERIVED ProductAsset 将进入 Rakuten canonical publish，不要求员工手工搬运图片。</p></div><span class="phc-state phc-state--pending">待设计验收</span></div><div class="phc-pipeline"><span class="is-done">Product Truth</span><i>→</i><span class="is-done">SOURCE</span><i>→</i><span>Design</span><i>→</i><span>Review</span><i>→</i><span>Rakuten</span></div></div>`;
