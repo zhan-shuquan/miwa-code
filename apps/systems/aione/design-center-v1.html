@@ -17,7 +17,7 @@
 <body>
   <header class="dc-preview-shell">
     <div><b>AIONE</b><span class="dc-snapshot-badge">MH0000002 · 验收快照 · 不写数据库</span></div>
-    <span>设计中心 V2 · 主图微调验证</span>
+    <span>设计中心 V2 · 图片规划 + 主图微调</span>
   </header>
   <main id="app-main-host"></main>
   <script type="module">
@@ -32,7 +32,7 @@
 
       async function getSnapshot(){
         if(snapshotPayload) return snapshotPayload;
-        const response=await nativeFetch("./pages/design-center/mh0000002-preview.json?v=20260913-v1",{cache:"no-store"});
+        const response=await nativeFetch("./pages/design-center/mh0000002-preview.json?v=20260913-v2",{cache:"no-store"});
         if(!response.ok) throw new Error(`Snapshot load failed: ${response.status}`);
         snapshotPayload=await response.json();
         if(snapshotPayload?.workbench?.heroSpec && !snapshotPayload.workbench.heroSpec.layout_adjustments){
@@ -77,6 +77,8 @@
     host.innerHTML=await response.text();
     const { initDesignCenter } = await import("./js/pages/design-center-v1.js?v=20260913-v4");
     await initDesignCenter();
+    const { initDesignCenterPagePlan } = await import("./js/pages/design-center-page-plan-v1.js?v=20260913-v2");
+    initDesignCenterPagePlan();
     const { initDesignCenterLayoutAdjustments } = await import("./js/pages/design-center-layout-v1.js?v=20260913-v1");
     await initDesignCenterLayoutAdjustments();
   </script>
