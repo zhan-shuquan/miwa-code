@@ -4,13 +4,17 @@ import {
   getDesignExecutionPlan,
   listDesignExecutionCapabilities
 } from "../src/services/design-engine-router-service.js";
+import {
+  buildWhiteBackgroundPrompt,
+  resolveWhiteBackgroundExecutionMode
+} from "../src/services/design-white-background-output-service.js";
 
 const expected = {
   normalize_canvas: ["deterministic", "implemented"],
   deterministic_copy_overlay: ["deterministic", "implemented"],
   benefit_feature_image: ["ai_image_edit", "implemented"],
   compose_sku_color_image: ["deterministic", "planned"],
-  compose_white_background_product: ["hybrid", "planned"],
+  compose_white_background_product: ["hybrid", "implemented"],
   generate_source_anchored_model_wear: ["ai_image_edit", "planned"],
   compose_material_texture_image: ["deterministic", "planned"],
   compose_truthful_size_guide: ["deterministic", "planned"],
@@ -49,7 +53,38 @@ assert.equal(plan.status, "planned");
 assert.equal(plan.sourceAnchored, true);
 assert.equal(plan.humanReviewRequired, true);
 
+const whiteTask = {
+  id: "dtk_white",
+  product_id: "prod_test",
+  template_id: "dtpl_unified_white_bg_square_v1",
+  task_type: "compose_white_background_product",
+  task_status: "approved",
+  input_asset_ids: ["ast_white"],
+  input_fact_snapshot: {
+    actualVariants: ["白色", "米色", "卡其", "军绿", "深灰", "黑色"]
+  },
+  instruction_snapshot: {
+    pageType: "white_bg",
+    preserveProductTruth: true,
+    pageSpec: {
+      presentation: { cleanupMode: "cleanup", shadowMode: "none" },
+      metadata: { sourceAnchored: true }
+    }
+  }
+};
+assert.equal(resolveWhiteBackgroundExecutionMode(whiteTask), "hybrid");
+assert.equal(getDesignExecutionPlan(whiteTask).status, "implemented");
+const prompt = buildWhiteBackgroundPrompt(whiteTask);
+assert.match(prompt, /pure white #FFFFFF/);
+assert.match(prompt, /Do not add text/);
+assert.match(prompt, /Preserve the exact product shape/);
+
+const preserveTask = structuredClone(whiteTask);
+preserveTask.instruction_snapshot.pageSpec.presentation.cleanupMode = "preserve";
+assert.equal(resolveWhiteBackgroundExecutionMode(preserveTask), "deterministic");
+
 const listed = listDesignExecutionCapabilities();
 assert.equal(listed.length, Object.keys(expected).length);
 
 console.log("[AIONE] DESIGN ENGINE EXECUTION REGISTRY PASS");
+console.log("[AIONE] WHITE BACKGROUND EXECUTOR CONTRACT PASS");
