@@ -1,3 +1,5 @@
+import { aioneApi } from "../services/aione-api-client.js";
+
 const PRODUCT_REF = "MH0000002";
 const PANEL_ID = "aione-product-home-weekly-acceptance";
 
@@ -105,9 +107,7 @@ function baseMarkup(){
 
 async function hydrate(panel){
   try{
-    const response=await fetch(`/api/v1/design-center/workbench?product=${encodeURIComponent(PRODUCT_REF)}`,{headers:{Accept:"application/json"},cache:"no-store"});
-    if(!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload=await response.json();
+    const payload=await aioneApi(`/api/v1/design-center/workbench?product=${encodeURIComponent(PRODUCT_REF)}`,{headers:{Accept:"application/json"}});
     const workbench=payload?.workbench;
     if(!workbench) throw new Error("workbench missing");
     const facts=panel.querySelector('[data-weekly="facts"]');
@@ -115,7 +115,7 @@ async function hydrate(panel){
     const status=panel.querySelector('[data-weekly="status"]');
     if(facts) facts.textContent=String(factCount(workbench));
     if(assets) assets.textContent=String(countUniqueAssets(workbench.materials));
-    if(status) status.textContent="CURRENT 后端已返回真实商品工作台。现在可以从上方入口直接进入真实商品事实、素材、设计和发布状态进行前端验收。";
+    if(status){status.classList.remove("is-error");status.textContent="CURRENT 后端已返回真实商品工作台。现在可以从上方入口直接进入真实商品事实、素材、设计和发布状态进行前端验收。";}
   }catch(error){
     const status=panel.querySelector('[data-weekly="status"]');
     if(status){status.classList.add("is-error");status.textContent=`真实工作台暂未读取成功：${error?.message||error}。静态工程能力仍可查看，但不要把这一步算作 E2E 通过。`;}
