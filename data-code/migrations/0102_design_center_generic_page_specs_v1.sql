@@ -84,6 +84,13 @@ VALUES
   '["product_source"]'::jsonb,'["productCode"]'::jsonb,'["compose_product_spec","deterministic_copy_overlay"]'::jsonb,
   '{"sourceTruthRequired":true,"humanReviewRequired":true,"confirmedFactsOnly":true,"omitMissingFacts":true,"doNotInventFacts":true,"deterministicRendering":true}'::jsonb,
   'UNIFIED-PRODUCT-SPEC-1000X1500','active','{"current":true,"stage":"design-center-page-type-v1","pageType":"spec","operatorAdjustable":true,"deterministicRendering":true,"confirmedFactsOnly":true}'::jsonb,'aione-design-center-v1'
+),
+(
+  'dtpl_unified_detail_vertical_v1','UNIFIED-DETAIL-1000X1500','Unified Source-Anchored Detail 1000x1500','1.0','detail_image',NULL,NULL,NULL,1000,1500,
+  '{"family":"detail","slots":{"title":{"x":"8%","y":"5%","w":"84%","h":"9%"},"detail_visual":{"x":"8%","y":"18%","w":"84%","h":"61%"},"fact_copy":{"x":"8%","y":"83%","w":"84%","h":"10%"}},"technicalDesignStatus":"operator-adjustable-v1"}'::jsonb,
+  '["detail_source"]'::jsonb,'[]'::jsonb,'["source_anchored_crop","cleanup_detail_source","compose_detail_image","deterministic_copy_overlay"]'::jsonb,
+  '{"sourceTruthRequired":true,"humanReviewRequired":true,"confirmedFactsOnly":true,"doNotInventStructure":true,"doNotInventFeatures":true,"sourceAnchored":true}'::jsonb,
+  'UNIFIED-DETAIL-1000X1500','active','{"current":true,"stage":"design-center-page-type-v1","pageType":"detail","operatorAdjustable":true,"sourceAnchored":true,"confirmedFactsOnly":true}'::jsonb,'aione-design-center-v1'
 )
 ON CONFLICT (template_code, version) DO NOTHING;
 
