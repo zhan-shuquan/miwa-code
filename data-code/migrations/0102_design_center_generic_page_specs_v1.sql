@@ -42,7 +42,8 @@ INSERT INTO public.design_templates (
   allowed_operations, validation_rules,
   prompt_template_ref, lifecycle_status, metadata, source_system
 )
-VALUES (
+VALUES
+(
   'dtpl_unified_sku_color_square_v1',
   'UNIFIED-SKU-COLOR-1000X1000',
   'Unified SKU Color 1000x1000',
@@ -58,6 +59,24 @@ VALUES (
   'UNIFIED-SKU-COLOR-1000X1000',
   'active',
   '{"current":true,"stage":"design-center-page-type-v1","pageType":"sku","operatorAdjustable":true}'::jsonb,
+  'aione-design-center-v1'
+),
+(
+  'dtpl_unified_white_bg_square_v1',
+  'UNIFIED-WHITE-BG-1000X1000',
+  'Unified White Background Product 1000x1000',
+  '1.0',
+  'white_background_product_image',
+  NULL, NULL, NULL,
+  1000, 1000,
+  '{"family":"white_background","canvas":{"background":"#FFFFFF"},"slots":{"product":{"x":"10%","y":"10%","w":"80%","h":"80%"}},"technicalDesignStatus":"operator-adjustable-v1"}'::jsonb,
+  '["product_source"]'::jsonb,
+  '["actualVariants"]'::jsonb,
+  '["normalize_canvas","background_cleanup","source_anchored_edit","compose_white_background_product"]'::jsonb,
+  '{"sourceTruthRequired":true,"humanReviewRequired":true,"backgroundMustBeWhite":true,"preserveProductGeometry":true,"preserveActualColors":true,"preservePatternAndLogo":true,"doNotInventVariants":true}'::jsonb,
+  'UNIFIED-WHITE-BG-1000X1000',
+  'active',
+  '{"current":true,"stage":"design-center-page-type-v1","pageType":"white_bg","operatorAdjustable":true,"sourceAnchored":true}'::jsonb,
   'aione-design-center-v1'
 )
 ON CONFLICT (template_code, version) DO NOTHING;
