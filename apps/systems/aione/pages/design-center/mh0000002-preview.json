@@ -34,21 +34,24 @@
         {
           "id": "ast_03e3f75d-490c-47b6-9ba2-3645be239192",
           "original_name": "sku图-1.jpg",
-          "role": "source_sku_image"
+          "role": "source_sku_image",
+          "smoke_preview_url": "https://drive.google.com/thumbnail?id=19rvf9daUy_KxL-auBGSaNV52F71SWg0a&sz=w1600"
         }
       ],
       "whiteBackground": [
         {
           "id": "ast_2a578d25-bf22-4278-b515-1ea77e7e1143",
           "original_name": "白底图-1.jpg",
-          "role": "source_main_image"
+          "role": "source_main_image",
+          "smoke_preview_url": "https://drive.google.com/thumbnail?id=1zViaZYCPm-zyPrAE0sSCDspfNknrWn5w&sz=w1600"
         }
       ],
       "product": [
         {
           "id": "ast_2a578d25-bf22-4278-b515-1ea77e7e1143",
           "original_name": "白底图-1.jpg",
-          "role": "source_main_image"
+          "role": "source_main_image",
+          "smoke_preview_url": "https://drive.google.com/thumbnail?id=1zViaZYCPm-zyPrAE0sSCDspfNknrWn5w&sz=w1600"
         }
       ],
       "real": []
@@ -116,10 +119,11 @@
     ]
   },
   "snapshot": {
-    "source": "CURRENT MH0000002 audit + successful Design Center bootstrap",
+    "source": "CURRENT MH0000002 audit + successful Design Center bootstrap + real Drive asset smoke preview",
     "mode": "read-only acceptance preview",
     "databaseWrite": false,
     "imageGenerated": false,
+    "realAssetSmokeTest": true,
     "supportedSize": "24–27cm"
   }
 }
