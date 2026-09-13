@@ -32,7 +32,7 @@
 
       async function getSnapshot(){
         if(snapshotPayload) return snapshotPayload;
-        const response=await nativeFetch("./pages/design-center/mh0000002-preview.json?v=20260913-v1",{cache:"no-store"});
+        const response=await nativeFetch("./pages/design-center/mh0000002-preview.json?v=20260913-v2",{cache:"no-store"});
         if(!response.ok) throw new Error(`Snapshot load failed: ${response.status}`);
         snapshotPayload=await response.json();
         if(snapshotPayload?.workbench?.heroSpec && !snapshotPayload.workbench.heroSpec.layout_adjustments){
@@ -77,7 +77,7 @@
     host.innerHTML=await response.text();
     const { initDesignCenter } = await import("./js/pages/design-center-v1.js?v=20260913-v4");
     await initDesignCenter();
-    const { initDesignCenterPagePlan } = await import("./js/pages/design-center-page-plan-v1.js?v=20260913-v1");
+    const { initDesignCenterPagePlan } = await import("./js/pages/design-center-page-plan-v1.js?v=20260913-v2");
     initDesignCenterPagePlan();
     const { initDesignCenterLayoutAdjustments } = await import("./js/pages/design-center-layout-v1.js?v=20260913-v1");
     await initDesignCenterLayoutAdjustments();
