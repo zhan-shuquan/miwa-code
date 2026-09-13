@@ -24,6 +24,62 @@ steps:
       - asia-northeast1-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:main-$SHORT_SHA
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: pre-migration-current-health
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        source infra/gcp/cloud-shell/CURRENT_BASELINE.sh
+        assert_aione_current_baseline
+
+        echo '[AIONE] Verify CURRENT service is healthy before automatic schema migration'
+        SERVICE_URL="$$(gcloud run services describe "$$AIONE_RUN_SERVICE" --region="$$AIONE_REGION" --project="$$AIONE_PROJECT_ID" --format='value(status.url)')"
+        IAM_TOKEN="$$(gcloud auth print-identity-token --audiences="$$SERVICE_URL")"
+        CURRENT_HEALTH="$$(curl -fsS -H "Authorization: Bearer $$IAM_TOKEN" "$$SERVICE_URL/health")"
+        printf '%s\n' "$$CURRENT_HEALTH"
+        printf '%s' "$$CURRENT_HEALTH" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p.get("ok") is True and p.get("database")=="connected"'
+        echo '[AIONE] Pre-migration CURRENT health PASS'
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: automatic-current-migration
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        source infra/gcp/cloud-shell/CURRENT_BASELINE.sh
+        assert_aione_current_baseline
+
+        IMAGE="$${AIONE_REGION}-docker.pkg.dev/$${AIONE_PROJECT_ID}/$${AIONE_ARTIFACT_REPO}/$${AIONE_IMAGE_NAME}:main-${SHORT_SHA}"
+        CONNECTION="$$(gcloud sql instances describe "$$AIONE_SQL_INSTANCE" --project="$$AIONE_PROJECT_ID" --format='value(connectionName)')"
+        RUNTIME_SA="$${AIONE_RUNTIME_SERVICE_ACCOUNT_NAME}@$${AIONE_PROJECT_ID}.iam.gserviceaccount.com"
+        REPO_VERSION="$$(find data-code/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]_*.sql' -printf '%f\n' | sort | tail -n1 | cut -d_ -f1)"
+
+        test -n "$$REPO_VERSION"
+        printf '[AIONE] Automatic CURRENT migration target: %s\n' "$$REPO_VERSION"
+
+        gcloud run jobs deploy "$$AIONE_MIGRATION_JOB" \
+          --image="$$IMAGE" \
+          --region="$$AIONE_REGION" \
+          --project="$$AIONE_PROJECT_ID" \
+          --service-account="$$RUNTIME_SA" \
+          --set-cloudsql-instances="$$CONNECTION" \
+          --set-env-vars="DB_USER=$${AIONE_DB_USER},DB_NAME=$${AIONE_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/$${CONNECTION},NODE_ENV=production" \
+          --set-secrets="DB_PASS=$${AIONE_DB_PASSWORD_SECRET}:latest" \
+          --command=npm \
+          --args=run,db:migrate \
+          --tasks=1 \
+          --max-retries=0 \
+          --task-timeout=10m \
+          --quiet
+
+        gcloud run jobs execute "$$AIONE_MIGRATION_JOB" \
+          --region="$$AIONE_REGION" \
+          --project="$$AIONE_PROJECT_ID" \
+          --wait
+
+        echo '[AIONE] Automatic CURRENT migration execution PASS'
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     id: migration-gate
     entrypoint: bash
     args:
@@ -32,7 +88,7 @@ steps:
         source infra/gcp/cloud-shell/CURRENT_BASELINE.sh
         assert_aione_current_baseline
 
-        echo '[AIONE] Verify deployed DB migration matches Repo before automatic deployment'
+        echo '[AIONE] Verify CURRENT DB migration matches Repo after automatic migration'
         SERVICE_URL="$$(gcloud run services describe "$$AIONE_RUN_SERVICE" --region="$$AIONE_REGION" --project="$$AIONE_PROJECT_ID" --format='value(status.url)')"
         IAM_TOKEN="$$(gcloud auth print-identity-token --audiences="$$SERVICE_URL")"
         HEALTH_JSON="$$(curl -fsS -H "Authorization: Bearer $$IAM_TOKEN" "$$SERVICE_URL/health")"
@@ -43,8 +99,7 @@ steps:
         test -n "$$DB_VERSION"
         test -n "$$REPO_VERSION"
         if [[ "$$DB_VERSION" != "$$REPO_VERSION" ]]; then
-          echo '[AIONE][STOP] Immutable main image is ready, but CURRENT DB migration is behind Repo.' >&2
-          echo '[AIONE][STOP] Automatic production deployment is blocked. Run the reviewed CURRENT migration action.' >&2
+          echo '[AIONE][STOP] Automatic migration did not align CURRENT DB with Repo. Deployment is blocked.' >&2
           exit 20
         fi
         echo '[AIONE] Migration gate PASS'
@@ -145,7 +200,7 @@ steps:
         printf '%s\n' "$$FINAL_HEALTH"
         printf '%s' "$$FINAL_HEALTH" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p.get("ok") is True and p.get("database")=="connected"'
 
-        echo "[AIONE] AUTO DEPLOY PASS: $${AIONE_RUN_SERVICE} -> $${AIONE_SQL_INSTANCE} -> $${CANDIDATE_REVISION}"
+        echo "[AIONE] AUTO MIGRATE + DEPLOY PASS: $${AIONE_RUN_SERVICE} -> $${AIONE_SQL_INSTANCE} -> $${CANDIDATE_REVISION}"
 
 options:
   logging: CLOUD_LOGGING_ONLY
