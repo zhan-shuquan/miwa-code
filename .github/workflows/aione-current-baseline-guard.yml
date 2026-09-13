@@ -31,9 +31,10 @@ jobs:
           test "$AIONE_DB_USER" = "aione_app"
           test "$AIONE_DB_PASSWORD_SECRET" = "aione-db-password-dev"
           test "$AIONE_PREFLIGHT_JOB" = "aione-db-preflight-current"
+          test "$AIONE_MIGRATION_JOB" = "aione-db-migrate-current"
           test "$AIONE_DEPLOY_TRIGGER_NAME" = "aione-current-deploy"
 
-      - name: Verify automated deployment assets exist
+      - name: Verify fully automated deployment assets exist
         shell: bash
         run: |
           set -euo pipefail
@@ -41,9 +42,39 @@ jobs:
           test -f infra/gcp/automation/INSTALL_CURRENT_AUTOMATION.sh
           grep -Fq '$AIONE_RUN_SERVICE' infra/gcp/cloudbuild/deploy-current.yaml
           grep -Fq '$AIONE_SQL_INSTANCE' infra/gcp/cloudbuild/deploy-current.yaml
+          grep -Fq 'id: automatic-current-migration' infra/gcp/cloudbuild/deploy-current.yaml
+          grep -Fq '$AIONE_MIGRATION_JOB' infra/gcp/cloudbuild/deploy-current.yaml
+          grep -Fq -- '--args=run,db:migrate' infra/gcp/cloudbuild/deploy-current.yaml
+          grep -Fq 'id: migration-gate' infra/gcp/cloudbuild/deploy-current.yaml
+          grep -Fq 'id: read-only-db-preflight' infra/gcp/cloudbuild/deploy-current.yaml
           grep -Fq 'candidate-' infra/gcp/cloudbuild/deploy-current.yaml
           grep -Fq -- '--no-traffic' infra/gcp/cloudbuild/deploy-current.yaml
           grep -Fq 'update-traffic' infra/gcp/cloudbuild/deploy-current.yaml
+          grep -Fq 'AUTO MIGRATE + DEPLOY PASS' infra/gcp/cloudbuild/deploy-current.yaml
+          grep -Fq 'No Cloud Shell migration/deploy command is required for normal releases.' infra/gcp/automation/INSTALL_CURRENT_AUTOMATION.sh
+
+      - name: Verify automatic pipeline stage order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          text = Path('infra/gcp/cloudbuild/deploy-current.yaml').read_text(encoding='utf-8')
+          stages = [
+              'id: build-image',
+              'id: push-image',
+              'id: pre-migration-current-health',
+              'id: automatic-current-migration',
+              'id: migration-gate',
+              'id: read-only-db-preflight',
+              'id: candidate-deploy-health-cutover',
+          ]
+          positions = [text.index(stage) for stage in stages]
+          if positions != sorted(positions):
+              raise SystemExit('[AIONE][FATAL] CURRENT automatic pipeline stage order is invalid.')
+          print('Automatic CURRENT migrate/deploy stage order PASS.')
+          PY
 
       - name: Block unescaped Cloud Build shell variables
         shell: bash

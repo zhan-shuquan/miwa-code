@@ -14,7 +14,7 @@ RUNTIME_SA="${AIONE_RUNTIME_SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceacco
 TRIGGER="$AIONE_DEPLOY_TRIGGER_NAME"
 BUILD_CONFIG="infra/gcp/cloudbuild/deploy-current.yaml"
 
-printf '\n[AIONE] Install automated CURRENT operations\n'
+printf '\n[AIONE] Install fully automated CURRENT operations\n'
 printf 'Project       : %s\n' "$PROJECT_ID"
 printf 'Cloud Run     : %s\n' "$AIONE_RUN_SERVICE"
 printf 'Cloud SQL     : %s\n' "$AIONE_SQL_INSTANCE"
@@ -80,7 +80,7 @@ gcloud run services add-iam-policy-binding "$AIONE_RUN_SERVICE" \
 INCLUDED_FILES='apps/systems/aione/backend/**,data-code/migrations/**,data-code/current/**,Dockerfile,infra/gcp/cloudbuild/deploy-current.yaml,infra/gcp/cloud-shell/CURRENT_BASELINE.sh'
 SERVICE_ACCOUNT_RESOURCE="projects/${PROJECT_ID}/serviceAccounts/${DEPLOYER_SA}"
 
-echo '[AIONE] Create or update the single main -> CURRENT deployment trigger'
+echo '[AIONE] Create or update the single main -> CURRENT automatic migrate + deploy trigger'
 if gcloud builds triggers describe "$TRIGGER" --project="$PROJECT_ID" --region=global >/dev/null 2>&1; then
   gcloud builds triggers update github "$TRIGGER" \
     --project="$PROJECT_ID" \
@@ -113,7 +113,7 @@ gcloud builds triggers describe "$TRIGGER" \
   --region=global \
   --format='yaml(name,filename,github.push.branch,serviceAccount,includedFiles,disabled)'
 
-printf '\n[AIONE] AUTOMATED OPS INSTALLED\n'
+printf '\n[AIONE] FULL AUTO OPS INSTALLED\n'
 printf 'Normal operation from now on:\n'
-printf '  Branch work -> checks -> merge main -> Cloud Build auto deploy -> candidate health -> 100%% cutover\n'
-printf 'Database migration mismatch blocks deployment automatically and requires a separately reviewed CURRENT migration action.\n'
+printf '  Branch work -> PR checks -> merge main -> build immutable image -> automatic idempotent DB migration -> migration verification -> read-only preflight -> 0%% candidate -> authenticated health -> 100%% cutover.\n'
+printf 'No Cloud Shell migration/deploy command is required for normal releases.\n'
