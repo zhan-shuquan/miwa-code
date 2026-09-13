@@ -5,7 +5,7 @@ const PAGE_TYPES = [
   { code:"model", name:"模特 / 穿着图", required:false, output:"1000×1500", status:"ready", fields:["适用人群","季节","长度/类型","搭配方向"], assets:["白底商品图","SKU图","产品图","实拍图"], note:"已接入商品锚点、穿着场景、取景、布局微调和 AI 设计任务；AI 只生成模特、姿势与场景，不改商品本体。" },
   { code:"material", name:"材质 / 质地图", required:true, output:"1000×1500", status:"ready", fields:["已确认材质","材质特征文案"], assets:["细节图","产品图"], note:"已接入真实细节素材、材质事实绑定、纹理展示模式和设计任务；未确认材质时只展示真实纹理，不生成材质宣称。" },
   { code:"size", name:"尺寸 / 尺码图", required:true, output:"1000×1500", status:"ready", fields:["适用尺码","实测尺寸（如有）"], assets:["平铺图","产品图"], note:"已接入确定性尺寸页：有实测值显示完整尺寸，没有实测值自动退化为真实支持尺码，禁止 AI 推断数字。" },
-  { code:"spec", name:"商品仕様图", required:true, output:"1000×1500", status:"planned", fields:["品番","材质","适用尺码","颜色","季节","套数","生产信息"], assets:["产品图","SKU图"], note:"作为结构化事实页，优先确定性排版，不依赖AI自由生成文字。" },
+  { code:"spec", name:"商品仕様图", required:true, output:"1000×1500", status:"ready", fields:["品番","材质","适用尺码","颜色","季节","套数","生产信息"], assets:["产品图","SKU图"], note:"已接入结构化 Product Truth 自动排版；缺失字段自动省略，不让 AI 自由改写规格。" },
   { code:"detail", name:"细节 / 结构图", required:false, output:"1000×1500", status:"planned", fields:["已确认结构卖点","局部说明"], assets:["细节图","产品图"], note:"用于袜口、脚跟、脚尖、缝制、纹理等真实结构展示。" }
 ];
 
@@ -42,7 +42,8 @@ function renderPagePlanCard(type) {
     white_bg:'<button type="button" class="dc-button dc-button--primary" data-action="jump-white-bg">进入设计</button>',
     model:'<button type="button" class="dc-button dc-button--primary" data-action="jump-model">进入设计</button>',
     material:'<button type="button" class="dc-button dc-button--primary" data-action="jump-material">进入设计</button>',
-    size:'<button type="button" class="dc-button dc-button--primary" data-action="jump-size">进入设计</button>'
+    size:'<button type="button" class="dc-button dc-button--primary" data-action="jump-size">进入设计</button>',
+    spec:'<button type="button" class="dc-button dc-button--primary" data-action="jump-spec">进入设计</button>'
   };
   const action = actions[type.code] || '<button type="button" class="dc-button" disabled>待接入</button>';
   return `<article class="dc-page-plan-card" data-page-type="${escapeHtml(type.code)}">
@@ -58,7 +59,7 @@ function createSection() {
   const section = document.createElement("section");
   section.className = "dc-card dc-page-plan";
   section.dataset.ui = "page-plan";
-  section.innerHTML = `<div class="dc-page-plan__intro"><div><h2>图片设计规划</h2><p>先确定这件商品需要设计哪些图片、每张图读取哪些字段、使用哪些素材。前六类已经可操作，其余类型按同一底层逐张接入。</p></div><div class="dc-page-plan__legend"><span>字段来自 Product Truth</span><span>素材来自 01 / 02 / 03</span><span>设计中心只管呈现</span></div></div><div class="dc-page-plan-grid" data-ui="page-plan-grid"></div>`;
+  section.innerHTML = `<div class="dc-page-plan__intro"><div><h2>图片设计规划</h2><p>先确定这件商品需要设计哪些图片、每张图读取哪些字段、使用哪些素材。前七类已经可操作，细节图按同一底层继续接入。</p></div><div class="dc-page-plan__legend"><span>字段来自 Product Truth</span><span>素材来自 01 / 02 / 03</span><span>设计中心只管呈现</span></div></div><div class="dc-page-plan-grid" data-ui="page-plan-grid"></div>`;
   return section;
 }
 
@@ -93,6 +94,9 @@ export function initDesignCenterPagePlan() {
     const { initDesignCenterSizeV1 } = await import("./design-center-size-v1.js?v=20260913-v1");
     await initDesignCenterSizeV1();
     section.querySelector('[data-action="jump-size"]')?.addEventListener("click", () => root.querySelector('[data-section="size-design"]')?.scrollIntoView({ behavior:"smooth", block:"start" }));
+    const { initDesignCenterSpecV1 } = await import("./design-center-spec-v1.js?v=20260913-v1");
+    await initDesignCenterSpecV1();
+    section.querySelector('[data-action="jump-spec"]')?.addEventListener("click", () => root.querySelector('[data-section="spec-design"]')?.scrollIntoView({ behavior:"smooth", block:"start" }));
   });
 }
 
