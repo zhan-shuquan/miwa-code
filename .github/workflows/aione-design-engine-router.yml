@@ -34,6 +34,7 @@ jobs:
           node --check src/services/design-engine-router-service.js
           node --check src/services/design-execution-service.js
           node --check src/services/design-white-background-output-service.js
+          node --check src/services/design-model-wear-output-service.js
           node --check src/routes/design.js
           node --check scripts/test-design-engine-router.js
 
