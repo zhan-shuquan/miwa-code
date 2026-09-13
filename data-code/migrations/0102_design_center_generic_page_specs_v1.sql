@@ -77,6 +77,13 @@ VALUES
   '["product_source"]'::jsonb,'["supportedSize"]'::jsonb,'["compose_size_guide","deterministic_copy_overlay"]'::jsonb,
   '{"sourceTruthRequired":true,"humanReviewRequired":true,"measurementsOptional":true,"measurementFallback":"supported_size_only","blockWhenMeasurementsMissing":false,"doNotInferMeasurements":true,"confirmedFactsOnly":true}'::jsonb,
   'UNIFIED-SIZE-GUIDE-1000X1500','active','{"current":true,"stage":"design-center-page-type-v1","pageType":"size","operatorAdjustable":true,"truthfulFallback":true,"noAiMeasurementInference":true}'::jsonb,'aione-design-center-v1'
+),
+(
+  'dtpl_unified_product_spec_vertical_v1','UNIFIED-PRODUCT-SPEC-1000X1500','Unified Deterministic Product Spec 1000x1500','1.0','product_spec_image',NULL,NULL,NULL,1000,1500,
+  '{"family":"product_spec","slots":{"title":{"x":"8%","y":"4%","w":"84%","h":"9%"},"product_visual":{"x":"10%","y":"17%","w":"80%","h":"31%"},"spec_table":{"x":"8%","y":"53%","w":"84%","h":"39%"}},"technicalDesignStatus":"operator-adjustable-v1"}'::jsonb,
+  '["product_source"]'::jsonb,'["productCode"]'::jsonb,'["compose_product_spec","deterministic_copy_overlay"]'::jsonb,
+  '{"sourceTruthRequired":true,"humanReviewRequired":true,"confirmedFactsOnly":true,"omitMissingFacts":true,"doNotInventFacts":true,"deterministicRendering":true}'::jsonb,
+  'UNIFIED-PRODUCT-SPEC-1000X1500','active','{"current":true,"stage":"design-center-page-type-v1","pageType":"spec","operatorAdjustable":true,"deterministicRendering":true,"confirmedFactsOnly":true}'::jsonb,'aione-design-center-v1'
 )
 ON CONFLICT (template_code, version) DO NOTHING;
 
