@@ -3,7 +3,7 @@
     <div>
       <div class="design-center__eyebrow">商品之家 · 设计中心</div>
       <h1>商品主图设计工作台</h1>
-      <p>先把“商品标签卡 + 1:1 主图”跑通。商品事实只读取，不在设计中心维护第二套。</p>
+      <p>先把标签卡和 1:1 主图做成真正可用的成品母版，再扩展其他详情图。</p>
     </div>
     <div class="design-center__product-loader">
       <label for="design-product-ref">商品编码</label>
@@ -17,7 +17,7 @@
   <div class="design-center__notice" data-ui="message" hidden></div>
 
   <section class="dc-card dc-product-summary" data-ui="product-summary">
-    <div class="dc-empty">输入商品编码后读取 CURRENT Product Truth 和已确认素材。</div>
+    <div class="dc-empty">输入商品编码后读取当前商品信息和已选素材。</div>
   </section>
 
   <section class="dc-card">
@@ -40,15 +40,15 @@
         <span class="dc-step">02</span>
         <div>
           <h2>商品标签卡</h2>
-          <p>独立设计对象，可同时用于主图和包装。顶部/底部固定，中间固定 4 个槽位。</p>
+          <p>同一张标签卡同时用于主图和包装。顶部、底部固定，中间保留 4 个可配置槽位。</p>
         </div>
       </div>
-      <span class="dc-status dc-status--ready">统一标签 V1</span>
+      <span class="dc-status dc-status--ready">统一标签 V2</span>
     </div>
 
     <div class="dc-two-column">
       <div class="dc-tag-preview-panel">
-        <div class="dc-label">实时预览</div>
+        <div class="dc-label">标签卡实时预览</div>
         <div class="product-tag-card" data-ui="tag-preview">
           <div class="product-tag-card__brand" data-preview="brand">BRAND</div>
           <div class="product-tag-card__subline" data-preview="subline">Product Line</div>
@@ -56,7 +56,7 @@
           <div class="product-tag-card__slogan" data-preview="slogan">ブランドメッセージ</div>
         </div>
         <div class="dc-tag-usage">
-          <span>主图</span><span>包装</span><span>同一资产结构</span>
+          <span>主图</span><span>包装</span><span>同一标签资产</span>
         </div>
       </div>
 
@@ -67,9 +67,9 @@
           <label>最后一行日文品牌语<input name="brandSloganJa" type="text" maxlength="160" placeholder="毎日に頼れる一足"></label>
           <label>标签配色
             <select name="colorTheme">
-              <option value="neutral">Neutral</option>
-              <option value="navy-gold">Men / Navy + Gold</option>
-              <option value="warm-rose">Women / Warm Rose</option>
+              <option value="navy-gold">男款 · 深蓝 + 金色</option>
+              <option value="warm-rose">女款 · 粉米 + 咖色</option>
+              <option value="neutral">通用 · 黑 + 金色</option>
             </select>
           </label>
         </div>
@@ -77,7 +77,7 @@
         <div class="dc-slot-editor">
           <div class="dc-slot-editor__head">
             <h3>中间 4 个槽位</h3>
-            <p>优先绑定 Product Truth；没有可绑定事实时才填写显示文案。</p>
+            <p>先选择要显示的内容，再选择绑定字段；需要时可以直接手动改显示文案。</p>
           </div>
           <div data-ui="slot-editors"></div>
         </div>
@@ -97,7 +97,7 @@
         <span class="dc-step">03</span>
         <div>
           <h2>1:1 主图设计</h2>
-          <p>统一五槽位：标签卡 / 白底模特 / 商品展示 / 最强卖点 / 第二卖点。</p>
+          <p>模特图做主主体，标签卡固定左上，SKU/平铺图做辅助，卖点徽章负责强调。</p>
         </div>
       </div>
       <span class="dc-status" data-ui="hero-readiness">未配置</span>
@@ -105,14 +105,14 @@
 
     <div class="dc-two-column dc-two-column--hero">
       <div>
-        <div class="dc-label">1000 × 1000 布局预览</div>
+        <div class="dc-label">1000 × 1000 主图实时预览</div>
         <div class="hero-preview" data-ui="hero-preview">
-          <div class="hero-preview__tag" data-ui="hero-tag-preview"></div>
-          <div class="hero-preview__primary" data-preview="primary">最强卖点</div>
           <div class="hero-preview__model">
             <div class="hero-preview__legs"><i></i><i></i></div>
-            <span>AI白底模特图</span>
+            <span>主模特视觉区域</span>
           </div>
+          <div class="hero-preview__tag" data-ui="hero-tag-preview"></div>
+          <div class="hero-preview__primary" data-preview="primary">第一卖点</div>
           <div class="hero-preview__product" data-ui="hero-product-display">SKU / 白底商品展示</div>
           <div class="hero-preview__secondary" data-preview="secondary">第二卖点</div>
         </div>
@@ -120,10 +120,10 @@
 
       <form class="dc-form" data-form="hero-spec">
         <div class="dc-form-grid">
-          <label>模特生成指令
+          <label>模特图风格
             <select name="modelPresetId" data-ui="model-presets"><option value="">请选择</option></select>
           </label>
-          <label>商品展示指令
+          <label>商品展示风格
             <select name="productDisplayPresetId" data-ui="display-presets"><option value="">请选择</option></select>
           </label>
           <label>商品展示方式
@@ -139,32 +139,31 @@
         </div>
 
         <fieldset class="dc-binding">
-          <legend>右上角 · 最强卖点</legend>
+          <legend>右上角 · 第一卖点</legend>
           <div class="dc-binding-grid">
-            <label>Product Truth 路径<input name="primarySourceFactPath" type="text" list="product-fact-paths" placeholder="approvedPrimaryValue"></label>
-            <label>没有事实时的显示文案<input name="primaryTextOverride" type="text" maxlength="160"></label>
+            <label>绑定字段<select name="primarySourceFactPath" data-ui="primary-fact-options"></select></label>
+            <label>显示文案（可手动覆盖）<input name="primaryTextOverride" type="text" maxlength="160"></label>
           </div>
         </fieldset>
 
         <fieldset class="dc-binding">
-          <legend>左下/右下 · 第二卖点</legend>
+          <legend>左下 / 右下 · 第二卖点</legend>
           <div class="dc-binding-grid">
-            <label>Product Truth 路径<input name="secondarySourceFactPath" type="text" list="product-fact-paths" placeholder="sellingPoints.0"></label>
-            <label>没有事实时的显示文案<input name="secondaryTextOverride" type="text" maxlength="160"></label>
+            <label>绑定字段<select name="secondarySourceFactPath" data-ui="secondary-fact-options"></select></label>
+            <label>显示文案（可手动覆盖）<input name="secondaryTextOverride" type="text" maxlength="160"></label>
           </div>
         </fieldset>
 
         <div class="dc-sku-selector">
           <h3>SKU 图</h3>
-          <p>用于校验真实颜色、花型、套数；默认选 CURRENT SKU 图。</p>
+          <p>用于展示颜色、花型和套数；默认选当前 SKU 图。</p>
           <div data-ui="sku-assets"></div>
         </div>
 
         <div class="dc-form-actions dc-form-actions--end">
-          <button type="submit" class="dc-button dc-button--primary">保存主图规范</button>
+          <button type="submit" class="dc-button dc-button--primary">保存主图设置</button>
           <button type="button" class="dc-button" data-action="create-hero-task">创建主图设计任务</button>
         </div>
-        <p class="dc-helper">本批次先建立可靠输入、指令和设计任务；不会在缺少真实素材/事实时强行执行生图。</p>
       </form>
     </div>
   </section>
@@ -173,7 +172,7 @@
     <div class="dc-section-head">
       <div>
         <span class="dc-step">04</span>
-        <div><h2>AI 设计指令库</h2><p>页面手动选择和未来表格批量导入，底层都引用这些同一指令预设。</p></div>
+        <div><h2>AI 设计指令库</h2><p>页面手动选择和未来表格批量导入，底层都引用同一套设计指令。</p></div>
       </div>
     </div>
     <div class="dc-preset-list" data-ui="preset-list"></div>
