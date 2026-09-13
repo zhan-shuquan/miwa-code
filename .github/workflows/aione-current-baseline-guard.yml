@@ -53,6 +53,23 @@ jobs:
           grep -Fq 'AUTO MIGRATE + DEPLOY PASS' infra/gcp/cloudbuild/deploy-current.yaml
           grep -Fq 'No Cloud Shell migration/deploy command is required for normal releases.' infra/gcp/automation/INSTALL_CURRENT_AUTOMATION.sh
 
+      - name: Verify manual CURRENT deploy entrypoints are retired
+        shell: bash
+        run: |
+          set -euo pipefail
+          manual_files=(
+            infra/gcp/automation/APPLY_CURRENT_MIGRATIONS_AND_DEPLOY.sh
+            infra/gcp/cloud-shell/09_DEPLOY_CURRENT_BACKEND.sh
+          )
+          for file in "${manual_files[@]}"; do
+            grep -Fq 'retired' "$file"
+            if grep -Eq 'gcloud (run deploy|builds submit|run jobs deploy|run jobs execute)' "$file"; then
+              echo "[AIONE][FATAL] Retired manual deployment file still contains live deployment commands: $file"
+              exit 5
+            fi
+          done
+          echo 'Manual CURRENT deploy entrypoints are retired.'
+
       - name: Verify automatic pipeline stage order
         shell: bash
         run: |
@@ -107,7 +124,6 @@ jobs:
           set -euo pipefail
           files=(
             infra/gcp/cloud-shell/lib.sh
-            infra/gcp/cloud-shell/09_DEPLOY_CURRENT_BACKEND.sh
             infra/gcp/cloud-shell/cloud-config.sh.example
             infra/gcp/cloud-shell/README.md
             infra/gcp/cloudbuild/deploy-current.yaml
@@ -150,7 +166,6 @@ jobs:
           active_files=(
             infra/gcp/cloud-shell/CURRENT_BASELINE.sh
             infra/gcp/cloud-shell/lib.sh
-            infra/gcp/cloud-shell/09_DEPLOY_CURRENT_BACKEND.sh
             infra/gcp/cloudbuild/deploy-current.yaml
             infra/gcp/automation/INSTALL_CURRENT_AUTOMATION.sh
           )
