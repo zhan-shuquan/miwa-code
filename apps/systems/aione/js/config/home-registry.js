@@ -3,7 +3,7 @@
    规则：普通之家 = 概览(唯一) + 中心(按需) + 管理(按需)。
    工作之家是用户专属工作空间，允许使用专属 Personal Work Home 母版。
 
-   Governance CURRENT｜2026-09-05
+   Governance CURRENT｜2026-09-13
    已基本锁定：美和之家、事业之家、工作之家、商品之家。
    其余之家保留12之家一级入口，但二级目录/中心仍处于随“美和跨境”真实业务闭环逐步验证阶段；
    当前临时页面、临时目录或已有代码不得自动视为正式CURRENT定义。
@@ -44,15 +44,16 @@ export const HOME_PAGE_MODEL = Object.freeze({
   })
 });
 
-/* Product Home CURRENT｜2026-09-03
- * 选品已回归工作之家“我的工作 → 选品”，不再作为独立选品中心。
- * 商品之家保留完整专业中心，用于正式事实、规则、结果与深度管理。
+/* Product Home CURRENT｜2026-09-13
+ * 选品属于工作之家中的真实工作流，正式 Product 进入商品之家。
+ * 商品中心拥有 Product / SKU / Product Truth / ProductAsset 状态，不复制设计任务与发布任务。
+ * 设计任务属于设计中心；Approved 设计结果进入发布中心。
  * CURRENT 导航事实：章 = centers；节 = tabs。不得在页面中维护第二套同名定义。
  */
 export const PRODUCT_HOME_CENTERS = Object.freeze([
   center("product-center", "商品中心", { route: "product-home?center=product-center", icon: "product", tabs: ["全部商品", "SKU", "设置"], status: "active" }),
-  center("design-center", "设计中心", { route: "product-home?center=design-center", icon: "file", tabs: ["概览", "商品设计", "设计模板", "设计规则"] }),
-  center("publish-center", "发布中心", { route: "product-home?center=publish-center", icon: "publishing", tabs: ["概览", "待发布", "已发布", "发布规则"] }),
+  center("design-center", "设计中心", { route: "product-home?center=design-center", icon: "file", tabs: ["概览", "设计任务", "商品设计", "设计模板", "设计规则"], status: "active" }),
+  center("publish-center", "发布中心", { route: "product-home?center=publish-center", icon: "publishing", tabs: ["概览", "待发布", "已发布", "发布规则"], status: "active" }),
   center("cost-center", "成本中心", { route: "product-home?center=cost-center", icon: "expense", tabs: ["概览", "成本明细", "成本规则"] }),
   center("price-center", "价格中心", { route: "product-home?center=price-center", icon: "income", tabs: ["概览", "售价", "渠道价格", "调价规则"] }),
   center("profit-center", "利润中心", { route: "product-home?center=profit-center", icon: "analysis", tabs: ["概览", "毛利", "利润", "盈亏分析"] }),
