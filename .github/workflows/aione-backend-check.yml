@@ -32,16 +32,20 @@ jobs:
       - name: Syntax check
         run: npm run check
 
-      - name: Check Design Center V1 syntax
+      - name: Check Design Center syntax
         run: |
           node --check src/services/design-product-resolver.js
           node --check src/services/product-tag-card-service.js
           node --check src/services/product-hero-spec-service.js
           node --check src/services/design-center-workbench-service.js
+          node --check src/services/design-page-spec-service.js
           node --check src/routes/design-center.js
           node --check scripts/accept-design-center-tag-card-hero-v1.js
           node --check scripts/audit-design-center-current-inputs.js
           node --check ../js/pages/design-center-v1.js
+          node --check ../js/pages/design-center-page-plan-v1.js
+          node --check ../js/pages/design-center-sku-v1.js
+          node --check ../js/pages/design-center-white-bg-v1.js
 
       - name: Check Design Center CURRENT input audit runner syntax
         working-directory: .
@@ -125,6 +129,17 @@ jobs:
 
       - name: Migrate controlled database from current migration set
         run: npm run db:migrate
+
+      - name: Prove Design Center generic page-spec foundation
+        shell: bash
+        run: |
+          PGPASSWORD=aione_test psql -h 127.0.0.1 -U aione_test -d aione_test -v ON_ERROR_STOP=1 -Atc "
+            SELECT CASE WHEN
+              to_regclass('public.product_design_page_specs') IS NOT NULL
+              AND EXISTS (SELECT 1 FROM public.design_templates WHERE id='dtpl_unified_sku_color_square_v1' AND lifecycle_status='active')
+              AND EXISTS (SELECT 1 FROM public.design_templates WHERE id='dtpl_unified_white_bg_square_v1' AND lifecycle_status='active')
+            THEN 'PASS' ELSE 'FAIL' END;
+          " | grep -Fx PASS
 
       - name: Run Design Center Product Tag Card + Hero V1 acceptance
         shell: bash
