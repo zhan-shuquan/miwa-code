@@ -20,7 +20,7 @@ import {
 } from "../services/design-task-service.js";
 import { createDeterministicCopyOverlayTask } from "../services/design-copy-overlay-service.js";
 import { listDesignTaskOutputs } from "../services/design-output-service.js";
-import { executeDesignTask } from "../services/design-execution-service.js";
+import { executeDesignTask, getDesignTaskExecutionPlan } from "../services/design-execution-service.js";
 
 const router = Router();
 
@@ -152,6 +152,15 @@ router.get("/design/tasks/:taskId", async (req, res, next) => {
   try {
     const task = await getDesignTask(pool, cleanText(req.params.taskId, 240));
     res.json({ task });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/design/tasks/:taskId/execution-plan", async (req, res, next) => {
+  try {
+    const executionPlan = await getDesignTaskExecutionPlan(pool, cleanText(req.params.taskId, 240));
+    res.json({ executionPlan });
   } catch (error) {
     next(error);
   }
