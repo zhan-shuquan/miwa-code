@@ -17,7 +17,7 @@ const EXECUTION_REGISTRY = Object.freeze({
   compose_sku_color_image: {
     engine: "deterministic",
     executor: "sku_color_renderer",
-    status: "planned"
+    status: "implemented"
   },
   compose_white_background_product: {
     engine: "hybrid",
@@ -32,7 +32,7 @@ const EXECUTION_REGISTRY = Object.freeze({
   compose_material_texture_image: {
     engine: "deterministic",
     executor: "material_texture_renderer",
-    status: "planned"
+    status: "implemented"
   },
   compose_truthful_size_guide: {
     engine: "deterministic",
