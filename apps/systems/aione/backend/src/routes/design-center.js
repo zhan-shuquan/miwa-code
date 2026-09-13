@@ -8,6 +8,10 @@ import {
   listInstructionPresets,
   upsertProductHeroSpec
 } from "../services/product-hero-spec-service.js";
+import {
+  createDesignLayoutTemplate,
+  listDesignLayoutTemplates
+} from "../services/design-layout-template-service.js";
 
 const router = Router();
 
@@ -32,6 +36,31 @@ router.get("/design-center/instruction-presets", async (req, res, next) => {
       categoryScope: req.query.categoryScope
     });
     res.json({ presets });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/design-center/layout-templates", async (req, res, next) => {
+  try {
+    const templates = await listDesignLayoutTemplates(pool, {
+      pageType: req.query.pageType,
+      categoryScope: req.query.categoryScope,
+      channelScope: req.query.channelScope
+    });
+    res.json({ templates });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/design-center/layout-templates", requireWriteActor, async (req, res, next) => {
+  try {
+    const template = await withTransaction((client) => createDesignLayoutTemplate(client, {
+      input: req.body && typeof req.body === "object" ? req.body : {},
+      context: req.aioneContext || {}
+    }));
+    res.status(201).json({ template });
   } catch (error) {
     next(error);
   }
