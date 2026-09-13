@@ -70,6 +70,13 @@ VALUES
   '["detail_source"]'::jsonb,'[]'::jsonb,'["compose_material_texture_image","deterministic_copy_overlay","source_anchored_crop"]'::jsonb,
   '{"sourceTruthRequired":true,"humanReviewRequired":true,"confirmedFactsOnly":true,"doNotInventMaterial":true,"doNotInventTexture":true}'::jsonb,
   'UNIFIED-MATERIAL-1000X1500','active','{"current":true,"stage":"design-center-page-type-v1","pageType":"material","operatorAdjustable":true,"confirmedFactsOnly":true}'::jsonb,'aione-design-center-v1'
+),
+(
+  'dtpl_unified_size_guide_vertical_v1','UNIFIED-SIZE-GUIDE-1000X1500','Unified Truthful Size Guide 1000x1500','1.0','size_guide_image',NULL,NULL,NULL,1000,1500,
+  '{"family":"size_guide","slots":{"title":{"x":"8%","y":"4%","w":"84%","h":"10%"},"supported_size":{"x":"18%","y":"15%","w":"64%","h":"10%"},"product_visual":{"x":"8%","y":"28%","w":"84%","h":"40%"},"measurements":{"x":"8%","y":"72%","w":"84%","h":"20%"}},"fallback":"supported_size_only","technicalDesignStatus":"operator-adjustable-v1"}'::jsonb,
+  '["product_source"]'::jsonb,'["supportedSize"]'::jsonb,'["compose_size_guide","deterministic_copy_overlay"]'::jsonb,
+  '{"sourceTruthRequired":true,"humanReviewRequired":true,"measurementsOptional":true,"measurementFallback":"supported_size_only","blockWhenMeasurementsMissing":false,"doNotInferMeasurements":true,"confirmedFactsOnly":true}'::jsonb,
+  'UNIFIED-SIZE-GUIDE-1000X1500','active','{"current":true,"stage":"design-center-page-type-v1","pageType":"size","operatorAdjustable":true,"truthfulFallback":true,"noAiMeasurementInference":true}'::jsonb,'aione-design-center-v1'
 )
 ON CONFLICT (template_code, version) DO NOTHING;
 
