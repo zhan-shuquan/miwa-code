@@ -6,6 +6,7 @@ import { executeWhiteBackgroundProduct } from "./design-white-background-output-
 import { executeSourceAnchoredModelWear } from "./design-model-wear-output-service.js";
 import { executeTruthfulSizeGuide, executeDeterministicProductSpec } from "./design-deterministic-page-output-service.js";
 import { executeSkuColorImage, executeMaterialTextureImage } from "./design-deterministic-media-output-service.js";
+import { executeSourceAnchoredDetailImage } from "./design-detail-output-service.js";
 import { getDesignExecutionPlan } from "./design-engine-router-service.js";
 
 const EXECUTORS = Object.freeze({
@@ -17,7 +18,8 @@ const EXECUTORS = Object.freeze({
   truthful_size_guide_renderer: executeTruthfulSizeGuide,
   product_spec_renderer: executeDeterministicProductSpec,
   sku_color_renderer: executeSkuColorImage,
-  material_texture_renderer: executeMaterialTextureImage
+  material_texture_renderer: executeMaterialTextureImage,
+  detail_structure_renderer: executeSourceAnchoredDetailImage
 });
 
 export async function getDesignTaskExecutionPlan(client, taskId) {

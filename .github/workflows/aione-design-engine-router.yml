@@ -42,6 +42,7 @@ jobs:
           node --check src/services/design-model-wear-output-service.js
           node --check src/services/design-deterministic-page-output-service.js
           node --check src/services/design-deterministic-media-output-service.js
+          node --check src/services/design-detail-output-service.js
           node --check src/routes/design.js
           node --check scripts/test-design-engine-router.js
 
