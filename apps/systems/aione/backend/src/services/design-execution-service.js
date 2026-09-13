@@ -4,10 +4,8 @@ import { executeBenefitFeatureImage } from "./design-ai-output-service.js";
 import { executeDeterministicCopyOverlay } from "./design-copy-overlay-service.js";
 import { executeWhiteBackgroundProduct } from "./design-white-background-output-service.js";
 import { executeSourceAnchoredModelWear } from "./design-model-wear-output-service.js";
-import {
-  executeTruthfulSizeGuide,
-  executeDeterministicProductSpec
-} from "./design-deterministic-page-output-service.js";
+import { executeTruthfulSizeGuide, executeDeterministicProductSpec } from "./design-deterministic-page-output-service.js";
+import { executeSkuColorImage, executeMaterialTextureImage } from "./design-deterministic-media-output-service.js";
 import { getDesignExecutionPlan } from "./design-engine-router-service.js";
 
 const EXECUTORS = Object.freeze({
@@ -17,7 +15,9 @@ const EXECUTORS = Object.freeze({
   white_background_renderer: executeWhiteBackgroundProduct,
   source_anchored_model_wear: executeSourceAnchoredModelWear,
   truthful_size_guide_renderer: executeTruthfulSizeGuide,
-  product_spec_renderer: executeDeterministicProductSpec
+  product_spec_renderer: executeDeterministicProductSpec,
+  sku_color_renderer: executeSkuColorImage,
+  material_texture_renderer: executeMaterialTextureImage
 });
 
 export async function getDesignTaskExecutionPlan(client, taskId) {
@@ -30,9 +30,7 @@ export async function executeDesignTask(client, taskId, context = {}) {
   const plan = getDesignExecutionPlan(task);
   const executor = plan.executor ? EXECUTORS[plan.executor] : null;
 
-  if (plan.status === "implemented" && executor) {
-    return executor(client, taskId, context);
-  }
+  if (plan.status === "implemented" && executor) return executor(client, taskId, context);
 
   if (plan.status === "planned") {
     const error = new Error(`Design Engine executor is planned but not implemented yet: ${plan.executor}`);
