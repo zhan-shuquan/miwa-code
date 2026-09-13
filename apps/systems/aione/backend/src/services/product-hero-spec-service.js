@@ -18,6 +18,29 @@ function normalizeBinding(value = {}) {
   };
 }
 
+function normalizeAdjustments(value = {}) {
+  const number = (key, fallback, min, max) => {
+    const parsed = Number(value?.[key]);
+    return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
+  };
+  return {
+    modelScale: number("modelScale", 100, 60, 160),
+    modelOffsetX: number("modelOffsetX", 0, -30, 30),
+    modelOffsetY: number("modelOffsetY", 0, -30, 30),
+    tagScale: number("tagScale", 100, 60, 150),
+    tagOffsetX: number("tagOffsetX", 0, -30, 30),
+    tagOffsetY: number("tagOffsetY", 0, -30, 30),
+    productScale: number("productScale", 100, 60, 160),
+    productOffsetX: number("productOffsetX", 0, -30, 30),
+    productOffsetY: number("productOffsetY", 0, -30, 30),
+    primaryScale: number("primaryScale", 100, 60, 160),
+    primaryOffsetX: number("primaryOffsetX", 0, -30, 30),
+    primaryOffsetY: number("primaryOffsetY", 0, -30, 30),
+    secondaryOffsetX: number("secondaryOffsetX", 0, -30, 30),
+    secondaryOffsetY: number("secondaryOffsetY", 0, -30, 30)
+  };
+}
+
 function resolveBinding(binding, productData) {
   const fact = binding.sourceFactPath ? displayFact(readProductFact(productData, binding.sourceFactPath)) : "";
   const body = fact || binding.textOverride || "";
@@ -66,6 +89,7 @@ function resolveSpec(spec, product) {
   if (!spec) return null;
   return {
     ...spec,
+    layout_adjustments: normalizeAdjustments(spec.layout_adjustments || {}),
     resolved_primary_selling_point: resolveBinding(spec.primary_selling_point_binding || {}, product.product_data || {}),
     resolved_secondary_selling_point: resolveBinding(spec.secondary_selling_point_binding || {}, product.product_data || {})
   };
@@ -138,15 +162,16 @@ export async function upsertProductHeroSpec(client, { productRef, input = {}, co
 
   const modelAssetId = cleanText(input.modelAssetId, 240) || null;
   const productDisplayAssetId = cleanText(input.productDisplayAssetId, 240) || null;
-  const skuAssetIds = await assertOwnedAssets(client, product.id, [
+  const ownedAssetIds = await assertOwnedAssets(client, product.id, [
     ...(Array.isArray(input.skuAssetIds) ? input.skuAssetIds : []),
     modelAssetId,
     productDisplayAssetId
   ]);
-  const skuOnlyIds = skuAssetIds.filter((id) => id !== modelAssetId && id !== productDisplayAssetId);
+  const skuOnlyIds = ownedAssetIds.filter((id) => id !== modelAssetId && id !== productDisplayAssetId);
 
   const primaryBinding = normalizeBinding(input.primarySellingPointBinding || {});
   const secondaryBinding = normalizeBinding(input.secondarySellingPointBinding || {});
+  const layoutAdjustments = normalizeAdjustments(input.layoutAdjustments || {});
 
   const existing = await client.query(
     `SELECT id FROM public.product_hero_specs WHERE product_id=$1 AND archived_at IS NULL LIMIT 1 FOR UPDATE`,
@@ -168,8 +193,9 @@ export async function upsertProductHeroSpec(client, { productRef, input = {}, co
               product_display_mode=$10,
               primary_selling_point_binding=$11::jsonb,
               secondary_selling_point_binding=$12::jsonb,
-              lifecycle_status=$13,
-              updated_by_person_id=$14,
+              layout_adjustments=$13::jsonb,
+              lifecycle_status=$14,
+              updated_by_person_id=$15,
               updated_at=NOW(),
               record_version=record_version+1
         WHERE id=$1
@@ -177,7 +203,7 @@ export async function upsertProductHeroSpec(client, { productRef, input = {}, co
       [
         existing.rows[0].id, HERO_TEMPLATE_ID, tagCardId, layoutPresetId, modelPresetId,
         productDisplayPresetId, modelAssetId, productDisplayAssetId, JSON.stringify(skuOnlyIds),
-        displayMode, JSON.stringify(primaryBinding), JSON.stringify(secondaryBinding), lifecycleStatus,
+        displayMode, JSON.stringify(primaryBinding), JSON.stringify(secondaryBinding), JSON.stringify(layoutAdjustments), lifecycleStatus,
         context.personId || null
       ]
     );
@@ -187,13 +213,13 @@ export async function upsertProductHeroSpec(client, { productRef, input = {}, co
         (id, product_id, template_id, tag_card_id, layout_preset_id, model_preset_id,
          product_display_preset_id, model_asset_id, product_display_asset_id, sku_asset_ids,
          product_display_mode, primary_selling_point_binding, secondary_selling_point_binding,
-         lifecycle_status, created_by_person_id, updated_by_person_id, source_system)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12::jsonb,$13::jsonb,$14,$15,$15,$16)
+         layout_adjustments, lifecycle_status, created_by_person_id, updated_by_person_id, source_system)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12::jsonb,$13::jsonb,$14::jsonb,$15,$16,$16,$17)
        RETURNING *`,
       [
         makeId("herospec"), product.id, HERO_TEMPLATE_ID, tagCardId, layoutPresetId, modelPresetId,
         productDisplayPresetId, modelAssetId, productDisplayAssetId, JSON.stringify(skuOnlyIds),
-        displayMode, JSON.stringify(primaryBinding), JSON.stringify(secondaryBinding), lifecycleStatus,
+        displayMode, JSON.stringify(primaryBinding), JSON.stringify(secondaryBinding), JSON.stringify(layoutAdjustments), lifecycleStatus,
         context.personId || null, context.sourceSystem || "aione-web"
       ]
     );
@@ -204,7 +230,7 @@ export async function upsertProductHeroSpec(client, { productRef, input = {}, co
     objectType: "product",
     objectId: product.id,
     context,
-    payload: { heroSpecId: result.rows[0].id, templateId: HERO_TEMPLATE_ID, lifecycleStatus }
+    payload: { heroSpecId: result.rows[0].id, templateId: HERO_TEMPLATE_ID, lifecycleStatus, layoutAdjustments }
   });
 
   return { product, heroSpec: resolveSpec(result.rows[0], product) };
