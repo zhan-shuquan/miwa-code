@@ -2,7 +2,7 @@ const PAGE_TYPES = [
   { code:"hero", name:"主图", required:true, output:"1000×1000", status:"ready", fields:["品牌","套数/双数","适用尺码","长度/类型","第一卖点","第二卖点"], assets:["SKU图","白底商品图","模特/实拍参考"], note:"已接入标签卡、卖点绑定、布局微调和主图设计任务。" },
   { code:"sku", name:"SKU / 颜色图", required:true, output:"1000×1000", status:"ready", fields:["实际颜色/花型","套数/组合关系","SKU关系"], assets:["SKU图","白底图"], note:"已接入真实变体字段、SKU素材选择、实时预览、布局微调和设计任务。" },
   { code:"white_bg", name:"白底商品图", required:true, output:"1000×1000", status:"ready", fields:["商品主体","实际颜色/花型"], assets:["产品图","SKU图"], note:"已接入来源素材选择、白底清理模式、主体适配、安全边距和设计任务；商品本体必须保持真实。" },
-  { code:"model", name:"模特 / 穿着图", required:false, output:"1000×1500", status:"planned", fields:["适用人群","季节","长度/类型","搭配方向"], assets:["产品图","实拍图","SKU图"], note:"可由AI标准化模特角度，但商品颜色、花型、长度和结构必须忠于实物。" },
+  { code:"model", name:"模特 / 穿着图", required:false, output:"1000×1500", status:"ready", fields:["适用人群","季节","长度/类型","搭配方向"], assets:["白底商品图","SKU图","产品图","实拍图"], note:"已接入商品锚点、穿着场景、取景、布局微调和 AI 设计任务；AI 只生成模特、姿势与场景，不改商品本体。" },
   { code:"material", name:"材质 / 质地图", required:true, output:"1000×1500", status:"planned", fields:["已确认材质","材质特征文案"], assets:["细节图","产品图"], note:"只有已确认材质事实才可进入正式文案；没有事实时保留待确认。" },
   { code:"size", name:"尺寸 / 尺码图", required:true, output:"1000×1500", status:"fallback", fields:["适用尺码","实测尺寸（如有）"], assets:["平铺图","产品图"], note:"有实测值时显示完整尺寸；没有实测值时只显示真实支持尺码，不允许AI推断数字。" },
   { code:"spec", name:"商品仕様图", required:true, output:"1000×1500", status:"planned", fields:["品番","材质","适用尺码","颜色","季节","套数","生产信息"], assets:["产品图","SKU图"], note:"作为结构化事实页，优先确定性排版，不依赖AI自由生成文字。" },
@@ -36,13 +36,13 @@ function ensureStyles() {
 }
 
 function renderPagePlanCard(type) {
-  const action = type.code === "hero"
-    ? '<button type="button" class="dc-button dc-button--primary" data-action="jump-hero">进入设计</button>'
-    : type.code === "sku"
-      ? '<button type="button" class="dc-button dc-button--primary" data-action="jump-sku">进入设计</button>'
-      : type.code === "white_bg"
-        ? '<button type="button" class="dc-button dc-button--primary" data-action="jump-white-bg">进入设计</button>'
-        : '<button type="button" class="dc-button" disabled>待接入</button>';
+  const actions = {
+    hero:'<button type="button" class="dc-button dc-button--primary" data-action="jump-hero">进入设计</button>',
+    sku:'<button type="button" class="dc-button dc-button--primary" data-action="jump-sku">进入设计</button>',
+    white_bg:'<button type="button" class="dc-button dc-button--primary" data-action="jump-white-bg">进入设计</button>',
+    model:'<button type="button" class="dc-button dc-button--primary" data-action="jump-model">进入设计</button>'
+  };
+  const action = actions[type.code] || '<button type="button" class="dc-button" disabled>待接入</button>';
   return `<article class="dc-page-plan-card" data-page-type="${escapeHtml(type.code)}">
     <div class="dc-page-plan-card__head"><div><strong>${escapeHtml(type.name)}</strong><span>${escapeHtml(type.output)}</span></div><em class="dc-page-plan-status dc-page-plan-status--${escapeHtml(type.status)}">${escapeHtml(STATUS_LABELS[type.status] || type.status)}</em></div>
     <div class="dc-page-plan-card__meta"><b>需要字段</b><span>${escapeHtml(type.fields.join(" · "))}</span></div>
@@ -56,7 +56,7 @@ function createSection() {
   const section = document.createElement("section");
   section.className = "dc-card dc-page-plan";
   section.dataset.ui = "page-plan";
-  section.innerHTML = `<div class="dc-page-plan__intro"><div><h2>图片设计规划</h2><p>先确定这件商品需要设计哪些图片、每张图读取哪些字段、使用哪些素材。主图、SKU/颜色图、白底商品图已经可操作，其余类型按同一底层逐张接入。</p></div><div class="dc-page-plan__legend"><span>字段来自 Product Truth</span><span>素材来自 01 / 02 / 03</span><span>设计中心只管呈现</span></div></div><div class="dc-page-plan-grid" data-ui="page-plan-grid"></div>`;
+  section.innerHTML = `<div class="dc-page-plan__intro"><div><h2>图片设计规划</h2><p>先确定这件商品需要设计哪些图片、每张图读取哪些字段、使用哪些素材。前四类已经可操作，其余类型按同一底层逐张接入。</p></div><div class="dc-page-plan__legend"><span>字段来自 Product Truth</span><span>素材来自 01 / 02 / 03</span><span>设计中心只管呈现</span></div></div><div class="dc-page-plan-grid" data-ui="page-plan-grid"></div>`;
   return section;
 }
 
@@ -82,6 +82,9 @@ export function initDesignCenterPagePlan() {
     const { initDesignCenterWhiteBgV1 } = await import("./design-center-white-bg-v1.js?v=20260913-v1");
     await initDesignCenterWhiteBgV1();
     section.querySelector('[data-action="jump-white-bg"]')?.addEventListener("click", () => root.querySelector('[data-section="white-bg-design"]')?.scrollIntoView({ behavior:"smooth", block:"start" }));
+    const { initDesignCenterModelV1 } = await import("./design-center-model-v1.js?v=20260913-v1");
+    await initDesignCenterModelV1();
+    section.querySelector('[data-action="jump-model"]')?.addEventListener("click", () => root.querySelector('[data-section="model-design"]')?.scrollIntoView({ behavior:"smooth", block:"start" }));
   });
 }
 
