@@ -2,12 +2,14 @@ import { getDesignTask } from "./design-task-service.js";
 import { executeNormalizeCanvas } from "./design-output-service.js";
 import { executeBenefitFeatureImage } from "./design-ai-output-service.js";
 import { executeDeterministicCopyOverlay } from "./design-copy-overlay-service.js";
+import { executeWhiteBackgroundProduct } from "./design-white-background-output-service.js";
 import { getDesignExecutionPlan } from "./design-engine-router-service.js";
 
 const EXECUTORS = Object.freeze({
   normalize_canvas: executeNormalizeCanvas,
   benefit_feature_image: executeBenefitFeatureImage,
-  deterministic_copy_overlay: executeDeterministicCopyOverlay
+  deterministic_copy_overlay: executeDeterministicCopyOverlay,
+  white_background_renderer: executeWhiteBackgroundProduct
 });
 
 export async function getDesignTaskExecutionPlan(client, taskId) {
