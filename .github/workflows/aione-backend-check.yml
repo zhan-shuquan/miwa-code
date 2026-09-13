@@ -46,6 +46,7 @@ jobs:
           node --check ../js/pages/design-center-page-plan-v1.js
           node --check ../js/pages/design-center-sku-v1.js
           node --check ../js/pages/design-center-white-bg-v1.js
+          node --check ../js/pages/design-center-model-v1.js
 
       - name: Check Design Center CURRENT input audit runner syntax
         working-directory: .
@@ -138,6 +139,7 @@ jobs:
               to_regclass('public.product_design_page_specs') IS NOT NULL
               AND EXISTS (SELECT 1 FROM public.design_templates WHERE id='dtpl_unified_sku_color_square_v1' AND lifecycle_status='active')
               AND EXISTS (SELECT 1 FROM public.design_templates WHERE id='dtpl_unified_white_bg_square_v1' AND lifecycle_status='active')
+              AND EXISTS (SELECT 1 FROM public.design_templates WHERE id='dtpl_unified_model_wear_vertical_v1' AND lifecycle_status='active')
             THEN 'PASS' ELSE 'FAIL' END;
           " | grep -Fx PASS
 
