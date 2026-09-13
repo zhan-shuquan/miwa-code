@@ -13,6 +13,7 @@ import productAssetReadinessRouter from "./src/routes/product-asset-readiness.js
 import productMaterialConfirmationRouter from "./src/routes/product-material-confirmation.js";
 import rakutenCanonicalPublishRouter from "./src/routes/rakuten-canonical-publish.js";
 import designRouter from "./src/routes/design.js";
+import designCenterRouter from "./src/routes/design-center.js";
 import { resolveAioneGoogleIdentity } from "./src/http/google-auth.js";
 
 const app = express();
@@ -55,6 +56,44 @@ app.get("/health", async (req, res) => {
   }
 });
 
+function cookieValue(header, name) {
+  const prefix = `${name}=`;
+  for (const part of String(header || "").split(";")) {
+    const item = part.trim();
+    if (item.startsWith(prefix)) return decodeURIComponent(item.slice(prefix.length));
+  }
+  return "";
+}
+
+// Branch Preview only. Production leaves this disabled, so these files are not served.
+const designCenterPreviewEnabled = String(process.env.AIONE_ENABLE_DESIGN_CENTER_PREVIEW || "false").toLowerCase() === "true";
+if (designCenterPreviewEnabled) {
+  const previewRoot = String(process.env.AIONE_DESIGN_CENTER_PREVIEW_ROOT || "/app/design-center-preview").trim();
+  const previewAccessToken = String(process.env.AIONE_PREVIEW_ACCESS_TOKEN || "").trim();
+
+  // Direct branch preview may be exposed through an isolated Cloud Run service.
+  // The service can be IAM-public only when this application token gate is configured.
+  // A valid URL token establishes a short-lived secure same-origin cookie so subsequent
+  // static assets and API calls do not need to carry the token in every request.
+  if (previewAccessToken) {
+    app.use((req, res, next) => {
+      const supplied = String(req.query?.preview_key || "").trim();
+      const cookie = cookieValue(req.header("cookie"), "aione_preview_access");
+      const accepted = supplied === previewAccessToken || cookie === previewAccessToken;
+      if (!accepted) {
+        return res.status(401).type("text/plain").send("AIONE Design Center preview access required.");
+      }
+      if (supplied === previewAccessToken && cookie !== previewAccessToken) {
+        res.append("Set-Cookie", `aione_preview_access=${encodeURIComponent(previewAccessToken)}; Path=/; Max-Age=21600; HttpOnly; Secure; SameSite=Lax`);
+      }
+      next();
+    });
+  }
+
+  app.get("/", (_req, res) => res.redirect("/design-center-v1.html?product=MH0000002"));
+  app.use(express.static(previewRoot, { index: false, fallthrough: true, maxAge: 0 }));
+}
+
 // Production API requests must resolve a real Google identity server-side.
 // Cloud Run IAM remains a separate service-to-service boundary in front of this middleware.
 app.use(resolveAioneGoogleIdentity);
@@ -71,6 +110,7 @@ app.use("/api/v1/product-assets", productAssetReadinessRouter);
 app.use("/api/v1", productMaterialConfirmationRouter);
 app.use("/api/v1", rakutenCanonicalPublishRouter);
 app.use("/api/v1", designRouter);
+app.use("/api/v1", designCenterRouter);
 app.use("/api/v1", coreRouter);
 
 app.use((req, res) => {

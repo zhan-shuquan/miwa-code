@@ -1,0 +1,139 @@
+<style>
+.dc-layout-panel{margin-top:16px;border:1px solid var(--dc-line);border-radius:12px;padding:14px;background:#fbfcfb}.dc-layout-panel__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.dc-layout-panel__head h3{margin:0 0 3px;font-size:14px}.dc-layout-panel__head p{margin:0;color:var(--dc-muted);font-size:12px}.dc-layout-groups{display:grid;grid-template-columns:1fr 1fr;gap:12px}.dc-layout-group{border:1px solid #e9ecea;border-radius:10px;padding:10px;background:#fff}.dc-layout-group h4{margin:0 0 8px;font-size:12px}.dc-layout-control{display:grid;grid-template-columns:92px 1fr 42px;align-items:center;gap:8px;margin:7px 0}.dc-layout-control span{font-size:11px;color:#4f5753}.dc-layout-control input[type="range"]{min-height:0;padding:0}.dc-layout-control output{font-size:11px;text-align:right;color:#66706b;font-variant-numeric:tabular-nums}.dc-layout-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;padding-top:11px;border-top:1px solid #ecefed}@media(max-width:720px){.dc-layout-groups{grid-template-columns:1fr}.dc-layout-control{grid-template-columns:84px 1fr 36px}}
+</style>
+<section class="design-center" data-design-center-root>
+  <header class="design-center__header">
+    <div>
+      <div class="design-center__eyebrow">商品之家 · 设计中心</div>
+      <h1>商品主图设计工作台</h1>
+      <p>先把标签卡和 1:1 主图做成真正可用的成品母版，再扩展其他详情图。</p>
+    </div>
+    <div class="design-center__product-loader">
+      <label for="design-product-ref">商品编码</label>
+      <div class="design-center__product-loader-row">
+        <input id="design-product-ref" type="text" value="MH0000002" autocomplete="off" spellcheck="false">
+        <button type="button" class="dc-button dc-button--primary" data-action="load-product">读取商品</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="design-center__notice" data-ui="message" hidden></div>
+
+  <section class="dc-card dc-product-summary" data-ui="product-summary">
+    <div class="dc-empty">输入商品编码后读取当前商品信息和已选素材。</div>
+  </section>
+
+  <section class="dc-card">
+    <div class="dc-section-head">
+      <div><span class="dc-step">01</span><div><h2>关键素材</h2><p>文件仍只存 01_SKU图 / 02_产品图 / 03_实拍图；这里按设计用途识别。</p></div></div>
+      <span class="dc-status" data-ui="material-status">未读取</span>
+    </div>
+    <div class="dc-material-grid" data-ui="material-grid"></div>
+  </section>
+
+  <section class="dc-card">
+    <div class="dc-section-head">
+      <div><span class="dc-step">02</span><div><h2>商品标签卡</h2><p>同一张标签卡同时用于主图和包装。顶部、底部固定，中间保留 4 个可配置槽位。</p></div></div>
+      <span class="dc-status dc-status--ready">统一标签 V2</span>
+    </div>
+
+    <div class="dc-two-column">
+      <div class="dc-tag-preview-panel">
+        <div class="dc-label">标签卡实时预览</div>
+        <div class="product-tag-card" data-ui="tag-preview">
+          <div class="product-tag-card__brand" data-preview="brand">BRAND</div>
+          <div class="product-tag-card__subline" data-preview="subline">Product Line</div>
+          <div class="product-tag-card__slots" data-ui="tag-preview-slots"></div>
+          <div class="product-tag-card__slogan" data-preview="slogan">ブランドメッセージ</div>
+        </div>
+        <div class="dc-tag-usage"><span>主图</span><span>包装</span><span>同一标签资产</span></div>
+      </div>
+
+      <form class="dc-form" data-form="tag-card">
+        <div class="dc-form-grid">
+          <label>英文品牌名<input name="brandNameEn" type="text" maxlength="120" placeholder="SOCKONE"></label>
+          <label>第二行英文说明<input name="brandSublineEn" type="text" maxlength="160" placeholder="Men's Daily Socks"></label>
+          <label>最后一行日文品牌语<input name="brandSloganJa" type="text" maxlength="160" placeholder="毎日に頼れる一足"></label>
+          <label>标签配色<select name="colorTheme"><option value="navy-gold">男款 · 深蓝 + 金色</option><option value="warm-rose">女款 · 粉米 + 咖色</option><option value="neutral">通用 · 黑 + 金色</option></select></label>
+        </div>
+        <div class="dc-slot-editor">
+          <div class="dc-slot-editor__head"><h3>中间 4 个槽位</h3><p>先选择要显示的内容，再选择绑定字段；需要时可以直接手动改显示文案。</p></div>
+          <div data-ui="slot-editors"></div>
+        </div>
+        <div class="dc-form-actions">
+          <label class="dc-inline-check"><input type="checkbox" name="useHero" checked>用于主图</label>
+          <label class="dc-inline-check"><input type="checkbox" name="usePackaging" checked>用于包装</label>
+          <button type="submit" class="dc-button dc-button--primary">保存标签卡</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="dc-card">
+    <div class="dc-section-head">
+      <div><span class="dc-step">03</span><div><h2>1:1 主图设计</h2><p>模特图做主主体，标签卡固定左上，SKU/平铺图做辅助，卖点徽章负责强调。</p></div></div>
+      <span class="dc-status" data-ui="hero-readiness">未配置</span>
+    </div>
+
+    <div class="dc-two-column dc-two-column--hero">
+      <div>
+        <div class="dc-label">1000 × 1000 主图实时预览</div>
+        <div class="hero-preview" data-ui="hero-preview">
+          <div class="hero-preview__model"><div class="hero-preview__legs"><i></i><i></i></div><span>主模特视觉区域</span></div>
+          <div class="hero-preview__tag" data-ui="hero-tag-preview"></div>
+          <div class="hero-preview__primary" data-preview="primary">第一卖点</div>
+          <div class="hero-preview__product" data-ui="hero-product-display">SKU / 白底商品展示</div>
+          <div class="hero-preview__secondary" data-preview="secondary">第二卖点</div>
+        </div>
+      </div>
+
+      <form class="dc-form" data-form="hero-spec">
+        <div class="dc-form-grid">
+          <label>模特图风格<select name="modelPresetId" data-ui="model-presets"><option value="">请选择</option></select></label>
+          <label>商品展示风格<select name="productDisplayPresetId" data-ui="display-presets"><option value="">请选择</option></select></label>
+          <label>商品展示方式<select name="productDisplayMode"><option value="flat_lay">白底平铺</option><option value="three_quarter">白底立体 / 45°</option><option value="source">直接使用来源图</option></select></label>
+          <label>白底商品素材<select name="productDisplayAssetId" data-ui="product-display-assets"><option value="">请选择</option></select></label>
+        </div>
+
+        <fieldset class="dc-binding"><legend>右上角 · 第一卖点</legend><div class="dc-binding-grid"><label>绑定字段<select name="primarySourceFactPath" data-ui="primary-fact-options"></select></label><label>显示文案（可手动覆盖）<input name="primaryTextOverride" type="text" maxlength="160"></label></div></fieldset>
+        <fieldset class="dc-binding"><legend>左下 / 右下 · 第二卖点</legend><div class="dc-binding-grid"><label>绑定字段<select name="secondarySourceFactPath" data-ui="secondary-fact-options"></select></label><label>显示文案（可手动覆盖）<input name="secondaryTextOverride" type="text" maxlength="160"></label></div></fieldset>
+
+        <div class="dc-sku-selector"><h3>SKU 图</h3><p>用于展示颜色、花型和套数；默认选当前 SKU 图。</p><div data-ui="sku-assets"></div></div>
+
+        <section class="dc-layout-panel">
+          <div class="dc-layout-panel__head"><div><h3>主图微调</h3><p>实时调整排版，不再为了居中、大小、位置反复改代码。</p></div><button type="button" class="dc-button" data-action="reset-layout-adjustments">恢复默认</button></div>
+          <div class="dc-layout-groups">
+            <div class="dc-layout-group"><h4>模特图</h4>
+              <label class="dc-layout-control"><span>缩放</span><input type="range" min="60" max="160" step="1" data-layout-field="modelScale"><output data-layout-value="modelScale">100</output></label>
+              <label class="dc-layout-control"><span>左右位置</span><input type="range" min="-30" max="30" step="1" data-layout-field="modelOffsetX"><output data-layout-value="modelOffsetX">0</output></label>
+              <label class="dc-layout-control"><span>上下位置</span><input type="range" min="-30" max="30" step="1" data-layout-field="modelOffsetY"><output data-layout-value="modelOffsetY">0</output></label>
+            </div>
+            <div class="dc-layout-group"><h4>标签卡</h4>
+              <label class="dc-layout-control"><span>缩放</span><input type="range" min="60" max="150" step="1" data-layout-field="tagScale"><output data-layout-value="tagScale">100</output></label>
+              <label class="dc-layout-control"><span>左右位置</span><input type="range" min="-30" max="30" step="1" data-layout-field="tagOffsetX"><output data-layout-value="tagOffsetX">0</output></label>
+              <label class="dc-layout-control"><span>上下位置</span><input type="range" min="-30" max="30" step="1" data-layout-field="tagOffsetY"><output data-layout-value="tagOffsetY">0</output></label>
+            </div>
+            <div class="dc-layout-group"><h4>SKU / 白底商品图</h4>
+              <label class="dc-layout-control"><span>缩放</span><input type="range" min="60" max="160" step="1" data-layout-field="productScale"><output data-layout-value="productScale">100</output></label>
+              <label class="dc-layout-control"><span>左右位置</span><input type="range" min="-30" max="30" step="1" data-layout-field="productOffsetX"><output data-layout-value="productOffsetX">0</output></label>
+              <label class="dc-layout-control"><span>上下位置</span><input type="range" min="-30" max="30" step="1" data-layout-field="productOffsetY"><output data-layout-value="productOffsetY">0</output></label>
+            </div>
+            <div class="dc-layout-group"><h4>卖点模块</h4>
+              <label class="dc-layout-control"><span>第一卖点大小</span><input type="range" min="60" max="160" step="1" data-layout-field="primaryScale"><output data-layout-value="primaryScale">100</output></label>
+              <label class="dc-layout-control"><span>第一卖点左右</span><input type="range" min="-30" max="30" step="1" data-layout-field="primaryOffsetX"><output data-layout-value="primaryOffsetX">0</output></label>
+              <label class="dc-layout-control"><span>第一卖点上下</span><input type="range" min="-30" max="30" step="1" data-layout-field="primaryOffsetY"><output data-layout-value="primaryOffsetY">0</output></label>
+              <label class="dc-layout-control"><span>第二卖点左右</span><input type="range" min="-30" max="30" step="1" data-layout-field="secondaryOffsetX"><output data-layout-value="secondaryOffsetX">0</output></label>
+              <label class="dc-layout-control"><span>第二卖点上下</span><input type="range" min="-30" max="30" step="1" data-layout-field="secondaryOffsetY"><output data-layout-value="secondaryOffsetY">0</output></label>
+            </div>
+          </div>
+          <div class="dc-layout-actions"><button type="button" class="dc-button" data-action="save-layout-template">另存为男袜主图模板</button></div>
+        </section>
+
+        <div class="dc-form-actions dc-form-actions--end"><button type="submit" class="dc-button dc-button--primary">保存当前商品主图</button><button type="button" class="dc-button" data-action="create-hero-task">创建主图设计任务</button></div>
+      </form>
+    </div>
+  </section>
+
+  <section class="dc-card dc-instruction-summary"><div class="dc-section-head"><div><span class="dc-step">04</span><div><h2>AI 设计指令库</h2><p>页面手动选择和未来表格批量导入，底层都引用同一套设计指令。</p></div></div></div><div class="dc-preset-list" data-ui="preset-list"></div></section>
+  <datalist id="product-fact-paths" data-ui="fact-paths"></datalist>
+</section>

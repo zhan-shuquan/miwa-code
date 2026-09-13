@@ -1,0 +1,125 @@
+{
+  "workbench": {
+    "product": {
+      "id": "prod_mh0000002_preview",
+      "productCode": "MH0000002",
+      "name": "秋冬男士中筒条纹6双套装",
+      "categoryCode": "mens-socks",
+      "categoryName": "男袜",
+      "lifecycleStatus": "design_preview",
+      "productData": {
+        "setCount": 6,
+        "actualVariants": ["白色", "米色", "卡其", "军绿", "深灰", "黑色"],
+        "approvedPrimaryValue": "秋冬男士中筒条纹6双套装",
+        "sellingPoints": ["6双6色组合", "中筒条纹设计", "高弹袜口", "Y形/拼色后跟", "秋冬男袜"],
+        "supportedSize": "24–27cm",
+        "season": "秋冬",
+        "targetGender": "男",
+        "lengthType": "中筒"
+      }
+    },
+    "materialConfirmation": {
+      "id": "preview-confirmation-mh0000002",
+      "status": "confirmed"
+    },
+    "materials": {
+      "counts": {
+        "sku": 1,
+        "product": 29,
+        "real": 0,
+        "whiteBackgroundCandidates": 1,
+        "detailCandidates": 19
+      },
+      "sku": [
+        {
+          "id": "ast_03e3f75d-490c-47b6-9ba2-3645be239192",
+          "original_name": "sku图-1.jpg",
+          "role": "source_sku_image"
+        }
+      ],
+      "whiteBackground": [
+        {
+          "id": "ast_2a578d25-bf22-4278-b515-1ea77e7e1143",
+          "original_name": "白底图-1.jpg",
+          "role": "source_main_image"
+        }
+      ],
+      "product": [
+        {
+          "id": "ast_2a578d25-bf22-4278-b515-1ea77e7e1143",
+          "original_name": "白底图-1.jpg",
+          "role": "source_main_image"
+        }
+      ],
+      "real": []
+    },
+    "tagCard": {
+      "id": "tagcard_7bcc1f06-eaa8-4875-995f-29b469385941",
+      "brand_name_en": "SOCKONE",
+      "brand_subline_en": "Daily Socks Collection",
+      "brand_slogan_ja": "毎日に寄りそう一足。",
+      "color_theme": "navy-gold",
+      "usage_scopes": ["hero", "packaging"],
+      "lifecycle_status": "draft",
+      "slots": [
+        {"type": "setCount", "sourceFactPath": "setCount", "textOverride": "", "prefix": "", "suffix": "足セット", "iconCode": "", "visible": true},
+        {"type": "size", "sourceFactPath": "supportedSize", "textOverride": "", "prefix": "SIZE ", "suffix": "", "iconCode": "", "visible": true},
+        {"type": "style", "sourceFactPath": "", "textOverride": "クルー丈", "prefix": "", "suffix": "", "iconCode": "", "visible": true},
+        {"type": "style", "sourceFactPath": "", "textOverride": "秋冬", "prefix": "", "suffix": "", "iconCode": "", "visible": true}
+      ]
+    },
+    "heroSpec": {
+      "id": "herospec_8e453710-fcf8-48ee-b4cf-4812f891642b",
+      "tag_card_id": "tagcard_7bcc1f06-eaa8-4875-995f-29b469385941",
+      "layout_preset_id": "dip_unified_hero_square_layout_v1",
+      "model_preset_id": "dip_socks_white_bg_model_v1",
+      "product_display_preset_id": "dip_socks_flat_lay_set_v1",
+      "product_display_asset_id": "ast_2a578d25-bf22-4278-b515-1ea77e7e1143",
+      "sku_asset_ids": ["ast_03e3f75d-490c-47b6-9ba2-3645be239192"],
+      "product_display_mode": "flat_lay",
+      "primary_selling_point_binding": {"sourceFactPath": "", "textOverride": "6足6色", "prefix": "", "suffix": ""},
+      "secondary_selling_point_binding": {"sourceFactPath": "", "textOverride": "ボーダー柄クルー丈", "prefix": "", "suffix": ""},
+      "lifecycle_status": "draft"
+    },
+    "designProfile": {
+      "profileCode": "SOCKONE-SOCKS-DESIGN-V1",
+      "scope": "socks",
+      "brandSource": "interim-category-brand-rule",
+      "tagCardDefaults": {
+        "templatePresetId": "dip_miwa_product_tag_card_v1",
+        "brandNameEn": "SOCKONE",
+        "brandSublineEn": "Daily Socks Collection",
+        "brandSloganJa": "毎日に寄りそう一足。",
+        "colorTheme": "navy-gold",
+        "usageScopes": ["hero", "packaging"],
+        "slots": [
+          {"type": "setCount", "sourceFactPath": "setCount", "textOverride": "", "prefix": "", "suffix": "足セット", "iconCode": "", "visible": true},
+          {"type": "size", "sourceFactPath": "supportedSize", "textOverride": "", "prefix": "SIZE ", "suffix": "", "iconCode": "", "visible": true},
+          {"type": "style", "sourceFactPath": "", "textOverride": "クルー丈", "prefix": "", "suffix": "", "iconCode": "", "visible": true},
+          {"type": "style", "sourceFactPath": "", "textOverride": "秋冬", "prefix": "", "suffix": "", "iconCode": "", "visible": true}
+        ]
+      },
+      "heroDefaults": {
+        "layoutPresetId": "dip_unified_hero_square_layout_v1",
+        "modelPresetId": "dip_socks_white_bg_model_v1",
+        "productDisplayPresetId": "dip_socks_flat_lay_set_v1",
+        "productDisplayMode": "flat_lay",
+        "primarySellingPointBinding": {"sourceFactPath": "", "textOverride": "6足6色", "prefix": "", "suffix": ""},
+        "secondarySellingPointBinding": {"sourceFactPath": "", "textOverride": "ボーダー柄クルー丈", "prefix": "", "suffix": ""}
+      }
+    },
+    "instructionPresets": [
+      {"id": "dip_miwa_product_tag_card_v1", "preset_code": "MIWA-PRODUCT-TAG-CARD-V1", "name": "MIWA Unified Product Tag Card", "instruction_kind": "tag_card", "category_scope": null},
+      {"id": "dip_unified_hero_square_layout_v1", "preset_code": "UNIFIED-HERO-SQUARE-LAYOUT-V1", "name": "Unified Product Hero Square Layout", "instruction_kind": "hero_layout", "category_scope": null},
+      {"id": "dip_socks_white_bg_model_v1", "preset_code": "SOCKS-WHITE-BG-MODEL-V1", "name": "Socks White Background Model", "instruction_kind": "model_generation", "category_scope": "socks"},
+      {"id": "dip_socks_flat_lay_set_v1", "preset_code": "SOCKS-FLAT-LAY-SET-V1", "name": "Socks White Background Set Display", "instruction_kind": "product_display", "category_scope": "socks"}
+    ]
+  },
+  "snapshot": {
+    "source": "CURRENT MH0000002 audit + successful Design Center bootstrap",
+    "mode": "read-only acceptance preview",
+    "databaseWrite": false,
+    "imageGenerated": false,
+    "supportedSize": "24–27cm"
+  }
+}
