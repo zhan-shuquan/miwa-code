@@ -37,7 +37,7 @@ export AIONE_OPENAI_API_KEY_SECRET="aione-openai-api-key"
 
 export AIONE_GOOGLE_CLIENT_ID="49629089449-5lkfjfnadvq14f9uuid91chqgjjdihmi.apps.googleusercontent.com"
 export AIONE_PRODUCTION_ORIGIN="https://aione.miwa-happyhouse.com"
-export AIONE_TEST_ORIGIN="https://aione-test.miwa-happyhouse.com"
+export AIONE_DEV_ORIGIN="https://dev.aione.miwa-happyhouse.com"
 
 AIONE_FORBIDDEN_RUNTIME_NAMES=(
   "aione-backend-v190"
