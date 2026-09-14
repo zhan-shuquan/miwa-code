@@ -111,7 +111,8 @@ function buildRegistryHomeItems(rootId) {
   if (!definition || definition.template === "personal-work-home") return null;
 
   const items = [];
-  if (definition.overview?.enabled) {
+  // 商品之家的根级入口属于 Main 横向导航，不进入承载16个业务中心的 Sidebar。
+  if (definition.overview?.enabled && rootId !== "product-home") {
     items.push({
       id: `${rootId}-overview`,
       label: "概览",

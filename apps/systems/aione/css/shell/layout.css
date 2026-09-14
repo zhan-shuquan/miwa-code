@@ -1,15 +1,4 @@
-/* =========================================================
-   AIONE Global Layout｜RESET BASELINE
-   2026-09-05
-
-   CURRENT shell:
-   Header = global / 12之家
-   Main = primary workspace
-   Footer = low-attention system information
-
-   Sidebar and Context Drawer are intentionally absent from the desktop layout
-   until their new Product Freeze is completed.
-   ========================================================= */
+/* AIONE Global Layout｜Header + Sidebar + Main｜CURRENT 2026-09-08 */
 
 .app-shell{
   min-height:100vh;
@@ -23,9 +12,7 @@
   min-width:0;
 }
 
-#desktop-header-host,
-.desktop-sidebar-host,
-.desktop-aside-host{
+#desktop-header-host,.desktop-sidebar-host,.desktop-aside-host{
   display:none;
 }
 
@@ -71,15 +58,13 @@
 
   .app-body{
     display:grid;
-    grid-template-columns:minmax(0,1fr);
+    grid-template-columns:var(--desktop-sidebar,224px) minmax(0,1fr);
     align-items:stretch;
     min-width:0;
   }
 
-  .desktop-sidebar-host,
-  .desktop-aside-host{
-    display:none!important;
-  }
+  .desktop-sidebar-host{display:block!important;width:var(--desktop-sidebar,224px);min-width:0;border-right:1px solid var(--border-soft);background:#fff}
+  .desktop-aside-host{display:none!important}
 
   .app-main{
     min-width:0;
