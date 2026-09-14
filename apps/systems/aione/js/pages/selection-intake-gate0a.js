@@ -1,6 +1,8 @@
 import { aioneApi } from "../services/aione-api-client.js";
 
-const MARK = "data-selection-intake-gate0a";
+const BUTTON_MARK = "data-selection-intake-entry";
+const DIALOG_MARK = "data-selection-intake-gate0a";
+
 const roleOf = (file) => {
   const value = `${file.webkitRelativePath || ""}/${file.name || ""}`.toLowerCase();
   if (/(^|[\\/_-])sku([\\/_-]|\.)/.test(value)) return "SKU图";
@@ -70,7 +72,7 @@ function ensureDialog() {
   if (dialog) return dialog;
   dialog = document.createElement("dialog");
   dialog.id = "selection-intake-gate0a-dialog";
-  dialog.setAttribute(MARK, "true");
+  dialog.setAttribute(DIALOG_MARK, "true");
   dialog.innerHTML = `
     <form method="dialog" class="selection-intake-g0a">
       <header><div><small>Gate 0A</small><h2>导入选品</h2><p>1688 Excel → 本地素材识别 → 真实商品机会。当前步骤不会创建正式商品。</p></div><button value="cancel" aria-label="关闭">×</button></header>
@@ -100,8 +102,14 @@ function ensureDialog() {
     const type = dialog.querySelector("[data-intake-type]").value;
     const resultNode = dialog.querySelector("[data-intake-result]");
     const submit = dialog.querySelector("[data-intake-submit]");
-    if (!excel) { resultNode.hidden = false; resultNode.className = "selection-intake-g0a__result is-error"; resultNode.textContent = "请先选择1688 Excel。"; return; }
-    submit.disabled = true; submit.textContent = "处理中…";
+    if (!excel) {
+      resultNode.hidden = false;
+      resultNode.className = "selection-intake-g0a__result is-error";
+      resultNode.textContent = "请先选择1688 Excel。";
+      return;
+    }
+    submit.disabled = true;
+    submit.textContent = "处理中…";
     try {
       const records = await parseExcel(excel);
       const materialManifest = manifestFromFiles(folder.files);
@@ -110,32 +118,60 @@ function ensureDialog() {
         body: JSON.stringify({ selectionType: type, records, materialManifest, intakeFile: { name: excel.name, size: excel.size } })
       });
       const ids = (result.verification?.persisted || []).map((item) => item.selection_no || item.id).filter(Boolean).join("、");
-      resultNode.hidden = false; resultNode.className = "selection-intake-g0a__result";
+      resultNode.hidden = false;
+      resultNode.className = "selection-intake-g0a__result";
       resultNode.textContent = `真实写入完成：新增 ${result.createdCount}，更新 ${result.updatedCount}，DB复读 ${result.verification?.persistedCount || 0}/${result.totalCount}。${ids ? ` 编号：${ids}` : ""}`;
       window.dispatchEvent(new CustomEvent("aione:selection-intake-completed", { detail: result }));
     } catch (error) {
-      resultNode.hidden = false; resultNode.className = "selection-intake-g0a__result is-error"; resultNode.textContent = error.message || "导入失败。";
-    } finally { submit.disabled = false; submit.textContent = "校验并创建商品机会"; }
+      resultNode.hidden = false;
+      resultNode.className = "selection-intake-g0a__result is-error";
+      resultNode.textContent = error.message || "导入失败。";
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "校验并创建商品机会";
+    }
   });
   return dialog;
 }
 
-function mountEntry() {
-  const workspace = document.querySelector('[data-workspace-id="selection-opportunity-list-v2"]');
-  if (!workspace) return;
-  const toolbar = workspace.querySelector(".miwa-universal-workspace__toolbar");
-  if (!toolbar || toolbar.querySelector(`[${MARK}]`)) return;
-  const button = document.createElement("button");
-  button.type = "button";
-  button.setAttribute(MARK, "true");
-  button.textContent = "＋ 导入选品";
-  button.addEventListener("click", () => ensureDialog().showModal());
-  const disabledImport = toolbar.querySelector("[data-workspace-import]");
-  if (disabledImport) disabledImport.hidden = true;
-  toolbar.appendChild(button);
+function findSelectionSearch() {
+  return [...document.querySelectorAll("input")].find((input) => String(input.placeholder || "").includes("Selection Code"));
 }
 
-const observer = new MutationObserver(mountEntry);
+function isSelectionListPage() {
+  const hash = decodeURIComponent(window.location.hash || "");
+  if (hash.includes("center=selection-center") && hash.includes("view=1")) return true;
+  const hasTitle = [...document.querySelectorAll("h1,h2,h3")].some((node) => node.textContent?.trim() === "选品中心");
+  return hasTitle && Boolean(findSelectionSearch());
+}
+
+function mountEntry() {
+  if (!isSelectionListPage()) return;
+  if (document.querySelector(`[${BUTTON_MARK}]`)) return;
+
+  const searchInput = findSelectionSearch();
+  if (!searchInput) return;
+  const saveView = [...document.querySelectorAll("button")].find((button) => button.textContent?.trim() === "保存视图");
+  const host = saveView?.parentElement || searchInput.parentElement?.parentElement || searchInput.parentElement;
+  if (!host) return;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.setAttribute(BUTTON_MARK, "true");
+  button.textContent = "＋ 导入选品";
+  if (saveView?.className) button.className = saveView.className;
+  button.style.marginLeft = "8px";
+  button.style.borderColor = "#176b4d";
+  button.style.background = "#176b4d";
+  button.style.color = "#fff";
+  button.addEventListener("click", () => ensureDialog().showModal());
+
+  if (saveView && saveView.parentElement === host) host.insertBefore(button, saveView);
+  else host.appendChild(button);
+}
+
+const observer = new MutationObserver(() => mountEntry());
 observer.observe(document.documentElement, { childList: true, subtree: true });
 window.addEventListener("hashchange", () => requestAnimationFrame(mountEntry));
-mountEntry();
+window.addEventListener("popstate", () => requestAnimationFrame(mountEntry));
+requestAnimationFrame(mountEntry);
