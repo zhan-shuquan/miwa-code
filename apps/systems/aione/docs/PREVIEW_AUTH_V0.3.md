@@ -21,6 +21,7 @@ AIONE内测阶段采用“全开放、强归属、重记录、后收权”。Goo
 - Client ID：公开前端识别符，可保存在前端配置中。
 - Client Secret：不得进入前端代码、GitHub仓库或浏览器资源。
 - 正式来源：`https://aione.miwa-happyhouse.com`
+- 固定DEV验收来源：`https://dev.aione.miwa-happyhouse.com`
 - 本地来源：`http://127.0.0.1:5500`
 - 当前Google OAuth发布状态：测试。
 

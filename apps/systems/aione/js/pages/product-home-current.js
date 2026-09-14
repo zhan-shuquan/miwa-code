@@ -1,201 +1,140 @@
-import { PRODUCT_HOME_CENTERS } from "../config/home-registry.js?v=20260903-product-home-current";
+import { PRODUCT_HOME_CENTERS } from "../config/home-registry.js?v=20260908-product-home-current";
 import { aioneApi } from "../services/aione-api-client.js";
 
-const CURRENT_VALIDATION_PRODUCT = "MH0000002";
+const PRODUCT_REF="MH0000002";
+const SELECTION_REF="SEL-20260907-000001";
+const SKU_REF="MH0000002-01";
+const ROOT_VIEWS=Object.freeze([
+  {id:"overview",label:"概览",type:"overview"},
+  {id:"handbook",label:"学习手册",type:"electronic-publication"},
+  {id:"assets",label:"资料一览",type:"asset-management"}
+]);
+const VIEW_TYPES=Object.freeze({
+  "selection-center":["overview","data-list","electronic-publication"],
+  "product-center":["overview","data-list","data-list","generator-wizard"],
+  "profit-center":["data-list","analysis-report"],
+  "design-center":["overview","data-list","batch-job-monitor","asset-management","master-data","mapping"],
+  "publish-center":["overview","data-list","form-editor","form-editor","batch-job-monitor","form-editor","batch-job-monitor","batch-job-monitor","batch-job-monitor","error-queue","master-data","mapping"],
+  "category-center":["overview","master-data","tree","master-data","mapping","tree"],
+  "brand-center":["overview","master-data","form-editor"],
+  "attribute-center":["overview","master-data","master-data"],
+  "specification-center":["overview","master-data","master-data"],
+  "coding-center":["overview","master-data","generator-wizard","generator-wizard","master-data"],
+  "sampling-center":["overview","data-list","master-data"],
+  "procurement-center":["overview","data-list","data-list","ledger"],
+  "inventory-center":["overview","data-list","ledger","rule-management"],
+  "order-center":["overview","data-list"],
+  "operations-center":["overview","data-list","rule-management"],
+  "service-center":["overview","data-list"]
+});
+const CENTER_COPY=Object.freeze({
+  "selection-center":"商品生命周期入口。候选商品通过后才创建正式 Product。",
+  "product-center":"统一管理 Product、SKU、Product Truth 与正式商品工作区。",
+  "profit-center":"统一成本试算、智能定价与利润结果。",
+  "design-center":"ProductAsset、DesignTask、Page Spec、Design Engine 与人工审核的唯一工作场所。",
+  "publish-center":"Publish Batch → Publish Job → Platform Adapter；Current State 与执行历史严格分离。",
+  "category-center":"维护唯一系统分类、店铺分类及平台映射。",
+  "brand-center":"维护统一品牌对象与品牌注册事实。",
+  "attribute-center":"维护可供人工、规则、AI 与平台映射共同使用的属性。",
+  "specification-center":"维护规格定义、模板及 SKU 组合依据。",
+  "coding-center":"统一管理 Product、SKU、JAN、二维码与海关编码。",
+  "sampling-center":"记录测样事实、证据与责任结论。",
+  "procurement-center":"Purchase Request → Purchase Order → 收货的统一采购工作区。",
+  "inventory-center":"以 SKU × Location 余额与不可无痕修改的 Ledger 管理库存。",
+  "order-center":"确定性查询订单、订单行与经营聚合。",
+  "operations-center":"维护运营记录与定价策略；价格计算仍归利润中心。",
+  "service-center":"围绕订单与商品处理问题和客诉，不复制客户对象。"
+});
+const STATUS_LABEL=Object.freeze({active:"CURRENT",validating:"VALIDATING",planned:"NOT YET IMPLEMENTED"});
 
-function escapeHtml(value){
-  return String(value ?? "").replace(/[&<>"']/g,(ch)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+function esc(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
+function params(){const raw=String(location.hash||"");return raw.includes("?")?new URLSearchParams(raw.slice(raw.indexOf("?")+1)):new URLSearchParams();}
+function centerById(id){return PRODUCT_HOME_CENTERS.find(center=>center.id===id)||null;}
+function navigate(next){location.hash=`#/product-home?${new URLSearchParams(next)}`;}
+function status(value){const key=String(value||"validating").toLowerCase();return `<span class="phc-state phc-state--${key==='active'||key==='current'?'ready':key==='blocked'?'blocked':'pending'}">${esc(STATUS_LABEL[key]||String(value||"VALIDATING").toUpperCase())}</span>`;}
+function rootTabs(active){return `<nav class="phc-tabs phc-root-tabs" aria-label="商品之家"><button data-root-view="overview" class="${active==='overview'?'is-active':''}">概览</button><button data-root-view="handbook" class="${active==='handbook'?'is-active':''}">学习手册</button><button data-root-view="assets" class="${active==='assets'?'is-active':''}">资料一览</button></nav>`;}
+function centerTabs(center,active){return `<nav class="phc-tabs" aria-label="${esc(center.label)}">${center.tabs.map((label,index)=>`<button data-center-view="${index}" class="${index===active?'is-active':''}">${esc(label)}</button>`).join("")}</nav>`;}
+function pageHeader(title,copy,badge=""){return `<header class="phc-page-head"><div><h1 id="phc-title">${esc(title)}</h1><p>${esc(copy)}</p></div>${badge}</header>`;}
+function pending(title,type,state="VALIDATING",detail="后端能力尚未接入；页面 Contract、权限边界与状态表达已就位，不展示虚假业务数据。"){return `<section class="phc-empty-state"><div class="phc-empty-state__icon">${esc(type.split("-").map(x=>x[0]).join("").toUpperCase())}</div><h2>${esc(title)}</h2><p>${esc(detail)}</p><span>${esc(state)}</span></section>`;}
+function toolbar({primary="",search="搜索",danger=false}={}){return `<div class="phc-toolbar">${primary?`<button class="${danger?'phc-danger':'phc-primary'}">${esc(primary)}</button>`:""}<label class="phc-search"><span>⌕</span><input type="search" placeholder="${esc(search)}"></label><button>筛选</button><button>排序</button><button>列设置</button><span class="phc-toolbar-spacer"></span><button>保存视图</button></div>`;}
+function dataTable(columns,rows=[]){return `<div class="phc-table-wrap"><table class="phc-table"><thead><tr>${columns.map(x=>`<th>${esc(x)}</th>`).join("")}</tr></thead><tbody>${rows.length?rows.map(row=>`<tr>${row.map((cell,index)=>`<td>${index===0?`<strong>${esc(cell)}</strong>`:esc(cell)}</td>`).join("")}</tr>`).join(""):`<tr><td colspan="${columns.length}"><div class="phc-table-empty">待后端接入后显示真实记录</div></td></tr>`}</tbody></table></div>`;}
+function metric(label,value,copy,state=""){return `<div class="phc-metric"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(copy)}</small>${state?status(state):""}</div>`;}
+
+const PAGE_TYPE_RENDERERS=Object.freeze({
+  overview:({center})=>`<div class="phc-overview-grid">${metric("运行原则","Automation First","正常流程自动执行")}${metric("人工介入","By Exception","异常、低置信度、高风险与最终责任")}${metric("数据状态",center.status==='active'?"CURRENT":"VALIDATING","未接入能力不生成数字",center.status)}</div><section class="phc-section"><h2>当前工作</h2>${pending(`${center.label}业务聚合`,"overview",STATUS_LABEL[center.status]||"VALIDATING")}</section>`,
+  "data-list":({center,label})=>`${toolbar({primary:label.includes("商品")?"＋ 新建商品":"",search:`搜索${label}`})}${dataTable(["对象","关联","状态","负责人","更新时间"])}`,
+  "object-detail":({workbench={}})=>productWorkspaceMarkup(workbench),
+  "form-editor":({label})=>`<div class="phc-form"><label><span>执行范围</span><input disabled placeholder="待后端接入"></label><label><span>对象</span><input disabled placeholder="从统一对象选择"></label><label class="phc-form-wide"><span>说明</span><textarea disabled placeholder="不以临时表单生成正式数据"></textarea></label><div class="phc-form-actions"><button disabled>保存草稿</button><button class="phc-primary" disabled>${esc(label)}</button></div></div>`,
+  "generator-wizard":({label})=>`<ol class="phc-steps"><li class="is-active"><b>1</b><span>选择对象</span></li><li><b>2</b><span>规则预览</span></li><li><b>3</b><span>冲突校验</span></li><li><b>4</b><span>生成结果</span></li></ol>${pending(label,"generator-wizard","NOT YET IMPLEMENTED","生成器共用统一规则引擎；后端未接入时不在浏览器制造正式编码或对象。")}`,
+  "master-data":({label})=>`${toolbar({primary:`＋ 新增${label.replace("一览","")}`,search:`搜索${label}`})}${dataTable(["编码","名称","引用数","状态","更新时间"])}`,
+  tree:({label})=>`<div class="phc-tree-layout"><section><h2>${esc(label)}</h2><div class="phc-tree-placeholder"><span>▸</span> 分类根节点<div><span>▸</span> 待后端接入真实层级</div></div></section><aside>${pending("节点详情","tree","NOT YET IMPLEMENTED")}</aside></div>`,
+  mapping:({label})=>`${toolbar({primary:"＋ 新建映射",search:`搜索${label}`})}${dataTable(["AIONE 来源","平台 / 目标","转换规则","优先级","状态"])}`,
+  ledger:({label})=>`${toolbar({search:`搜索${label}`})}${dataTable(["发生时间","业务类型","对象","变更前","变更后","来源单据"])}`,
+  "rule-management":({label})=>`${toolbar({primary:"＋ 新建规则",search:`搜索${label}`})}${dataTable(["规则","Scope","条件","动作","优先级","状态"])}`,
+  "batch-job-monitor":({label})=>`${toolbar({search:`搜索${label}`})}${dataTable(["任务 / 批次","执行方式","进度","成功","失败","状态"])}`,
+  "analysis-report":()=>`<div class="phc-analysis">${metric("新品保本标准售价","800 JPY","CURRENT 已验证计算")}${metric("常规定价","1680 JPY","目标利润率规则结果")}${metric("50%优惠","3360 → 1680 JPY","活动标价 → 成交价")}${metric("700円校验","-37 JPY","低于当前经营现金口径保本线","blocked")}</div><section class="phc-section"><h2>${PRODUCT_REF} 成本依据</h2>${dataTable(["项目","值","来源状态"],[["采购成本","11.4 CNY / 套","CONFIRMED"],["国际空运","5.28 CNY / 套","PROVISIONAL"],["包装/验货/标签","2 CNY / 套","CONFIRMED"],["日本配送","200 JPY / 订单","CONFIRMED"],["乐天综合手续费率","10%","CONFIRMED"]])}</section>`,
+  "asset-management":({label})=>`${toolbar({search:`搜索${label}`})}<div class="phc-asset-groups"><div><strong>01_SKU图</strong><span>人工素材 CURRENT</span></div><div><strong>02_产品图</strong><span>人工素材 CURRENT</span></div><div><strong>03_实拍图</strong><span>人工素材 CURRENT</span></div></div>${pending("资产记录","asset-management","NOT YET IMPLEMENTED","ProductAsset 是唯一图片事实；文件来源、版本、用途与关联对象由后端返回后展示。")}`,
+  "electronic-publication":()=>`<div class="phc-publication"><aside><strong>目录</strong><a href="#phc-handbook-1">商品生命周期</a><a href="#phc-handbook-2">Automation First</a><a href="#phc-handbook-3">对象与责任</a></aside><article><span>CURRENT · 2026-09-08</span><h2 id="phc-handbook-1">商品从选品开始</h2><p>Selection 是商品生命周期入口。选品通过后，系统才创建正式 Product，并由同一生成引擎建立 SKU。</p><h2 id="phc-handbook-2">Automation First, Human by Exception</h2><p>确定、可继承、可计算和可映射的工作由系统完成；员工处理异常、低置信度、高风险、首次正式发布确认与最终责任判断。</p><h2 id="phc-handbook-3">一个对象，一份事实</h2><p>Product、SKU、ProductAsset、DesignTask、Listing、Publish Job、Inventory 与 Procurement 各守边界，通过关系连接，不复制事实。</p></article></div>`,
+  "error-queue":({label})=>`${toolbar({search:`搜索${label}`})}${dataTable(["严重度","错误类型","对象","可重试","负责人","状态"])}`
+});
+export { PAGE_TYPE_RENDERERS };
+
+async function selectionData(){return aioneApi(`/api/v1/selections?q=${encodeURIComponent(SELECTION_REF)}&limit=20`);}
+async function productData(){return aioneApi(`/api/v1/design-center/workbench?product=${encodeURIComponent(PRODUCT_REF)}`);}
+function loading(){return `<div class="phc-loading"><span></span>正在通过 AIONE API Client 读取真实数据</div>`;}
+function loadError(error){return `<div class="phc-inline-error"><strong>真实 API 暂不可用</strong><span>${esc(error?.message||"连接失败")}</span><small>页面保持可用，不以 Mock 数据替代。</small></div>`;}
+function lifecycle(){
+  const stages=[["Selection","CURRENT"],["Product","CURRENT"],["SKU","CURRENT"],["素材","VALIDATING"],["Design / Image","VALIDATING"],["Review","VALIDATING"],["Profit","CURRENT"],["Publish","NOT YET IMPLEMENTED"],["Rakuten","NOT YET IMPLEMENTED"],["Order","NOT YET IMPLEMENTED"],["Inventory","NOT YET IMPLEMENTED"],["Procurement","NOT YET IMPLEMENTED"]];
+  return `<div class="phc-lifecycle">${stages.map(([label,state],i)=>`<div class="phc-lifecycle__step"><span>${i+1}</span><strong>${esc(label)}</strong><small>${esc(state)}</small></div>`).join("")}</div>`;
 }
-
-function currentParams(){
-  const raw=String(window.location.hash||"");
-  if(!raw.startsWith("#/product-home")) return new URLSearchParams();
-  return raw.includes("?")?new URLSearchParams(raw.slice(raw.indexOf("?")+1)):new URLSearchParams();
-}
-
-function currentCenterId(){ return currentParams().get("center") || "home"; }
-function currentProductRef(){ return currentParams().get("product") || ""; }
-function currentProductSection(){ return currentParams().get("section") || "overview"; }
-
-function centerDefinition(centerId){
-  return PRODUCT_HOME_CENTERS.find((center)=>center.id===centerId) || null;
-}
-
-function navigateProduct(productRef,section="overview"){
-  const params=new URLSearchParams({center:"product-center",product:productRef,section});
-  window.location.hash=`#/product-home?${params.toString()}`;
-}
-
-function renderHomeOverview(host){
-  host.innerHTML=`
-    <section class="phc phc-home" aria-labelledby="phc-title">
-      <header class="phc-page-head">
-        <div>
-          <h1 id="phc-title">商品之家</h1>
-          <p>统一管理商品正式事实、素材、设计与发布状态。</p>
-        </div>
-      </header>
-      <main class="phc-home-stage">
-        <div class="phc-home-welcome phc-home-welcome--real">
-          <div>
-            <span class="phc-eyebrow">CURRENT · 真实业务入口</span>
-            <h2>从真实商品开始工作</h2>
-            <p>商品之家已经进入前后端联调阶段。当前先用真实商品打通 Product Truth → 素材 → 设计 → 审核 → 发布。</p>
-          </div>
-          <button type="button" class="phc-primary" data-action="open-current-product">打开 ${CURRENT_VALIDATION_PRODUCT}</button>
-        </div>
-      </main>
-    </section>`;
-  host.querySelector('[data-action="open-current-product"]')?.addEventListener("click",()=>navigateProduct(CURRENT_VALIDATION_PRODUCT));
-  window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"light",kicker:"商品之家",title:"概览",text:"当前阶段优先跑通真实商品闭环，再扩展同类商品与其他分类。"}}));
-}
-
-function renderLoading(host,title="商品中心"){
-  host.innerHTML=`<section class="phc phc-center"><header class="phc-page-head"><div><h1>${escapeHtml(title)}</h1><p>正在读取 CURRENT 商品事实与素材状态…</p></div></header><div class="phc-loading"><span></span>正在连接 AIONE 后端</div></section>`;
-}
-
-function renderLoadError(host,error){
-  host.innerHTML=`<section class="phc phc-center"><header class="phc-page-head"><div><h1>商品中心</h1><p>真实商品工作区暂时无法读取。</p></div></header><div class="phc-error"><strong>连接失败</strong><span>${escapeHtml(error?.message||"未知错误")}</span><button type="button" data-action="retry-product">重新读取</button></div></section>`;
-  host.querySelector('[data-action="retry-product"]')?.addEventListener("click",()=>renderProductCenter(host));
-}
-
-function productFactRows(workbench){
-  const product=workbench?.product||{};
-  const data=product.productData||{};
-  const variants=Array.isArray(data.actualVariants)?data.actualVariants.filter(Boolean).join(" / "):"";
-  return [
-    ["商品编号",product.productCode],
-    ["商品名称",product.name||product.productName],
-    ["适用人群",data.targetGender],
-    ["季节",data.season],
-    ["长度 / 类型",data.lengthType],
-    ["适用尺码",data.supportedSize],
-    ["颜色 / 变体",variants],
-    ["套装数",data.setCount],
-    ["材质",data.material]
-  ].filter(([,value])=>value!==undefined&&value!==null&&String(value).trim()!=="");
-}
-
-function materialCount(materials,key){ return Array.isArray(materials?.[key])?materials[key].length:0; }
-function totalSourceCount(materials){
-  const ids=new Set();
-  Object.values(materials||{}).forEach((items)=>{ if(Array.isArray(items)) items.forEach((item)=>item?.id&&ids.add(item.id)); });
-  return ids.size;
-}
-
-function designCenterMarkup(productRef){
-  const src=`./design-center-v1.html?product=${encodeURIComponent(productRef)}&embed=1`;
-  return `<div class="phc-design-live">
-    <div class="phc-design-live__head">
-      <div><span class="phc-eyebrow">LIVE DESIGN WORKSPACE</span><h2>设计中心</h2><p>直接在商品之家内操作真实 ProductAsset、Page Spec、DesignTask、生成结果和人工验收。</p></div>
-      <a class="phc-link-button phc-link-button--secondary" href="${src.replace("&embed=1","")}" target="_blank" rel="noopener">新窗口打开</a>
-    </div>
-    <div class="phc-design-frame-wrap"><iframe class="phc-design-frame" src="${src}" title="${escapeHtml(productRef)} 设计中心" loading="eager"></iframe></div>
-  </div>`;
-}
-
-function productSectionMarkup(section,workbench){
-  const product=workbench.product||{};
-  const data=product.productData||{};
-  const materials=workbench.materials||{};
-  const productRef=product.productCode||CURRENT_VALIDATION_PRODUCT;
-  if(section==="facts"){
-    const rows=productFactRows(workbench);
-    return `<div class="phc-work-panel"><div class="phc-panel-head"><div><h2>Product Truth</h2><p>这里只显示当前已经存在的正式商品事实；未确认内容不由 AI 补写。</p></div><span class="phc-state phc-state--ready">CURRENT</span></div><div class="phc-facts">${rows.map(([label,value])=>`<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("")||'<p class="phc-muted">暂无已确认商品事实。</p>'}</div></div>`;
-  }
-  if(section==="assets"){
-    return `<div class="phc-work-panel"><div class="phc-panel-head"><div><h2>商品素材</h2><p>正式素材只认 ProductAsset；Google Drive 是来源，不在前端维护第二套事实。</p></div><span class="phc-state phc-state--ready">${totalSourceCount(materials)} 个素材</span></div><div class="phc-metric-grid"><div><b>${materialCount(materials,"sku")}</b><span>SKU图</span></div><div><b>${materialCount(materials,"product")+materialCount(materials,"whiteBackground")}</b><span>产品图 / 白底图</span></div><div><b>${materialCount(materials,"real")}</b><span>实拍图</span></div><div><b>${materialCount(materials,"detail")}</b><span>细节候选</span></div></div><p class="phc-note">CURRENT 素材目录仍保持：01_SKU图 / 02_产品图 / 03_实拍图。</p></div>`;
-  }
-  if(section==="design"){
-    return designCenterMarkup(productRef);
-  }
-  if(section==="publish"){
-    return `<div class="phc-work-panel"><div class="phc-panel-head"><div><h2>发布状态</h2><p>Approved DERIVED ProductAsset 将进入 Rakuten canonical publish，不要求员工手工搬运图片。</p></div><span class="phc-state phc-state--pending">待设计验收</span></div><div class="phc-pipeline"><span class="is-done">Product Truth</span><i>→</i><span class="is-done">SOURCE</span><i>→</i><span>Design</span><i>→</i><span>Review</span><i>→</i><span>Rakuten</span></div></div>`;
-  }
-  const facts=productFactRows(workbench);
-  return `<div class="phc-workspace-overview"><div class="phc-work-panel"><div class="phc-panel-head"><div><span class="phc-eyebrow">真实商品工作区</span><h2>${escapeHtml(productRef)}</h2><p>${escapeHtml(product.name||product.productName||"当前验证商品")}</p></div><span class="phc-state phc-state--ready">可操作</span></div><div class="phc-summary-grid"><div><span>Product Truth</span><b>${facts.length}</b><small>已读取字段</small></div><div><span>ProductAsset</span><b>${totalSourceCount(materials)}</b><small>素材对象</small></div><div><span>适用尺码</span><b>${escapeHtml(data.supportedSize||"待确认")}</b><small>不推断数字</small></div><div><span>套装</span><b>${escapeHtml(data.setCount||"—")}</b><small>当前商品事实</small></div></div></div><div class="phc-next-step"><strong>当前员工下一步</strong><span>先查看素材和商品事实，再进入设计中心生成第一张真实白底图。</span><button type="button" class="phc-primary" data-open-section="design">进入设计</button></div></div>`;
-}
-
-async function loadWorkbench(productRef){
-  const payload=await aioneApi(`/api/v1/design-center/workbench?product=${encodeURIComponent(productRef)}`);
-  if(!payload?.workbench) throw new Error("后端未返回商品工作区。");
-  return payload.workbench;
-}
-
-async function renderProductWorkspace(host,productRef){
-  renderLoading(host,productRef);
+async function renderSelectionView(stage,label,index){
+  if(index===2){stage.innerHTML=PAGE_TYPE_RENDERERS["electronic-publication"]({label});return;}
+  stage.innerHTML=loading();
   try{
-    const workbench=await loadWorkbench(productRef);
-    const product=workbench.product||{};
-    const resolvedRef=product.productCode||productRef;
-    const active=currentProductSection();
-    const sections=[
-      ["overview","概览"],["facts","商品事实"],["assets","商品素材"],["design","设计中心"],["publish","发布状态"]
-    ];
-    host.innerHTML=`<section class="phc phc-center phc-product-workspace" aria-labelledby="phc-title"><header class="phc-page-head phc-page-head--workspace"><div><button type="button" class="phc-back" data-action="back-products">← 商品中心</button><h1 id="phc-title">${escapeHtml(resolvedRef)}</h1><p>${escapeHtml(product.name||product.productName||"正式商品工作区")}</p></div><span class="phc-state phc-state--ready">REAL DATA</span></header><nav class="phc-tabs" aria-label="商品工作区">${sections.map(([id,label])=>`<button type="button" class="${id===active?"is-active":""}" data-product-section="${id}">${label}</button>`).join("")}</nav><main class="phc-content" data-phc-product-stage>${productSectionMarkup(active,workbench)}</main></section>`;
-    host.querySelector('[data-action="back-products"]')?.addEventListener("click",()=>{window.location.hash="#/product-home?center=product-center";});
-    const stage=host.querySelector("[data-phc-product-stage]");
-    function switchSection(id){
-      host.querySelectorAll("[data-product-section]").forEach((button)=>button.classList.toggle("is-active",button.dataset.productSection===id));
-      stage.innerHTML=productSectionMarkup(id,workbench);
-      stage.querySelector('[data-open-section="design"]')?.addEventListener("click",()=>switchSection("design"));
-      const params=new URLSearchParams({center:"product-center",product:resolvedRef,section:id});
-      history.replaceState(null,"",`${location.pathname}${location.search}#/${"product-home"}?${params.toString()}`);
-    }
-    host.querySelectorAll("[data-product-section]").forEach((button)=>button.addEventListener("click",()=>switchSection(button.dataset.productSection)));
-    stage.querySelector('[data-open-section="design"]')?.addEventListener("click",()=>switchSection("design"));
-    window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"light",kicker:"商品之家 · 商品中心",title:resolvedRef,text:"真实 Product Truth、ProductAsset、Design 与发布状态统一在同一商品对象下工作。"}}));
-  }catch(error){ renderLoadError(host,error); }
+    const payload=await selectionData();const items=Array.isArray(payload?.items)?payload.items:[];
+    if(index===0){stage.innerHTML=`<div class="phc-overview-grid">${metric("真实验证 Selection",SELECTION_REF,"已转为正式商品")}${metric("正式 Product",PRODUCT_REF,"Selection qualified 后生成")}${metric("正式 SKU",SKU_REF,"6种颜色是套装内容，不拆 SKU")}</div>${items.length?"":pending("选品聚合","overview","CURRENT","当前筛选未返回记录；不补造候选商品数量。")}`;}
+    else stage.innerHTML=`${toolbar({search:"搜索 Selection Code / 商品名 / 来源"})}${dataTable(["Selection Code","候选商品","来源","状态","正式商品"],items.map(item=>[item.selectionNo||item.id,item.title||"—",item.sourcePlatform||"—",item.lifecycleStatus||"—",item.convertedProductCode||"—"]))}`;
+  }catch(error){stage.innerHTML=`${loadError(error)}${index===0?`<div class="phc-overview-grid">${metric("已验证身份链",`${SELECTION_REF} → ${PRODUCT_REF} → ${SKU_REF}`,"Google Drive CURRENT 运行时证据")}</div>`:""}`;}
 }
-
-function renderProductList(host,center,sections){
-  host.innerHTML=`<section class="phc phc-center" aria-labelledby="phc-title"><header class="phc-page-head phc-page-head--center"><div><h1 id="phc-title">商品中心</h1><p>管理正式 Product、SKU 与商品工作区。</p></div></header><nav class="phc-tabs" aria-label="商品中心">${sections.map((label,index)=>`<button type="button" class="${index===0?"is-active":""}" data-phc-section="${index}">${label}</button>`).join("")}</nav><div class="phc-toolbar" data-phc-toolbar><button type="button" class="phc-primary">＋ 新建商品</button><label class="phc-search"><span>⌕</span><input type="search" placeholder="搜索商品 / SKU" value="${CURRENT_VALIDATION_PRODUCT}"></label><button type="button">筛选</button><button type="button">分组</button><button type="button">排序</button><span class="phc-toolbar-spacer"></span><button type="button">列表</button><button type="button">卡片</button></div><main class="phc-content" data-phc-stage><div class="phc-product-list"><button type="button" class="phc-product-row" data-product-ref="${CURRENT_VALIDATION_PRODUCT}"><span class="phc-product-thumb">M2</span><span class="phc-product-main"><strong>${CURRENT_VALIDATION_PRODUCT}</strong><small>冬款男袜 6双套装 · 当前真实验证商品</small></span><span class="phc-state phc-state--progress">设计联调</span><span class="phc-chevron">›</span></button></div></main></section>`;
-  host.querySelector(`[data-product-ref="${CURRENT_VALIDATION_PRODUCT}"]`)?.addEventListener("click",()=>navigateProduct(CURRENT_VALIDATION_PRODUCT));
-  const stage=host.querySelector("[data-phc-stage]");
-  const toolbar=host.querySelector("[data-phc-toolbar]");
-  host.querySelectorAll("[data-phc-section]").forEach((button)=>button.addEventListener("click",()=>{
-    const index=Number(button.dataset.phcSection)||0; const section=sections[index];
-    host.querySelectorAll("[data-phc-section]").forEach((item)=>item.classList.toggle("is-active",item===button));
-    toolbar.hidden=section==="设置";
-    if(index===0) stage.innerHTML=`<div class="phc-product-list"><button type="button" class="phc-product-row" data-product-ref="${CURRENT_VALIDATION_PRODUCT}"><span class="phc-product-thumb">M2</span><span class="phc-product-main"><strong>${CURRENT_VALIDATION_PRODUCT}</strong><small>冬款男袜 6双套装 · 当前真实验证商品</small></span><span class="phc-state phc-state--progress">设计联调</span><span class="phc-chevron">›</span></button></div>`;
-    else if(section==="SKU") stage.innerHTML=`<div class="phc-empty-lite"><h2>SKU 统一归属于正式商品</h2><p>进入商品工作区后查看当前 SKU 与素材，不维护第二套商品事实。</p></div>`;
-    else stage.innerHTML=`<div class="phc-settings-lite"><div><strong>商品编号规则</strong><span>统一 Product / SKU 编号与生成规则</span></div><div><strong>默认视图</strong><span>设置商品中心默认列表与卡片视图</span></div></div>`;
-    stage.querySelector(`[data-product-ref="${CURRENT_VALIDATION_PRODUCT}"]`)?.addEventListener("click",()=>navigateProduct(CURRENT_VALIDATION_PRODUCT));
-  }));
-  window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"light",kicker:"商品之家",title:"商品中心",text:"从真实 Product 进入统一商品工作区，不复制 Product Truth。"}}));
+function workbenchFacts(workbench){
+  const product=workbench?.product||{},data=product.productData||{};return [["Product Code",product.productCode||PRODUCT_REF],["商品名称",product.name||"冬款男袜6双套装"],["SKU Code",SKU_REF],["生命周期",product.lifecycleStatus||"draft"],["销售 SKU 结构","1个SKU"],["套装颜色","白色｜米色｜卡其｜军绿｜深灰｜黑色"],["素材目录","01_SKU图｜02_产品图｜03_实拍图"],["Rakuten normal-item","574列 Contract｜平台规则仍在验证"]];
 }
-
-async function renderProductCenter(host,center,sections){
-  const productRef=currentProductRef();
-  if(productRef) return renderProductWorkspace(host,productRef);
-  return renderProductList(host,center,sections);
+function objectSection(section,workbench){
+  const facts=workbenchFacts(workbench);
+  if(section==="facts")return `<section class="phc-section"><h2>Product Truth</h2>${dataTable(["字段","当前事实"],facts)}</section>`;
+  if(section==="relations")return `<section class="phc-section"><h2>对象关系</h2>${lifecycle()}</section>`;
+  if(section==="timeline")return `<section class="phc-section"><h2>时间线</h2>${dataTable(["时间","对象","事件","状态"],[["2026-09-07",SELECTION_REF,"选品通过并创建正式商品","CURRENT"],["2026-09-07",PRODUCT_REF,"生成 Product Code","CURRENT"],["2026-09-07",SKU_REF,"生成 SKU Code","CURRENT"]])}</section>`;
+  return `<section class="phc-object-summary"><div><span>Selection</span><strong>${SELECTION_REF}</strong></div><div><span>Product</span><strong>${PRODUCT_REF}</strong></div><div><span>SKU</span><strong>${SKU_REF}</strong></div><div><span>SKU数量</span><strong>1</strong></div></section><section class="phc-section"><h2>全链路状态</h2>${lifecycle()}</section>`;
 }
-
-function genericEmpty(center,section){
-  return `<div class="phc-empty-lite"><h2>${escapeHtml(section)}</h2><p>${escapeHtml(center.label)}的“${escapeHtml(section)}”已作为正式页面节保留，业务内容将在真实流程验证后逐步接入。</p></div>`;
+function productWorkspaceMarkup(workbench){
+  return `${pageHeader(PRODUCT_REF,"正式商品工作区 · Product Truth 与跨中心状态",status("active"))}<nav class="phc-tabs" aria-label="商品详情"><button class="is-active" data-object-view="overview">概览</button><button data-object-view="facts">商品事实</button><button data-object-view="relations">关系</button><button data-object-view="timeline">时间线</button></nav><main data-object-stage>${objectSection("overview",workbench)}</main><div class="phc-responsibility-links"><button data-jump="design-center">进入设计中心</button><button data-jump="profit-center">进入利润中心</button><button data-jump="publish-center">进入发布中心</button><button data-jump="inventory-center">进入库存中心</button></div>`;
 }
-
-function renderGenericCenter(host,center,sections){
-  host.innerHTML=`<section class="phc phc-center" aria-labelledby="phc-title"><header class="phc-page-head phc-page-head--center"><div><h1 id="phc-title">${escapeHtml(center.label)}</h1><p>统一管理${escapeHtml(center.label.replace("中心",""))}相关事实、规则与业务能力。</p></div></header><nav class="phc-tabs" aria-label="${escapeHtml(center.label)}">${sections.map((label,index)=>`<button type="button" class="${index===0?"is-active":""}" data-phc-section="${index}">${escapeHtml(label)}</button>`).join("")}</nav><main class="phc-content" data-phc-stage>${genericEmpty(center,sections[0])}</main></section>`;
-  const stage=host.querySelector("[data-phc-stage]");
-  host.querySelectorAll("[data-phc-section]").forEach((button)=>button.addEventListener("click",()=>{const index=Number(button.dataset.phcSection)||0;host.querySelectorAll("[data-phc-section]").forEach((item)=>item.classList.toggle("is-active",item===button));stage.innerHTML=genericEmpty(center,sections[index]);}));
-  window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"light",kicker:"商品之家",title:center.label,text:`${center.label}采用统一中心页母版。`}}));
+async function renderProductWorkspace(host){let workbench={};host.innerHTML=`<section class="phc phc-object-workspace">${loading()}</section>`;try{const payload=await productData();workbench=payload?.workbench||{};host.firstElementChild.innerHTML=PAGE_TYPE_RENDERERS["object-detail"]({workbench});}catch(error){host.firstElementChild.innerHTML=`${loadError(error)}${PAGE_TYPE_RENDERERS["object-detail"]({workbench})}`;}host.querySelectorAll("[data-jump]").forEach(button=>button.addEventListener("click",()=>navigate({center:button.dataset.jump})));host.querySelectorAll("[data-object-view]").forEach(button=>button.addEventListener("click",()=>{host.querySelectorAll("[data-object-view]").forEach(item=>item.classList.toggle("is-active",item===button));host.querySelector("[data-object-stage]").innerHTML=objectSection(button.dataset.objectView,workbench);}));}
+function designLive(){return `<div class="phc-design-frame-wrap"><iframe class="phc-design-frame" src="./design-center-v1.html?product=${PRODUCT_REF}&embed=1" title="${PRODUCT_REF} 设计中心" loading="eager"></iframe></div>`;}
+async function renderCenter(host,center,index){
+  const label=center.tabs[index]||center.tabs[0],type=(VIEW_TYPES[center.id]||[])[index]||"overview";
+  host.innerHTML=`<section class="phc phc-center" aria-labelledby="phc-title">${pageHeader(center.label,CENTER_COPY[center.id],status(center.status))}${centerTabs(center,index)}<main class="phc-content" data-stage></main></section>`;
+  const stage=host.querySelector("[data-stage]");
+  if(center.id==="selection-center")await renderSelectionView(stage,label,index);
+  else if(center.id==="product-center"&&index===0)stage.innerHTML=`<section class="phc-section"><h2>正式商品工作区</h2><button class="phc-object-row" data-open-product><span class="phc-product-thumb">M2</span><span><strong>${PRODUCT_REF}</strong><small>冬款男袜6双套装 · 1个SKU</small></span>${status("active")}<b>›</b></button></section><section class="phc-section"><h2>生命周期关系</h2>${lifecycle()}</section>`;
+  else if(center.id==="product-center"&&index===1)stage.innerHTML=`${toolbar({search:"搜索商品编码 / 名称"})}${dataTable(["商品编码","商品名称","SKU数","生命周期","发布状态"],[[PRODUCT_REF,"冬款男袜6双套装","1","draft","NOT YET IMPLEMENTED"]])}`;
+  else if(center.id==="product-center"&&index===2)stage.innerHTML=`${toolbar({search:"搜索 SKU Code / 商品"})}${dataTable(["SKU Code","Product Code","规格组合","状态","更新时间"],[[SKU_REF,PRODUCT_REF,"款式｜6双套装","CURRENT","2026-09-07"]])}`;
+  else if(center.id==="design-center"&&index===2)stage.innerHTML=designLive();
+  else stage.innerHTML=PAGE_TYPE_RENDERERS[type]({center,label});
+  host.querySelector("[data-open-product]")?.addEventListener("click",()=>navigate({center:"product-center",product:PRODUCT_REF}));
+  host.querySelectorAll("[data-center-view]").forEach(button=>button.addEventListener("click",()=>navigate({center:center.id,view:button.dataset.centerView})));
 }
-
-async function renderCenter(host,centerId){
-  const center=centerDefinition(centerId);
-  if(!center){renderHomeOverview(host);return true;}
-  const sections=Array.isArray(center.tabs)&&center.tabs.length?center.tabs:["概览"];
-  if(centerId==="product-center") await renderProductCenter(host,center,sections);
-  else renderGenericCenter(host,center,sections);
-  return true;
+function renderRoot(host,view){
+  const active=ROOT_VIEWS.some(item=>item.id===view)?view:"overview";const definition=ROOT_VIEWS.find(item=>item.id===active);
+  let body="";
+  if(active==="overview")body=`<section class="phc-home-intro"><div><span class="phc-eyebrow">商品之家 · CURRENT</span><h2>商品全生命周期工作台</h2><p>从选品进入正式商品，自动连接素材、设计、利润、发布、订单、库存与采购。只在例外需要人。</p></div><button class="phc-primary" data-open-product>打开 ${PRODUCT_REF}</button></section><section class="phc-section"><h2>真实验证链</h2>${lifecycle()}</section>`;
+  else body=PAGE_TYPE_RENDERERS[definition.type]({label:definition.label,center:{status:"active",label:definition.label}});
+  host.innerHTML=`<section class="phc phc-home" aria-labelledby="phc-title">${pageHeader("商品之家","Product Truth：Google Drive CURRENT · 2026-09-08",status("active"))}${rootTabs(active)}<main class="phc-content">${body}</main></section>`;
+  host.querySelector("[data-open-product]")?.addEventListener("click",()=>navigate({center:"product-center",product:PRODUCT_REF}));host.querySelectorAll("[data-root-view]").forEach(button=>button.addEventListener("click",()=>navigate({view:button.dataset.rootView})));
 }
-
 export async function initProductHomeCurrent(){
-  const host=document.getElementById("app-main-host");
-  if(!host)return false;
-  const centerId=currentCenterId();
-  if(centerId==="home")return renderHomeOverview(host),true;
-  await renderCenter(host,centerId);
-  return true;
+  const host=document.getElementById("app-main-host");if(!host)return false;document.body.dataset.productHome="current";
+  const query=params(),centerId=query.get("center");
+  if(query.get("product"))await renderProductWorkspace(host);else if(centerId&&centerById(centerId))await renderCenter(host,centerById(centerId),Math.max(0,Number(query.get("view")||0)));else renderRoot(host,query.get("view")||"overview");
+  window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"hidden"}}));return true;
 }
