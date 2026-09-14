@@ -23,8 +23,10 @@ IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AIONE_ARTIFACT_REPO}/${AIONE_IMA
 JOB="aione-mens-socks-trial-preflight"
 PRODUCT_CODE="${AIONE_ACCEPT_IMAGE_PRODUCT_CODE:-MH0000002}"
 PASS_MARKER='MENS SOCKS TRIAL GATE C PREFLIGHT PASS - NO IMAGE GENERATED'
+EXECUTE_OUTPUT=""
 
 cleanup() {
+  [[ -z "$EXECUTE_OUTPUT" ]] || rm -f "$EXECUTE_OUTPUT" >/dev/null 2>&1 || true
   gcloud run jobs delete "$JOB" --region="$REGION" --project="$PROJECT_ID" --quiet >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -57,7 +59,31 @@ gcloud run jobs deploy "$JOB" \
   --task-timeout=5m \
   --quiet >/dev/null
 
-EXECUTION="$(gcloud run jobs execute "$JOB" --region="$REGION" --project="$PROJECT_ID" --wait --format='value(metadata.name)')"
+EXECUTE_OUTPUT="$(mktemp)"
+set +e
+gcloud run jobs execute "$JOB" \
+  --region="$REGION" \
+  --project="$PROJECT_ID" \
+  --wait >"$EXECUTE_OUTPUT" 2>&1
+EXECUTE_STATUS=$?
+set -e
+
+EXECUTION="$(gcloud run jobs describe "$JOB" \
+  --region="$REGION" \
+  --project="$PROJECT_ID" \
+  --format='value(status.latestCreatedExecution.name)')"
+
+if [[ -z "$EXECUTION" ]]; then
+  echo '[AIONE][STOP] Cloud Run did not expose a latest execution name.' >&2
+  cat "$EXECUTE_OUTPUT" >&2 || true
+  exit 25
+fi
+
+if [[ "$EXECUTE_STATUS" -ne 0 ]]; then
+  printf '\n[AIONE] Cloud Run execution returned non-zero; preserving diagnostics before fail-closed decision\n'
+  cat "$EXECUTE_OUTPUT" || true
+fi
+
 LOGS=""
 for i in $(seq 1 24); do
   LOGS="$(gcloud beta run jobs executions logs read "$EXECUTION" --region="$REGION" --project="$PROJECT_ID" --limit=3000 2>&1 || true)"
