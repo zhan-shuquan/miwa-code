@@ -6,7 +6,9 @@ const allowedTypes = new Set(["直发选品", "常规选品"]);
 const clean = (v, n = 1000) => String(v ?? "").trim().slice(0, n);
 const nullable = (v, n = 1000) => clean(v, n) || null;
 const numberOrNull = (v) => {
-  const n = Number(String(v ?? "").replaceAll(",", "").trim());
+  const raw = String(v ?? "").replaceAll(",", "").trim();
+  if (!raw) return null;
+  const n = Number(raw);
   return Number.isFinite(n) ? n : null;
 };
 
