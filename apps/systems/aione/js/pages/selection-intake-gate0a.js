@@ -2,6 +2,7 @@ import { aioneApi } from "../services/aione-api-client.js";
 
 const BUTTON_MARK = "data-selection-intake-entry";
 const DIALOG_MARK = "data-selection-intake-gate0a";
+const SUCCESS_KEY = "aione.selection-intake.success";
 
 const roleOf = (file) => {
   const value = `${file.webkitRelativePath || ""}/${file.name || ""}`.toLowerCase();
@@ -67,6 +68,33 @@ async function parseExcel(file) {
   return records;
 }
 
+function showSuccessToast(message) {
+  const old = document.querySelector("[data-selection-intake-toast]");
+  if (old) old.remove();
+  const toast = document.createElement("div");
+  toast.setAttribute("data-selection-intake-toast", "true");
+  toast.textContent = message;
+  toast.style.cssText = "position:fixed;right:24px;bottom:24px;z-index:10000;max-width:min(520px,calc(100vw - 48px));padding:12px 16px;border-radius:12px;background:#176b4d;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.18);font-weight:650;line-height:1.5";
+  document.body.appendChild(toast);
+  window.setTimeout(() => toast.remove(), 5000);
+}
+
+function restoreSuccessToast() {
+  try {
+    const raw = window.sessionStorage.getItem(SUCCESS_KEY);
+    if (!raw) return;
+    window.sessionStorage.removeItem(SUCCESS_KEY);
+    const payload = JSON.parse(raw);
+    const created = Number(payload?.createdCount || 0);
+    const updated = Number(payload?.updatedCount || 0);
+    const ids = Array.isArray(payload?.ids) ? payload.ids.filter(Boolean) : [];
+    const suffix = ids.length === 1 ? `｜编号 ${ids[0]}` : ids.length > 1 ? `｜${ids.length} 条记录已处理` : "";
+    showSuccessToast(`导入完成：新增 ${created}，更新 ${updated}${suffix}`);
+  } catch {
+    window.sessionStorage.removeItem(SUCCESS_KEY);
+  }
+}
+
 function ensureDialog() {
   let dialog = document.getElementById("selection-intake-gate0a-dialog");
   if (dialog) return dialog;
@@ -117,11 +145,15 @@ function ensureDialog() {
         method: "POST",
         body: JSON.stringify({ selectionType: type, records, materialManifest, intakeFile: { name: excel.name, size: excel.size } })
       });
-      const ids = (result.verification?.persisted || []).map((item) => item.selection_no || item.id).filter(Boolean).join("、");
-      resultNode.hidden = false;
-      resultNode.className = "selection-intake-g0a__result";
-      resultNode.textContent = `真实写入完成：新增 ${result.createdCount}，更新 ${result.updatedCount}，DB复读 ${result.verification?.persistedCount || 0}/${result.totalCount}。${ids ? ` 编号：${ids}` : ""}`;
+      const ids = (result.verification?.persisted || []).map((item) => item.selection_no || item.id).filter(Boolean);
       window.dispatchEvent(new CustomEvent("aione:selection-intake-completed", { detail: result }));
+      window.sessionStorage.setItem(SUCCESS_KEY, JSON.stringify({
+        createdCount: result.createdCount,
+        updatedCount: result.updatedCount,
+        ids
+      }));
+      dialog.close();
+      window.location.reload();
     } catch (error) {
       resultNode.hidden = false;
       resultNode.className = "selection-intake-g0a__result is-error";
@@ -174,4 +206,7 @@ const observer = new MutationObserver(() => mountEntry());
 observer.observe(document.documentElement, { childList: true, subtree: true });
 window.addEventListener("hashchange", () => requestAnimationFrame(mountEntry));
 window.addEventListener("popstate", () => requestAnimationFrame(mountEntry));
-requestAnimationFrame(mountEntry);
+requestAnimationFrame(() => {
+  mountEntry();
+  restoreSuccessToast();
+});
