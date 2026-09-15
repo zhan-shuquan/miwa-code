@@ -1,5 +1,4 @@
 substitutions:
-  _COMMIT_SHA: manual
   _REGION: asia-northeast1
   _PREVIEW_SERVICE: aione-backend-preview
   _SQL_INSTANCE: aione-pg-dev
@@ -16,14 +15,14 @@ steps:
     args:
       - build
       - -t
-      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-${_COMMIT_SHA}
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-$SHORT_SHA
       - .
 
   - name: gcr.io/cloud-builders/docker
     id: push-preview-image
     args:
       - push
-      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-${_COMMIT_SHA}
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-$SHORT_SHA
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     id: selection-intake-schema-preflight
@@ -33,7 +32,7 @@ steps:
       - |
         CONNECTION="$$(gcloud sql instances describe "${_SQL_INSTANCE}" --project="$PROJECT_ID" --format='value(connectionName)')"
         test "$$CONNECTION" = "miwa-aione:asia-northeast1:aione-pg-dev"
-        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-${_COMMIT_SHA}"
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-$SHORT_SHA"
         gcloud run jobs deploy aione-selection-intake-schema-preview \
           --image="$$IMAGE" \
           --region="${_REGION}" \
@@ -61,7 +60,7 @@ steps:
       - |
         CONNECTION="$$(gcloud sql instances describe "${_SQL_INSTANCE}" --project="$PROJECT_ID" --format='value(connectionName)')"
         test "$$CONNECTION" = "miwa-aione:asia-northeast1:aione-pg-dev"
-        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-${_COMMIT_SHA}"
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-$SHORT_SHA"
         gcloud run deploy "${_PREVIEW_SERVICE}" \
           --image="$$IMAGE" \
           --region="${_REGION}" \
@@ -88,7 +87,7 @@ steps:
         printf 'preview_service=%s\npreview_revision=%s\npreview_url=%s\n' "${_PREVIEW_SERVICE}" "$$REVISION" "$$SERVICE_URL"
 
 images:
-  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-${_COMMIT_SHA}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-$SHORT_SHA
 
 options:
   logging: CLOUD_LOGGING_ONLY
