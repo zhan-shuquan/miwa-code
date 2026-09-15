@@ -104,3 +104,5 @@ export function initSelectionCenterLiveList() {
   }
   scheduleHydrate();
 }
+
+initSelectionCenterLiveList();
