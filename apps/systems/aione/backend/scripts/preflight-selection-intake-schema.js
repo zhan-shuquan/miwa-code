@@ -13,7 +13,14 @@ let client;
 try {
   client = await pool.connect();
   await client.query("BEGIN READ ONLY");
-  const [tableResult, columnResult, counterResult, sourceUniquenessResult] = await Promise.all([
+  const [
+    tableResult,
+    columnResult,
+    counterResult,
+    sourceUniquenessResult,
+    checkConstraintResult,
+    canonicalValueResult
+  ] = await Promise.all([
     client.query("SELECT to_regclass('public.product_opportunities')::text AS table_name"),
     client.query(
       `SELECT column_name
@@ -29,6 +36,30 @@ try {
           AND indexdef ILIKE '%UNIQUE%'
           AND indexdef ILIKE '%source_platform%'
           AND indexdef ILIKE '%source_ref%'`
+    ),
+    client.query(
+      `SELECT c.conname AS name,
+              pg_get_constraintdef(c.oid, true) AS definition
+         FROM pg_constraint c
+         JOIN pg_class t ON t.oid = c.conrelid
+         JOIN pg_namespace n ON n.oid = t.relnamespace
+        WHERE n.nspname='public'
+          AND t.relname='product_opportunities'
+          AND c.contype='c'
+        ORDER BY c.conname`
+    ),
+    client.query(
+      `SELECT selection_mode,
+              lifecycle_status,
+              classification_status,
+              source_fulfillment_hint,
+              source_system,
+              COUNT(*)::int AS row_count
+         FROM public.product_opportunities
+        WHERE archived_at IS NULL
+        GROUP BY selection_mode, lifecycle_status, classification_status, source_fulfillment_hint, source_system
+        ORDER BY row_count DESC, selection_mode, lifecycle_status
+        LIMIT 50`
     )
   ]);
 
@@ -39,6 +70,8 @@ try {
     selectionNumberCounters: counterResult.rows[0]?.table_name || null,
     missingColumns,
     canonicalSourceUniqueness: sourceUniquenessResult.rowCount > 0,
+    checkConstraints: checkConstraintResult.rows,
+    canonicalValueCombinations: canonicalValueResult.rows,
     transactionReadOnly: true
   };
 
@@ -51,7 +84,15 @@ try {
   await client.query("ROLLBACK");
 } catch (error) {
   if (client) await client.query("ROLLBACK").catch(() => {});
-  console.error(JSON.stringify({ ok: false, error: error?.code || "selection_intake_schema_preflight_failed", message: error?.message || "unknown" }));
+  console.error(JSON.stringify({
+    ok: false,
+    error: error?.code || "selection_intake_schema_preflight_failed",
+    constraint: error?.constraint || null,
+    table: error?.table || null,
+    column: error?.column || null,
+    detail: error?.detail || null,
+    message: error?.message || "unknown"
+  }));
   process.exitCode = 1;
 } finally {
   client?.release();
