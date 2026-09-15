@@ -11,6 +11,7 @@
     "db:migrate": "node scripts/migrate.js",
     "db:smoke:p0": "node scripts/p0-db-smoke.js",
     "selection:audit:current": "node scripts/audit-selection-current.js",
+    "selection:intake:schema:preflight": "node scripts/preflight-selection-intake-schema.js",
     "selection:accept:backend": "node scripts/accept-selection-backend-current.js",
     "selection:import:1688-drive": "node scripts/import-1688-drive-inbox.js",
     "product:lifecycle:accept": "node scripts/accept-product-lifecycle-current.js",
