@@ -133,6 +133,20 @@ jobs:
       - name: Migrate controlled database from current migration set
         run: npm run db:migrate
 
+      - name: Prove Gate 0A Selection schema contract
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p preflight-output
+          npm run selection:intake:schema:preflight | tee preflight-output/selection-intake-schema.log
+
+      - name: Prove Gate 0A Selection write and idempotency contract
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p preflight-output
+          npm run selection:intake:accept:gate0a | tee preflight-output/selection-intake-gate0a.log
+
       - name: Prove Design Center generic page-spec foundation
         shell: bash
         run: |
