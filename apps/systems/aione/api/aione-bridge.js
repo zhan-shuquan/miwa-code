@@ -7,18 +7,35 @@ const CURRENT_BACKEND_URL = "https://aione-backend-current-jjlnxogxta-an.a.run.a
 const ALLOWED_API_PATH = /^(?:v1(?:\/|$)|product-opportunities(?:\/|$))/;
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
-let cachedRunIdToken = { token: "", expiresAt: 0 };
+let cachedRunIdToken = { token: "", expiresAt: 0, audience: "" };
+
+export function backendTarget() {
+  const vercelEnv = String(process.env.VERCEL_ENV || "").trim().toLowerCase();
+  if (vercelEnv === "preview") {
+    const backendUrl = String(process.env.AIONE_PREVIEW_BACKEND_URL || "").trim().replace(/\/$/, "");
+    if (!backendUrl) {
+      return { error: "aione_preview_backend_not_configured" };
+    }
+    return {
+      backendUrl,
+      backendAudience: String(process.env.AIONE_PREVIEW_BACKEND_AUDIENCE || "").trim() || backendUrl
+    };
+  }
+  return { backendUrl: CURRENT_BACKEND_URL, backendAudience: CURRENT_BACKEND_URL };
+}
 
 function requiredEnv() {
+  const target = backendTarget();
+  if (target.error) return { env: {}, missing: [], error: target.error };
   const env = {
-    backendUrl: CURRENT_BACKEND_URL,
+    ...target,
     projectNumber: String(process.env.GCP_PROJECT_NUMBER || "").trim(),
     serviceAccountEmail: String(process.env.GCP_SERVICE_ACCOUNT_EMAIL || "").trim(),
     poolId: String(process.env.GCP_WORKLOAD_IDENTITY_POOL_ID || "").trim(),
     providerId: String(process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID || "").trim()
   };
   const missing = Object.entries(env).filter(([, value]) => !value).map(([key]) => key);
-  return { env, missing };
+  return { env, missing, error: "" };
 }
 
 function decodeJwtPayload(token) {
@@ -96,7 +113,7 @@ async function exchangeVercelOidcForFederatedToken(env) {
 }
 
 async function getCloudRunIdToken(env) {
-  if (cachedRunIdToken.token && cachedRunIdToken.expiresAt > Date.now() + 120000) {
+  if (cachedRunIdToken.token && cachedRunIdToken.audience === env.backendAudience && cachedRunIdToken.expiresAt > Date.now() + 120000) {
     return cachedRunIdToken.token;
   }
 
@@ -108,7 +125,7 @@ async function getCloudRunIdToken(env) {
       authorization: `Bearer ${federatedToken}`,
       "content-type": "application/json"
     },
-    body: JSON.stringify({ audience: env.backendUrl, includeEmail: true })
+    body: JSON.stringify({ audience: env.backendAudience, includeEmail: true })
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || !payload.token) {
@@ -119,7 +136,8 @@ async function getCloudRunIdToken(env) {
 
   cachedRunIdToken = {
     token: payload.token,
-    expiresAt: decodeJwtExpiry(payload.token) || Date.now() + 45 * 60 * 1000
+    expiresAt: decodeJwtExpiry(payload.token) || Date.now() + 45 * 60 * 1000,
+    audience: env.backendAudience
   };
   return cachedRunIdToken.token;
 }
@@ -194,7 +212,10 @@ function sendJson(res, status, payload) {
 
 export default async function handler(req, res) {
   try {
-    const { env, missing } = requiredEnv();
+    const { env, missing, error } = requiredEnv();
+    if (error) {
+      return sendJson(res, 503, { error });
+    }
     if (missing.length) {
       return sendJson(res, 503, { error: "aione_bridge_not_configured", missing });
     }

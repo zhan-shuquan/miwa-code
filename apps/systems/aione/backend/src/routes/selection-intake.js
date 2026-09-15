@@ -1,0 +1,33 @@
+import { Router } from "express";
+import { intakeSelectionRecords } from "../services/selection-intake-service.js";
+
+const router = Router();
+const clean = (value, maxLength = 200) => String(value ?? "").trim().slice(0, maxLength);
+
+router.post("/selection-intake", async (req, res, next) => {
+  try {
+    const identity = req.aioneIdentity || null;
+    if (!identity) return res.status(401).json({ error: "authenticated_actor_required" });
+
+    const result = await intakeSelectionRecords({
+      records: req.body?.records,
+      selectionType: clean(req.body?.selectionType, 40),
+      ownerPersonId: identity.personId || null,
+      actor: {
+        subjectType: identity.subjectType || null,
+        subjectId: identity.subjectId || null,
+        personId: identity.personId || null,
+        authenticatedEmail: identity.authenticatedEmail || identity.primaryEmail || null,
+        authSource: identity.authSource || null,
+        identitySource: identity.identitySource || null
+      },
+      materialManifest: req.body?.materialManifest || {},
+      intakeFile: req.body?.intakeFile || {}
+    });
+    return res.status(result.createdCount ? 201 : 200).json({ ok: true, ...result });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+export default router;
