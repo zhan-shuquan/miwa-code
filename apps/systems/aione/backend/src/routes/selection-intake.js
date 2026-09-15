@@ -6,12 +6,21 @@ const clean = (value, maxLength = 200) => String(value ?? "").trim().slice(0, ma
 
 router.post("/selection-intake", async (req, res, next) => {
   try {
-    const context = req.aioneContext || {};
-    if (!context.personId) return res.status(401).json({ error: "authenticated_actor_required" });
+    const identity = req.aioneIdentity || null;
+    if (!identity) return res.status(401).json({ error: "authenticated_actor_required" });
+
     const result = await intakeSelectionRecords({
       records: req.body?.records,
       selectionType: clean(req.body?.selectionType, 40),
-      ownerPersonId: context.personId,
+      ownerPersonId: identity.personId || null,
+      actor: {
+        subjectType: identity.subjectType || null,
+        subjectId: identity.subjectId || null,
+        personId: identity.personId || null,
+        authenticatedEmail: identity.authenticatedEmail || identity.primaryEmail || null,
+        authSource: identity.authSource || null,
+        identitySource: identity.identitySource || null
+      },
       materialManifest: req.body?.materialManifest || {},
       intakeFile: req.body?.intakeFile || {}
     });
