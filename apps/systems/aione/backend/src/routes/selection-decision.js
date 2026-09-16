@@ -28,7 +28,7 @@ function requireAuthenticatedIdentity(req, res, next) {
   return next();
 }
 
-router.post("/selections/:id/select", requireAuthenticatedIdentity, async (req, res, next) => {
+router.post("/:id/select", requireAuthenticatedIdentity, async (req, res, next) => {
   const opportunityId = cleanText(req.params.id, 240);
   const qualificationData = req.body?.qualificationData && typeof req.body.qualificationData === "object"
     ? req.body.qualificationData
@@ -49,7 +49,7 @@ router.post("/selections/:id/select", requireAuthenticatedIdentity, async (req, 
   }
 });
 
-router.post("/selections/:id/reject", requireAuthenticatedIdentity, async (req, res, next) => {
+router.post("/:id/reject", requireAuthenticatedIdentity, async (req, res, next) => {
   const opportunityId = cleanText(req.params.id, 240);
   try {
     const context = req.aioneContext;
@@ -86,7 +86,7 @@ router.post("/selections/:id/reject", requireAuthenticatedIdentity, async (req, 
   }
 });
 
-router.post("/selections/:id/convert", requireAuthenticatedIdentity, async (req, res, next) => {
+router.post("/:id/convert", requireAuthenticatedIdentity, async (req, res, next) => {
   const opportunityId = cleanText(req.params.id, 240);
   const requestedSkuCount = Number(req.body?.skuCount ?? 1);
   const skuCount = Number.isInteger(requestedSkuCount) && requestedSkuCount > 0 && requestedSkuCount <= 99
