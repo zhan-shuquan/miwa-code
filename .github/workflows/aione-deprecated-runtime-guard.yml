@@ -1,0 +1,60 @@
+name: AIONE Deprecated Runtime Guard
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deprecated-runtime-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Block removed legacy runtime files from returning
+        shell: bash
+        run: |
+          set -euo pipefail
+          removed=(
+            .github/workflows/aione-mh0000002-product-truth-reconcile.yml
+            apps/systems/aione/backend/scripts/reconcile-mh0000002-product-truth-v1.js
+            infra/gcp/automation/RUN_MH0000002_PRODUCT_TRUTH_RECONCILE_V1.sh
+            apps/systems/aione/css/pages/selection-record-preview.css
+            apps/systems/aione/css/pages/selection-guidance.css
+          )
+          for file in "${removed[@]}"; do
+            if [[ -e "$file" ]]; then
+              echo "[AIONE][FATAL] Deprecated runtime file returned: $file"
+              exit 1
+            fi
+          done
+
+      - name: Block deprecated demo identities and folder model in active Product Home runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          active=(
+            apps/systems/aione/index.html
+            apps/systems/aione/js/miwa-system.js
+            apps/systems/aione/js/pages/product-home-current.js
+          )
+          forbidden='MH0000002|SEL-20260907-000001|MH0000002-01|01_SKU图|02_产品图|03_实拍图'
+          if grep -En "$forbidden" "${active[@]}"; then
+            echo '[AIONE][FATAL] Deprecated demo identity or folder model found in active Product Home runtime.'
+            exit 2
+          fi
+
+      - name: Require CURRENT source-material folder model
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq '01_原始素材' apps/systems/aione/js/pages/product-home-current.js
+          grep -Fq '02_实拍图' apps/systems/aione/js/pages/product-home-current.js
+          echo 'AIONE deprecated runtime guard passed.'
