@@ -24,8 +24,22 @@ jobs:
           set -euo pipefail
           removed=(
             .github/workflows/aione-mh0000002-product-truth-reconcile.yml
+            .github/workflows/aione-design-center-preview-contract.yml
+            .github/workflows/aione-mens-socks-real-product-discovery.yml
+            .github/workflows/aione-mens-socks-template-set-foundation.yml
+            .github/workflows/aione-mens-socks-trial-preflight.yml
             apps/systems/aione/backend/scripts/reconcile-mh0000002-product-truth-v1.js
+            apps/systems/aione/backend/scripts/bootstrap-mh0000002-design-center-v1.js
+            apps/systems/aione/backend/scripts/discover-mens-socks-trial-products.js
+            apps/systems/aione/backend/scripts/preflight-mens-socks-trial-gate-c.js
+            apps/systems/aione/backend/scripts/accept-mens-socks-template-set-foundation-v1.js
+            apps/systems/aione/backend/scripts/accept-mens-socks-template-set-trial-execution-v1.js
             infra/gcp/automation/RUN_MH0000002_PRODUCT_TRUTH_RECONCILE_V1.sh
+            infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+            infra/gcp/automation/START_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+            infra/gcp/automation/RESUME_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+            infra/gcp/automation/RUN_MENS_SOCKS_REAL_PRODUCT_DISCOVERY_V1.sh
+            infra/gcp/automation/RUN_MENS_SOCKS_TRIAL_GATE_C_PREFLIGHT_V1.sh
             apps/systems/aione/css/pages/selection-record-preview.css
             apps/systems/aione/css/pages/selection-guidance.css
           )
@@ -49,6 +63,15 @@ jobs:
           if grep -En "$forbidden" "${active[@]}"; then
             echo '[AIONE][FATAL] Deprecated demo identity or folder model found in active Product Home runtime.'
             exit 2
+          fi
+
+      - name: Block retired experiment naming from CI surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -En 'MH0000002|Mens Socks Trial|mens-socks-trial|mens_socks_trial' .github/workflows/*.yml; then
+            echo '[AIONE][FATAL] Retired product-specific experiment leaked back into CI.'
+            exit 3
           fi
 
       - name: Require CURRENT source-material folder model
