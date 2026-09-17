@@ -38,10 +38,12 @@ jobs:
             infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
             infra/gcp/automation/START_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
             infra/gcp/automation/RESUME_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+            infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_INPUT_AUDIT_V1.sh
             infra/gcp/automation/RUN_MENS_SOCKS_REAL_PRODUCT_DISCOVERY_V1.sh
             infra/gcp/automation/RUN_MENS_SOCKS_TRIAL_GATE_C_PREFLIGHT_V1.sh
             apps/systems/aione/css/pages/selection-record-preview.css
             apps/systems/aione/css/pages/selection-guidance.css
+            apps/systems/aione/js/pages/selection-record-preview.js
           )
           for file in "${removed[@]}"; do
             if [[ -e "$file" ]]; then
