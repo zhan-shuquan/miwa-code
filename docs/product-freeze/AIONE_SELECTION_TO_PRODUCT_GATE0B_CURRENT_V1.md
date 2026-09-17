@@ -30,7 +30,7 @@ CURRENT Selection intake 当前能够稳定提供：
 - 选品方式（直发 / 常规）
 - 本地素材 manifest：文件名、相对路径、文件大小、识别角色（SKU图 / 详情图 / 白底图 / 主图 / 实拍图 / 其他）
 
-当前 intake **没有结构化保存供应商真实规格组合 / variant / source SKU ID / 颜色规格映射 / 尺码规格映射**。
+当前 Gate 0A intake **没有结构化保存供应商真实规格组合 / variant / source SKU ID / 颜色规格映射 / 尺码规格映射**。
 
 因此：
 
@@ -40,18 +40,42 @@ CURRENT Selection intake 当前能够稳定提供：
 
 > 没有结构化规格证据时，系统不能推断 `skuCount`，也不能为了让链路继续而生成 1 个占位 SKU。
 
+### 已验证的现有 1688 能力
+
+Repo 当前已经存在 1688 Open Platform 商品读取能力：
+
+- `integrations/alibaba1688-client.js` 中已有 `normalizeSkuList(product)`。
+- 可从 `skuInfos / skuList / saleInfo.skuInfos / saleInfo.skuList / productSkuInfos` 等供应商返回结构归一化 SKU。
+- 归一化结果包含 `skuId / spec / price / stock`。
+- `normalize1688Product(...)` 已正式返回 `skus`、`skuCount` 及 `factsAvailable.skus`。
+- `/api/v1/integrations/1688/product-by-url` 已能以商品 URL 读取该标准化结果。
+
+这证明 **Architecture Truth 上已经存在“真实来源 SKU evidence”通道**，不需要另造一套 SKU 抽取实现。
+
+但这并不证明每个真实 1688 商品都一定返回完整 SKU，也不证明当前测试商品已经成功取得该数据。因此 Gate 0B 仍保持阻断，下一步应先做 read-only evidence audit，而不是立即转换 Product。
+
 ## 3. Gate 0B 当前阻断条件
 
 在以下任一条件满足前，CURRENT 不提供真实“通过选品并创建 Product + SKU”按钮：
 
-A. Selection 来源数据已经具有可验证的真实供应商 SKU / 规格组合；或  
+A. 对当前 Selection 的真实 1688 sourceUrl 读取后，得到可验证、非空且足以建立销售规格的 `skus`；或  
 B. AIONE 增加一个明确的“规格确认”步骤，由人工确认正式销售 SKU 事实。
 
 在此之前，历史测试产生的 Product / SKU 只可作为验证证据，不自动升级为 CURRENT 产品规则。
 
-## 4. 待冻结决策
+## 4. 当前优先验证顺序
 
-需要在真实业务测试中确认最终采用哪一种长期方式：
+先验证路径 A，不先增加人工字段：
+
+1. 从 Selection 读取真实 `source_url / source_ref`。
+2. 复用现有 1688 Open Platform client 做 **read-only SKU evidence audit**。
+3. 检查 `factsAvailable.skus`、`skuCount` 以及每条 `skuId / spec`。
+4. 若证据完整，再冻结“来源规格自动继承”规则。
+5. 若证据缺失、不稳定或无法表达实际销售 SKU，再进入最小“规格确认”设计。
+
+这符合 AIONE 原则：能自动继承的数据不要求员工重复填写；只有来源无法形成真实事实时才增加人工确认。
+
+## 5. 待冻结决策
 
 ### 路径 A｜来源规格自动继承
 
@@ -69,7 +93,7 @@ Selection → 人工通过 → 规格确认 → 原子创建 Product + genuine S
 
 规格确认只补充“销售所需的真实规格事实”，不得演变成复杂审批流程。
 
-## 5. 禁止方案
+## 6. 禁止方案
 
 以下实现进入 Deprecated，不得重新进入 CURRENT：
 
@@ -78,9 +102,10 @@ Selection → 人工通过 → 规格确认 → 原子创建 Product + genuine S
 - 根据 SKU 图片数量自动推断 SKU 数
 - 根据颜色图数量自动推断 SKU 数
 - 为了满足数据库关系而制造临时 SKU
+- 重新实现一套与现有 1688 client 重复的 SKU 抽取逻辑
 - 用历史 `MH0000002`、`MH0000003` 或其他测试对象反推长期产品定义
 
-## 6. Gate 0B 验收标准
+## 7. Gate 0B 验收标准
 
 只有同时满足以下条件才能解除 Gate 0B 阻断：
 
@@ -95,8 +120,8 @@ Selection → 人工通过 → 规格确认 → 原子创建 Product + genuine S
 - 自动化测试覆盖 success / retry / rollback / missing-SKU-evidence
 - Preview 真实验收一次通过后才允许进入稳定基线
 
-## 7. Governance
+## 8. Governance
 
 本文只冻结已经有证据支持的边界与禁止项。
 
-“来源规格自动继承”还是“AIONE 规格确认”目前仍为 VALIDATING；在真实 1688 SKU 数据审计完成前，不擅自锁定其中一种为最终方案。
+“来源规格自动继承”还是“AIONE 规格确认”目前仍为 VALIDATING。CURRENT 下一步先复用已有 1688 client 对真实 Selection 做只读 SKU evidence audit；在真实结果出来前，不擅自锁定最终路径。
