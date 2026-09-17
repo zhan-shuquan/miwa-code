@@ -1,0 +1,88 @@
+name: AIONE Deprecated Runtime Guard
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deprecated-runtime-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Block removed legacy runtime files from returning
+        shell: bash
+        run: |
+          set -euo pipefail
+          removed=(
+            .github/workflows/aione-mh0000002-product-truth-reconcile.yml
+            .github/workflows/aione-design-center-preview-contract.yml
+            .github/workflows/aione-mens-socks-real-product-discovery.yml
+            .github/workflows/aione-mens-socks-template-set-foundation.yml
+            .github/workflows/aione-mens-socks-trial-preflight.yml
+            apps/systems/aione/backend/scripts/reconcile-mh0000002-product-truth-v1.js
+            apps/systems/aione/backend/scripts/bootstrap-mh0000002-design-center-v1.js
+            apps/systems/aione/backend/scripts/discover-mens-socks-trial-products.js
+            apps/systems/aione/backend/scripts/preflight-mens-socks-trial-gate-c.js
+            apps/systems/aione/backend/scripts/accept-mens-socks-template-set-foundation-v1.js
+            apps/systems/aione/backend/scripts/accept-mens-socks-template-set-trial-execution-v1.js
+            infra/gcp/automation/RUN_MH0000002_PRODUCT_TRUTH_RECONCILE_V1.sh
+            infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+            infra/gcp/automation/START_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+            infra/gcp/automation/RESUME_DESIGN_CENTER_MH0000002_PREVIEW_V1.sh
+            infra/gcp/automation/RUN_DESIGN_CENTER_MH0000002_INPUT_AUDIT_V1.sh
+            infra/gcp/automation/RUN_MENS_SOCKS_REAL_PRODUCT_DISCOVERY_V1.sh
+            infra/gcp/automation/RUN_MENS_SOCKS_TRIAL_GATE_C_PREFLIGHT_V1.sh
+            apps/systems/aione/css/pages/selection-record-preview.css
+            apps/systems/aione/css/pages/selection-guidance.css
+            apps/systems/aione/js/pages/selection-record-preview.js
+            apps/systems/aione/js/pages/selection-center-live-list.js
+            apps/systems/aione/js/pages/selection-intake-gate0a.js
+          )
+          for file in "${removed[@]}"; do
+            if [[ -e "$file" ]]; then
+              echo "[AIONE][FATAL] Deprecated/transitional runtime file returned: $file"
+              exit 1
+            fi
+          done
+
+      - name: Block deprecated demo identities and folder model in active Product Home runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          active=(
+            apps/systems/aione/index.html
+            apps/systems/aione/js/miwa-system.js
+            apps/systems/aione/js/pages/product-home-current.js
+          )
+          forbidden='MH0000002|SEL-20260907-000001|MH0000002-01|01_SKU图|02_产品图|03_实拍图|selection-center-live-list|selection-intake-gate0a'
+          if grep -En "$forbidden" "${active[@]}"; then
+            echo '[AIONE][FATAL] Deprecated demo identity, folder model, or DOM-overlay Selection runtime found in active Product Home.'
+            exit 2
+          fi
+
+      - name: Block retired experiment naming from other CI workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t workflows < <(find .github/workflows -maxdepth 1 -type f -name '*.yml' ! -name 'aione-deprecated-runtime-guard.yml' -print)
+          if ((${#workflows[@]})) && grep -En 'MH0000002|Mens Socks Trial|mens-socks-trial|mens_socks_trial' "${workflows[@]}"; then
+            echo '[AIONE][FATAL] Retired product-specific experiment leaked back into CI.'
+            exit 3
+          fi
+
+      - name: Require CURRENT source-material folder model
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq '01_原始素材' apps/systems/aione/js/pages/product-home-current.js
+          grep -Fq '02_实拍图' apps/systems/aione/js/pages/product-home-current.js
+          echo 'AIONE deprecated runtime guard passed.'
