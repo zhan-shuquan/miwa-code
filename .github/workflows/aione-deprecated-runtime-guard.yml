@@ -44,10 +44,12 @@ jobs:
             apps/systems/aione/css/pages/selection-record-preview.css
             apps/systems/aione/css/pages/selection-guidance.css
             apps/systems/aione/js/pages/selection-record-preview.js
+            apps/systems/aione/js/pages/selection-center-live-list.js
+            apps/systems/aione/js/pages/selection-intake-gate0a.js
           )
           for file in "${removed[@]}"; do
             if [[ -e "$file" ]]; then
-              echo "[AIONE][FATAL] Deprecated runtime file returned: $file"
+              echo "[AIONE][FATAL] Deprecated/transitional runtime file returned: $file"
               exit 1
             fi
           done
@@ -61,9 +63,9 @@ jobs:
             apps/systems/aione/js/miwa-system.js
             apps/systems/aione/js/pages/product-home-current.js
           )
-          forbidden='MH0000002|SEL-20260907-000001|MH0000002-01|01_SKU图|02_产品图|03_实拍图'
+          forbidden='MH0000002|SEL-20260907-000001|MH0000002-01|01_SKU图|02_产品图|03_实拍图|selection-center-live-list|selection-intake-gate0a'
           if grep -En "$forbidden" "${active[@]}"; then
-            echo '[AIONE][FATAL] Deprecated demo identity or folder model found in active Product Home runtime.'
+            echo '[AIONE][FATAL] Deprecated demo identity, folder model, or DOM-overlay Selection runtime found in active Product Home.'
             exit 2
           fi
 
