@@ -48,9 +48,10 @@ export const HOME_PAGE_MODEL = Object.freeze({
  * Product Truth: Google Sheet 1YE4F_OEU7sPaWJt15Cn2h0lOo9TywgbowiJ7UKPLjLU.
  * 之家级横向入口 = 概览｜学习手册｜资料一览；Sidebar = 16个业务中心；
  * 中心内横向导航 = center.tabs。此处是运行时唯一导航定义。
+ * Selection Center 特例：复用 canonical #/selection 工作台，不维护第二套 Product Home renderer。
  */
 export const PRODUCT_HOME_CENTERS = Object.freeze([
-  center("selection-center", "选品中心", { route: "product-home?center=selection-center", icon: "search", tabs: ["概览", "选品一览", "选品方法"], status: "active" }),
+  center("selection-center", "选品中心", { route: "selection", icon: "search", tabs: ["概览", "选品一览", "选品方法"], status: "active" }),
   center("product-center", "商品中心", { route: "product-home?center=product-center", icon: "product", tabs: ["概览", "商品一览", "SKU一览", "SKU生成器"], status: "active" }),
   center("profit-center", "利润中心", { route: "product-home?center=profit-center", icon: "analysis", tabs: ["利润一览", "利润分析"], status: "active" }),
   center("design-center", "设计中心", { route: "product-home?center=design-center", icon: "file", tabs: ["概览", "设计一览", "AI批量出图", "图片管理", "设计模板", "模板映射"], status: "validating" }),
