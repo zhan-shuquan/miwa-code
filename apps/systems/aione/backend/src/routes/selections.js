@@ -1,5 +1,6 @@
 import { Router } from "express";
 import pool from "../../db.js";
+import { auditSelectionSkuEvidence } from "../services/selection-sku-evidence-service.js";
 
 const router = Router();
 
@@ -136,6 +137,15 @@ router.get("/", async (req, res, next) => {
         sortDirection: sortDirection.toLowerCase()
       }
     });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get("/:id/sku-evidence", async (req, res, next) => {
+  try {
+    const audit = await auditSelectionSkuEvidence(req.params.id);
+    return res.json({ ok: true, ...audit });
   } catch (error) {
     return next(error);
   }
