@@ -67,11 +67,12 @@ jobs:
             exit 2
           fi
 
-      - name: Block retired experiment naming from CI surface
+      - name: Block retired experiment naming from other CI workflows
         shell: bash
         run: |
           set -euo pipefail
-          if grep -En 'MH0000002|Mens Socks Trial|mens-socks-trial|mens_socks_trial' .github/workflows/*.yml; then
+          mapfile -t workflows < <(find .github/workflows -maxdepth 1 -type f -name '*.yml' ! -name 'aione-deprecated-runtime-guard.yml' -print)
+          if ((${#workflows[@]})) && grep -En 'MH0000002|Mens Socks Trial|mens-socks-trial|mens_socks_trial' "${workflows[@]}"; then
             echo '[AIONE][FATAL] Retired product-specific experiment leaked back into CI.'
             exit 3
           fi
