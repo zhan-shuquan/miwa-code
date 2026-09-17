@@ -73,8 +73,9 @@ async function parseExcel(file) {
   if (!sheet) throw new Error("Excel没有可读取工作表。");
   const records = rowsToRecords(window.XLSX.utils.sheet_to_json(sheet, { defval: "" }));
   if (!records.length) throw new Error("Excel中没有可导入数据。");
+  if (records.length !== 1) throw new Error(`当前单品导入必须只包含 1 个商品，检测到 ${records.length} 个。批量选品将使用独立的批量入口。`);
   const invalid = records.filter((record) => !record.title || (!record.sourceRef && !record.sourceUrl));
-  if (invalid.length) throw new Error(`有 ${invalid.length} 条记录缺少商品标题或商品ID/链接。`);
+  if (invalid.length) throw new Error("当前商品缺少商品标题或商品ID/链接。");
   return records;
 }
 
@@ -84,15 +85,15 @@ function createIntakeDialog(root, onCompleted) {
   dialog.innerHTML = `
     <form method="dialog" class="selection-batch-dialog__body" data-selection-current-intake>
       <div class="selection-batch-dialog__head">
-        <div><small>Selection Intake · CURRENT</small><h2>导入选品</h2><p>1688 Excel + 本地商品素材 → 真实 Selection。此步骤不会创建 Product 或 SKU。</p></div>
+        <div><small>Selection Intake · CURRENT</small><h2>导入选品</h2><p>1 个 1688 商品 Excel + 1 个本地商品素材文件夹 → 1 个真实 Selection。此步骤不会创建 Product 或 SKU。</p></div>
         <button class="selection-batch-dialog__close" value="cancel" aria-label="关闭">×</button>
       </div>
       <label>选品方式<select data-intake-type><option value="直发选品">直发选品</option><option value="常规选品">常规选品</option></select></label>
-      <label>1688 Excel<input data-intake-excel type="file" accept=".xlsx" required></label>
-      <label>本地产品素材文件夹<input data-intake-folder type="file" webkitdirectory directory multiple></label>
+      <label>1688 单品 Excel<input data-intake-excel type="file" accept=".xlsx" required></label>
+      <label>该商品的本地素材文件夹<input data-intake-folder type="file" webkitdirectory directory multiple></label>
       <div class="selection-batch-validation" data-intake-summary>尚未读取素材。没有原始主图不会阻断 Selection 创建。</div>
       <div class="selection-batch-validation is-error" data-intake-error hidden></div>
-      <footer class="selection-batch-dialog__foot"><p>唯一写入目标：product_opportunities。</p><div><button value="cancel">取消</button><button type="button" class="selection-batch-action-button" data-intake-submit>校验并创建 Selection</button></div></footer>
+      <footer class="selection-batch-dialog__foot"><p>CURRENT：一个商品对应一个本地素材文件夹；批量选品另走独立批量入口。</p><div><button value="cancel">取消</button><button type="button" class="selection-batch-action-button" data-intake-submit>校验并创建 Selection</button></div></footer>
     </form>`;
   root.appendChild(dialog);
 
@@ -111,7 +112,7 @@ function createIntakeDialog(root, onCompleted) {
     const submit = dialog.querySelector("[data-intake-submit]");
     if (!excel) {
       errorNode.hidden = false;
-      errorNode.textContent = "请先选择1688 Excel。";
+      errorNode.textContent = "请先选择1688单品 Excel。";
       return;
     }
     errorNode.hidden = true;
