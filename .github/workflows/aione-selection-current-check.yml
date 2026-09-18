@@ -93,8 +93,9 @@ jobs:
           grep -Fq '_PREVIEW_SERVICE: aione-backend-preview' "$preview"
           grep -Fq -- '--no-allow-unauthenticated' "$preview"
           grep -Fq 'selection:intake:schema:preflight' "$preview"
-          if grep -Fq 'backendUrl: CURRENT_BACKEND_URL,' "$bridge"; then
-            echo '[AIONE][FATAL] Preview bridge can still unconditionally target CURRENT backend.'
+          grep -Fq 'const target = backendTarget();' "$bridge"
+          if grep -Fq 'const env = {' "$bridge" && grep -A2 -F 'const env = {' "$bridge" | grep -Fq 'backendUrl: CURRENT_BACKEND_URL'; then
+            echo '[AIONE][FATAL] requiredEnv bypasses backendTarget and can route Preview to CURRENT.'
             exit 12
           fi
           echo 'AIONE Preview backend isolation PASS.'
