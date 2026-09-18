@@ -1,0 +1,101 @@
+name: AIONE Selection CURRENT Check
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  selection-current-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check Selection frontend and backend syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check apps/systems/aione/js/pages/selection-workbench.js
+          node --check apps/systems/aione/js/pages/selection-workbench-current.js
+          node --check apps/systems/aione/js/pages/selection-secondary-pages.js
+          node --check apps/systems/aione/js/data/selection-workbench-adapter.js
+          node --check apps/systems/aione/backend/src/routes/selections.js
+          node --check apps/systems/aione/backend/src/routes/selection-intake.js
+          node --check apps/systems/aione/backend/src/services/selection-intake-service.js
+          node --check apps/systems/aione/backend/src/services/selection-sku-evidence-service.js
+          node --check apps/systems/aione/backend/scripts/preflight-selection-intake-schema.js
+          node --check apps/systems/aione/api/aione-bridge.js
+
+      - name: Prove one canonical Selection renderer
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'route: "selection"' apps/systems/aione/js/config/home-registry.js
+          grep -Fq 'routeId === "selection"' apps/systems/aione/js/config/sidebar-registry.js
+          grep -Fq 'location.hash="#/selection"' apps/systems/aione/js/pages/product-home-current.js
+          if grep -Eq 'renderSelectionView|selectionData\(' apps/systems/aione/js/pages/product-home-current.js; then
+            echo '[AIONE][FATAL] Duplicate Product Home Selection renderer returned.'
+            exit 10
+          fi
+          grep -Fq 'initSelectionWorkbenchCurrent' apps/systems/aione/js/pages/selection-workbench.js
+          grep -Fq '/api/v1/selections' apps/systems/aione/js/data/selection-workbench-adapter.js
+          grep -Fq '/api/v1/selection-intake' apps/systems/aione/js/pages/selection-workbench-current.js
+
+      - name: Block Preview and placeholder SKU truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            apps/systems/aione/js/pages/selection-workbench.js
+            apps/systems/aione/js/pages/selection-workbench-current.js
+            apps/systems/aione/js/pages/selection-secondary-pages.js
+            apps/systems/aione/js/data/selection-workbench-adapter.js
+          )
+          if grep -En 'preview-opportunities|importPreviewOpportunities|createPreviewOpportunityId|skuCount:[[:space:]]*1|skuCount[[:space:]]*=[[:space:]]*1' "${files[@]}"; then
+            echo '[AIONE][FATAL] Preview/localStorage Selection or placeholder SKU logic detected.'
+            exit 11
+          fi
+
+      - name: Prove Gate 0A and SKU evidence boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq '1 个 1688 商品 Excel + 1 个本地商品素材文件夹 → 1 个真实 Selection' apps/systems/aione/js/pages/selection-workbench-current.js
+          grep -Fq 'records.length !== 1' apps/systems/aione/js/pages/selection-workbench-current.js
+          grep -Fq 'LEFT JOIN public.products p' apps/systems/aione/backend/src/routes/selections.js
+          grep -Fq '/:id/sku-evidence' apps/systems/aione/backend/src/routes/selections.js
+          grep -Fq 'fetch1688ProductByUrl' apps/systems/aione/backend/src/services/selection-sku-evidence-service.js
+          grep -Fq 'sufficientForAutomaticSkuInheritance' apps/systems/aione/backend/src/services/selection-sku-evidence-service.js
+          echo 'AIONE Selection CURRENT contract PASS.'
+
+      - name: Prove Preview backend isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          bridge=apps/systems/aione/api/aione-bridge.js
+          preview=infra/gcp/cloudbuild/deploy-preview.yaml
+          grep -Fq 'VERCEL_ENV' "$bridge"
+          grep -Fq 'AIONE_PREVIEW_BACKEND_URL' "$bridge"
+          grep -Fq 'aione_preview_backend_not_configured' "$bridge"
+          grep -Fq 'backendAudience' "$bridge"
+          grep -Fq '_PREVIEW_SERVICE: aione-backend-preview' "$preview"
+          grep -Fq -- '--no-allow-unauthenticated' "$preview"
+          grep -Fq 'selection:intake:schema:preflight' "$preview"
+          grep -Fq 'const target = backendTarget();' "$bridge"
+          if grep -Fq 'const env = {' "$bridge" && grep -A2 -F 'const env = {' "$bridge" | grep -Fq 'backendUrl: CURRENT_BACKEND_URL'; then
+            echo '[AIONE][FATAL] requiredEnv bypasses backendTarget and can route Preview to CURRENT.'
+            exit 12
+          fi
+          echo 'AIONE Preview backend isolation PASS.'

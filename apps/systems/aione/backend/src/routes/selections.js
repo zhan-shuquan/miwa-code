@@ -1,5 +1,6 @@
 import { Router } from "express";
 import pool from "../../db.js";
+import { auditSelectionSkuEvidence } from "../services/selection-sku-evidence-service.js";
 
 const router = Router();
 
@@ -105,8 +106,13 @@ router.get("/", async (req, res, next) => {
          o.business_id, o.category_id, o.owner_person_id,
          o.estimated_cost, o.estimated_sale_price, o.currency,
          o.metadata, o.created_at, o.updated_at, o.record_version,
+         p.id AS converted_product_id,
+         p.product_code AS converted_product_code,
+         p.lifecycle_status AS converted_product_status,
          COUNT(*) OVER()::INTEGER AS total_count
        FROM public.product_opportunities o
+       LEFT JOIN public.products p
+         ON p.source_opportunity_id = o.id AND p.archived_at IS NULL
        WHERE ${clauses.join(" AND ")}
        ORDER BY ${sortBy} ${sortDirection} NULLS LAST, o.created_at DESC, o.id DESC
        LIMIT ${limitParam} OFFSET ${offsetParam}`,
@@ -131,6 +137,15 @@ router.get("/", async (req, res, next) => {
         sortDirection: sortDirection.toLowerCase()
       }
     });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get("/:id/sku-evidence", async (req, res, next) => {
+  try {
+    const audit = await auditSelectionSkuEvidence(req.params.id);
+    return res.json({ ok: true, ...audit });
   } catch (error) {
     return next(error);
   }

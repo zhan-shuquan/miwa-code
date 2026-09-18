@@ -48,7 +48,7 @@ function getParentRoute(routeId) {
 }
 
 function resolvePlatformRoot(routeId) {
-  if (routeId === "category-home") return "product-home";
+  if (routeId === "category-home" || routeId === "selection") return "product-home";
   if (PLATFORM_CONTEXT_META[routeId]) return routeId;
 
   let cursor = routeId;
@@ -111,7 +111,6 @@ function buildRegistryHomeItems(rootId) {
   if (!definition || definition.template === "personal-work-home") return null;
 
   const items = [];
-  // 商品之家的根级入口属于 Main 横向导航，不进入承载16个业务中心的 Sidebar。
   if (definition.overview?.enabled && rootId !== "product-home") {
     items.push({
       id: `${rootId}-overview`,
