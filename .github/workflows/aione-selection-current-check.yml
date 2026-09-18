@@ -35,6 +35,8 @@ jobs:
           node --check apps/systems/aione/backend/src/routes/selection-intake.js
           node --check apps/systems/aione/backend/src/services/selection-intake-service.js
           node --check apps/systems/aione/backend/src/services/selection-sku-evidence-service.js
+          node --check apps/systems/aione/backend/scripts/preflight-selection-intake-schema.js
+          node --check apps/systems/aione/api/aione-bridge.js
 
       - name: Prove one canonical Selection renderer
         shell: bash
@@ -77,3 +79,22 @@ jobs:
           grep -Fq 'fetch1688ProductByUrl' apps/systems/aione/backend/src/services/selection-sku-evidence-service.js
           grep -Fq 'sufficientForAutomaticSkuInheritance' apps/systems/aione/backend/src/services/selection-sku-evidence-service.js
           echo 'AIONE Selection CURRENT contract PASS.'
+
+      - name: Prove Preview backend isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          bridge=apps/systems/aione/api/aione-bridge.js
+          preview=infra/gcp/cloudbuild/deploy-preview.yaml
+          grep -Fq 'VERCEL_ENV' "$bridge"
+          grep -Fq 'AIONE_PREVIEW_BACKEND_URL' "$bridge"
+          grep -Fq 'aione_preview_backend_not_configured' "$bridge"
+          grep -Fq 'backendAudience' "$bridge"
+          grep -Fq '_PREVIEW_SERVICE: aione-backend-preview' "$preview"
+          grep -Fq -- '--no-allow-unauthenticated' "$preview"
+          grep -Fq 'selection:intake:schema:preflight' "$preview"
+          if grep -Fq 'backendUrl: CURRENT_BACKEND_URL,' "$bridge"; then
+            echo '[AIONE][FATAL] Preview bridge can still unconditionally target CURRENT backend.'
+            exit 12
+          fi
+          echo 'AIONE Preview backend isolation PASS.'
