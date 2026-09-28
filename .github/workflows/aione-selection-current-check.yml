@@ -78,6 +78,8 @@ jobs:
           grep -Fq '/:id/sku-evidence' apps/systems/aione/backend/src/routes/selections.js
           grep -Fq 'fetch1688ProductByUrl' apps/systems/aione/backend/src/services/selection-sku-evidence-service.js
           grep -Fq 'sufficientForAutomaticSkuInheritance' apps/systems/aione/backend/src/services/selection-sku-evidence-service.js
+          grep -Fq 'data-object-action="sku-evidence"' apps/systems/aione/js/pages/selection-workbench-current.js
+          grep -Fq '/sku-evidence' apps/systems/aione/js/pages/selection-workbench-current.js
           echo 'AIONE Selection CURRENT contract PASS.'
 
       - name: Prove Preview backend isolation
