@@ -149,6 +149,43 @@ function productHtml(item) {
   return `<div class="miwa-selection-list-product"><span class="miwa-selection-list-thumb">${image}</span><span><strong>${esc(item.name)}</strong><small>${esc(item.selectionNo || item.id)} · ${esc(item.type)} · ${source}</small></span></div>`;
 }
 
+
+function showSkuEvidenceDialog(root, item, audit) {
+  let dialog = root.querySelector("dialog[data-sku-evidence-dialog]");
+  if (!dialog) {
+    dialog = document.createElement("dialog");
+    dialog.setAttribute("data-sku-evidence-dialog", "");
+    dialog.className = "selection-batch-dialog";
+    root.appendChild(dialog);
+  }
+  const evidence = audit?.evidence || {};
+  const rows = Array.isArray(evidence.skus) ? evidence.skus : [];
+  dialog.innerHTML = `
+    <div class="selection-batch-dialog__body">
+      <div class="selection-batch-dialog__head">
+        <div><small>Gate 0B · Read-only Evidence</small><h2>1688 SKU 证据</h2><p>${esc(item?.selectionNo || item?.id || "Selection")} · ${esc(item?.name || "")}</p></div>
+        <button type="button" class="selection-batch-dialog__close" data-sku-evidence-close aria-label="关闭">×</button>
+      </div>
+      <div class="selection-batch-validation">
+        状态：${esc(evidence.status || "unknown")} ｜ SKU：${Number(evidence.skuCount || 0)} ｜ 可用：${Number(evidence.usableSkuCount || 0)}
+        ｜ 自动继承：${evidence.sufficientForAutomaticSkuInheritance ? "可以" : "不可以"}
+      </div>
+      <div class="selection-batch-validation">${esc(evidence.reason || "暂无说明")}</div>
+      <div class="miwa-object-table-wrap">
+        <table class="miwa-object-table">
+          <thead><tr><th>sourceSkuId</th><th>规格 spec</th><th>价格</th><th>库存</th></tr></thead>
+          <tbody>${rows.length ? rows.map((sku) => `<tr><td>${esc(sku.sourceSkuId || "—")}</td><td>${esc(sku.sourceSpec || "—")}</td><td>${esc(sku.sourcePrice ?? "—")}</td><td>${esc(sku.sourceStock ?? "—")}</td></tr>`).join("") : '<tr><td colspan="4">1688 未返回结构化 SKU 证据</td></tr>'}</tbody>
+        </table>
+      </div>
+      <footer class="selection-batch-dialog__foot">
+        <p>只读验证：不会修改 Selection，不会创建 Product 或 SKU。</p>
+        <div><button type="button" data-sku-evidence-close>关闭</button></div>
+      </footer>
+    </div>`;
+  dialog.querySelectorAll("[data-sku-evidence-close]").forEach((button) => button.addEventListener("click", () => dialog.close()));
+  if (!dialog.open) dialog.showModal();
+}
+
 export async function initSelectionWorkbenchCurrent() {
   const entry = document.getElementById("miwa-selection-template-entry");
   if (!entry) return false;
@@ -218,7 +255,36 @@ export async function initSelectionWorkbenchCurrent() {
         { label: "正式商品", value: (item) => item.convertedProductCode || "—" },
         { label: "时间", value: (item) => item.time }
       ],
-      actions: []
+      actions: [
+        {
+          key: "sku-evidence",
+          label: "SKU证据",
+          visible: (item) => String(item?.source || "").toLowerCase() === "1688" && Boolean(item?.sourceUrl)
+        }
+      ]
+    });
+
+    if (!table.body.dataset.skuEvidenceBound) {
+      table.body.dataset.skuEvidenceBound = "true";
+      table.body.addEventListener("click", async (event) => {
+        const button = event.target.closest('[data-object-action="sku-evidence"]');
+        if (!button) return;
+        const item = items.find((row) => String(row.id) === String(button.dataset.objectId));
+        if (!item) return;
+        const original = button.textContent;
+        button.disabled = true;
+        button.textContent = "读取中…";
+        try {
+          const audit = await aioneApi(`/api/v1/selections/${encodeURIComponent(item.id)}/sku-evidence`);
+          showSkuEvidenceDialog(base.root, item, audit);
+        } catch (error) {
+          workspace.showError(`SKU证据读取失败：${error?.message || "请重试"}`);
+        } finally {
+          button.disabled = false;
+          button.textContent = original;
+        }
+      });
+    }
     });
   }
 
