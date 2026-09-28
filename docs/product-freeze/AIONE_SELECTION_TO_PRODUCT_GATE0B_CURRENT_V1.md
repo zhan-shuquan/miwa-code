@@ -125,3 +125,15 @@ Selection → 人工通过 → 规格确认 → 原子创建 Product + genuine S
 本文只冻结已经有证据支持的边界与禁止项。
 
 “来源规格自动继承”还是“AIONE 规格确认”目前仍为 VALIDATING。CURRENT 下一步先复用已有 1688 client 对真实 Selection 做只读 SKU evidence audit；在真实结果出来前，不擅自锁定最终路径。
+
+## 9. Preview 验证环境
+
+Gate 0B 的人工与只读验证必须使用独立 Preview Backend，不得回退 Production Backend。
+
+当前 Vercel Preview 环境统一读取：
+
+- `AIONE_PREVIEW_BACKEND_URL=https://aione-backend-preview-jjlnxogxta-an.a.run.app`
+- 适用范围：Preview / All unassigned git branches
+- 若该变量缺失，Preview 必须 fail-closed 返回 `aione_preview_backend_not_configured`
+
+任何 Preview → CURRENT Backend fallback 都视为 Architecture Guardrail 失败。
