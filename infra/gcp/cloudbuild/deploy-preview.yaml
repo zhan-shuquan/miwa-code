@@ -1,0 +1,95 @@
+substitutions:
+  _REGION: asia-northeast1
+  _PREVIEW_SERVICE: aione-backend-preview
+  _SQL_INSTANCE: aione-pg-dev
+  _DB_NAME: aione
+  _DB_USER: aione_app
+  _DB_PASSWORD_SECRET: aione-db-password-dev
+  _RUNTIME_SERVICE_ACCOUNT: aione-runtime@miwa-aione.iam.gserviceaccount.com
+  _GOOGLE_CLIENT_ID: 49629089449-5lkfjfnadvq14f9uuid91chqgjjdihmi.apps.googleusercontent.com
+  _PREVIEW_ORIGIN: https://dev.aione.miwa-happyhouse.com
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: build-preview-image
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-$SHORT_SHA
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    id: push-preview-image
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-$SHORT_SHA
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: selection-intake-schema-preflight
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        CONNECTION="$$(gcloud sql instances describe "${_SQL_INSTANCE}" --project="$PROJECT_ID" --format='value(connectionName)')"
+        test "$$CONNECTION" = "miwa-aione:asia-northeast1:aione-pg-dev"
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-$SHORT_SHA"
+        gcloud run jobs deploy aione-selection-intake-schema-preview \
+          --image="$$IMAGE" \
+          --region="${_REGION}" \
+          --project="$PROJECT_ID" \
+          --service-account="${_RUNTIME_SERVICE_ACCOUNT}" \
+          --set-cloudsql-instances="$$CONNECTION" \
+          --set-env-vars="DB_USER=${_DB_USER},DB_NAME=${_DB_NAME},INSTANCE_UNIX_SOCKET=/cloudsql/$$CONNECTION,NODE_ENV=production" \
+          --set-secrets="DB_PASS=${_DB_PASSWORD_SECRET}:latest" \
+          --command=npm \
+          --args=run,selection:intake:schema:preflight \
+          --tasks=1 \
+          --max-retries=0 \
+          --task-timeout=5m \
+          --quiet
+        gcloud run jobs execute aione-selection-intake-schema-preview \
+          --region="${_REGION}" \
+          --project="$PROJECT_ID" \
+          --wait
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: deploy-private-preview-service
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        CONNECTION="$$(gcloud sql instances describe "${_SQL_INSTANCE}" --project="$PROJECT_ID" --format='value(connectionName)')"
+        test "$$CONNECTION" = "miwa-aione:asia-northeast1:aione-pg-dev"
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-$SHORT_SHA"
+        gcloud run deploy "${_PREVIEW_SERVICE}" \
+          --image="$$IMAGE" \
+          --region="${_REGION}" \
+          --project="$PROJECT_ID" \
+          --service-account="${_RUNTIME_SERVICE_ACCOUNT}" \
+          --set-cloudsql-instances="$$CONNECTION" \
+          --set-env-vars="^@^DB_USER=${_DB_USER}@DB_NAME=${_DB_NAME}@INSTANCE_UNIX_SOCKET=/cloudsql/$$CONNECTION@NODE_ENV=production@AIONE_ALLOW_PREVIEW_ACTOR=false@AIONE_ALLOW_SYSTEM_WRITES=false@AIONE_REQUIRE_GOOGLE_AUTH=true@AIONE_GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID}@AIONE_CORS_ORIGINS=${_PREVIEW_ORIGIN}" \
+          --set-secrets="DB_PASS=${_DB_PASSWORD_SECRET}:latest" \
+          --no-allow-unauthenticated \
+          --quiet
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: authenticated-preview-health
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        SERVICE_URL="$$(gcloud run services describe "${_PREVIEW_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(status.url)')"
+        REVISION="$$(gcloud run services describe "${_PREVIEW_SERVICE}" --region="${_REGION}" --project="$PROJECT_ID" --format='value(status.latestReadyRevisionName)')"
+        TOKEN="$$(gcloud auth print-identity-token --audiences="$$SERVICE_URL")"
+        HEALTH="$$(curl -fsS -H "Authorization: Bearer $$TOKEN" "$$SERVICE_URL/health")"
+        printf '%s\n' "$$HEALTH"
+        printf '%s' "$$HEALTH" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p.get("ok") is True and p.get("database")=="connected"'
+        printf 'preview_service=%s\npreview_revision=%s\npreview_url=%s\n' "${_PREVIEW_SERVICE}" "$$REVISION" "$$SERVICE_URL"
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:preview-$SHORT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1200s

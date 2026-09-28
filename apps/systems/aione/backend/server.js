@@ -7,6 +7,7 @@ import integrations1688Router from "./src/routes/integrations-1688.js";
 import integrationsRakutenRouter from "./src/routes/integrations-rakuten.js";
 import driveAssetsRouter from "./src/routes/drive-assets.js";
 import selectionsRouter from "./src/routes/selections.js";
+import selectionIntakeRouter from "./src/routes/selection-intake.js";
 import productLifecycleRouter from "./src/routes/product-lifecycle.js";
 import productAssetsRouter from "./src/routes/product-assets.js";
 import productAssetReadinessRouter from "./src/routes/product-asset-readiness.js";
@@ -21,7 +22,6 @@ const app = express();
 app.disable("x-powered-by");
 app.use(express.json({ limit: "2mb" }));
 
-// Local Preview may run the static frontend on :5500 and Backend on :8080.
 const corsOrigins = new Set(String(process.env.AIONE_CORS_ORIGINS || "http://127.0.0.1:5500,http://localhost:5500").split(",").map((item) => item.trim()).filter(Boolean));
 app.use((req, res, next) => {
   const origin = req.header("origin");
@@ -65,16 +65,11 @@ function cookieValue(header, name) {
   return "";
 }
 
-// Branch Preview only. Production leaves this disabled, so these files are not served.
 const designCenterPreviewEnabled = String(process.env.AIONE_ENABLE_DESIGN_CENTER_PREVIEW || "false").toLowerCase() === "true";
 if (designCenterPreviewEnabled) {
   const previewRoot = String(process.env.AIONE_DESIGN_CENTER_PREVIEW_ROOT || "/app/design-center-preview").trim();
   const previewAccessToken = String(process.env.AIONE_PREVIEW_ACCESS_TOKEN || "").trim();
 
-  // Direct branch preview may be exposed through an isolated Cloud Run service.
-  // The service can be IAM-public only when this application token gate is configured.
-  // A valid URL token establishes a short-lived secure same-origin cookie so subsequent
-  // static assets and API calls do not need to carry the token in every request.
   if (previewAccessToken) {
     app.use((req, res, next) => {
       const supplied = String(req.query?.preview_key || "").trim();
@@ -90,12 +85,10 @@ if (designCenterPreviewEnabled) {
     });
   }
 
-  app.get("/", (_req, res) => res.redirect("/design-center-v1.html?product=MH0000002"));
+  app.get("/", (_req, res) => res.redirect("/design-center-v1.html"));
   app.use(express.static(previewRoot, { index: false, fallthrough: true, maxAge: 0 }));
 }
 
-// Production API requests must resolve a real Google identity server-side.
-// Cloud Run IAM remains a separate service-to-service boundary in front of this middleware.
 app.use(resolveAioneGoogleIdentity);
 
 app.use("/api/v1/me", currentUserRouter);
@@ -104,6 +97,7 @@ app.use("/api/v1/integrations/1688", integrations1688Router);
 app.use("/api/v1/integrations/rakuten", integrationsRakutenRouter);
 app.use("/api/v1/drive-assets", driveAssetsRouter);
 app.use("/api/v1/selections", selectionsRouter);
+app.use("/api/v1", selectionIntakeRouter);
 app.use("/api/v1/product-lifecycle", productLifecycleRouter);
 app.use("/api/v1/product-assets", productAssetsRouter);
 app.use("/api/v1/product-assets", productAssetReadinessRouter);

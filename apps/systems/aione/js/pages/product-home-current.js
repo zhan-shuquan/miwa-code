@@ -7,7 +7,6 @@ const ROOT_VIEWS=Object.freeze([
   {id:"assets",label:"资料一览",type:"asset-management"}
 ]);
 const VIEW_TYPES=Object.freeze({
-  "selection-center":["overview","data-list","electronic-publication"],
   "product-center":["overview","data-list","data-list","generator-wizard"],
   "profit-center":["data-list","analysis-report"],
   "design-center":["overview","data-list","batch-job-monitor","asset-management","master-data","mapping"],
@@ -25,7 +24,6 @@ const VIEW_TYPES=Object.freeze({
   "service-center":["overview","data-list"]
 });
 const CENTER_COPY=Object.freeze({
-  "selection-center":"商品生命周期入口。候选商品通过后才创建正式 Product。",
   "product-center":"统一管理 Product、SKU、Product Truth 与正式商品工作区。",
   "profit-center":"统一成本试算、智能定价与利润结果。",
   "design-center":"ProductAsset、DesignTask、Page Spec、Design Engine 与人工审核的唯一工作场所。",
@@ -74,28 +72,13 @@ const PAGE_TYPE_RENDERERS=Object.freeze({
   "batch-job-monitor":({label})=>`${toolbar({search:`搜索${label}`})}${dataTable(["任务 / 批次","执行方式","进度","成功","失败","状态"])}`,
   "analysis-report":()=>pending("利润分析","analysis-report","VALIDATING","只展示后端返回的真实成本与定价结果；前端不保留示例价格、示例成本或历史商品数据。"),
   "asset-management":({label})=>`${toolbar({search:`搜索${label}`})}<div class="phc-asset-groups"><div><strong>01_原始素材</strong><span>供应商 / 1688 原始证据</span></div><div><strong>02_实拍图</strong><span>美和实拍证据，可为空</span></div></div>${pending("ProductAsset 视图","asset-management","VALIDATING","物理目录只保留 01_原始素材 / 02_实拍图；SKU图、原始主图、详情图、白底图等作为 ProductAsset View/Filter，不再建立第二套物理目录。")}`,
-  "electronic-publication":()=>`<div class="phc-publication"><aside><strong>目录</strong><a href="#phc-handbook-1">商品生命周期</a><a href="#phc-handbook-2">Automation First</a><a href="#phc-handbook-3">对象与责任</a></aside><article><span>CURRENT</span><h2 id="phc-handbook-1">商品从选品开始</h2><p>Selection 是商品生命周期入口。选品通过后，系统才创建正式 Product，并由统一规则建立 SKU。</p><h2 id="phc-handbook-2">Automation First, Human by Exception</h2><p>确定、可继承、可计算和可映射的工作由系统完成；员工处理异常、低置信度、高风险、首次正式发布确认与最终责任判断。</p><h2 id="phc-handbook-3">一个对象，一份事实</h2><p>Product、SKU、ProductAsset、DesignTask、Listing、Publish Job、Inventory 与 Procurement 各守边界，通过关系连接，不复制事实。</p></article></div>`,
+  "electronic-publication":()=>`<div class="phc-publication"><aside><strong>目录</strong><a href="#phc-handbook-1">商品生命周期</a><a href="#phc-handbook-2">Automation First</a><a href="#phc-handbook-3">对象与责任</a></aside><article><span>CURRENT</span><h2 id="phc-handbook-1">商品从选品开始</h2><p>Selection 是商品生命周期入口。选品通过后，系统才创建正式 Product；SKU 必须来自真实规格事实，不由前端硬编码或图片数量推断。</p><h2 id="phc-handbook-2">Automation First, Human by Exception</h2><p>确定、可继承、可计算和可映射的工作由系统完成；员工处理异常、低置信度、高风险、首次正式发布确认与最终责任判断。</p><h2 id="phc-handbook-3">一个对象，一份事实</h2><p>Product、SKU、ProductAsset、DesignTask、Listing、Publish Job、Inventory 与 Procurement 各守边界，通过关系连接，不复制事实。</p></article></div>`,
   "error-queue":({label})=>`${toolbar({search:`搜索${label}`})}${dataTable(["严重度","错误类型","对象","可重试","负责人","状态"])}`
 });
 export { PAGE_TYPE_RENDERERS };
 
-async function selectionData(){return aioneApi('/api/v1/selections?limit=50');}
 function loading(){return `<div class="phc-loading"><span></span>正在通过 AIONE API Client 读取真实数据</div>`;}
 function loadError(error){return `<div class="phc-inline-error"><strong>真实 API 暂不可用</strong><span>${esc(error?.message||"连接失败")}</span><small>页面保持可用，不以 Mock 数据替代。</small></div>`;}
-
-async function renderSelectionView(stage,label,index){
-  if(index===2){stage.innerHTML=PAGE_TYPE_RENDERERS["electronic-publication"]({label});return;}
-  stage.innerHTML=loading();
-  try{
-    const payload=await selectionData();
-    const items=Array.isArray(payload?.items)?payload.items:[];
-    if(index===0){
-      stage.innerHTML=`<div class="phc-overview-grid">${metric("真实 Selection",String(items.length),"仅统计 API 当前返回记录")}${metric("Product 创建","Qualified 后","Selection 通过后才允许创建正式 Product")}${metric("SKU 创建","Product 后","不得由前端硬编码")}</div>${items.length?"":pending("选品聚合","overview","CURRENT","当前没有 Selection 记录；保持真实空状态。")}`;
-      return;
-    }
-    stage.innerHTML=`${toolbar({search:"搜索 Selection Code / 商品名 / 来源"})}${dataTable(["Selection Code","候选商品","来源","状态","正式商品"],items.map(item=>[item.selectionNo||item.id||"—",item.title||"—",item.sourcePlatform||"—",item.lifecycleStatus||"—",item.convertedProductCode||"—"]))}`;
-  }catch(error){stage.innerHTML=loadError(error);}
-}
 
 async function renderProductWorkspace(host,productCode){
   host.innerHTML=`<section class="phc phc-object-workspace">${loading()}</section>`;
@@ -116,10 +99,9 @@ function designLive(productCode){
 
 async function renderCenter(host,center,index,query){
   const label=center.tabs[index]||center.tabs[0],type=(VIEW_TYPES[center.id]||[])[index]||"overview";
-  host.innerHTML=`<section class="phc phc-center" aria-labelledby="phc-title">${pageHeader(center.label,CENTER_COPY[center.id],status(center.status))}${centerTabs(center,index)}<main class="phc-content" data-stage></main></section>`;
+  host.innerHTML=`<section class="phc phc-center" aria-labelledby="phc-title">${pageHeader(center.label,CENTER_COPY[center.id]||center.label,status(center.status))}${centerTabs(center,index)}<main class="phc-content" data-stage></main></section>`;
   const stage=host.querySelector("[data-stage]");
-  if(center.id==="selection-center") await renderSelectionView(stage,label,index);
-  else if(center.id==="product-center"&&index===0) stage.innerHTML=`<section class="phc-section"><h2>正式商品工作区</h2>${pending("Product 一览","data-list","VALIDATING","商品中心只接受正式 Product 数据源；历史演示商品已从运行时移除。")}</section><section class="phc-section"><h2>生命周期关系</h2>${lifecycle()}</section>`;
+  if(center.id==="product-center"&&index===0) stage.innerHTML=`<section class="phc-section"><h2>正式商品工作区</h2>${pending("Product 一览","data-list","VALIDATING","商品中心只接受正式 Product 数据源；历史演示商品已从运行时移除。")}</section><section class="phc-section"><h2>生命周期关系</h2>${lifecycle()}</section>`;
   else if(center.id==="product-center"&&(index===1||index===2)) stage.innerHTML=`${toolbar({search:index===1?"搜索商品编码 / 名称":"搜索 SKU Code / 商品"})}${dataTable(index===1?["商品编码","商品名称","SKU数","生命周期","发布状态"]:["SKU Code","Product Code","规格组合","状态","更新时间"])}`;
   else if(center.id==="design-center"&&index===2) stage.innerHTML=designLive(query.get("product"));
   else stage.innerHTML=PAGE_TYPE_RENDERERS[type]({center,label});
@@ -141,6 +123,10 @@ export async function initProductHomeCurrent(){
   if(!host)return false;
   document.body.dataset.productHome="current";
   const query=params(),centerId=query.get("center"),productCode=query.get("product");
+  if(centerId==="selection-center"){
+    location.hash="#/selection";
+    return true;
+  }
   if(productCode) await renderProductWorkspace(host,productCode);
   else if(centerId&&centerById(centerId)) await renderCenter(host,centerById(centerId),Math.max(0,Number(query.get("view")||0)),query);
   else renderRoot(host,query.get("view")||"overview");

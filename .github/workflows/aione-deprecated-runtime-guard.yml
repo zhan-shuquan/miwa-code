@@ -69,6 +69,26 @@ jobs:
             exit 2
           fi
 
+      - name: Require canonical Selection runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          active_selection=(
+            apps/systems/aione/js/pages/selection-workbench.js
+            apps/systems/aione/js/pages/selection-workbench-current.js
+            apps/systems/aione/js/pages/selection-secondary-pages.js
+            apps/systems/aione/js/data/selection-workbench-adapter.js
+          )
+          if grep -En 'preview-opportunities|importPreviewOpportunities|createPreviewOpportunityId|skuCount:[[:space:]]*1|skuCount[[:space:]]*=[[:space:]]*1' "${active_selection[@]}"; then
+            echo '[AIONE][FATAL] Preview/localStorage Selection or placeholder SKU logic returned to CURRENT runtime.'
+            exit 4
+          fi
+          grep -Fq 'route: "selection"' apps/systems/aione/js/config/home-registry.js
+          grep -Fq 'routeId === "selection"' apps/systems/aione/js/config/sidebar-registry.js
+          grep -Fq '/api/v1/selections' apps/systems/aione/js/data/selection-workbench-adapter.js
+          grep -Fq '/api/v1/selection-intake' apps/systems/aione/js/pages/selection-workbench-current.js
+          echo 'AIONE canonical Selection runtime guard passed.'
+
       - name: Block retired experiment naming from other CI workflows
         shell: bash
         run: |
