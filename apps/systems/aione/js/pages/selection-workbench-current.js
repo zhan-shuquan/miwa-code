@@ -285,7 +285,6 @@ export async function initSelectionWorkbenchCurrent() {
         }
       });
     }
-    });
   }
 
   async function refresh(result = null) {
