@@ -102,7 +102,7 @@ export async function showProducts(host,notice=""){
    const area=host.querySelector("[data-pe-table]");if(!area)return;
    try{
      const res=await aioneApi(BASE+"?q="+encodeURIComponent(value)+"&limit=200");
-     area.innerHTML='<div class="pe-scroll"><table class="pe-table"><thead><tr><th>本地货号</th><th>AIONE编码</th><th>商品名称</th><th>售价JPY</th><th>版本</th><th>自动上架</th><th></th></tr></thead><tbody>'+res.items.map(p=>'<tr><td>'+esc(p.localCode)+'</td><td>'+esc(p.productCode)+'</td><td>'+esc(p.nameZh)+'</td><td>'+esc(p.salePriceJpy??"—")+'</td><td>'+esc(p.version)+'</td><td>'+esc(p.autoPublish?"是（待校验）":"否")+'</td><td><button data-pe-edit="'+esc(p.id)+'">编辑</button></td></tr>').join("")+(res.items.length?"":'<tr><td colspan="7">暂无商品，请新增或导入。</td></tr>')+'</tbody></table></div>';
+     area.innerHTML='<div class="pe-scroll"><table class="pe-table"><thead><tr><th>本地货号</th><th>AIONE编码</th><th>商品名称</th><th>售价JPY</th><th>版本</th><th>自动上架</th><th></th></tr></thead><tbody>'+res.items.map(p=>'<tr><td>'+esc(p.localCode)+'</td><td>'+esc(p.productCode)+'</td><td>'+esc(p.nameZh)+'</td><td>'+esc(p.salePriceJpy??"—")+'</td><td>'+esc(p.version)+'</td><td>'+esc(p.autoPublish?"是（待校验）":"否")+'</td><td>'+(p.readOnly?'<span class="pe-note">既有商品（只读）</span>':'<button data-pe-edit="'+esc(p.id)+'">编辑</button>')+'</tr>').join("")+(res.items.length?"":'<tr><td colspan="7">暂无商品，请新增或导入。</td></tr>')+'</tbody></table></div>';
      area.querySelectorAll("[data-pe-edit]").forEach(b=>b.onclick=async()=>{try{const d=await aioneApi(BASE+"/"+encodeURIComponent(b.dataset.peEdit));editor(host,d.product);}catch(e){alert("读取失败："+e.message);}});
    }catch(err){area.innerHTML='<div class="pe-alert">商品接口未就绪："+esc(err.message)+"。未显示任何模拟数据。</div>';}
  };
