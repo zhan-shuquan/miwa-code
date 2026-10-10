@@ -42,7 +42,7 @@ jobs:
           node-version: "22"
       - name: Install backend dependencies
         working-directory: apps/systems/aione/backend
-        run: npm ci --no-audit --no-fund
+        run: npm install --package-lock=false --no-audit --no-fund
       - name: Validate changed JS syntax
         run: |
           node --check apps/systems/aione/backend/src/services/product-entry-contract.js
