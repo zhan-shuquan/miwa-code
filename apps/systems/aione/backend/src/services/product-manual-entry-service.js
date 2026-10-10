@@ -96,7 +96,7 @@ export async function saveManualProduct(input, context={}, options={}) {
 export async function listManualProducts({query="",limit=100,offset=0}={}) {
   await assertCurrentProductEntrySchema(pool);
   const q=String(query||"").trim();
-  const lim=Math.min(200,Math.max(1,Number(limit)||100)),skip=Math.max(0,Number(offset)||0);
+  const lim=Math.min(201,Math.max(1,Number(limit)||100)),skip=Math.max(0,Number(offset)||0);
   const r=await pool.query("SELECT "+BASIC_FIELDS+" FROM public.products WHERE metadata ? 'manualEntry' AND ($1='' OR product_code ILIKE $2 OR name_zh ILIKE $2 OR metadata->'manualEntry'->>'localCode' ILIKE $2) ORDER BY updated_at DESC LIMIT $3 OFFSET $4",[q,"%"+q+"%",lim,skip]);
   return r.rows.map(unwrap);
 }
