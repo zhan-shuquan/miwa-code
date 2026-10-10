@@ -52,11 +52,11 @@ async function run(){
   assert.equal(variants.length,4,"two colors x M/L must yield four SKU combinations");
   assert.deepEqual(variants.map(x=>x.identity),["颜色=黑色|尺码=M","颜色=黑色|尺码=L","颜色=灰色|尺码=M","颜色=灰色|尺码=L"]);
   const customized=normalizeProductEntry({...slash,skuOverrides:[{index:2,identity:"颜色=灰色|尺码=M",priceJpy:1580,stock:321}]});
-  const changed=normalizeProductEntry({...customized,specs:[{name:"颜色",values:"灰色，黑色"},{name:"尺码",values:"M/L"}]});
-  const rsku=buildSkuEntries(changed).find(x=>x.identity==="颜色=灰色|尺码=M");
+  const reordered=normalizeProductEntry({...customized,specs:[{name:"颜色",values:"灰色，黑色"},{name:"尺码",values:"M/L"}]});
+  const rsku=buildSkuEntries(reordered).find(x=>x.identity==="颜色=灰色|尺码=M");
   assert.equal(rsku.priceJpy,1580,"SKU price override must follow specification identity, not row");
   assert.equal(rsku.stock,321,"SKU stock override must follow specification identity, not row");
-  assert.equal(buildSkuEntries(changed).find(x=>x.identity==="颜色=黑色|尺码=L").stock,1000);
+  assert.equal(buildSkuEntries(reordered).find(x=>x.identity==="颜色=黑色|尺码=L").stock,1000);
   const exported=await exportProductEntries([original]);
   const roundtrip=await parseProductEntryWorkbook(exported,"aione_export.xlsx");
   assert.equal(roundtrip.items[0].localCode,original.localCode);
