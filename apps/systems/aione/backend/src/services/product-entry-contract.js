@@ -71,7 +71,7 @@ export function normalizeProductEntry(input = {}) {
   if (p.setQuantity !== null && (!Number.isInteger(p.setQuantity) || p.setQuantity < 1)) throw bad("invalid_set_quantity", "套装数量必须是正整数。");
   p.specs = [];
   if (Array.isArray(input.specs)) {
-    for (const item of input.specs.slice(0, 3)) if (str(item?.name)) p.specs.push({ name: str(item.name), values: values(item.values) });
+    for (const item of input.specs) if (str(item?.name)) p.specs.push({ name: str(item.name), values: values(item.values) });
   } else {
     for (let i = 1; i <= 3; i++) {
       const name = str(input["spec" + i + "Name"]);
@@ -82,7 +82,7 @@ export function normalizeProductEntry(input = {}) {
   const overrides = Array.isArray(input.skuOverrides) ? input.skuOverrides : [];
   p.skuOverrides = overrides.map(o => {
     const index = Number(o.index);
-    if (!Number.isInteger(index) || index < 1 || index > 12) throw bad("invalid_sku_index", "SKU序号必须为1至12。");
+    if (!Number.isSafeInteger(index) || index < 1) throw bad("invalid_sku_index", "SKU序号必须为正整数。");
     const priceJpy = num(o.priceJpy, "SKU售价");
     const stock = num(o.stock, "SKU库存");
     const purchaseCostCny = num(o.purchaseCostCny, "SKU采购价");
@@ -103,7 +103,7 @@ export function buildSkuEntries(p) {
   let combinations = [{}];
   for (const spec of p.specs || []) {
     combinations = combinations.flatMap(item => spec.values.map(v => ({ ...item, [spec.name]: v })));
-    if (combinations.length > 12) throw bad("too_many_skus", "规格组合超过12个，禁止自动上架。");
+    // SKU quantity is not a catalog-entry business limit. Channel rules are checked at publication.
   }
   return combinations.map((attributes, i) => {
     const override = (p.skuOverrides || []).find(o => o.index === i + 1) || {};
