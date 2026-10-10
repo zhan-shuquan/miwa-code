@@ -1,0 +1,61 @@
+name: AIONE Product Entry Contract
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - apps/systems/aione/backend/src/services/product-entry-contract.js
+      - apps/systems/aione/backend/src/services/product-manual-entry-service.js
+      - apps/systems/aione/backend/src/routes/product-manual-entry.js
+      - apps/systems/aione/backend/scripts/test-product-entry-current.js
+      - apps/systems/aione/js/pages/product-manual-entry.js
+      - apps/systems/aione/js/pages/product-home-current.js
+      - apps/systems/aione/backend/server.js
+      - .github/workflows/aione-product-entry-contract.yml
+      - data-code/current/0001_aione_current_baseline.sql
+permissions:
+  contents: read
+jobs:
+  product-entry-contract:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aione_ci
+          POSTGRES_PASSWORD: aione_ci
+          POSTGRES_DB: aione_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aione_ci -d aione_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://aione_ci:aione_ci@localhost:5432/aione_ci
+      AIONE_ENV: controlled-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install backend dependencies
+        working-directory: apps/systems/aione/backend
+        run: npm install --package-lock=false --no-audit --no-fund
+      - name: Validate changed JS syntax
+        run: |
+          node --check apps/systems/aione/backend/src/services/product-entry-contract.js
+          node --check apps/systems/aione/backend/src/services/product-manual-entry-service.js
+          node --check apps/systems/aione/backend/src/routes/product-manual-entry.js
+          node --check apps/systems/aione/backend/scripts/test-product-entry-current.js
+          node --check apps/systems/aione/js/pages/product-manual-entry.js
+          node --check apps/systems/aione/js/pages/product-home-current.js
+          node --check apps/systems/aione/backend/server.js
+      - name: Initialize disposable CURRENT SQL baseline
+        env:
+          PGPASSWORD: aione_ci
+        run: psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -f data-code/current/0001_aione_current_baseline.sql
+      - name: Test Excel/WPS and CURRENT database roundtrip (no Rakuten)
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-product-entry-current.js

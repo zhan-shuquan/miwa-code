@@ -1,5 +1,6 @@
 import { PRODUCT_HOME_CENTERS } from "../config/home-registry.js?v=20260908-product-home-current";
 import { aioneApi } from "../services/aione-api-client.js";
+import { showProducts } from "./product-manual-entry.js";
 
 const PRODUCT_REF="MH0000002";
 const SELECTION_REF="SEL-20260907-000001";
@@ -117,7 +118,7 @@ async function renderCenter(host,center,index){
   const stage=host.querySelector("[data-stage]");
   if(center.id==="selection-center")await renderSelectionView(stage,label,index);
   else if(center.id==="product-center"&&index===0)stage.innerHTML=`<section class="phc-section"><h2>正式商品工作区</h2><button class="phc-object-row" data-open-product><span class="phc-product-thumb">M2</span><span><strong>${PRODUCT_REF}</strong><small>冬款男袜6双套装 · 1个SKU</small></span>${status("active")}<b>›</b></button></section><section class="phc-section"><h2>生命周期关系</h2>${lifecycle()}</section>`;
-  else if(center.id==="product-center"&&index===1)stage.innerHTML=`${toolbar({search:"搜索商品编码 / 名称"})}${dataTable(["商品编码","商品名称","SKU数","生命周期","发布状态"],[[PRODUCT_REF,"冬款男袜6双套装","1","draft","NOT YET IMPLEMENTED"]])}`;
+  else if(center.id==="product-center"&&index===1)await showProducts(stage);
   else if(center.id==="product-center"&&index===2)stage.innerHTML=`${toolbar({search:"搜索 SKU Code / 商品"})}${dataTable(["SKU Code","Product Code","规格组合","状态","更新时间"],[[SKU_REF,PRODUCT_REF,"款式｜6双套装","CURRENT","2026-09-07"]])}`;
   else if(center.id==="design-center"&&index===2)stage.innerHTML=designLive();
   else stage.innerHTML=PAGE_TYPE_RENDERERS[type]({center,label});

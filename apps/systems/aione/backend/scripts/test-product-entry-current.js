@@ -1,0 +1,111 @@
+import assert from "node:assert/strict";
+import ExcelJS from "exceljs";
+import pool from "../db.js";
+import {
+  normalizeProductEntry, buildSkuEntries, parseProductEntryWorkbook,
+  exportProductEntries, readinessWarnings
+} from "../src/services/product-entry-contract.js";
+import {
+  assertCurrentProductEntrySchema, saveManualProduct, listManualProducts,
+  getManualProduct, previewImportProducts, importManualProducts
+} from "../src/services/product-manual-entry-service.js";
+
+async function expectCode(fn, code) {
+  await assert.rejects(fn, err => err.code === code, "expected error code "+code);
+}
+async function wpsExample() {
+  const book=new ExcelJS.Workbook(),sheet=book.addWorksheet("商品信息"),sku=book.addWorksheet("sku生成器");
+  const fields={
+    C3:"zjl238",C4:"户外水龙头防冻罩",C5:"https://detail.1688.com/offer/961532175335.html",
+    C6:5.5,C7:0,C8:1,C9:64,C10:"家居用品",C11:"HOMEONE",
+    C13:"空运大件（普货）",C14:"原装",C15:"3cm厚",C16:"A4信封",
+    C17:26,C18:18,C19:2,C24:0,C38:980,
+    I3:"蛇口カバー 凍結防止 屋外",I4:"冬の蛇口に、かぶせて留めるだけ",I5:565305,
+    I10:1000,I13:"モニターの発色により異なる場合があります",I22:"颜色",J22:"黑色",I30:"是"
+  };
+  for(const [cell,value] of Object.entries(fields))sheet.getCell(cell).value=value;
+  sku.getCell("J9").value={formula:"IF(A9=\"\",\"\",IF(ISNUMBER(AD9),AD9,#REF!))",result:1000};
+  sku.getCell("L9").value=null;
+  return Buffer.from(await book.xlsx.writeBuffer());
+}
+async function run(){
+  const fixture=await parseProductEntryWorkbook(await wpsExample(),"zjl238.xlsx");
+  assert.equal(fixture.sourceKind,"wps-single");
+  assert.equal(fixture.items.length,1);
+  const original=fixture.items[0];
+  assert.equal(original.localCode,"zjl238");
+  assert.equal(original.nameZh,"户外水龙头防冻罩");
+  assert.equal(original.salePriceJpy,980);
+  assert.equal(original.rakutenGenreId,"565305");
+  assert.equal(original.autoPublish,true);
+  assert.equal(original.skuOverrides.length,0);
+  assert.equal(buildSkuEntries(original).length,1);
+  assert.equal(buildSkuEntries(original)[0].stock,null,"must ignore old 1000 test stock");
+  assert(fixture.warnings.some(x=>x.includes("1000")),"warn about sample stock");
+  assert(fixture.warnings.some(x=>x.includes("损坏引用")),"warn about broken formulas");
+  assert(readinessWarnings(original).length>0);
+  await expectCode(async()=>normalizeProductEntry({...original,autoPublish:"maybe"}),"invalid_auto_publish");
+  await expectCode(async()=>normalizeProductEntry({...original,specs:[{name:"颜色",values:Array.from({length:13},(_,i)=>String(i+1))}]}),"too_many_skus");
+  const exported=await exportProductEntries([original]);
+  const roundtrip=await parseProductEntryWorkbook(exported,"aione_export.xlsx");
+  assert.equal(roundtrip.items[0].localCode,original.localCode);
+  assert.equal(roundtrip.items[0].salePriceJpy,original.salePriceJpy);
+  assert.equal(roundtrip.items[0].specs[0].name,"颜色");
+  assert.deepEqual(roundtrip.items[0].specs[0].values,["黑色"]);
+  assert.equal(roundtrip.items[0].autoPublish,true);
+
+  // DATABASE_URL must point to a disposable CI Postgres with CURRENT baseline loaded.
+  if(!process.env.DATABASE_URL || process.env.AIONE_ENV!=="controlled-ci") {
+    throw new Error("Refusing DB contract test outside controlled-ci disposable database.");
+  }
+  await assertCurrentProductEntrySchema(pool);
+  const preview=await previewImportProducts([original]);
+  assert.equal(preview[0].action,"new_draft");
+  const added=await saveManualProduct(original,{personId:"ci",sourceSystem:"controlled-ci"},{createOnly:true});
+  assert.equal(added.product.localCode,"zjl238");
+  assert.match(added.product.productCode,/^MH\d{7}$/);
+  assert.equal(added.product.version,1);
+  assert.equal(added.skus.length,1);
+  const read=await getManualProduct("zjl238");
+  assert.equal(read.product.id,added.product.id);
+  assert.equal(read.product.salePriceJpy,980);
+  assert.equal(read.product.autoPublish,true);
+  assert.equal(read.skus.length,1);
+  const skuRecord=read.skus[0];
+  assert.equal(skuRecord.attributes["颜色"],"黑色");
+  const stored=await pool.query("SELECT status,metadata FROM public.products WHERE id=$1",[added.product.id]);
+  assert.equal(stored.rows[0].status,"draft");
+  assert.equal(stored.rows[0].metadata.autoPublishAuthorized,false);
+  assert.equal(stored.rows[0].metadata.publishStatus,"draft_only");
+  const listings=await pool.query("SELECT count(*)::integer AS n FROM public.listings WHERE product_id=$1",[added.product.id]);
+  assert.equal(listings.rows[0].n,0);
+
+  const changed=await saveManualProduct({...original,nameZh:"户外防冻罩（已校对）",salePriceJpy:1080},{
+    personId:"ci",sourceSystem:"controlled-ci"
+  },{updateOnly:true,expectedVersion:1});
+  assert.equal(changed.product.version,2);
+  const current=await getManualProduct("zjl238");
+  assert.equal(current.product.nameZh,"户外防冻罩（已校对）");
+  assert.equal(current.product.salePriceJpy,1080);
+  assert.equal(current.skus[0].sku_code,skuRecord.sku_code);
+  await expectCode(()=>saveManualProduct(original,{}, {updateOnly:true,expectedVersion:1}),"product_version_conflict");
+  await expectCode(()=>saveManualProduct(original,{}, {createOnly:true}),"product_exists");
+
+  const list=await listManualProducts({query:"zjl238"});
+  assert.equal(list.length,1);
+  assert.equal(list[0].id,added.product.id);
+  const e=await exportProductEntries([current.product]);
+  const parsed=await parseProductEntryWorkbook(e,"roundtrip.xlsx");
+  assert.equal(parsed.items[0].salePriceJpy,1080);
+
+  const second=normalizeProductEntry({...original,localCode:"zjl239",autoPublish:"否"});
+  const batch=await importManualProducts([original,second],{personId:"ci",sourceSystem:"controlled-ci"});
+  assert.equal(batch.successCount,1);
+  assert.equal(batch.failedCount,1);
+  assert.equal((await getManualProduct("zjl239")).product.autoPublish,false);
+  const skipped=await previewImportProducts([original,second]);
+  assert.deepEqual(skipped.map(x=>x.action),["existing_requires_confirm","existing_requires_confirm"]);
+
+  console.log("PASS: CURRENT baseline / real WPS pattern / Excel roundtrip / CRUD / versioning / SKU / duplicate / no publish.");
+}
+run().catch(e=>{console.error(e);process.exitCode=1}).finally(()=>pool.end());

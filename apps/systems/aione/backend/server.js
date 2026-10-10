@@ -8,6 +8,7 @@ import integrationsRakutenRouter from "./src/routes/integrations-rakuten.js";
 import driveAssetsRouter from "./src/routes/drive-assets.js";
 import selectionsRouter from "./src/routes/selections.js";
 import productLifecycleRouter from "./src/routes/product-lifecycle.js";
+import productManualEntryRouter from "./src/routes/product-manual-entry.js";
 import productAssetsRouter from "./src/routes/product-assets.js";
 import productAssetReadinessRouter from "./src/routes/product-asset-readiness.js";
 import productMaterialConfirmationRouter from "./src/routes/product-material-confirmation.js";
@@ -19,7 +20,7 @@ import { resolveAioneGoogleIdentity } from "./src/http/google-auth.js";
 const app = express();
 
 app.disable("x-powered-by");
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "4mb" })); // Excel base64 import is capped separately at 2MB raw payload
 
 // Local Preview may run the static frontend on :5500 and Backend on :8080.
 const corsOrigins = new Set(String(process.env.AIONE_CORS_ORIGINS || "http://127.0.0.1:5500,http://localhost:5500").split(",").map((item) => item.trim()).filter(Boolean));
@@ -105,6 +106,7 @@ app.use("/api/v1/integrations/rakuten", integrationsRakutenRouter);
 app.use("/api/v1/drive-assets", driveAssetsRouter);
 app.use("/api/v1/selections", selectionsRouter);
 app.use("/api/v1/product-lifecycle", productLifecycleRouter);
+app.use("/api/v1/product-entry", productManualEntryRouter);
 app.use("/api/v1/product-assets", productAssetsRouter);
 app.use("/api/v1/product-assets", productAssetReadinessRouter);
 app.use("/api/v1", productMaterialConfirmationRouter);

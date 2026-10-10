@@ -16,7 +16,8 @@ export function getRequestContext(req) {
 export function requireWriteActor(req, res, next) {
   const context = getRequestContext(req);
   const allowSystemWrites = String(process.env.AIONE_ALLOW_SYSTEM_WRITES || "false").toLowerCase() === "true";
-  if (!context.personId && !allowSystemWrites) {
+  const trustedAdmin = req.aioneIdentity?.subjectType === "admin" && req.aioneIdentity?.identitySource === "legacy_admin_bridge";
+  if (!context.personId && !trustedAdmin && !allowSystemWrites) {
     return res.status(401).json({
       error: "authenticated_actor_required",
       message: "AIONE writes require an authenticated person context unless system writes are explicitly enabled."
