@@ -22,7 +22,7 @@ export const FIELD_KEYS = Object.freeze([
 
 export const SKU_EXPORT_HEADERS = ["商品货号", "SKU序号", "售价覆盖(JPY)", "库存覆盖", "采购价覆盖(CNY)", "重量覆盖(g)", "发货尺寸覆盖", "SKU图片文件"];
 const NUMBERS = ["purchaseUnitCostCny", "domesticFreightCny", "setQuantity", "weightG", "packageLengthCm", "packageWidthCm", "packageHeightCm", "salePriceJpy"];
-const TEXTS = ["nameZh", "purchaseUrl", "category", "brand", "logisticsMethod", "packagingMethod", "sizeClass", "packagingMaterial", "rakutenTitle", "rakutenCatchCopy", "rakutenGenreId", "rakutenNotice", "pcDescription", "spDescription", "salesDescription", "targetShopRef"];
+const TEXTS = ["nameZh", "purchaseUrl", "category", "brand", "logisticsMethod", "packagingMethod", "sizeClass", "packagingMaterial", "rakutenTitle", "rakutenCatchCopy", "rakutenGenreId", "rakutenNotice", "pcDescription", "spDescription", "salesDescription", "targetShopRef", "sourcePlatform", "originCountry", "rakutenStoreCategory"];
 const BAD_EXCEL_ERRORS = ["#REF!", "#VALUE!", "#N/A", "#DIV/0!", "#NAME?", "#NUM!"];
 
 function bad(code, message, statusCode = 400) {
@@ -62,6 +62,30 @@ export function normalizeProductEntry(input = {}) {
   if (!/^[a-z]{2,8}[0-9]{2,6}$/.test(p.localCode)) throw bad("invalid_local_code", "商品货号必须类似zjl238、zsq081。");
   for (const key of TEXTS) p[key] = str(input[key]);
   for (const key of NUMBERS) p[key] = num(input[key], key);
+  p.sourcePlatform ||= "阿里巴巴";
+  p.logisticsMethod ||= "空运大件（普货）";
+  p.packagingMethod ||= "原装";
+  p.packagingMaterial ||= "A4信封";
+  p.originCountry ||= "中国";
+  p.setQuantity ??= 1;
+  p.domesticFreightCny ??= 0;
+  p.defaultStock = input.defaultStock === undefined || input.defaultStock === null || input.defaultStock === "" ? 1000 : num(input.defaultStock, "SKU默认库存");
+  if (!Number.isSafeInteger(p.defaultStock) || p.defaultStock < 0) throw bad("invalid_stock", "默认库存必须是非负整数。");
+  const rates = input.rates && typeof input.rates === "object" ? input.rates : {};
+  p.rates = {};
+  for (const key of ["coupon", "points", "ads", "other", "platform"]) {
+    const raw = rates[key];
+    const rate = raw === undefined || raw === null || raw === "" ? (key==="platform"?10:key==="points"?2:0) : num(raw, key+"费率");
+    if (!(rate >= 0 && rate <= 100)) throw bad("invalid_rate", key+"费率必须在0至100之间。");
+    p.rates[key] = rate;
+  }
+  const goals = input.profitTargets && typeof input.profitTargets === "object" ? input.profitTargets : {};
+  p.profitTargets = {};
+  for (const [key,def] of [["productMargin",40],["operationMargin",20]]) {
+    const val = goals[key] === undefined || goals[key] === null || goals[key] === "" ? def : num(goals[key], key);
+    if (!(val >= 0 && val < 100)) throw bad("invalid_margin_target", key+"利润目标必须在0至100%之间。");
+    p.profitTargets[key] = val;
+  }
   p.autoPublish = yes(input.autoPublish);
   if (!p.nameZh) throw bad("name_required", "商品名称不能为空。");
   if (p.salePriceJpy !== null && (!Number.isInteger(p.salePriceJpy) || p.salePriceJpy < 0)) throw bad("invalid_price", "实际售价必须是非负整数日元。");
@@ -71,7 +95,7 @@ export function normalizeProductEntry(input = {}) {
   if (p.setQuantity !== null && (!Number.isInteger(p.setQuantity) || p.setQuantity < 1)) throw bad("invalid_set_quantity", "套装数量必须是正整数。");
   p.specs = [];
   if (Array.isArray(input.specs)) {
-    for (const item of input.specs.slice(0, 3)) if (str(item?.name)) p.specs.push({ name: str(item.name), values: values(item.values) });
+    for (const item of input.specs) if (str(item?.name)) p.specs.push({ name: str(item.name), values: values(item.values) });
   } else {
     for (let i = 1; i <= 3; i++) {
       const name = str(input["spec" + i + "Name"]);
@@ -82,7 +106,7 @@ export function normalizeProductEntry(input = {}) {
   const overrides = Array.isArray(input.skuOverrides) ? input.skuOverrides : [];
   p.skuOverrides = overrides.map(o => {
     const index = Number(o.index);
-    if (!Number.isInteger(index) || index < 1 || index > 12) throw bad("invalid_sku_index", "SKU序号必须为1至12。");
+    if (!Number.isSafeInteger(index) || index < 1) throw bad("invalid_sku_index", "SKU序号必须为正整数。");
     const priceJpy = num(o.priceJpy, "SKU售价");
     const stock = num(o.stock, "SKU库存");
     const purchaseCostCny = num(o.purchaseCostCny, "SKU采购价");
@@ -103,13 +127,13 @@ export function buildSkuEntries(p) {
   let combinations = [{}];
   for (const spec of p.specs || []) {
     combinations = combinations.flatMap(item => spec.values.map(v => ({ ...item, [spec.name]: v })));
-    if (combinations.length > 12) throw bad("too_many_skus", "规格组合超过12个，禁止自动上架。");
+    // SKU quantity is not a catalog-entry business limit. Channel rules are checked at publication.
   }
   return combinations.map((attributes, i) => {
     const override = (p.skuOverrides || []).find(o => o.index === i + 1) || {};
     return {
       index: i + 1, attributes, priceJpy: override.priceJpy ?? p.salePriceJpy ?? null,
-      stock: override.stock ?? null, purchaseCostCny: override.purchaseCostCny ?? p.purchaseUnitCostCny ?? null,
+      stock: override.stock ?? p.defaultStock ?? 1000, purchaseCostCny: override.purchaseCostCny ?? p.purchaseUnitCostCny ?? null,
       weightG: override.weightG ?? p.weightG ?? null,
       sizeClass: override.sizeClass || p.sizeClass || "",
       imageFile: override.imageFile || (p.localCode + "_sku" + String(i + 1).padStart(2, "0") + ".jpg")
@@ -123,7 +147,6 @@ export function readinessWarnings(p) {
   if (!p.rakutenGenreId) out.push("尚未核实乐天末级ジャンルID和必填属性");
   if (!p.rakutenTitle || !p.rakutenCatchCopy) out.push("乐天标题或キャッチコピー不完整");
   if (!p.pcDescription || !p.spDescription || !p.salesDescription) out.push("PC/手机/销售说明文尚未分别确认");
-  if (buildSkuEntries(p).some(s => s.stock === null)) out.push("SKU实际可售库存来源未确认（未使用旧表1000件测试值）");
   out.push("商品图片和R-Cabinet发布证据尚待关联核验");
   return out;
 }
@@ -162,7 +185,7 @@ function fromWps(workbook, filename) {
     }));
     if (invalidFormulas) warnings.push("旧SKU生成器有" + invalidFormulas + "处损坏引用；SKU以原始规格值在AIONE重新组合");
   }
-  if (str(get(ws, "I10")) === "1000") warnings.push("已忽略旧单品表的初期库存1000；只接受SKU行显式覆盖库存");
+  // Stock defaults to 1000 for each generated SKU unless overridden.
   if (str(get(ws, "C24")) === "0") warnings.push("中国包装成本单元格为0，请与共享参数核对");
   return { items: [normalizeProductEntry(input)], sourceKind: "wps-single", filename, warnings };
 }
@@ -196,6 +219,17 @@ function fromBatch(workbook, filename) {
     for (const [key, label] of FIELD_KEYS) batchField(raw, cellText(row.getCell(columns.get(label))), key);
     if (!str(raw.localCode) && !str(raw.nameZh)) continue;
     raw.skuOverrides = overrideRows.get(str(raw.localCode).toLowerCase()) || [];
+    const extended = {
+      defaultStock:"SKU默认库存", sourcePlatform:"来源", originCountry:"原产国",
+      rakutenStoreCategory:"乐天店铺分类", rates:"运营费率JSON", profitTargets:"利润目标JSON", specs:"完整规格JSON"
+    };
+    for (const [key,header] of Object.entries(extended)) {
+      const col=columns.get(header); if(!col)continue;
+      const rawCell=cellText(row.getCell(col));
+      if(["rates","profitTargets","specs"].includes(key) && str(rawCell)) {
+        try {raw[key]=JSON.parse(rawCell);}catch {throw bad("invalid_json_field","第"+rowNo+"行"+header+"不是有效JSON。");}
+      }else if(str(rawCell))raw[key]=rawCell;
+    }
     try { items.push(normalizeProductEntry(raw)); }
     catch (e) { throw bad("batch_row_invalid", "批量导入第" + rowNo + "行：" + e.message); }
     if (items.length > 200) throw bad("batch_limit", "一次批量导入最多200件商品。");
@@ -217,7 +251,8 @@ export async function exportProductEntries(items) {
   const book = new ExcelJS.Workbook();
   book.creator = "AIONE";
   const main = book.addWorksheet("商品一览");
-  main.addRow(FIELD_KEYS.map(pair => pair[1]));
+  const extras = [["defaultStock","SKU默认库存"],["sourcePlatform","来源"],["originCountry","原产国"],["rakutenStoreCategory","乐天店铺分类"],["rates","运营费率JSON"],["profitTargets","利润目标JSON"],["specs","完整规格JSON"]];
+  main.addRow([...FIELD_KEYS.map(pair => pair[1]),...extras.map(pair=>pair[1])]);
   const sku = book.addWorksheet("SKU明细");
   sku.addRow(SKU_EXPORT_HEADERS);
   for (const p of items) {
@@ -229,7 +264,7 @@ export async function exportProductEntries(items) {
         row[key] = match[2] === "Name" ? (spec.name || "") : (spec.values || []).join("|");
       } else row[key] = key === "autoPublish" ? (p.autoPublish ? "是" : "否") : p[key] ?? "";
     }
-    main.addRow(FIELD_KEYS.map(pair => row[pair[0]]));
+    main.addRow([...FIELD_KEYS.map(pair => row[pair[0]]),...extras.map(([key])=>["rates","profitTargets","specs"].includes(key)?JSON.stringify(p[key]||[]):(p[key]??""))]);
     for (const o of p.skuOverrides || []) sku.addRow([p.localCode, o.index, o.priceJpy ?? "", o.stock ?? "", o.purchaseCostCny ?? "", o.weightG ?? "", o.sizeClass || "", o.imageFile || ""]);
   }
   for (const ws of [main, sku]) {

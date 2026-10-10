@@ -40,12 +40,13 @@ async function run(){
   assert.equal(original.autoPublish,true);
   assert.equal(original.skuOverrides.length,0);
   assert.equal(buildSkuEntries(original).length,1);
-  assert.equal(buildSkuEntries(original)[0].stock,null,"must ignore old 1000 test stock");
-  assert(fixture.warnings.some(x=>x.includes("1000")),"warn about sample stock");
+  assert.equal(buildSkuEntries(original)[0].stock,1000,"new product SKU stock defaults to 1000");
+  assert.equal(original.defaultStock,1000);
   assert(fixture.warnings.some(x=>x.includes("损坏引用")),"warn about broken formulas");
   assert(readinessWarnings(original).length>0);
   await expectCode(async()=>normalizeProductEntry({...original,autoPublish:"maybe"}),"invalid_auto_publish");
-  await expectCode(async()=>normalizeProductEntry({...original,specs:[{name:"颜色",values:Array.from({length:13},(_,i)=>String(i+1))}]}),"too_many_skus");
+  assert.equal(buildSkuEntries(normalizeProductEntry({...original,specs:[{name:"颜色",values:Array.from({length:13},(_,i)=>String(i+1))}]})).length,13,"AIONE catalog entry must not limit to 12 SKUs");
+  assert.equal(buildSkuEntries(normalizeProductEntry({...original,specs:[{name:"颜色",values:["黑色","白色"]},{name:"尺码",values:["M","L"]},{name:"套数",values:["1","2"]},{name:"型号",values:["A","B"]}]})).length,16,"AIONE catalog entry must support more than three specification dimensions");
   const exported=await exportProductEntries([original]);
   const roundtrip=await parseProductEntryWorkbook(exported,"aione_export.xlsx");
   assert.equal(roundtrip.items[0].localCode,original.localCode);
@@ -53,6 +54,8 @@ async function run(){
   assert.equal(roundtrip.items[0].specs[0].name,"颜色");
   assert.deepEqual(roundtrip.items[0].specs[0].values,["黑色"]);
   assert.equal(roundtrip.items[0].autoPublish,true);
+   assert.equal(roundtrip.items[0].defaultStock,1000);
+   assert.equal(roundtrip.items[0].profitTargets.productMargin,40);
 
   // DATABASE_URL must point to a disposable CI Postgres with CURRENT baseline loaded.
   if(!process.env.DATABASE_URL || process.env.AIONE_ENV!=="controlled-ci") {
