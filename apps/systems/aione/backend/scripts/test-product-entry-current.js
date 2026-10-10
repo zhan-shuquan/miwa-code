@@ -45,7 +45,8 @@ async function run(){
   assert(fixture.warnings.some(x=>x.includes("损坏引用")),"warn about broken formulas");
   assert(readinessWarnings(original).length>0);
   await expectCode(async()=>normalizeProductEntry({...original,autoPublish:"maybe"}),"invalid_auto_publish");
-  await expectCode(async()=>normalizeProductEntry({...original,specs:[{name:"颜色",values:Array.from({length:13},(_,i)=>String(i+1))}]}),"too_many_skus");
+  assert.equal(buildSkuEntries(normalizeProductEntry({...original,specs:[{name:"颜色",values:Array.from({length:13},(_,i)=>String(i+1))}]})).length,13,"AIONE catalog entry must not limit to 12 SKUs");
+  assert.equal(buildSkuEntries(normalizeProductEntry({...original,specs:[{name:"颜色",values:["黑色","白色"]},{name:"尺码",values:["M","L"]},{name:"套数",values:["1","2"]},{name:"型号",values:["A","B"]}]})).length,16,"AIONE catalog entry must support more than three specification dimensions");
   const exported=await exportProductEntries([original]);
   const roundtrip=await parseProductEntryWorkbook(exported,"aione_export.xlsx");
   assert.equal(roundtrip.items[0].localCode,original.localCode);
