@@ -90,32 +90,39 @@ async function syncSku(client, productId, code, entries, source, shape, allowDra
     "SELECT id,sku_code,"+dataCol+" AS attributes FROM public.product_skus WHERE product_id=$1 ORDER BY sku_code FOR UPDATE",
     [productId]
   );
-  const byCode=new Map(existing.rows.map(x=>[x.sku_code,x]));
   for(const item of existing.rows)
     if(!item.attributes?.__aioneManualEntry)
       throw error("sku_external_conflict","此商品已有其他来源SKU，不能自动覆盖。",409);
+  // Preserve existing SKU database identity and sku_code when the specification order changes.
+  // Never match an existing SKU by its row number: the meaning of that position can change.
+  const byIdentity=new Map(existing.rows.map(row=>{
+    const attrs=Object.fromEntries(Object.entries(row.attributes||{}).filter(([k])=>!k.startsWith("__aione")));
+    return [comparableSkuAttributes(attrs),row];
+  }));
+  const existingNumbers=existing.rows.map(row=>Number(String(row.sku_code).slice(code.length+1))).filter(Number.isSafeInteger);
+  let nextNumber=Math.max(0,...existingNumbers)+1;
   const output=[];
   for(const entry of entries){
-    const skuCode=code+"-"+String(entry.index).padStart(2,"0");
+    const identity=comparableSkuAttributes(entry.attributes);
+    const old=byIdentity.get(identity);
+    if(!old&&!allowDraftChange)
+      throw error("sku_identity_changed","此商品已进入渠道流程，不能直接更改SKU规格组合。",409);
+    const serial=old?Number(String(old.sku_code).slice(code.length+1)):nextNumber++;
+    const skuCode=old?.sku_code || code+"-"+String(serial).padStart(2,"0");
     const data={...entry.attributes,__aioneManualEntry:true,__aioneSource:source};
     const name=Object.values(entry.attributes).join(" / ")||"单规格";
-    const old=byCode.get(skuCode);
     if(old){
-      const previous=Object.fromEntries(Object.entries(old.attributes||{}).filter(([k])=>!k.startsWith("__aione")));
-      if(comparableSkuAttributes(previous)!==comparableSkuAttributes(entry.attributes) && !allowDraftChange)
-        throw error("sku_identity_changed","此商品已进入发布或关联渠道资料，不能直接改变SKU身份。",409);
       await client.query(
         "UPDATE public.product_skus SET name=$2,"+dataCol+"=$3::jsonb,"+statusCol+"='active' WHERE id=$1",
         [old.id,name,JSON.stringify(data)]
       );
       output.push({id:old.id,skuCode});
     }else{
-      if(!allowDraftChange) throw error("sku_set_changed","此商品已关联渠道资料，新增SKU需要专门审核。",409);
       const id=shape.skuNo?"sku_"+randomUUID():randomUUID();
       if(shape.skuNo){
         await client.query(
           "INSERT INTO public.product_skus(id,product_id,sku_code,sku_no,name,sku_data,lifecycle_status) VALUES($1,$2,$3,$4,$5,$6::jsonb,'active')",
-          [id,productId,skuCode,entry.index,name,JSON.stringify(data)]
+          [id,productId,skuCode,serial,name,JSON.stringify(data)]
         );
       }else{
         await client.query(
