@@ -91,6 +91,23 @@ async function run(){
   await expectCode(()=>saveManualProduct(original,{}, {updateOnly:true,expectedVersion:1}),"product_version_conflict");
   await expectCode(()=>saveManualProduct(original,{}, {createOnly:true}),"product_exists");
 
+  // Real user flow: single-SKU draft can change specification after first save.
+  const changedSpec=await saveManualProduct({...original,specs:[{name:"颜色",values:["白色","黑色"]}]},{personId:"ci"},{updateOnly:true,expectedVersion:2});
+  assert.equal(changedSpec.product.version,3);
+  assert.equal(changedSpec.skus.length,2);
+  const twoSku=await getManualProduct("zjl238");
+  assert.equal(twoSku.skus.length,2);
+  assert.equal(twoSku.skus[0].attributes["颜色"],"白色");
+  const reduced=await saveManualProduct({...original,specs:[{name:"颜色",values:["白色"]}]},{personId:"ci"},{updateOnly:true,expectedVersion:3});
+  assert.equal(reduced.skus.length,1);
+  assert.equal((await getManualProduct("zjl238")).skus.length,1);
+  // A channel listing makes SKU identity changes unsafe and must continue to block.
+  await pool.query("INSERT INTO public.platforms(code,name) VALUES ('CI_RAKUTEN','Rakuten') ON CONFLICT DO NOTHING");
+  const platform=await pool.query("SELECT id FROM public.platforms WHERE code='CI_RAKUTEN'");
+  await pool.query("INSERT INTO public.stores(code,name,platform_id) VALUES ('CI_STORE','CI', $1) ON CONFLICT DO NOTHING",[platform.rows[0].id]);
+  const store=await pool.query("SELECT id FROM public.stores WHERE code='CI_STORE'");
+  await pool.query("INSERT INTO public.listings(listing_code,product_id,store_id) VALUES ($1,$2,$3)",["CI_ZJL238",added.product.id,store.rows[0].id]);
+  await expectCode(()=>saveManualProduct({...original,specs:[{name:"颜色",values:["黑色"]}]},{personId:"ci"},{updateOnly:true,expectedVersion:4}),"sku_identity_changed");
   const list=await listManualProducts({query:"zjl238"});
   assert.equal(list.length,1);
   assert.equal(list[0].id,added.product.id);

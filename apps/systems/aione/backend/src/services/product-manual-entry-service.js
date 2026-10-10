@@ -32,7 +32,7 @@ export async function assertCurrentProductEntrySchema(db) {
 function productFields(shape){
   return "id,product_code,"+shape.nameCol+" AS name_zh,"+
     (shape.variant==="current-baseline"?"name_ja":"NULL::text AS name_ja")+
-    ",metadata,created_at,updated_at";
+    ",metadata,created_at,updated_at,"+(shape.variant==="existing-lifecycle"?"lifecycle_status":"status")+" AS entry_lifecycle";
 }
 async function getProductByLocalCode(client,code,shape,lock=false){
   const q=await client.query("SELECT "+productFields(shape)+
@@ -53,7 +53,38 @@ async function insertProductCode(client) {
   if(n>9999999)throw error("product_code_exhausted","商品内部编码已用尽。",409);
   return "MH"+String(n).padStart(7,"0");
 }
-async function syncSku(client, productId, code, entries, source, shape) {
+
+function comparableSkuAttributes(attributes) {
+  return JSON.stringify(
+    Object.entries(attributes||{})
+      .filter(([key])=>!key.startsWith("__aione"))
+      .sort(([a],[b])=>a.localeCompare(b))
+  );
+}
+
+// Editing SKU specifications is routine in an unpublished draft.
+// A Product that has entered a channel workflow or holds SKU-bound assets must
+// use the separate, audited SKU-change workflow instead.
+async function draftSkuCanChange(client, existing, shape) {
+  if(!existing) return true;
+  if(existing.entry_lifecycle!=="draft") return false;
+  const relation=shape.variant==="existing-lifecycle"?"channel_listings":"listings";
+  const linked=await client.query(
+    "SELECT EXISTS(SELECT 1 FROM public."+relation+" WHERE product_id=$1) AS linked",
+    [existing.id]
+  );
+  if(linked.rows[0]?.linked) return false;
+  if(shape.variant==="current-baseline"){
+    const assets=await client.query(
+      "SELECT EXISTS(SELECT 1 FROM public.product_assets WHERE product_id=$1 AND sku_id IS NOT NULL) AS linked",
+      [existing.id]
+    );
+    if(assets.rows[0]?.linked) return false;
+  }
+  return true;
+}
+
+async function syncSku(client, productId, code, entries, source, shape, allowDraftChange) {
   const dataCol=shape.skuDataCol, statusCol=shape.skuStatusCol;
   const existing=await client.query(
     "SELECT id,sku_code,"+dataCol+" AS attributes FROM public.product_skus WHERE product_id=$1 ORDER BY sku_code FOR UPDATE",
@@ -71,14 +102,15 @@ async function syncSku(client, productId, code, entries, source, shape) {
     const old=byCode.get(skuCode);
     if(old){
       const previous=Object.fromEntries(Object.entries(old.attributes||{}).filter(([k])=>!k.startsWith("__aione")));
-      if(JSON.stringify(previous)!==JSON.stringify(entry.attributes))
-        throw error("sku_identity_changed","SKU规格身份变化，需要专门审核，不得直接覆盖。",409);
+      if(comparableSkuAttributes(previous)!==comparableSkuAttributes(entry.attributes) && !allowDraftChange)
+        throw error("sku_identity_changed","此商品已进入发布或关联渠道资料，不能直接改变SKU身份。",409);
       await client.query(
         "UPDATE public.product_skus SET name=$2,"+dataCol+"=$3::jsonb,"+statusCol+"='active' WHERE id=$1",
         [old.id,name,JSON.stringify(data)]
       );
       output.push({id:old.id,skuCode});
     }else{
+      if(!allowDraftChange) throw error("sku_set_changed","此商品已关联渠道资料，新增SKU需要专门审核。",409);
       const id=shape.skuNo?"sku_"+randomUUID():randomUUID();
       if(shape.skuNo){
         await client.query(
@@ -95,8 +127,10 @@ async function syncSku(client, productId, code, entries, source, shape) {
     }
   }
   const keep=new Set(output.map(x=>x.skuCode));
-  for(const row of existing.rows)if(!keep.has(row.sku_code))
-    throw error("sku_set_changed","SKU组合已更改，旧SKU需另行审核，不会自动删除。",409);
+  for(const row of existing.rows)if(!keep.has(row.sku_code)){
+    if(!allowDraftChange) throw error("sku_set_changed","此商品已进入发布或关联渠道资料，删除SKU需要专门审核。",409);
+    await client.query("DELETE FROM public.product_skus WHERE id=$1",[row.id]);
+  }
   return output;
 }
 
@@ -141,7 +175,7 @@ export async function saveManualProduct(input, context={}, options={}) {
         );
       }
     }
-    const sku=await syncSku(client,id,productCode,buildSkuEntries(p),options.source||"aione-web",shape);
+    const sku=await syncSku(client,id,productCode,buildSkuEntries(p),options.source||"aione-web",shape,await draftSkuCanChange(client,existing,shape));
     return {product:{...p,id,productCode,version},skus:sku,reused:!!existing,warnings:readinessWarnings(p)};
   });
 }
