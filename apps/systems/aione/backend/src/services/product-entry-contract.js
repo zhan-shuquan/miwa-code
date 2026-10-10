@@ -20,7 +20,7 @@ export const FIELD_KEYS = Object.freeze([
   ["autoPublish", "自动上架"]
 ]);
 
-export const SKU_EXPORT_HEADERS = ["商品货号", "SKU序号", "售价覆盖(JPY)", "库存覆盖", "采购价覆盖(CNY)", "重量覆盖(g)", "发货尺寸覆盖", "SKU图片文件"];
+export const SKU_EXPORT_HEADERS = ["商品货号", "SKU序号", "售价覆盖(JPY)", "库存覆盖", "采购价覆盖(CNY)", "重量覆盖(g)", "发货尺寸覆盖", "SKU图片文件", "规格组合身份"];
 const NUMBERS = ["purchaseUnitCostCny", "domesticFreightCny", "setQuantity", "weightG", "packageLengthCm", "packageWidthCm", "packageHeightCm", "salePriceJpy"];
 const TEXTS = ["nameZh", "purchaseUrl", "category", "brand", "logisticsMethod", "packagingMethod", "sizeClass", "packagingMaterial", "rakutenTitle", "rakutenCatchCopy", "rakutenGenreId", "rakutenNotice", "pcDescription", "spDescription", "salesDescription", "targetShopRef", "sourcePlatform", "originCountry", "rakutenStoreCategory"];
 const BAD_EXCEL_ERRORS = ["#REF!", "#VALUE!", "#N/A", "#DIV/0!", "#NAME?", "#NUM!"];
@@ -42,7 +42,7 @@ function yes(v) {
   throw bad("invalid_auto_publish", "自动上架只能选择「是」或「否」。");
 }
 function values(v) {
-  const arr = Array.isArray(v) ? v : str(v).split(/[|,，、;\n；]/);
+  const arr = Array.isArray(v) ? v : str(v).split(/[|,，、;\n；\/／]/);
   return [...new Set(arr.map(str).filter(Boolean))];
 }
 function cellText(c) {
@@ -115,7 +115,7 @@ export function normalizeProductEntry(input = {}) {
     if (stock !== null && (!Number.isInteger(stock) || stock < 0)) throw bad("invalid_sku_stock", "SKU库存必须是非负整数。");
     if (purchaseCostCny !== null && purchaseCostCny < 0) throw bad("invalid_sku_cost", "SKU采购价不能为负数。");
     if (weightG !== null && weightG < 0) throw bad("invalid_sku_weight", "SKU重量不能为负数。");
-    return { index, priceJpy, stock, purchaseCostCny, weightG, sizeClass: str(o.sizeClass), imageFile: str(o.imageFile) };
+    return { index, identity: str(o.identity), priceJpy, stock, purchaseCostCny, weightG, sizeClass: str(o.sizeClass), imageFile: str(o.imageFile) };
   });
   if (new Set(p.skuOverrides.map(x => x.index)).size !== p.skuOverrides.length) throw bad("duplicate_sku_override", "SKU覆盖行的序号重复。");
   const sku = buildSkuEntries(p);
@@ -130,9 +130,10 @@ export function buildSkuEntries(p) {
     // SKU quantity is not a catalog-entry business limit. Channel rules are checked at publication.
   }
   return combinations.map((attributes, i) => {
-    const override = (p.skuOverrides || []).find(o => o.index === i + 1) || {};
+    const identity = Object.entries(attributes).map(([key,value])=>key+"="+value).join("|") || "default";
+    const override = (p.skuOverrides || []).find(o => o.identity === identity) || (p.skuOverrides || []).find(o => !o.identity && o.index === i + 1) || {};
     return {
-      index: i + 1, attributes, priceJpy: override.priceJpy ?? p.salePriceJpy ?? null,
+      index: i + 1, identity, attributes, priceJpy: override.priceJpy ?? p.salePriceJpy ?? null,
       stock: override.stock ?? p.defaultStock ?? 1000, purchaseCostCny: override.purchaseCostCny ?? p.purchaseUnitCostCny ?? null,
       weightG: override.weightG ?? p.weightG ?? null,
       sizeClass: override.sizeClass || p.sizeClass || "",
@@ -207,7 +208,7 @@ function fromBatch(workbook, filename) {
       const o = {
         index: cellText(row.getCell(2)), priceJpy: cellText(row.getCell(3)),
         stock: cellText(row.getCell(4)), purchaseCostCny: cellText(row.getCell(5)),
-        weightG: cellText(row.getCell(6)), sizeClass: cellText(row.getCell(7)), imageFile: cellText(row.getCell(8))
+        weightG: cellText(row.getCell(6)), sizeClass: cellText(row.getCell(7)), imageFile: cellText(row.getCell(8)), identity: cellText(row.getCell(9))
       };
       if (!overrideRows.has(code)) overrideRows.set(code, []);
       overrideRows.get(code).push(o);
@@ -265,7 +266,7 @@ export async function exportProductEntries(items) {
       } else row[key] = key === "autoPublish" ? (p.autoPublish ? "是" : "否") : p[key] ?? "";
     }
     main.addRow([...FIELD_KEYS.map(pair => row[pair[0]]),...extras.map(([key])=>["rates","profitTargets","specs"].includes(key)?JSON.stringify(p[key]||[]):(p[key]??""))]);
-    for (const o of p.skuOverrides || []) sku.addRow([p.localCode, o.index, o.priceJpy ?? "", o.stock ?? "", o.purchaseCostCny ?? "", o.weightG ?? "", o.sizeClass || "", o.imageFile || ""]);
+    for (const o of p.skuOverrides || []) sku.addRow([p.localCode, o.index, o.priceJpy ?? "", o.stock ?? "", o.purchaseCostCny ?? "", o.weightG ?? "", o.sizeClass || "", o.imageFile || "", o.identity || ""]);
   }
   for (const ws of [main, sku]) {
     ws.views = [{ state: "frozen", ySplit: 1 }];
