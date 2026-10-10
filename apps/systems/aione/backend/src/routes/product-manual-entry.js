@@ -24,7 +24,8 @@ router.get("/",async(req,res,next)=>{
 });
 router.get("/export.xlsx",async(req,res,next)=>{
   try {
-    const items=await listManualProducts({query:req.query.q,limit:200,offset:0});
+    const items=await listManualProducts({query:req.query.q,limit:201,offset:0});
+    if(items.length>200)invalid("export_limit","超过200件，请缩小筛选范围后导出，避免文件缺行。");
     const bytes=await exportProductEntries(items);
     res.set("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.set("Content-Disposition",'attachment; filename="aione_products_export.xlsx"');
