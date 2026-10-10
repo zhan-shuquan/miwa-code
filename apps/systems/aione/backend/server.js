@@ -20,7 +20,7 @@ import { resolveAioneGoogleIdentity } from "./src/http/google-auth.js";
 const app = express();
 
 app.disable("x-powered-by");
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "4mb" })); // Excel base64 import is capped separately at 2MB raw payload
 
 // Local Preview may run the static frontend on :5500 and Backend on :8080.
 const corsOrigins = new Set(String(process.env.AIONE_CORS_ORIGINS || "http://127.0.0.1:5500,http://localhost:5500").split(",").map((item) => item.trim()).filter(Boolean));
