@@ -50,7 +50,7 @@ async function syncSku(client, productId, code, entries, source) {
     const name=Object.values(entry.attributes).join(" / ")||"单规格";
     const old=byCode.get(skuCode);
     if(old) {
-      await client.query("UPDATE public.product_skus SET name=$2,attributes=$3::jsonb,status='active',updated_at=NOW() WHERE id=$1",[old.id,name,JSON.stringify(skuData)]);
+      await client.query("UPDATE public.product_skus SET name=$2,attributes=$3::jsonb,status='active' WHERE id=$1",[old.id,name,JSON.stringify(skuData)]);
       output.push({id:old.id,skuCode});
     } else {
       const id=randomUUID();
