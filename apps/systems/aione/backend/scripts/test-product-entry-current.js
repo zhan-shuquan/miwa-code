@@ -54,7 +54,10 @@ async function run(){
   const customized=normalizeProductEntry({...slash,skuOverrides:[{index:2,identity:"颜色=灰色|尺码=M",priceJpy:1580,stock:321}]});
   const reordered=normalizeProductEntry({...customized,specs:[{name:"颜色",values:"灰色，黑色"},{name:"尺码",values:"M/L"}]});
   const rsku=buildSkuEntries(reordered).find(x=>x.identity==="颜色=灰色|尺码=M");
-  assert.equal(rsku.priceJpy,1580,"SKU price override must follow specification identity, not row");
+  assert.equal(rsku.priceJpy,980,"SKU selling price must inherit the shared product price, even if a legacy override exists");
+  const unifiedPrice=normalizeProductEntry({...customized,salePriceJpy:1080});
+  assert.deepEqual([...new Set(buildSkuEntries(unifiedPrice).map(x=>x.priceJpy))],[1080],"all SKU variants must follow one product selling price");
+  assert.equal(buildSkuEntries(unifiedPrice).find(x=>x.identity==="颜色=灰色|尺码=M").stock,321,"independent SKU stock must survive unified selling price changes");
   assert.equal(rsku.stock,321,"SKU stock override must follow specification identity, not row");
   assert.equal(buildSkuEntries(reordered).find(x=>x.identity==="颜色=黑色|尺码=L").stock,1000);
   const exported=await exportProductEntries([original]);

@@ -133,7 +133,7 @@ export function buildSkuEntries(p) {
     const identity = Object.entries(attributes).map(([key,value])=>key+"="+value).join("|") || "default";
     const override = (p.skuOverrides || []).find(o => o.identity === identity) || (p.skuOverrides || []).find(o => !o.identity && o.index === i + 1) || {};
     return {
-      index: i + 1, identity, attributes, priceJpy: override.priceJpy ?? p.salePriceJpy ?? null,
+      index: i + 1, identity, attributes, priceJpy: p.salePriceJpy ?? null,
       stock: override.stock ?? p.defaultStock ?? 1000, purchaseCostCny: override.purchaseCostCny ?? p.purchaseUnitCostCny ?? null,
       weightG: override.weightG ?? p.weightG ?? null,
       sizeClass: override.sizeClass || p.sizeClass || "",
