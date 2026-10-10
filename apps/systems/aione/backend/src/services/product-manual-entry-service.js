@@ -50,6 +50,8 @@ async function syncSku(client, productId, code, entries, source) {
     const name=Object.values(entry.attributes).join(" / ")||"单规格";
     const old=byCode.get(skuCode);
     if(old) {
+      const previous=Object.fromEntries(Object.entries(old.attributes||{}).filter(([k])=>!k.startsWith("__aione")));
+      if(JSON.stringify(previous)!==JSON.stringify(entry.attributes)) throw error("sku_identity_changed","SKU规格身份发生变化，请负责人核对并执行专用SKU变更流程。",409);
       await client.query("UPDATE public.product_skus SET name=$2,attributes=$3::jsonb,status='active' WHERE id=$1",[old.id,name,JSON.stringify(skuData)]);
       output.push({id:old.id,skuCode});
     } else {
