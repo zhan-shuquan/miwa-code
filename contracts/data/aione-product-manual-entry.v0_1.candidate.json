@@ -1,0 +1,404 @@
+{
+  "contract": "aione.product.manual-entry",
+  "version": "0.1-candidate",
+  "status": "VALIDATING",
+  "sourceEvidence": {
+    "fileName": "zjl238.xlsx",
+    "workbookVersion": "V7.0",
+    "schema": "aione_local_product_v7",
+    "mainSheet": "商品信息",
+    "mappingSheet": "_字段映射",
+    "mappingSheetStatus": "STALE; inspect labels and current cell placement before any import"
+  },
+  "principle": "AIONE Product/SKU/ProductAsset are canonical. Legacy cells are only a versioned import adapter, never permanent online UI identity.",
+  "manualFields": [
+    {
+      "fieldKey": "productCode",
+      "label": "商品货号",
+      "group": "product",
+      "dataType": "string",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C3"
+      }
+    },
+    {
+      "fieldKey": "nameZh",
+      "label": "商品名称",
+      "group": "product",
+      "dataType": "string",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C4"
+      }
+    },
+    {
+      "fieldKey": "purchaseUrl",
+      "label": "采购链接",
+      "group": "product",
+      "dataType": "url",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C5"
+      }
+    },
+    {
+      "fieldKey": "purchaseUnitCostCny",
+      "label": "采购单价(CNY)",
+      "group": "procurement",
+      "dataType": "number",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C6"
+      }
+    },
+    {
+      "fieldKey": "chinaDomesticFreightCny",
+      "label": "中国国内运费(CNY)",
+      "group": "procurement",
+      "dataType": "number",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C7"
+      }
+    },
+    {
+      "fieldKey": "setQuantity",
+      "label": "套装数量(PCS)",
+      "group": "procurement",
+      "dataType": "integer",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C8"
+      }
+    },
+    {
+      "fieldKey": "unitWeightG",
+      "label": "单件商品重量（g）",
+      "group": "procurement",
+      "dataType": "number",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C9"
+      }
+    },
+    {
+      "fieldKey": "categoryCode",
+      "label": "商品分类",
+      "group": "product",
+      "dataType": "enum",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C10"
+      }
+    },
+    {
+      "fieldKey": "brandCode",
+      "label": "所属品牌",
+      "group": "product",
+      "dataType": "enum",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C11"
+      }
+    },
+    {
+      "fieldKey": "logisticsMethod",
+      "label": "物流方式",
+      "group": "fulfillment",
+      "dataType": "enum",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C13"
+      }
+    },
+    {
+      "fieldKey": "chinaPackingMethod",
+      "label": "包装方式",
+      "group": "fulfillment",
+      "dataType": "enum",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C14"
+      }
+    },
+    {
+      "fieldKey": "shippingSizeClass",
+      "label": "发货尺寸",
+      "group": "fulfillment",
+      "dataType": "enum",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C15"
+      }
+    },
+    {
+      "fieldKey": "japanPackingMaterial",
+      "label": "日本包装物",
+      "group": "fulfillment",
+      "dataType": "enum",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C16"
+      }
+    },
+    {
+      "fieldKey": "packageLengthCm",
+      "label": "发货长(cm)",
+      "group": "fulfillment",
+      "dataType": "number",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C17"
+      }
+    },
+    {
+      "fieldKey": "packageWidthCm",
+      "label": "发货宽(cm)",
+      "group": "fulfillment",
+      "dataType": "number",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C18"
+      }
+    },
+    {
+      "fieldKey": "packageHeightCm",
+      "label": "发货高(cm)",
+      "group": "fulfillment",
+      "dataType": "number",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C19"
+      }
+    },
+    {
+      "fieldKey": "customPackingSurchargeJpy",
+      "label": "定制包装增量费",
+      "group": "fulfillment",
+      "dataType": "number",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!D24"
+      }
+    },
+    {
+      "fieldKey": "confirmedSellingPriceJpy",
+      "label": "实际售价",
+      "group": "pricing",
+      "dataType": "integer",
+      "requiredAtPublication": true,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!C38"
+      }
+    },
+    {
+      "fieldKey": "couponRateOverride",
+      "label": "优惠券实际费率",
+      "group": "pricing",
+      "dataType": "fraction",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!D32"
+      }
+    },
+    {
+      "fieldKey": "rppRateOverride",
+      "label": "RPP广告实际费率",
+      "group": "pricing",
+      "dataType": "fraction",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!D34"
+      }
+    },
+    {
+      "fieldKey": "otherOpsRateOverride",
+      "label": "其他运营实际费率",
+      "group": "pricing",
+      "dataType": "fraction",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!D35"
+      }
+    },
+    {
+      "fieldKey": "rakutenTitle",
+      "label": "楽天商品名",
+      "group": "channelCopy",
+      "dataType": "string",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!I3"
+      }
+    },
+    {
+      "fieldKey": "rakutenTagline",
+      "label": "キャッチコピー",
+      "group": "channelCopy",
+      "dataType": "string",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!I4"
+      }
+    },
+    {
+      "fieldKey": "rakutenGenreIdCandidate",
+      "label": "楽天ジャンルID候选",
+      "group": "channelCopy",
+      "dataType": "string",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!I5"
+      }
+    },
+    {
+      "fieldKey": "rakutenFreeInput1",
+      "label": "自由入力行1",
+      "group": "channelCopy",
+      "dataType": "string",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!I13"
+      }
+    },
+    {
+      "fieldKey": "autoPublishRequested",
+      "label": "自动上架",
+      "group": "control",
+      "dataType": "boolean-yes-no",
+      "requiredAtPublication": false,
+      "legacyLocator": {
+        "schema": "aione_local_product_v7",
+        "cell": "商品信息!I30"
+      }
+    }
+  ],
+  "skuInput": {
+    "names": [
+      "商品信息!I22",
+      "商品信息!I23",
+      "商品信息!I24"
+    ],
+    "values": [
+      "商品信息!J22:S22",
+      "商品信息!J23:S23",
+      "商品信息!J24:S24"
+    ],
+    "maxLevels": 3,
+    "maxPublishSkuCombos": 12,
+    "overrides": {
+      "skuSalePriceJpy": "sku生成器!L9:L20",
+      "skuPurchaseCostCny": "sku生成器!M9:M20",
+      "skuWeightG": "sku生成器!N9:N20",
+      "skuSizeClass": "sku生成器!O9:O20",
+      "skuStock": "sku生成器!AD9:AD20"
+    },
+    "computedSkuCoordinates": "sku生成器!A9:K20",
+    "warning": "Formulas have broken #REF! references; treat computed SKU and inventory as invalid until repaired. NEVER fall back to 1000 test stock."
+  },
+  "requiredChannelOutput": {
+    "pcProductDescription": {
+      "status": "MISSING_FROM_CURRENT_WORKBOOK",
+      "source": "employee-reviewed copy or deterministic template"
+    },
+    "smartphoneProductDescription": {
+      "status": "MISSING_FROM_CURRENT_WORKBOOK",
+      "source": "employee-reviewed copy or deterministic template"
+    },
+    "pcSalesDescription": {
+      "status": "MISSING_FROM_CURRENT_WORKBOOK",
+      "source": "verified image URLs and reviewed copy"
+    }
+  },
+  "systemDerived": [
+    "AIONE product_id and product_code",
+    "real RMS shop binding from authenticated context",
+    "Rakuten itemNumber and SKU adapters",
+    "taxIncluded and taxRate (default only, per product exceptions)",
+    "RMS shipping/lead-time IDs with live verification",
+    "R-Cabinet urls and image mapping",
+    "platform catalog/article exemptions after genre lookup",
+    "publication outcome/trace/status"
+  ],
+  "noPublishConditions": [
+    "Excel SKU #REF! formula errors",
+    "missing trustworthy saleable stock or remote store binding",
+    "genre mandatory attributes not checked",
+    "RMS mapping status unverified",
+    "description fields required but absent",
+    "image files not verified",
+    "inconsistent imported mapping sheet",
+    "autoPublishRequested not an explicit valid yes"
+  ],
+  "detectedWorkbookIssues": [
+    {
+      "code": "legacy_field_mapping_stale",
+      "evidence": "_字段映射 points to 商品信息!C54:C80 yet sheet 商品信息 has 49 rows; current Rakuten fields sit in H3:J13 and auto publish in I30"
+    },
+    {
+      "code": "broken_sku_formulas",
+      "evidence": "sku生成器 contains 18 #REF! formulas (D3:E5, J9:J20) and actual SKU stock J9 has #REF! cache"
+    },
+    {
+      "code": "broken_diagnostic_formula",
+      "evidence": "_计算!H14 = #REF!"
+    },
+    {
+      "code": "auto_publish_validation_missing",
+      "evidence": "商品信息!I30 has 是 but no list validation; always require explicit review and server-side yes/no parsing"
+    },
+    {
+      "code": "obsolete_product_warning",
+      "evidence": "商品信息!I32 mentions different sample products"
+    },
+    {
+      "code": "china_packing_cost_inconsistent",
+      "evidence": "共享参数!B5 default is 2 CNY/finished set but 商品信息!C24 is fixed zero; cost logic requires reconciliation"
+    },
+    {
+      "code": "stock_is_only_placeholder",
+      "evidence": "商品信息!I10 is 1000 but no inventory source or verification"
+    },
+    {
+      "code": "shop_missing",
+      "evidence": "No selected RMS shop exists in current product worksheet"
+    },
+    {
+      "code": "genre_requires_rms_lookup",
+      "evidence": "商品信息!I5 is suggestion only; 共享参数 genre verification entries await API"
+    }
+  ],
+  "protection": {
+    "defaultAutoPublish": false,
+    "importMode": "DRAFT_ONLY_UNTIL_ALL_GATES_PASS",
+    "noProductionWrites": true,
+    "doNotChangeMain": true
+  },
+  "nextGate": "Resolve CURRENT production database read-only schema preflight and confirm missing descriptions, store selection, SKU/packing inconsistencies before formal LOCK."
+}
