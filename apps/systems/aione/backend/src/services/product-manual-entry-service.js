@@ -26,8 +26,8 @@ async function getProductByLocalCode(client,code,lock=false) {
 }
 function unwrap(row) {
   const p=metadataOf(row);
-  if(!p) return null;
-  return {...p,id:row.id,productCode:row.product_code,version:Number(row.metadata.manualEntryVersion||1),updatedAt:row.updated_at};
+  if(!p) return {id:row.id,productCode:row.product_code,localCode:"",nameZh:row.name_zh||row.name_ja||"",salePriceJpy:null,autoPublish:false,version:null,readOnly:true,updatedAt:row.updated_at};
+  return {...p,id:row.id,productCode:row.product_code,version:Number(row.metadata.manualEntryVersion||1),readOnly:false,updatedAt:row.updated_at};
 }
 async function insertProductCode(client) {
   await client.query("SELECT pg_advisory_xact_lock(793833102)");
@@ -99,7 +99,7 @@ export async function listManualProducts({query="",limit=100,offset=0}={}) {
   await assertCurrentProductEntrySchema(pool);
   const q=String(query||"").trim();
   const lim=Math.min(201,Math.max(1,Number(limit)||100)),skip=Math.max(0,Number(offset)||0);
-  const r=await pool.query("SELECT "+BASIC_FIELDS+" FROM public.products WHERE metadata ? 'manualEntry' AND ($1='' OR product_code ILIKE $2 OR name_zh ILIKE $2 OR metadata->'manualEntry'->>'localCode' ILIKE $2) ORDER BY updated_at DESC LIMIT $3 OFFSET $4",[q,"%"+q+"%",lim,skip]);
+  const r=await pool.query("SELECT "+BASIC_FIELDS+" FROM public.products WHERE ($1='' OR product_code ILIKE $2 OR name_zh ILIKE $2 OR name_ja ILIKE $2 OR metadata->'manualEntry'->>'localCode' ILIKE $2) ORDER BY updated_at DESC LIMIT $3 OFFSET $4",[q,"%"+q+"%",lim,skip]);
   return r.rows.map(unwrap);
 }
 export async function getManualProduct(ref) {
