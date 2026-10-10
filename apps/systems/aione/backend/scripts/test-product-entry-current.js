@@ -110,7 +110,8 @@ async function run(){
   assert.equal(changedSpec.skus.length,2);
   const twoSku=await getManualProduct("zjl238");
   assert.equal(twoSku.skus.length,2);
-  assert.equal(twoSku.skus[0].attributes["颜色"],"白色");
+  assert.equal(twoSku.skus.find(x=>x.sku_code===skuRecord.sku_code).attributes["颜色"],"黑色","previous black SKU identity must remain stable");
+  assert.equal(twoSku.skus.some(x=>x.attributes["颜色"]==="白色"),true,"new white variant exists");
   const reduced=await saveManualProduct({...original,specs:[{name:"颜色",values:["白色"]}]},{personId:"ci"},{updateOnly:true,expectedVersion:3});
   assert.equal(reduced.skus.length,1);
   assert.equal((await getManualProduct("zjl238")).skus.length,1);
