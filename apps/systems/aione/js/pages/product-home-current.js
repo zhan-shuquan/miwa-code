@@ -1,6 +1,6 @@
 import { PRODUCT_HOME_CENTERS } from "../config/home-registry.js?v=20261011-product-center-v7";
 import { aioneApi } from "../services/aione-api-client.js";
-import { showProducts } from "./product-manual-entry.js?v=20261011-product-center-v7";
+import { showProducts, showSkuList, openProductEditor } from "./product-manual-entry.js?v=20261011-product-center-v7";
 
 const PRODUCT_REF="MH0000002";
 const SELECTION_REF="SEL-20260907-000001";
@@ -118,7 +118,7 @@ async function renderCenter(host,center,index){
   const stage=host.querySelector("[data-stage]");
   if(center.id==="selection-center")await renderSelectionView(stage,label,index);
   else if(center.id==="product-center"&&(index===1||index===0))await showProducts(stage);
-  else if(center.id==="product-center"&&index===2)stage.innerHTML=`${toolbar({search:"搜索 SKU Code / 商品"})}${dataTable(["SKU Code","Product Code","规格组合","状态","更新时间"],[[SKU_REF,PRODUCT_REF,"款式｜6双套装","CURRENT","2026-09-07"]])}`;
+  else if(center.id==="product-center"&&index===2)await showSkuList(stage);
   else if(center.id==="design-center"&&index===2)stage.innerHTML=designLive();
   else stage.innerHTML=PAGE_TYPE_RENDERERS[type]({center,label});
   host.querySelector("[data-open-product]")?.addEventListener("click",()=>navigate({center:"product-center",product:PRODUCT_REF}));
@@ -135,6 +135,6 @@ function renderRoot(host,view){
 export async function initProductHomeCurrent(){
   const host=document.getElementById("app-main-host");if(!host)return false;document.body.dataset.productHome="current";
   const query=params(),centerId=query.get("center");
-  if(query.get("product"))await renderProductWorkspace(host);else if(centerId&&centerById(centerId))await renderCenter(host,centerById(centerId),Math.max(0,Number(query.get("view")||0)));else renderRoot(host,query.get("view")||"overview");
+  if(centerId==="product-center"&&query.get("new")==="1"){host.innerHTML=`<section class="phc phc-center"><main class="phc-content" data-stage></main></section>`;openProductEditor(host.querySelector("[data-stage]"));}else if(query.get("product"))await renderProductWorkspace(host);else if(centerId&&centerById(centerId))await renderCenter(host,centerById(centerId),Math.max(0,Number(query.get("view")||0)));else renderRoot(host,query.get("view")||"overview");
   window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"hidden"}}));return true;
 }
