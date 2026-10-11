@@ -118,8 +118,9 @@ async function fileBase64(file){
 }
 function importer(host){
  const target=host.querySelector("[data-pe-import]");
- target.innerHTML='<div class="pe-import"><h3>批量导入</h3><p class="pe-note">WPS单品表或AIONE批量模板，先预览、后确认，只新增草稿，不覆盖已有商品。</p><input type="file" accept=".xlsx" data-pe-file><div data-pe-preview></div><button data-pe-close>关闭</button></div>';
+ target.innerHTML='<div class="pe-import"><h3>批量导入</h3><p class="pe-note">WPS单品表或AIONE批量模板，先预览、后确认，只新增草稿，不覆盖已有商品。</p><div class="pe-import-actions"><input type="file" accept=".xlsx" data-pe-file><button type="button" data-pe-template>下载空白模板</button></div><div data-pe-preview></div><button data-pe-close>关闭</button></div>';
  target.querySelector("[data-pe-close]").onclick=()=>target.innerHTML="";
+ target.querySelector("[data-pe-template]").onclick=async()=>{try{await aioneDownload(BASE+"/export.xlsx?q=__AIONE_EMPTY_TEMPLATE__")}catch(e){alert("模板下载失败："+e.message)}};
  target.querySelector("[data-pe-file]").onchange=async e=>{
    const file=e.target.files?.[0];if(!file)return;
    const panel=target.querySelector("[data-pe-preview]");panel.textContent="正在检查…";
@@ -144,13 +145,12 @@ export function openNewProductEditor(host){editor(host,{});}
 export async function openProductEditor(host,ref){const data=await aioneApi(BASE+"/"+encodeURIComponent(ref));if(!data?.product)throw Error("商品未找到");editor(host,data.product,data.skus||[]);}
 export async function showProducts(host,notice=""){
  stopEditor(host);style();
- host.innerHTML='<section class="phc pe-wrap pe-manager"><div class="pe-toolbar"><div><small class="pe-kicker">PRODUCT MANAGEMENT</small><h2>商品一览</h2><p class="pe-note">真实商品数据 · 单品编辑 · 批量导入导出</p></div><div class="pe-actions"><button class="pe-main" data-pe-new>＋ 新建商品</button><button data-pe-import-open>批量导入</button><button data-pe-export>导出 Excel</button><button data-pe-template>下载模板</button></div></div>'+
+ host.innerHTML='<section class="phc pe-wrap pe-manager"><div class="pe-toolbar"><div><h2>商品一览</h2><p class="pe-note">真实商品数据 · 单品编辑 · 批量导入导出</p></div><div class="pe-actions"><button class="pe-main" data-pe-new>＋ 新建商品</button><button data-pe-import-open>批量导入</button><button data-pe-export>导出 Excel</button></div></div>'+
  (notice?'<p class="pe-success" role="status">'+esc(notice)+'</p>':'')+
- '<div class="pe-filterbar"><label class="pe-search">⌕ <input data-pe-q type="search" placeholder="搜索货号 / AIONE编码 / 商品名称"></label><button data-pe-refresh>刷新</button></div><div data-pe-stats class="pe-stats"></div><div data-pe-table>正在读取商品…</div><div class="pe-pager"><span data-pe-count></span><div><button data-pe-prev>上一页</button><button data-pe-next>下一页</button></div></div><div data-pe-import></div></section>';
+ '<div class="pe-filterbar"><label class="pe-search">⌕ <input data-pe-q type="search" placeholder="搜索货号 / AIONE编码 / 商品名称"></label></div><div data-pe-table>正在读取商品…</div><div class="pe-pager"><span data-pe-count></span><div><button data-pe-prev>上一页</button><button data-pe-next>下一页</button></div></div><div data-pe-import></div></section>';
  host.querySelector("[data-pe-new]").onclick=()=>openNewProductEditor(host);
  host.querySelector("[data-pe-import-open]").onclick=()=>importer(host);
  host.querySelector("[data-pe-export]").onclick=async()=>{try{const q=host.querySelector("[data-pe-q]")?.value.trim()||"";await aioneDownload(BASE+"/export.xlsx"+(q?"?q="+encodeURIComponent(q):""));}catch(e){alert("导出失败："+e.message+"。单次最多200件，请缩小筛选范围。")}};
- host.querySelector("[data-pe-template]").onclick=async()=>{try{await aioneDownload(BASE+"/export.xlsx?q=__AIONE_EMPTY_TEMPLATE__")}catch(e){alert("模板下载失败："+e.message)}};
  const state={q:"",page:0,serial:0};
  async function load(){
   const id=++state.serial,area=host.querySelector("[data-pe-table]");if(!area)return;
@@ -159,8 +159,6 @@ export async function showProducts(host,notice=""){
    const res=await aioneApi(BASE+"?q="+encodeURIComponent(state.q)+"&limit="+PRODUCT_PAGE_SIZE+"&offset="+(state.page*PRODUCT_PAGE_SIZE));
    if(id!==state.serial||!host.querySelector("[data-pe-table]"))return;
    const items=Array.isArray(res.items)?res.items:[];
-   const editable=items.filter(p=>!p.readOnly).length;
-   host.querySelector("[data-pe-stats]").innerHTML='<div>本页商品 <strong>'+items.length+'</strong></div><div>可编辑 <strong>'+editable+'</strong></div><div>原流程只读 <strong>'+(items.length-editable)+'</strong></div>';
    area.innerHTML='<div class="pe-scroll"><table class="pe-table"><thead><tr><th>商品名称</th><th>本地货号</th><th>AIONE编号</th><th>品牌 / 分类</th><th>SKU数</th><th>售价 JPY</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>'+
     (items.length?items.map(p=>'<tr><td><div class="pe-product-cell"><span class="pe-product-symbol">'+esc((p.nameZh||"商")[0])+'</span><strong>'+esc(p.nameZh||"未命名商品")+'</strong></div></td><td>'+esc(p.localCode||"—")+'</td><td>'+esc(p.productCode||"—")+'</td><td>'+esc([p.brand,p.category].filter(Boolean).join(" / ")||"—")+'</td><td>'+(!p.readOnly?productSkuCount(p):"—")+'</td><td>'+esc(p.salePriceJpy==null?"—":MONEY(p.salePriceJpy))+'</td><td><span class="pe-status">'+(p.readOnly?"原流程只读":"草稿可编辑")+'</span></td><td>'+dateLabel(p.updatedAt)+'</td><td>'+(p.readOnly?"—":'<button class="pe-edit" data-pe-edit="'+esc(p.id)+'">编辑 ›</button>')+'</td></tr>').join(""):'<tr><td colspan="9" class="pe-no-results">暂无匹配商品，可新建或导入。</td></tr>')+'</tbody></table></div>';
    area.querySelectorAll("[data-pe-edit]").forEach(b=>b.onclick=async()=>{try{await openProductEditor(host,b.dataset.peEdit)}catch(e){alert("打开失败："+e.message)}});
@@ -170,15 +168,13 @@ export async function showProducts(host,notice=""){
   }catch(e){if(id!==state.serial)return;area.innerHTML='<div class="pe-alert" role="alert">商品接口读取失败：'+esc(e.message)+'。不显示模拟数据。</div>';host.querySelector("[data-pe-prev]").disabled=true;host.querySelector("[data-pe-next]").disabled=true}
  }
  let timer;host.querySelector("[data-pe-q]").oninput=e=>{clearTimeout(timer);timer=setTimeout(()=>{state.q=e.target.value.trim();state.page=0;load()},250)};
- host.querySelector("[data-pe-refresh]").onclick=load;
  host.querySelector("[data-pe-prev]").onclick=()=>{if(state.page){state.page--;load()}};
  host.querySelector("[data-pe-next]").onclick=()=>{state.page++;load()};
  await load();
 }
 export async function showSkuList(host){
  stopEditor(host);style();
- host.innerHTML='<section class="phc pe-wrap pe-manager"><div class="pe-toolbar"><div><small class="pe-kicker">SKU MANAGEMENT</small><h2>SKU一览</h2><p class="pe-note">只读取数据库中的真实SKU，不生成演示编号</p></div><div class="pe-actions"><button data-sku-back>返回商品一览</button></div></div><div class="pe-filterbar"><label class="pe-search">⌕ <input data-sku-q type="search" placeholder="搜索SKU编号 / 商品名称 / 本地货号"></label><button data-sku-refresh>刷新</button></div><div data-sku-table>正在读取SKU…</div><div class="pe-pager"><span data-sku-count></span><div><button data-sku-prev>上一页</button><button data-sku-next>下一页</button></div></div></section>';
- host.querySelector("[data-sku-back]").onclick=()=>location.hash="#/product-home?center=product-center&view=0";
+ host.innerHTML='<section class="phc pe-wrap pe-manager"><div class="pe-toolbar"><div><h2>SKU一览</h2><p class="pe-note">真实SKU资料 · 关联所属商品</p></div></div><div class="pe-filterbar"><label class="pe-search">⌕ <input data-sku-q type="search" placeholder="搜索SKU编号 / 商品名称 / 本地货号"></label></div><div data-sku-table>正在读取SKU…</div><div class="pe-pager"><span data-sku-count></span><div><button data-sku-prev>上一页</button><button data-sku-next>下一页</button></div></div></section>';
  const state={q:"",page:0,serial:0};
  async function load(){
   const serial=++state.serial,area=host.querySelector("[data-sku-table]");if(!area)return;
@@ -197,7 +193,6 @@ export async function showSkuList(host){
   }catch(e){if(serial!==state.serial)return;area.innerHTML='<div class="pe-alert" role="alert">SKU接口未就绪：'+esc(e.message)+'。未显示模拟记录。</div>';host.querySelector("[data-sku-prev]").disabled=true;host.querySelector("[data-sku-next]").disabled=true}
  }
  let timer;host.querySelector("[data-sku-q]").oninput=e=>{clearTimeout(timer);timer=setTimeout(()=>{state.q=e.target.value.trim();state.page=0;load()},250)};
- host.querySelector("[data-sku-refresh]").onclick=load;
  host.querySelector("[data-sku-prev]").onclick=()=>{if(state.page){state.page--;load()}};
  host.querySelector("[data-sku-next]").onclick=()=>{state.page++;load()};
  await load();
