@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 // Stable business-field contract. Cell addresses belong only in the V7 WPS adapter.
 export const PRODUCT_ENTRY_VERSION = "1.0-candidate";
 export const FIELD_KEYS = Object.freeze([
-  ["localCode", "商品货号"], ["nameZh", "商品名称"], ["purchaseUrl", "采购链接"],
+  ["localCode", "商品货号"], ["nameZh", "商品名称"], ["material", "商品材质"], ["productSpecifications", "商品规格"], ["purchaseUrl", "采购链接"],
   ["purchaseUnitCostCny", "采购单价(CNY)"], ["domesticFreightCny", "国内运费(CNY)"],
   ["setQuantity", "套装数量"], ["weightG", "重量(g)"], ["category", "商品分类"],
   ["brand", "所属品牌"], ["logisticsMethod", "物流方式"], ["packagingMethod", "包装方式"],
@@ -22,7 +22,7 @@ export const FIELD_KEYS = Object.freeze([
 
 export const SKU_EXPORT_HEADERS = ["商品货号", "SKU序号", "售价覆盖(JPY)", "库存覆盖", "采购价覆盖(CNY)", "重量覆盖(g)", "发货尺寸覆盖", "SKU图片文件", "规格组合身份"];
 const NUMBERS = ["purchaseUnitCostCny", "domesticFreightCny", "setQuantity", "weightG", "packageLengthCm", "packageWidthCm", "packageHeightCm", "salePriceJpy"];
-const TEXTS = ["nameZh", "purchaseUrl", "category", "brand", "logisticsMethod", "packagingMethod", "sizeClass", "packagingMaterial", "rakutenTitle", "rakutenCatchCopy", "rakutenGenreId", "rakutenNotice", "pcDescription", "spDescription", "salesDescription", "targetShopRef", "sourcePlatform", "originCountry", "rakutenStoreCategory"];
+const TEXTS = ["nameZh", "material", "productSpecifications", "purchaseUrl", "category", "brand", "logisticsMethod", "packagingMethod", "sizeClass", "packagingMaterial", "rakutenTitle", "rakutenCatchCopy", "rakutenGenreId", "rakutenNotice", "pcDescription", "spDescription", "salesDescription", "targetShopRef", "sourcePlatform", "originCountry", "rakutenStoreCategory"];
 const BAD_EXCEL_ERRORS = ["#REF!", "#VALUE!", "#N/A", "#DIV/0!", "#NAME?", "#NUM!"];
 
 function bad(code, message, statusCode = 400) {
