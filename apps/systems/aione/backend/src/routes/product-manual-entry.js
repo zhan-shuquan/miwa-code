@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireWriteActor } from "../http/context.js";
 import {
-  getManualProduct, listManualProducts, saveManualProduct,
+  getManualProduct, listManualProducts, listManualSkus, saveManualProduct,
   previewImportProducts, importManualProducts
 } from "../services/product-manual-entry-service.js";
 import {
@@ -32,6 +32,10 @@ router.get("/export.xlsx",async(req,res,next)=>{
     res.set("Cache-Control","private, no-store");
     res.send(bytes);
   } catch(e){next(e);}
+});
+router.get("/sku-list",async(req,res,next)=>{
+  try{res.json({ok:true,...await listManualSkus({query:req.query.q,limit:req.query.limit,offset:req.query.offset})});}
+  catch(e){next(e);}
 });
 router.get("/:ref",async(req,res,next)=>{
   try{res.json({ok:true,...await getManualProduct(req.params.ref)});}
