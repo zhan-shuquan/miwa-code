@@ -9,7 +9,7 @@ import { systemConfig } from "./config/system-config.js";
 import { ROUTE_REGISTRY, getRouteDefinition, getRouteId } from "./config/route-registry.js";
 import { loadComponents } from "./core/component-loader.js";
 import { initHeader } from "./shell/header.js";
-import { initPrimaryNavigation } from "./shell/primary-navigation.js?v=20260908-product-home-current";
+import { initPrimaryNavigation } from "./shell/primary-navigation.js?v=20261011-product-center-v7";
 import { initPlatformContext } from "./shell/platform-context.js";
 import { initAside } from "./shell/aside.js";
 import { initMiwaAILayer } from "./shell/miwa-ai-layer.js?v=20260826-v1.9.30.2-work-attention";
