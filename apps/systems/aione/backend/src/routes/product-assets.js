@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import pool, { withTransaction } from "../../db.js";
 import { requireWriteActor } from "../http/context.js";
-import { readGcsObject } from "../integrations/google-cloud-storage-client.js";
+import { readGcsObject, uploadGcsObjectIfAbsent } from "../integrations/google-cloud-storage-client.js";
 import { recordBusinessEvent } from "../services/event-service.js";
 
 const router = Router();
@@ -156,6 +156,63 @@ router.get("/:assetId/content", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+
+// Minimal AIONE-owned representative image upload. Does not publish to Rakuten.
+router.post("/products/:productId/primary-image", requireWriteActor, async (req, res, next) => {
+  try {
+    const productId = cleanText(req.params.productId, 240);
+    const mime = cleanText(req.body?.mimeType, 80).toLowerCase();
+    const base64 = String(req.body?.base64 || "");
+    const formats = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+    if (!formats[mime] || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
+      return res.status(400).json({ error: "invalid_image", message: "Please provide a JPEG, PNG or WebP image." });
+    }
+    const buffer = Buffer.from(base64, "base64");
+    const signatureValid = mime === "image/jpeg"
+      ? buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
+      : mime === "image/png"
+        ? buffer.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex"))
+        : buffer.subarray(0, 4).toString() === "RIFF" && buffer.subarray(8, 12).toString() === "WEBP";
+    if (!signatureValid || buffer.length < 16 || buffer.length > 2 * 1024 * 1024) {
+      return res.status(400).json({ error: "invalid_image", message: "Image content is invalid or exceeds 2 MB." });
+    }
+    const bucket = cleanText(process.env.AIONE_PRODUCT_ASSET_BUCKET, 512);
+    if (!bucket) return res.status(503).json({ error: "asset_storage_unconfigured" });
+    const product = await loadProduct(pool, productId);
+    const digest = createHash("sha256").update(buffer).digest("hex");
+    const objectName = `product/manual/${product.product_code}/${digest}.${formats[mime]}`;
+    await uploadGcsObjectIfAbsent({ bucketName: bucket, objectName, buffer, contentType: mime });
+    const context = req.aioneContext || {};
+    const result = await withTransaction(async client => {
+      await client.query("SELECT id FROM public.products WHERE id=$1 FOR UPDATE", [productId]);
+      const existing = await client.query(
+        `SELECT * FROM public.product_assets
+          WHERE product_id=$1 AND source_provider='aione_manual'
+            AND metadata->>'fileSha256'=$2 AND archived_at IS NULL
+          LIMIT 1`, [productId, digest]);
+      if (existing.rowCount) return { asset: existing.rows[0], reused: true };
+      const nextNumber = await client.query(
+        "SELECT COALESCE(MAX(asset_no),0)+1 AS next FROM public.product_assets WHERE product_id=$1",
+        [productId]);
+      const assetNo = Number(nextNumber.rows[0].next);
+      if (assetNo > 999) {
+        const e = new Error("Product asset limit reached."); e.code = "asset_limit_reached"; e.statusCode = 409; throw e;
+      }
+      const metadata = { gcsBucket: bucket, gcsObject: objectName, fileSha256: digest, imagePurpose: "system_primary" };
+      const saved = await client.query(
+        `INSERT INTO public.product_assets
+         (id,product_id,asset_no,asset_type,asset_role,source_provider,original_name,canonical_name,mime_type,lifecycle_status,metadata,created_by_person_id,updated_by_person_id,source_system)
+         VALUES ($1,$2,$3,'image','source_main_image','aione_manual',$4,$5,$6,'formalized',$7::jsonb,$8,$8,$9)
+         RETURNING *`,
+        [assetId(), productId, assetNo, `${product.product_code}_ma.${formats[mime]}`,
+          `${product.product_code}_${pad(assetNo)}.${formats[mime]}`, mime,
+          JSON.stringify(metadata), context.personId || null, context.sourceSystem || "aione"]);
+      return { asset: saved.rows[0], reused: false };
+    });
+    res.status(result.reused ? 200 : 201).json(result);
+  } catch (error) { next(error); }
 });
 
 router.post("/products/:productId/assets/plan", requireWriteActor, async (req, res, next) => {
