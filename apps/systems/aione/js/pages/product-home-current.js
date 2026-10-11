@@ -114,11 +114,11 @@ async function renderProductWorkspace(host){let workbench={};host.innerHTML=`<se
 function designLive(){return `<div class="phc-design-frame-wrap"><iframe class="phc-design-frame" src="./design-center-v1.html?product=${PRODUCT_REF}&embed=1" title="${PRODUCT_REF} 设计中心" loading="eager"></iframe></div>`;}
 async function renderCenter(host,center,index){
   const label=center.tabs[index]||center.tabs[0],type=(VIEW_TYPES[center.id]||[])[index]||"overview";
-  host.innerHTML=`<section class="phc phc-center" aria-labelledby="phc-title">${pageHeader(center.label,CENTER_COPY[center.id],status(center.status))}${centerTabs(center,index)}<main class="phc-content" data-stage></main></section>`;
+  host.innerHTML=`<section class="phc phc-center" aria-labelledby="phc-title">${pageHeader(center.label,CENTER_COPY[center.id],status(center.status))}${center.id==="product-center"?"":centerTabs(center,index)}<main class="phc-content" data-stage></main></section>`;
   const stage=host.querySelector("[data-stage]");
   if(center.id==="selection-center")await renderSelectionView(stage,label,index);
-  else if(center.id==="product-center"&&index===0)stage.innerHTML=`<section class="phc-section"><h2>正式商品工作区</h2><button class="phc-object-row" data-open-product><span class="phc-product-thumb">M2</span><span><strong>${PRODUCT_REF}</strong><small>冬款男袜6双套装 · 1个SKU</small></span>${status("active")}<b>›</b></button></section><section class="phc-section"><h2>生命周期关系</h2>${lifecycle()}</section>`;
-  else if(center.id==="product-center"&&index===1)await showProducts(stage);
+  else if(center.id==="product-center"&&index===99)stage.innerHTML=`<section class="phc-section"><h2>正式商品工作区</h2><button class="phc-object-row" data-open-product><span class="phc-product-thumb">M2</span><span><strong>${PRODUCT_REF}</strong><small>冬款男袜6双套装 · 1个SKU</small></span>${status("active")}<b>›</b></button></section><section class="phc-section"><h2>生命周期关系</h2>${lifecycle()}</section>`;
+  else if(center.id==="product-center"&&(index===1||index===0))await showProducts(stage);
   else if(center.id==="product-center"&&index===2)stage.innerHTML=`${toolbar({search:"搜索 SKU Code / 商品"})}${dataTable(["SKU Code","Product Code","规格组合","状态","更新时间"],[[SKU_REF,PRODUCT_REF,"款式｜6双套装","CURRENT","2026-09-07"]])}`;
   else if(center.id==="design-center"&&index===2)stage.innerHTML=designLive();
   else stage.innerHTML=PAGE_TYPE_RENDERERS[type]({center,label});
