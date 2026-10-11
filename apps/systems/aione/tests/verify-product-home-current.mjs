@@ -15,7 +15,7 @@ const centers=["选品中心","商品中心","利润中心","设计中心","发�
 centers.forEach(label=>assert.ok(home.includes(`"${label}"`),`missing center ${label}`));
 assert.ok(home.indexOf('"选品中心"')<home.indexOf('"商品中心"'),"selection must be lifecycle entry");
 assert.match(home,/\["概览", "选品一览", "选品方法"\]/);
-assert.match(home,/\["概览", "商品一览", "SKU一览", "SKU生成器"\]/);
+assert.match(home,/\["商品一览", "SKU一览"\]/);
 assert.match(home,/\["概览", "设计一览", "AI批量出图", "图片管理", "设计模板", "模板映射"\]/);
 assert.match(home,/\["概览", "发布一览", "商品发布", "分类发布", "图片发布", "商品删除", "导入任务", "发布批次", "发布任务", "错误追踪", "发布模板", "发布映射"\]/);
 assert.ok(sidebar.includes('rootId !== "product-home"'),"product root tabs must not enter sidebar");
@@ -24,6 +24,13 @@ assert.ok(!index.includes("product-home-weekly-acceptance"),"engineering accepta
 assert.ok(!page.includes("本周工程成果验收"),"engineering copy remains");
 assert.ok(page.includes("aioneApi(`/api/v1/selections")&&page.includes("aioneApi(`/api/v1/design-center/workbench"),"real API client integration missing");
 assert.ok(!/\bfetch\s*\(/.test(page),"Product Home must not bypass AIONE API Client");
+assert.ok(page.includes("showProducts(stage)")&&page.includes("showSkuList(stage)"),"product center must route to operational workbenches");
+assert.ok(!page.includes("index===2)stage.innerHTML=`${toolbar({search:\"搜索 SKU"),"mock SKU list must be removed");
+const editor=read("js/pages/product-manual-entry.js");
+assert.ok(editor.includes("export async function showSkuList")&&editor.includes("export async function showProducts"),"product/SKU pages missing");
+assert.ok(editor.includes("data-pe-edit")&&editor.includes("data-pe-import-open")&&editor.includes("data-sku-edit"),"edit/import/SKU actions missing");
+const skuRoute=read("backend/src/routes/product-manual-entry.js");
+assert.ok(skuRoute.indexOf('router.get("/sku-list"')<skuRoute.indexOf('router.get("/:ref"'),"SKU list route must be registered before param route");
 
 const pageTypes=["overview","data-list","object-detail","form-editor","generator-wizard","master-data","tree","mapping","ledger","rule-management","batch-job-monitor","analysis-report","asset-management","electronic-publication","error-queue"];
 pageTypes.forEach(type=>assert.ok(page.includes(type),`missing Page Type ${type}`));
@@ -41,7 +48,6 @@ const { initProductHomeCurrent }=await import("../js/pages/product-home-current.
 for(const route of [
   "#/product-home",
   "#/product-home?center=selection-center",
-  "#/product-home?center=product-center",
   "#/product-home?center=product-center&product=MH0000002",
   "#/product-home?center=design-center",
   "#/product-home?center=publish-center",
