@@ -43,6 +43,9 @@ input("productModel","规格型号",p.productModel)+input("barcode","条形码",
 function sku(){return '<div class="block"><h3>规格设置</h3>'+(p.specs||[]).map((s,i)=>'<div class="spec">'+input("sn"+i,"规格名称"+(i+1),s.name,["颜色","尺码","套数","型号","其他"])+input("sv"+i,"规格值",s.values?.join("，"))+'<button class="btn" data-remove="'+i+'">×</button></div>').join("")+'<button class="btn" data-add>＋ 添加规格维度</button></div><div class="block"><h3>自动生成的SKU <span class="muted">'+skuRows(p).length+'个实际SKU</span></h3><div class="tablewrap"><table><thead><tr><th>SKU图片</th><th>规格</th><th>SKU管理番号</th><th>システム連携用SKU番号</th><th>售价（¥）</th><th>库存</th><th>采购价（CNY）</th><th>重量（g）</th></tr></thead><tbody>'+skuRows(p).map(x=>'<tr><td>待关联</td><td>'+esc(x.label)+'</td><td>'+esc(x.number)+'</td><td>'+esc(x.link)+'</td>'+'<td><span class="pw-sku-price">'+MONEY(x.price)+'</span></td>'+[["stock","库存"],["cost","采购价"],["weight","重量"]].map(([k,t])=>'<td><input aria-label="'+esc(t)+'" data-sku="'+x.index+'" data-sku-field="'+k+'" type="number" min="0" value="'+esc(x[k])+'"></td>').join("")+'</tr>').join("")+'</tbody></table></div></div>'}
 function profit(){
  const rows=skuRows(p),row=selected?rows[selected-1]:null,m=finance(p,row),target=p.profitTargets,rate=p.rates;
+ const hasActual=Number(p.actualShipmentWeightG)>0;
+ const hasEstimated=Number(row?.weight??p.weightG)>0&&Number(p.setQuantity)>0;
+ if(!hasActual&&!hasEstimated)return '<div class="pw-v7-block"><h3>利润分析 · 待核算</h3><p class="pw-helper">请先录入实际发货重量，或至少填写单个净重与套装数量。重量缺失时不可将运费显示为0。</p></div>';
  const fixed=m.warehouse+m.japan,platformRate=Number(rate.platform??10)/100;
  const operatingRate=(Number(rate.coupon||0)+Number(rate.points||0)+Number(rate.ads||0)+Number(rate.other||0))/100;
  const tail=n=>Number.isFinite(n)&&n>=0?Math.max(80,Math.ceil((n-80)/100)*100+80):null;
