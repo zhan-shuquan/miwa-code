@@ -223,3 +223,43 @@ export async function importManualProducts(items, context={}) {
   }
   return {results,successCount:results.filter(x=>x.ok).length,failedCount:results.filter(x=>!x.ok).length};
 }
+
+
+/**
+ * Read the existing canonical Product/SKU tables. This endpoint never invents
+ * SKU IDs, creates records, changes publication state, or adds a second model.
+ */
+export async function listManualSkus({query="",limit=25,offset=0}={}){
+  const shape=await assertCurrentProductEntrySchema(pool);
+  const q=String(query||"").trim();
+  const lim=Math.min(100,Math.max(1,Number(limit)||25));
+  const skip=Math.max(0,Number(offset)||0);
+  const filter=" FROM public.product_skus s JOIN public.products p ON p.id=s.product_id"+
+    " WHERE ($1='' OR s.sku_code ILIKE $2 OR p.product_code ILIKE $2 OR p."+shape.nameCol+
+    " ILIKE $2 OR p.metadata->'manualEntry'->>'localCode' ILIKE $2)";
+  const binds=[q,"%"+q+"%"];
+  const [data,count]=await Promise.all([
+    pool.query("SELECT s.sku_code,s.name AS sku_name,s."+shape.skuDataCol+
+      " AS attributes,s."+shape.skuStatusCol+" AS sku_status,p.id AS product_id,p.product_code,p."+
+      shape.nameCol+" AS product_name,p.metadata,p.updated_at"+filter+
+      " ORDER BY p.updated_at DESC,s.sku_code ASC LIMIT $3 OFFSET $4",[...bind,lim,skip]),
+    pool.query("SELECT COUNT(*)::integer AS n"+filter,bind)
+  ]);
+  const items=data.rows.map(row=>{
+    const manual=metadataOf(row)||null;
+    const attrs=Object.fromEntries(Object.entries(row.attributes&&typeof row.attributes==="object"?row.attributes:{}).filter(([key])=>!key.startsWith("__aione")));
+    const identity=Object.entries(attrs).map(([key,value])=>key+"="+value).join("|")||"default";
+    const suffix=Number(String(row.sku_code||"").split("-").at(-1));
+    const overrides=manual?.skuOverrides||[];
+    const override=overrides.find(x=>x.identity===identity)||overrides.find(x=>!x.identity&&Number(x.index)===suffix)||{};
+    return {
+      skuCode:row.sku_code,productId:row.product_id,productCode:row.product_code,
+      localCode:manual?.localCode||"",nameZh:manual?.nameZh||row.product_name,
+      specification:Object.values(attrs).join(" / ")||row.sku_name||"单规格",
+      status:row.sku_status,updatedAt:row.updated_at,readOnly:!manual,
+      salePriceJpy:manual?(override.priceJpy??manual.salePriceJpy??null):null,
+      stock:manual?(override.stock??manual.defaultStock??null):null
+    };
+  });
+  return {items,total:Number(count.rows[0]?.n||0),limit:lim,offset:skip};
+}
