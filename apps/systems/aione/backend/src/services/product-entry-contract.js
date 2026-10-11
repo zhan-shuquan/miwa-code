@@ -17,12 +17,17 @@ export const FIELD_KEYS = Object.freeze([
   ["rakutenGenreId", "楽天ジャンルID"], ["rakutenNotice", "自由入力行1"],
   ["pcDescription", "PC用商品説明文"], ["spDescription", "スマートフォン用商品説明文"],
   ["salesDescription", "PC用販売説明文"], ["targetShopRef", "目标店铺"],
-  ["autoPublish", "自动上架"]
+  ["autoPublish", "自动上架"],
+  ["materialComposition", "材质成分"], ["productModel", "规格型号"], ["barcode", "条形码"],
+  ["actualShipmentWeightG", "发货实际重量(g)"],
+  ["sellingPointCore", "核心卖点"], ["sellingPointMaterial", "材质品质"],
+  ["sellingPointExperience", "使用体验"], ["sellingPointDesign", "设计特点"],
+  ["sellingPointScene", "适用场景"], ["sellingPointOther", "其他卖点"]
 ]);
 
 export const SKU_EXPORT_HEADERS = ["商品货号", "SKU序号", "售价覆盖(JPY)", "库存覆盖", "采购价覆盖(CNY)", "重量覆盖(g)", "发货尺寸覆盖", "SKU图片文件", "规格组合身份"];
-const NUMBERS = ["purchaseUnitCostCny", "domesticFreightCny", "setQuantity", "weightG", "packageLengthCm", "packageWidthCm", "packageHeightCm", "salePriceJpy"];
-const TEXTS = ["nameZh", "material", "productSpecifications", "purchaseUrl", "category", "brand", "logisticsMethod", "packagingMethod", "sizeClass", "packagingMaterial", "rakutenTitle", "rakutenCatchCopy", "rakutenGenreId", "rakutenNotice", "pcDescription", "spDescription", "salesDescription", "targetShopRef", "sourcePlatform", "originCountry", "rakutenStoreCategory"];
+const NUMBERS = ["purchaseUnitCostCny", "domesticFreightCny", "setQuantity", "weightG", "actualShipmentWeightG", "packageLengthCm", "packageWidthCm", "packageHeightCm", "salePriceJpy"];
+const TEXTS = ["nameZh", "material", "productSpecifications", "purchaseUrl", "category", "brand", "logisticsMethod", "packagingMethod", "sizeClass", "packagingMaterial", "rakutenTitle", "rakutenCatchCopy", "rakutenGenreId", "rakutenNotice", "pcDescription", "spDescription", "salesDescription", "targetShopRef", "sourcePlatform", "originCountry", "rakutenStoreCategory", "materialComposition", "productModel", "barcode", "sellingPointCore", "sellingPointMaterial", "sellingPointExperience", "sellingPointDesign", "sellingPointScene", "sellingPointOther"];
 const BAD_EXCEL_ERRORS = ["#REF!", "#VALUE!", "#N/A", "#DIV/0!", "#NAME?", "#NUM!"];
 
 function bad(code, message, statusCode = 400) {
@@ -62,13 +67,29 @@ export function normalizeProductEntry(input = {}) {
   if (!/^[a-z]{2,8}[0-9]{2,6}$/.test(p.localCode)) throw bad("invalid_local_code", "商品货号必须类似zjl238、zsq081。");
   for (const key of TEXTS) p[key] = str(input[key]);
   for (const key of NUMBERS) p[key] = num(input[key], key);
-  p.sourcePlatform ||= "阿里巴巴";
+  if (!p.sourcePlatform && p.purchaseUrl) {
+    try {
+      const host = new URL(p.purchaseUrl).hostname.toLowerCase();
+      if (host === "1688.com" || host.endsWith(".1688.com")) p.sourcePlatform = "1688";
+      else if (host === "taobao.com" || host.endsWith(".taobao.com")) p.sourcePlatform = "淘宝";
+      else if (host === "tmall.com" || host.endsWith(".tmall.com")) p.sourcePlatform = "天猫";
+      else if (host === "alibaba.com" || host.endsWith(".alibaba.com")) p.sourcePlatform = "Alibaba";
+    } catch { /* Unknown supplier links remain unclassified. */ }
+  }
   p.logisticsMethod ||= "空运大件（普货）";
   p.packagingMethod ||= "原装";
   p.packagingMaterial ||= "A4信封";
   p.originCountry ||= "中国";
   p.setQuantity ??= 1;
   p.domesticFreightCny ??= 0;
+  if (p.actualShipmentWeightG !== null && p.actualShipmentWeightG <= 0) throw bad("invalid_shipment_weight", "实际发货重量必须大于0，未称重请留空。");
+  p.extraAttributes = {};
+  if (input.extraAttributes && typeof input.extraAttributes === "object" && !Array.isArray(input.extraAttributes)) {
+    for (const [key, value] of Object.entries(input.extraAttributes).slice(0, 80)) {
+      const name = str(key).slice(0, 80);
+      if (name) p.extraAttributes[name] = str(value).slice(0, 500);
+    }
+  }
   p.defaultStock = input.defaultStock === undefined || input.defaultStock === null || input.defaultStock === "" ? 1000 : num(input.defaultStock, "SKU默认库存");
   if (!Number.isSafeInteger(p.defaultStock) || p.defaultStock < 0) throw bad("invalid_stock", "默认库存必须是非负整数。");
   const rates = input.rates && typeof input.rates === "object" ? input.rates : {};
@@ -252,7 +273,7 @@ export async function exportProductEntries(items) {
   const book = new ExcelJS.Workbook();
   book.creator = "AIONE";
   const main = book.addWorksheet("商品一览");
-  const extras = [["defaultStock","SKU默认库存"],["sourcePlatform","来源"],["originCountry","原产国"],["rakutenStoreCategory","乐天店铺分类"],["rates","运营费率JSON"],["profitTargets","利润目标JSON"],["specs","完整规格JSON"]];
+  const extras = [["extraAttributes","其他属性JSON"],["defaultStock","SKU默认库存"],["sourcePlatform","来源"],["originCountry","原产国"],["rakutenStoreCategory","乐天店铺分类"],["rates","运营费率JSON"],["profitTargets","利润目标JSON"],["specs","完整规格JSON"]];
   main.addRow([...FIELD_KEYS.map(pair => pair[1]),...extras.map(pair=>pair[1])]);
   const sku = book.addWorksheet("SKU明细");
   sku.addRow(SKU_EXPORT_HEADERS);
@@ -265,7 +286,7 @@ export async function exportProductEntries(items) {
         row[key] = match[2] === "Name" ? (spec.name || "") : (spec.values || []).join("|");
       } else row[key] = key === "autoPublish" ? (p.autoPublish ? "是" : "否") : p[key] ?? "";
     }
-    main.addRow([...FIELD_KEYS.map(pair => row[pair[0]]),...extras.map(([key])=>["rates","profitTargets","specs"].includes(key)?JSON.stringify(p[key]||[]):(p[key]??""))]);
+    main.addRow([...FIELD_KEYS.map(pair => row[pair[0]]),...extras.map(([key])=>["rates","profitTargets","specs","extraAttributes"].includes(key)?JSON.stringify(p[key]||{}):(p[key]??""))]);
     for (const o of p.skuOverrides || []) sku.addRow([p.localCode, o.index, o.priceJpy ?? "", o.stock ?? "", o.purchaseCostCny ?? "", o.weightG ?? "", o.sizeClass || "", o.imageFile || "", o.identity || ""]);
   }
   for (const ws of [main, sku]) {
