@@ -1,7 +1,7 @@
 /* AIONE Universal Sidebar｜CURRENT 2026-09-08 */
 import { getCurrentBusinessSpaceId, syncPlatformContextFromRoute } from "./platform-context.js";
 import { renderSemanticIcons } from "../config/semantic-icons.js?v=20260824-v1.9.5-sidebar-aside-lock-candidate";
-import { resolveSidebarContext } from "../config/sidebar-registry.js";
+import { resolveSidebarContext } from "../config/sidebar-registry.js?v=20261011-product-center-v7";
 
 function routeId(){return String(location.hash||"").replace(/^#\/?/,"").split(/[/?]/)[0]||"selection";}
 function hashBody(){return String(location.hash||"").replace(/^#\/?/,"");}
