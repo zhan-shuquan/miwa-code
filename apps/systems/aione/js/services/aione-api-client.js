@@ -83,6 +83,22 @@ export async function aioneApi(path, options = {}) {
   return payload;
 }
 
+export async function aioneImageBlobUrl(path) {
+  const response = await fetch(getAioneApiBaseUrl() + path, {
+    method: "GET",
+    headers: { ...actorHeaders(), Accept: "image/*" },
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    let payload = {};
+    try { payload = await response.json(); } catch (_) {}
+    throw new Error(payload.message || payload.error || "图片读取失败（HTTP " + response.status + "）");
+  }
+  const blob = await response.blob();
+  if (!blob.type.startsWith("image/") || !blob.size) throw new Error("图片内容无效");
+  return URL.createObjectURL(blob);
+}
+
 function filenameFromDisposition(value, fallback = "download") {
   const raw = String(value || "");
   const utf8 = raw.match(/filename\*=UTF-8''([^;]+)/i);
