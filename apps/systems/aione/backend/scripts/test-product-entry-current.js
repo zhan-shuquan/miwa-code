@@ -35,6 +35,13 @@ async function run(){
   const original=fixture.items[0];
   assert.equal(original.localCode,"zjl238");
   assert.equal(original.nameZh,"户外水龙头防冻罩");
+  const detailed=normalizeProductEntry({...original,material:"EVA",productSpecifications:"长度约26cm；厚度约2cm"});
+  assert.equal(detailed.material,"EVA");
+  assert.equal(detailed.productSpecifications,"长度约26cm；厚度约2cm");
+  const detailedExport=await exportProductEntries([detailed]);
+  const detailedRoundTrip=await parseProductEntryWorkbook(detailedExport,"product_details.xlsx");
+  assert.equal(detailedRoundTrip.items[0].material,"EVA","material must survive workbook roundtrip");
+  assert.equal(detailedRoundTrip.items[0].productSpecifications,"长度约26cm；厚度约2cm","descriptive product specifications must survive workbook roundtrip");
   assert.equal(original.salePriceJpy,980);
   assert.equal(original.rakutenGenreId,"565305");
   assert.equal(original.autoPublish,true);
