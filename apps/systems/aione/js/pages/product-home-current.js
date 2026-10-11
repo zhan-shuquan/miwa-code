@@ -1,6 +1,6 @@
 import { PRODUCT_HOME_CENTERS } from "../config/home-registry.js?v=20260908-product-home-current";
 import { aioneApi } from "../services/aione-api-client.js";
-import { showProducts } from "./product-manual-entry.js";
+import { showProducts, showSkuList, openProductEditor, openNewProductEditor } from "./product-manual-entry.js";
 
 const PRODUCT_REF="MH0000002";
 const SELECTION_REF="SEL-20260907-000001";
@@ -12,7 +12,7 @@ const ROOT_VIEWS=Object.freeze([
 ]);
 const VIEW_TYPES=Object.freeze({
   "selection-center":["overview","data-list","electronic-publication"],
-  "product-center":["overview","data-list","data-list","generator-wizard"],
+  "product-center":["data-list","data-list"],
   "profit-center":["data-list","analysis-report"],
   "design-center":["overview","data-list","batch-job-monitor","asset-management","master-data","mapping"],
   "publish-center":["overview","data-list","form-editor","form-editor","batch-job-monitor","form-editor","batch-job-monitor","batch-job-monitor","batch-job-monitor","error-queue","master-data","mapping"],
@@ -117,9 +117,18 @@ async function renderCenter(host,center,index){
   host.innerHTML=`<section class="phc phc-center" aria-labelledby="phc-title">${pageHeader(center.label,CENTER_COPY[center.id],status(center.status))}${centerTabs(center,index)}<main class="phc-content" data-stage></main></section>`;
   const stage=host.querySelector("[data-stage]");
   if(center.id==="selection-center")await renderSelectionView(stage,label,index);
-  else if(center.id==="product-center"&&index===0)stage.innerHTML=`<section class="phc-section"><h2>正式商品工作区</h2><button class="phc-object-row" data-open-product><span class="phc-product-thumb">M2</span><span><strong>${PRODUCT_REF}</strong><small>冬款男袜6双套装 · 1个SKU</small></span>${status("active")}<b>›</b></button></section><section class="phc-section"><h2>生命周期关系</h2>${lifecycle()}</section>`;
-  else if(center.id==="product-center"&&index===1)await showProducts(stage);
-  else if(center.id==="product-center"&&index===2)stage.innerHTML=`${toolbar({search:"搜索 SKU Code / 商品"})}${dataTable(["SKU Code","Product Code","规格组合","状态","更新时间"],[[SKU_REF,PRODUCT_REF,"款式｜6双套装","CURRENT","2026-09-07"]])}`;
+  else if(center.id==="product-center"&&index===0){
+    const query=params(),ref=query.get("edit");
+    if(ref){
+      try{await openProductEditor(stage,ref);}
+      catch(error){
+        stage.innerHTML=loadError(error)+'<button class="phc-primary" data-products-retry>返回商品一览</button>';
+        host.querySelector("[data-products-retry]")?.addEventListener("click",()=>navigate({center:"product-center",view:"0"}));
+      }
+    }else if(query.get("new")==="1")openNewProductEditor(stage);
+    else await showProducts(stage);
+  }
+  else if(center.id==="product-center"&&index===1)await showSkuList(stage);
   else if(center.id==="design-center"&&index===2)stage.innerHTML=designLive();
   else stage.innerHTML=PAGE_TYPE_RENDERERS[type]({center,label});
   host.querySelector("[data-open-product]")?.addEventListener("click",()=>navigate({center:"product-center",product:PRODUCT_REF}));
