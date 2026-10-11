@@ -51,7 +51,7 @@ export const HOME_PAGE_MODEL = Object.freeze({
  */
 export const PRODUCT_HOME_CENTERS = Object.freeze([
   center("selection-center", "选品中心", { route: "product-home?center=selection-center", icon: "search", tabs: ["概览", "选品一览", "选品方法"], status: "active" }),
-  center("product-center", "商品中心", { route: "product-home?center=product-center", icon: "product", tabs: ["概览", "商品一览", "SKU一览", "SKU生成器"], status: "active" }),
+  center("product-center", "商品中心", { route: "product-home?center=product-center", icon: "product", tabs: ["商品一览", "SKU一览"], status: "active" }),
   center("profit-center", "利润中心", { route: "product-home?center=profit-center", icon: "analysis", tabs: ["利润一览", "利润分析"], status: "active" }),
   center("design-center", "设计中心", { route: "product-home?center=design-center", icon: "file", tabs: ["概览", "设计一览", "AI批量出图", "图片管理", "设计模板", "模板映射"], status: "validating" }),
   center("publish-center", "发布中心", { route: "product-home?center=publish-center", icon: "publishing", tabs: ["概览", "发布一览", "商品发布", "分类发布", "图片发布", "商品删除", "导入任务", "发布批次", "发布任务", "错误追踪", "发布模板", "发布映射"], status: "validating" }),
