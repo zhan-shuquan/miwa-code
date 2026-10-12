@@ -3,6 +3,7 @@ import { randomUUID, createHash } from "node:crypto";
 import pool, { withTransaction } from "../../db.js";
 import { requireWriteActor } from "../http/context.js";
 import { readGcsObject, uploadGcsObjectIfAbsent } from "../integrations/google-cloud-storage-client.js";
+import {getDisplayWebp,displaySizes} from "../services/product-image-webp-service.js";
 import { recordBusinessEvent } from "../services/event-service.js";
 
 const router = Router();
@@ -137,6 +138,26 @@ router.get("/:assetId/content", async (req, res, next) => {
       throw error;
     }
 
+    const size=Number(req.query?.webpSize);
+    if(req.query?.webpSize!==undefined){
+      if(!displaySizes.includes(size))return res.status(400).json({error:"display_size_invalid"});
+      const digest=cleanText(metadata.fileSha256||metadata.localVerifiedSha256,128);
+      if(digest){
+        try{
+          const preview=await getDisplayWebp({assetId:asset.id,bucketName,objectName,digest,size});
+          res.setHeader("Content-Type","image/webp");
+          res.setHeader("Content-Length",String(preview.bytes.length));
+          res.setHeader("Cache-Control","private, max-age=3600");
+          res.setHeader("Vary","Authorization");
+          res.setHeader("X-Content-Type-Options","nosniff");
+          return res.send(preview.bytes);
+        }catch(error){
+          // Render the original asset if a display derivative cannot be generated.
+          // Never modify or delete a canonical source asset to recover a thumbnail.
+          console.warn("AIONE display derivative unavailable",String(error.message||error).slice(0,120));
+        }
+      }
+    }
     const canonical = await readGcsObject({ bucketName, objectName });
     const contentType = cleanText(canonical.contentType, 120) || declaredMime || "application/octet-stream";
     if (!contentType.startsWith("image/")) {
