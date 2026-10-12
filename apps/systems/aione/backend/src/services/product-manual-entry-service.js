@@ -214,7 +214,7 @@ async function attachDerivedStatuses(products, shape) {
   const ids=products.map(p=>p.id);
   let images=new Map(), publications=new Map(), assetAvailable=false, listingAvailable=false;
   try {
-    const q=await pool.query("SELECT product_id::text AS product_id, COUNT(*)::int AS n FROM public.product_assets WHERE product_id::text = ANY($1::text[]) AND asset_type='image' AND archived_at IS NULL GROUP BY product_id",[ids]);
+    const q=await pool.query("SELECT product_id::text AS product_id, COUNT(*)::int AS n FROM public.product_assets WHERE product_id::text = ANY($1::text[]) AND asset_type='image' AND archived_at IS NULL AND COALESCE(metadata->>'imagePurpose','')<>'product_recognition_reference' GROUP BY product_id",[ids]);
     images=new Map(q.rows.map(row=>[String(row.product_id),Number(row.n)>0]));assetAvailable=true;
   } catch(error) {
     // Legacy schema may lack archived_at; try its canonical product-assets table.
