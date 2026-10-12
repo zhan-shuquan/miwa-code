@@ -17,7 +17,7 @@ export const FIELD_KEYS = Object.freeze([
   ["rakutenGenreId", "楽天ジャンルID"], ["rakutenNotice", "自由入力行1"],
   ["pcDescription", "PC用商品説明文"], ["spDescription", "スマートフォン用商品説明文"],
   ["salesDescription", "PC用販売説明文"], ["targetShopRef", "目标店铺"],
-  ["materialComposition", "材质成分"], ["productModel", "规格型号"], ["barcode", "条形码"],
+  ["materialComposition", "材质成分"], ["productModel", "规格型号"], ["barcode", "条形码"], ["remarks", "备注"],
   ["actualShipmentWeightG", "发货实际重量(g)"],
   ["sellingPointCore", "核心卖点"], ["sellingPointMaterial", "材质品质"],
   ["sellingPointExperience", "使用体验"], ["sellingPointDesign", "设计特点"],
@@ -26,7 +26,7 @@ export const FIELD_KEYS = Object.freeze([
 
 export const SKU_EXPORT_HEADERS = ["商品货号", "SKU序号", "售价覆盖(JPY)", "库存覆盖", "采购价覆盖(CNY)", "重量覆盖(g)", "发货尺寸覆盖", "SKU图片文件", "规格组合身份"];
 const NUMBERS = ["purchaseUnitCostCny", "domesticFreightCny", "setQuantity", "weightG", "actualShipmentWeightG", "packageLengthCm", "packageWidthCm", "packageHeightCm", "salePriceJpy"];
-const TEXTS = ["nameZh", "material", "productSpecifications", "purchaseUrl", "category", "brand", "logisticsMethod", "packagingMethod", "sizeClass", "packagingMaterial", "rakutenTitle", "rakutenCatchCopy", "rakutenGenreId", "rakutenNotice", "pcDescription", "spDescription", "salesDescription", "targetShopRef", "sourcePlatform", "originCountry", "rakutenStoreCategory", "materialComposition", "productModel", "barcode", "sellingPointCore", "sellingPointMaterial", "sellingPointExperience", "sellingPointDesign", "sellingPointScene", "sellingPointOther"];
+const TEXTS = ["nameZh", "material", "productSpecifications", "purchaseUrl", "category", "brand", "logisticsMethod", "packagingMethod", "sizeClass", "packagingMaterial", "rakutenTitle", "rakutenCatchCopy", "rakutenGenreId", "rakutenNotice", "pcDescription", "spDescription", "salesDescription", "targetShopRef", "sourcePlatform", "originCountry", "rakutenStoreCategory", "materialComposition", "productModel", "barcode", "remarks", "sellingPointCore", "sellingPointMaterial", "sellingPointExperience", "sellingPointDesign", "sellingPointScene", "sellingPointOther"];
 const BAD_EXCEL_ERRORS = ["#REF!", "#VALUE!", "#N/A", "#DIV/0!", "#NAME?", "#NUM!"];
 
 function bad(code, message, statusCode = 400) {
