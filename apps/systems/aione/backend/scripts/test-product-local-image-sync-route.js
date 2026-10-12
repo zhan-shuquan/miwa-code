@@ -7,6 +7,8 @@ const id="prd_c61a3ec2-9e98-4892-8d08-985b7962f74a";
 const image=Buffer.concat([Buffer.from("89504e470d0a1a0a","hex"),Buffer.alloc(32)]);
 const sha=createHash("sha256").update(image).digest("hex");
 const bucket="fixture-assets";
+// Local test fixture only; injected GCS adapter does not access the network.
+process.env.AIONE_PRODUCT_ASSET_BUCKET=bucket;
 const current=[{id:"ast_manual",asset_role:"source_main_image",source_provider:"aione_manual",original_name:"MH0000005_ma.png",mime_type:"image/png",metadata:{fileSha256:sha,gcsBucket:bucket,gcsObject:"manual/primary.png"}}];
 const blobs=new Map([["manual/primary.png",{bytes:image,contentType:"image/png"}]]);
 const queries=[];
