@@ -175,3 +175,26 @@ export async function createCabinetFolder({ folderName, upperFolderId = null }) 
     folderName: xmlText(xml, "folderName") || cleanFolderName
   };
 }
+
+// ItemAPI 2.0 GET. Existing R-Cabinet credentials must explicitly be bound to
+// the requested shop; never reuse them for a different store by assumption.
+export async function getItemV2ReadOnly({shopRef,manageNumber,request=fetch}) {
+  const configuredShop=String(process.env.AIONE_RAKUTEN_SHOP_REF||"").trim();
+  if(!configuredShop||configuredShop!==String(shopRef||"").trim()){
+    const e=new Error("Rakuten credential shop binding is not configured or does not match.");
+    e.statusCode=503;e.code="rakuten_shop_binding_missing";throw e;
+  }
+  const code=String(manageNumber||"").trim();
+  if(!/^[A-Za-z0-9_-]{1,64}$/.test(code)){
+    const e=new Error("Invalid Rakuten product management number.");e.statusCode=400;e.code="invalid_manage_number";throw e;
+  }
+  const response=await request("https://api.rms.rakuten.co.jp/es/2.0/items/manage-numbers/"+encodeURIComponent(code),{
+    method:"GET",headers:{Authorization:authorizationHeader(),Accept:"application/json"},
+    signal:AbortSignal.timeout(15000)
+  });
+  const raw=await response.text();
+  if(response.status===404)return {exists:false,httpStatus:404,manageNumber:code,shopRef};
+  if(!response.ok){const e=new Error("Rakuten ItemAPI read failed (HTTP "+response.status+").");e.statusCode=502;e.code="rakuten_itemapi_read_failed";e.rakutenStatus=response.status;throw e;}
+  let item;try{item=JSON.parse(raw)}catch{const e=new Error("Rakuten ItemAPI response was not JSON.");e.statusCode=502;e.code="rakuten_itemapi_invalid_response";throw e;}
+  return {exists:true,httpStatus:response.status,manageNumber:code,shopRef,item};
+}
