@@ -17,7 +17,6 @@ export const FIELD_KEYS = Object.freeze([
   ["rakutenGenreId", "楽天ジャンルID"], ["rakutenNotice", "自由入力行1"],
   ["pcDescription", "PC用商品説明文"], ["spDescription", "スマートフォン用商品説明文"],
   ["salesDescription", "PC用販売説明文"], ["targetShopRef", "目标店铺"],
-  ["autoPublish", "自动上架"],
   ["materialComposition", "材质成分"], ["productModel", "规格型号"], ["barcode", "条形码"],
   ["actualShipmentWeightG", "发货实际重量(g)"],
   ["sellingPointCore", "核心卖点"], ["sellingPointMaterial", "材质品质"],
@@ -199,7 +198,7 @@ function fromWps(workbook, filename) {
     };
     if (Object.values(o).some((v, i) => i > 0 && str(v) !== "")) input.skuOverrides.push(o);
   }
-  const warnings = ["WPS导入仅建立AIONE草稿，不会因自动上架=是而直接发布"];
+  const warnings = ["WPS导入仅建立AIONE草稿，不会自动发布到外部平台。旧「自动上架」单元格只作为历史兼容读取。"];
   if (skuSheet) {
     let invalidFormulas = 0;
     skuSheet.eachRow(row => row.eachCell(c => {
@@ -284,7 +283,7 @@ export async function exportProductEntries(items) {
       if (match) {
         const spec = (p.specs || [])[Number(match[1]) - 1] || {};
         row[key] = match[2] === "Name" ? (spec.name || "") : (spec.values || []).join("|");
-      } else row[key] = key === "autoPublish" ? (p.autoPublish ? "是" : "否") : p[key] ?? "";
+      } else row[key] = p[key] ?? "";
     }
     main.addRow([...FIELD_KEYS.map(pair => row[pair[0]]),...extras.map(([key])=>["rates","profitTargets","specs","extraAttributes"].includes(key)?JSON.stringify(p[key]||{}):(p[key]??""))]);
     for (const o of p.skuOverrides || []) sku.addRow([p.localCode, o.index, o.priceJpy ?? "", o.stock ?? "", o.purchaseCostCny ?? "", o.weightG ?? "", o.sizeClass || "", o.imageFile || "", o.identity || ""]);
@@ -298,13 +297,5 @@ export async function exportProductEntries(items) {
     ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: ws.columnCount } };
   }
   main.getColumn(2).width = 38;
-  for (const [key, label] of FIELD_KEYS) {
-    if (key === "autoPublish") {
-      const col = FIELD_KEYS.findIndex(pair => pair[0] === key) + 1;
-      for (let row = 2; row <= Math.max(300, items.length + 1); row++) {
-        main.getCell(row, col).dataValidation = { type: "list", allowBlank: true, formulae: ['"是,否"'] };
-      }
-    }
-  }
   return Buffer.from(await book.xlsx.writeBuffer());
 }
