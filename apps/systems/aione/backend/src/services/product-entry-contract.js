@@ -95,7 +95,7 @@ export function normalizeProductEntry(input = {}) {
   p.rates = {};
   for (const key of ["coupon", "points", "ads", "other", "platform"]) {
     const raw = rates[key];
-    const rate = raw === undefined || raw === null || raw === "" ? (key==="platform"?10:key==="points"?2:0) : num(raw, key+"费率");
+    const rate = raw === undefined || raw === null || raw === "" ? (key==="platform"?10:0) : num(raw, key+"费率");
     if (!(rate >= 0 && rate <= 100)) throw bad("invalid_rate", key+"费率必须在0至100之间。");
     p.rates[key] = rate;
   }
