@@ -38,6 +38,14 @@ async function run(){
   assert.equal(original.nameZh,"户外水龙头防冻罩");
   const detailed=normalizeProductEntry({...original,material:"EVA",productSpecifications:"长度约26cm；厚度约2cm"});
   assert.equal(detailed.material,"EVA");
+  const ratesDefault=normalizeProductEntry({localCode:"zjl901",nameZh:"测试商品"});
+  assert.deepEqual([ratesDefault.rates.coupon,ratesDefault.rates.points,ratesDefault.rates.ads,ratesDefault.rates.other],[0,0,0,0],"new product operating cost defaults must be zero");
+  const ratesExisting=normalizeProductEntry({localCode:"zjl902",nameZh:"测试已有积分",rates:{coupon:1,points:2,ads:3,other:4,platform:10}});
+  assert.deepEqual([ratesExisting.rates.coupon,ratesExisting.rates.points,ratesExisting.rates.ads,ratesExisting.rates.other],[1,2,3,4],"explicit saved rates must remain unchanged");
+  const chineseMaterial=normalizeProductEntry({...original,material:"210D牛津布"});
+  assert.equal(chineseMaterial.material,"210D牛津布");
+  const chineseMaterialRoundTrip=await parseProductEntryWorkbook(await exportProductEntries([chineseMaterial]),"material.xlsx");
+  assert.equal(chineseMaterialRoundTrip.items[0].material,"210D牛津布");
   const withRemarks=normalizeProductEntry({...detailed,remarks:"先确认样品包装后采购"});
   const remarksRoundTrip=await parseProductEntryWorkbook(await exportProductEntries([withRemarks]),"remarks.xlsx");
   assert.equal(remarksRoundTrip.items[0].remarks,"先确认样品包装后采购");
