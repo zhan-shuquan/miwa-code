@@ -5,14 +5,21 @@ import { requireWriteActor } from "../http/context.js";
 import { uploadGcsObjectIfAbsent, getGcsObjectMetadata, readGcsObject } from "../integrations/google-cloud-storage-client.js";
 import { inspectLocalImageUpload, validProductIdentity, assertGcsImageMetadata, chooseExistingLocalImageAsset } from "../services/product-local-image-sync-contract.js";
 
+export function createProductImageSyncRouter({
+ queryPool=pool,
+ transaction=withTransaction,
+ uploadObject=uploadGcsObjectIfAbsent,
+ objectMetadata=getGcsObjectMetadata,
+ readObject=readGcsObject
+}={}){
 const router=Router();
 const err=(status,code,message)=>Object.assign(new Error(message),{statusCode:status,code});
 async function verifyStoredImage({bucketName,objectName,digest,size,mime,readBack=false}){
- const metadata=await getGcsObjectMetadata({bucketName,objectName});
+ const metadata=await objectMetadata({bucketName,objectName});
  const verifiedByMetadata=assertGcsImageMetadata(metadata,{digest,size,mime});
  if(readBack||!verifiedByMetadata){
   // Older blobs may lack custom SHA metadata. Re-read instead of claiming verified.
-  const actual=await readGcsObject({bucketName,objectName});
+  const actual=await readObject({bucketName,objectName});
   const actualHash=createHash("sha256").update(actual.bytes).digest("hex");
   if(actual.bytes.length!==size||actualHash!==digest)
    throw err(409,"image_storage_conflict","云端原图与登记哈希不匹配。");
@@ -20,7 +27,7 @@ async function verifyStoredImage({bucketName,objectName,digest,size,mime,readBac
  return true;
 }
 async function recordVerifiedPrimaryReuse({productId,assetId,slotKey,digest,fileName,personId,size}){
- return withTransaction(async client=>{
+ return transaction(async client=>{
   await client.query("SELECT id FROM public.products WHERE id=$1 FOR UPDATE",[productId]);
   const q=await client.query("SELECT id,asset_role,metadata FROM public.product_assets WHERE product_id=$1 AND archived_at IS NULL FOR UPDATE",[productId]);
   const decision=chooseExistingLocalImageAsset(q.rows,{slotKey,digest,kind:"main"});
@@ -53,14 +60,14 @@ router.post("/products/:productId/local-image",gate,requireWriteActor,async(req,
  try {
   const productId=String(req.params.productId||"").trim();
   if(!validProductIdentity(productId))throw err(400,"product_id_invalid","需要有效的商品内部ID。");
-  const p=await pool.query("SELECT id,product_code,metadata FROM public.products WHERE id=$1 AND archived_at IS NULL",[productId]);
+  const p=await queryPool.query("SELECT id,product_code,metadata FROM public.products WHERE id=$1 AND archived_at IS NULL",[productId]);
   if(p.rowCount!==1)throw err(404,"product_not_found","商品不存在或已归档。");
   const localCode=String(p.rows[0].metadata?.manualEntry?.localCode||"").trim();
   const {image:item,bytes,mime,digest,slotKey:imageSlot}=inspectLocalImageUpload(req.body,localCode);
   const name=item.originalName;
   const bucket=String(process.env.AIONE_PRODUCT_ASSET_BUCKET||"").trim();
   if(!bucket)throw err(503,"asset_storage_unconfigured","AIONE图片云存储尚未配置。");
-  const current=await pool.query("SELECT id,asset_role,original_name,mime_type,metadata FROM public.product_assets WHERE product_id=$1 AND archived_at IS NULL",[productId]);
+  const current=await queryPool.query("SELECT id,asset_role,original_name,mime_type,metadata FROM public.product_assets WHERE product_id=$1 AND archived_at IS NULL",[productId]);
   const decision=chooseExistingLocalImageAsset(current.rows,{slotKey:imageSlot,digest,kind:item.kind});
   if(decision.action!=="create"){
    const existing=decision.asset;
@@ -73,9 +80,9 @@ router.post("/products/:productId/local-image",gate,requireWriteActor,async(req,
    return res.json({ok:true,reused:true,assetId:existing.id,originalName:name,kind:item.kind,slot:item.slot,verified:true});
   }
   const objectName="product/local/"+p.rows[0].product_code+"/"+digest+"."+item.extension;
-  await uploadGcsObjectIfAbsent({bucketName:bucket,objectName,buffer:bytes,contentType:mime,metadata:{fileSha256:digest}});
+  await uploadObject({bucketName:bucket,objectName,buffer:bytes,contentType:mime,metadata:{fileSha256:digest}});
   await verifyStoredImage({bucketName:bucket,objectName,digest,size:bytes.length,mime});
-  const result=await withTransaction(async client=>{
+  const result=await transaction(async client=>{
    await client.query("SELECT id FROM public.products WHERE id=$1 FOR UPDATE",[productId]);
    const rows=await client.query("SELECT id,asset_role,mime_type,metadata FROM public.product_assets WHERE product_id=$1 AND archived_at IS NULL FOR UPDATE",[productId]);
    const locked=chooseExistingLocalImageAsset(rows.rows,{slotKey:imageSlot,digest,kind:item.kind});
@@ -98,9 +105,9 @@ router.get("/products/:productId/local-images/status",gate,async(req,res,next)=>
  try{
   const productId=String(req.params.productId||"").trim();
   if(!validProductIdentity(productId))throw err(400,"product_id_invalid","需要有效的商品内部ID。");
-  const p=await pool.query("SELECT id,metadata FROM public.products WHERE id=$1 AND archived_at IS NULL",[productId]);
+  const p=await queryPool.query("SELECT id,metadata FROM public.products WHERE id=$1 AND archived_at IS NULL",[productId]);
   if(p.rowCount!==1)throw err(404,"product_not_found","商品不存在或已归档。");
-  const rows=await pool.query("SELECT id,original_name,mime_type,metadata FROM public.product_assets WHERE product_id=$1 AND archived_at IS NULL AND metadata ? 'localImageSlot' ORDER BY asset_no",[productId]);
+  const rows=await queryPool.query("SELECT id,original_name,mime_type,metadata FROM public.product_assets WHERE product_id=$1 AND archived_at IS NULL AND metadata ? 'localImageSlot' ORDER BY asset_no",[productId]);
   const assets=[];
   for(const item of rows.rows){
    const m=item.metadata||{};
@@ -117,4 +124,6 @@ router.get("/products/:productId/local-images/status",gate,async(req,res,next)=>
  }catch(e){next(e);}
 });
 
-export default router;
+return router;
+}
+export default createProductImageSyncRouter();
