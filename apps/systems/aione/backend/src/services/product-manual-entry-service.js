@@ -106,7 +106,7 @@ async function syncSku(client, productId, code, entries, source, shape, allowDra
   // In the alternate schema, use a complete numeric suffix (never offset slices).
   const existingNumbers=existing.rows.map(row=>{
     if(shape.skuNo)return Number(row.sku_no);
-    const match=String(row.sku_code||"").match(/-(\\d+)$/);
+    const match=String(row.sku_code||"").match(/-(\d+)$/);
     return match?Number(match[1]):null;
   }).filter(n=>Number.isSafeInteger(n)&&n>0);
   let nextNumber=Math.max(0,existing.rows.length,...existingNumbers)+1;
