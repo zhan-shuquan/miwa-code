@@ -1,4 +1,5 @@
 import { aioneApi, aioneDownload, aioneImageBlobUrl } from "../services/aione-api-client.js";
+import { suggestProductCategory } from "../config/product-category-suggestion.js?v=20261012-category-suggestion";
 import { quoteJapanDelivery } from "../config/japan-delivery-cost.js?v=20261012-shipping-rates";
 const BASE="/api/v1/product-entry";
 const ACTIVE_EDITOR_EVENTS=new WeakMap();
@@ -27,20 +28,7 @@ salePriceJpy:"填写商品含税售价",rakutenGenreId:"填写乐天末级ジャ
 rakutenCatchCopy:"填写日文宣传短语",pcDescription:"填写PC商品说明",spDescription:"填写手机商品说明",
 salesDescription:"填写销售说明",productSpecifications:"其他商品规格说明",originCountry:"如：中国"
 });
-const CATEGORY_TERMS=[
-["女袜",/女袜|女士.{0,8}袜|女性.{0,8}袜|レディース.{0,8}(ソックス|靴下)/i],
-["男袜",/男袜|男士.{0,8}袜|男性.{0,8}袜|メンズ.{0,8}(ソックス|靴下)/i],
-["童袜",/童袜|儿童.{0,8}袜|宝宝.{0,8}袜|キッズ.{0,8}(ソックス|靴下)/i],
-["女帽",/女帽|女士.{0,8}帽|女性.{0,8}帽/i],
-["男帽",/男帽|男士.{0,8}帽|男性.{0,8}帽/i],
-["鞋靴",/拖鞋|棉拖|运动鞋|皮鞋|凉鞋|雪地靴|鞋子|クロッグ/i],
-["宠物用品",/宠物|猫粮|狗粮|猫砂|猫抓板/i],
-["电子配件",/数据线|充电器|充电线|手机壳|电脑配件/i],
-["家居用品",/水龙头|防冻罩|家居|家具|收纳盒|浴室|厨房用品/i],
-["箱包",/背包|手提包|旅行包|钱包|行李箱/i],
-["玩具用品",/玩具|玩偶|积木|娃娃/i]
-];
-function recommendCategory(name){const matches=CATEGORY_TERMS.filter(([,re])=>re.test(String(name||"")));return matches.length===1?matches[0][0]:"";}
+const recommendCategory=name=>suggestProductCategory(name,CATS);
 function input(key,label,value,options=null,type="text",readonly=false){
  const hint=ENTRY_HINTS[key]||("填写"+label.replace(/^\*\s*/,"").replace(/（.*?）/g,""));
  const placeholder=esc(hint);
@@ -54,7 +42,7 @@ function finance(p,row){const price=Number(row?.price??p.salePriceJpy)||0,qty=Nu
 function imageKind(a){const n=String(a.original_name||a.canonical_name||"").toLowerCase();if(/[_-]ma\.(jpg|jpeg|png|webp)$/.test(n))return "ma";if(/[_-]01\.(jpg|jpeg|png|webp)$/.test(n))return "01";if(/[_-]sku\d+\.(jpg|jpeg|png|webp)$/.test(n))return "sku";return "";}
 function imageGroupType(a){const role=String(a.asset_role||"").toLowerCase(),name=String(a.original_name||a.canonical_name||"").toLowerCase(),purpose=String(a.metadata?.imagePurpose||"");if(/sku/.test(role)||/[_-]sku\d+\./.test(name))return "sku";if(/white|white_bg|white-background/.test(role)||/[_-]ma\./.test(name))return "white";if(/detail/.test(role))return "detail";if(/main/.test(role)||purpose==="system_primary"||/[_-]0[1-9]\./.test(name))return "main";return "detail"}
 function imageSummary(items){const active=(items||[]).filter(a=>!a.archived_at);const primary=active.filter(a=>a.metadata?.imagePurpose==="system_primary").sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")))[0];return {main:primary||active.find(a=>imageKind(a)==="ma")||active.find(a=>imageKind(a)==="01")||null,sku:active.filter(a=>imageKind(a)==="sku"||/sku/i.test(String(a.asset_role||"")))};}
-function editor(host,existing={}){style();stopEditor(host);const editorEvents=new AbortController();ACTIVE_EDITOR_EVENTS.set(host,editorEvents);let p={...START(),...existing,rates:{...START().rates,...existing.rates},profitTargets:{...START().profitTargets,...existing.profitTargets}};if(!p.brand&&BRAND[p.category])p.brand=BRAND[p.category];let categoryManual=!!p.category,tab="basic",selected=0,opened=new Set(),assets=[],failure="",imageMessage="",imageBlobUrl="",imageLoadedId="",imageType="main";
+function editor(host,existing={}){style();stopEditor(host);const editorEvents=new AbortController();ACTIVE_EDITOR_EVENTS.set(host,editorEvents);let p={...START(),...existing,rates:{...START().rates,...existing.rates},profitTargets:{...START().profitTargets,...existing.profitTargets}};if(!p.category&&p.nameZh)p.category=recommendCategory(p.nameZh);if(!p.brand&&BRAND[p.category])p.brand=BRAND[p.category];let categoryManual=!!existing.category,tab="basic",selected=0,opened=new Set(),assets=[],failure="",imageMessage="",imageBlobUrl="",imageLoadedId="",imageType="main";
 const field=(k,label)=>input(k,label,p[k]);
 function basic(){
 const specValue=name=>((p.specs||[]).find(x=>x.name===name)?.values||[]).join("、")||"—";
