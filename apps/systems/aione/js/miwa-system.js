@@ -26,7 +26,7 @@ import { initBusinessPage } from "./pages/business-page-template.js";
 import { initContentPage } from "./pages/content-page-template.js";
 import { initMiwaCompanyHome } from "./pages/miwa-company-home-book.js?v=20260827-v1.9.31.5-digital-publication";
 import { initMiwaBusinessHome } from "./pages/miwa-business-home-book.js?v=20260827-v1.9.31.5-digital-publication";
-import { initProductHomeCurrent } from "./pages/product-home-current.js?v=20261012-image-first";
+import { initProductHomeCurrent } from "./pages/product-home-current.js?v=20261012-entry-tuning";
 import { initNotificationsPage } from "./pages/notifications.js";
 import { initNotificationDetailPage } from "./pages/notification-detail.js";
 import { syncNotificationHeader } from "./data/notification-store.js";

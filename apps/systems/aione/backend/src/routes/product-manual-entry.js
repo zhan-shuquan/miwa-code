@@ -44,11 +44,10 @@ router.post("/",requireWriteActor,async(req,res,next)=>{
 router.patch("/:ref",requireWriteActor,async(req,res,next)=>{
   try {
     const current=await getManualProduct(req.params.ref);
-    if(!req.body||String(req.body.localCode||"").toLowerCase()!==current.product.localCode)
-      invalid("immutable_local_code","商品货号不能通过编辑修改。");
+    if(!req.body||!req.body.localCode)invalid("local_code_required","商品货号不能为空。");
     const expected=Number(req.body.version);
     if(!Number.isInteger(expected)||expected<1)invalid("version_required","编辑时必须提交商品版本号。");
-    res.json({ok:true,...await saveManualProduct(req.body,req.aioneContext,{updateOnly:true,expectedVersion:expected,source:"aione-web"})});
+    res.json({ok:true,...await saveManualProduct(req.body,req.aioneContext,{updateOnly:true,expectedVersion:expected,source:"aione-web",productId:current.product.id})});
   }catch(e){next(e);}
 });
 router.post("/import/preview",requireWriteActor,async(req,res,next)=>{

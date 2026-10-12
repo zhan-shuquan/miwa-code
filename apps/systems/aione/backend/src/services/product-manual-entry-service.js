@@ -148,7 +148,17 @@ export async function saveManualProduct(input, context={}, options={}) {
     const shape=await assertCurrentProductEntrySchema(client);
     // Lock per business code, to protect concurrent manual/save and batch imports.
     await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",["aione-manual:"+p.localCode]);
-    const existing=await getProductByLocalCode(client,p.localCode,shape,true);
+    const identity=options.productId?await client.query("SELECT "+productFields(shape)+" FROM public.products WHERE id::text=$1 FOR UPDATE",[String(options.productId)]):null;
+    const existing=options.productId?(identity.rows[0]||null):await getProductByLocalCode(client,p.localCode,shape,true);
+    if(existing && options.productId && !metadataOf(existing))throw error("product_not_in_manual_entry","该商品不是此录入流程所建，禁止修改。",409);
+    const previousCode=existing?metadataOf(existing)?.localCode:null;
+    const renamed=Boolean(existing&&previousCode!==p.localCode);
+    if(renamed){
+      if(existing.entry_lifecycle!=="draft")throw error("local_code_locked","已发布或非草稿商品不能修改货号。",409);
+      const conflict=await getProductByLocalCode(client,p.localCode,shape,true);
+      if(conflict && String(conflict.id)!==String(existing.id))throw error("product_exists","新商品货号已被使用。",409);
+      if(!(await draftSkuCanChange(client,existing,shape)))throw error("local_code_linked","该商品已有渠道或SKU图片关联，不能直接改货号。",409);
+    }
     const expected=options.expectedVersion;
     if(existing && expected!==undefined && Number(expected)!==Number(existing.metadata?.manualEntryVersion||1))
       throw error("product_version_conflict","商品已有新版本，刷新再确认；旧表不能覆盖新数据。",409);
@@ -183,7 +193,17 @@ export async function saveManualProduct(input, context={}, options={}) {
         );
       }
     }
-    const sku=await syncSku(client,id,productCode,buildSkuEntries(p),options.source||"aione-web",shape,await draftSkuCanChange(client,existing,shape));
+    if(renamed){
+      // SKU identities (UUID) remain stable; only business-facing SKU codes are renamed.
+      const rows=await client.query("SELECT id,sku_code FROM public.product_skus WHERE product_id=$1 FOR UPDATE",[id]);
+      for(const row of rows.rows){
+        const oldCode=String(row.sku_code);
+        if(!oldCode.startsWith(previousCode+"-"))throw error("sku_external_conflict","SKU编码不属于原货号，无法安全更名。",409);
+        const suffix=oldCode.slice(previousCode.length);
+        await client.query("UPDATE public.product_skus SET sku_code=$2 WHERE id=$1",[row.id,p.localCode+suffix]);
+      }
+    }
+    const sku=await syncSku(client,id,p.localCode,buildSkuEntries(p),options.source||"aione-web",shape,await draftSkuCanChange(client,existing,shape));
     return {product:{...p,id,productCode,version},skus:sku,reused:!!existing,warnings:readinessWarnings(p)};
   });
 }
