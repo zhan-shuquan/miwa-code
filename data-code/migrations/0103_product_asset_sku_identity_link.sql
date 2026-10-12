@@ -19,11 +19,16 @@ BEGIN
     WHERE conname = 'fk_product_assets_product_sku_same_product'
       AND conrelid = 'public.product_assets'::regclass
   ) THEN
-    ALTER TABLE public.product_assets
-      ADD CONSTRAINT fk_product_assets_product_sku_same_product
-      FOREIGN KEY (product_id, sku_id)
-      REFERENCES public.product_skus(product_id, id)
-      ON DELETE RESTRICT;
+    IF (SELECT atttypid FROM pg_attribute WHERE attrelid='public.product_assets'::regclass AND attname='sku_id') =
+       (SELECT atttypid FROM pg_attribute WHERE attrelid='public.product_skus'::regclass AND attname='id') THEN
+      ALTER TABLE public.product_assets
+        ADD CONSTRAINT fk_product_assets_product_sku_same_product
+        FOREIGN KEY (product_id, sku_id)
+        REFERENCES public.product_skus(product_id, id)
+        ON DELETE RESTRICT;
+    ELSE
+      RAISE EXCEPTION 'ProductAsset.sku_id and ProductSKU.id types differ; stop and review CURRENT schema';
+    END IF;
   END IF;
 END
 $body$;
