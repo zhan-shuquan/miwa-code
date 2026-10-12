@@ -194,7 +194,7 @@ async function run(){
   assert.equal(renamed.product.id,initial.product.id,"rename cannot create a second Product");
   assert.equal(renamed.product.productCode,initial.product.productCode);
   assert.equal(renamed.skus[0].id,initial.skus[0].id,"SKU UUID must remain unchanged");
-  assert.equal(renamed.skus[0].skuCode,"zjl241-01");
+  assert.equal(renamed.skus[0].skuCode,"zjl241-c01");
   assert.equal((await getManualProduct(initial.product.id)).product.remarks,"包装已确认");
   assert.equal((await listManualProducts({query:"zjl240"})).length,0);
   await expectCode(()=>saveManualProduct({...draft,localCode:"zjl238"},{personId:"ci"},{updateOnly:true,productId:initial.product.id,expectedVersion:2}),"product_exists");
