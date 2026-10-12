@@ -1,6 +1,6 @@
-import { PRODUCT_HOME_CENTERS } from "../config/home-registry.js?v=20260908-product-home-current";
+import { PRODUCT_HOME_CENTERS } from "../config/home-registry.js?v=20261011-product-center-v7";
 import { aioneApi } from "../services/aione-api-client.js";
-import { showProducts } from "./product-manual-entry.js";
+import { showProducts, showSkuList, openProductEditor } from "./product-manual-entry.js?v=20261011-product-center-v7";
 
 const PRODUCT_REF="MH0000002";
 const SELECTION_REF="SEL-20260907-000001";
@@ -113,13 +113,16 @@ function productWorkspaceMarkup(workbench){
 async function renderProductWorkspace(host){let workbench={};host.innerHTML=`<section class="phc phc-object-workspace">${loading()}</section>`;try{const payload=await productData();workbench=payload?.workbench||{};host.firstElementChild.innerHTML=PAGE_TYPE_RENDERERS["object-detail"]({workbench});}catch(error){host.firstElementChild.innerHTML=`${loadError(error)}${PAGE_TYPE_RENDERERS["object-detail"]({workbench})}`;}host.querySelectorAll("[data-jump]").forEach(button=>button.addEventListener("click",()=>navigate({center:button.dataset.jump})));host.querySelectorAll("[data-object-view]").forEach(button=>button.addEventListener("click",()=>{host.querySelectorAll("[data-object-view]").forEach(item=>item.classList.toggle("is-active",item===button));host.querySelector("[data-object-stage]").innerHTML=objectSection(button.dataset.objectView,workbench);}));}
 function designLive(){return `<div class="phc-design-frame-wrap"><iframe class="phc-design-frame" src="./design-center-v1.html?product=${PRODUCT_REF}&embed=1" title="${PRODUCT_REF} 设计中心" loading="eager"></iframe></div>`;}
 async function renderCenter(host,center,index){
+  // 商品中心直接由真实商品列表/编辑器承载，不能再套旧版标题和横向导航。
+  // 保留现有 view=1 商品一览、view=2 SKU一览深链。
+  if(center.id==="product-center"){
+    if(index===2)return showSkuList(host);
+    return showProducts(host);
+  }
   const label=center.tabs[index]||center.tabs[0],type=(VIEW_TYPES[center.id]||[])[index]||"overview";
   host.innerHTML=`<section class="phc phc-center" aria-labelledby="phc-title">${pageHeader(center.label,CENTER_COPY[center.id],status(center.status))}${centerTabs(center,index)}<main class="phc-content" data-stage></main></section>`;
   const stage=host.querySelector("[data-stage]");
   if(center.id==="selection-center")await renderSelectionView(stage,label,index);
-  else if(center.id==="product-center"&&index===0)stage.innerHTML=`<section class="phc-section"><h2>正式商品工作区</h2><button class="phc-object-row" data-open-product><span class="phc-product-thumb">M2</span><span><strong>${PRODUCT_REF}</strong><small>冬款男袜6双套装 · 1个SKU</small></span>${status("active")}<b>›</b></button></section><section class="phc-section"><h2>生命周期关系</h2>${lifecycle()}</section>`;
-  else if(center.id==="product-center"&&index===1)await showProducts(stage);
-  else if(center.id==="product-center"&&index===2)stage.innerHTML=`${toolbar({search:"搜索 SKU Code / 商品"})}${dataTable(["SKU Code","Product Code","规格组合","状态","更新时间"],[[SKU_REF,PRODUCT_REF,"款式｜6双套装","CURRENT","2026-09-07"]])}`;
   else if(center.id==="design-center"&&index===2)stage.innerHTML=designLive();
   else stage.innerHTML=PAGE_TYPE_RENDERERS[type]({center,label});
   host.querySelector("[data-open-product]")?.addEventListener("click",()=>navigate({center:"product-center",product:PRODUCT_REF}));
@@ -136,6 +139,6 @@ function renderRoot(host,view){
 export async function initProductHomeCurrent(){
   const host=document.getElementById("app-main-host");if(!host)return false;document.body.dataset.productHome="current";
   const query=params(),centerId=query.get("center");
-  if(query.get("product"))await renderProductWorkspace(host);else if(centerId&&centerById(centerId))await renderCenter(host,centerById(centerId),Math.max(0,Number(query.get("view")||0)));else renderRoot(host,query.get("view")||"overview");
+  if(centerId==="product-center"&&query.get("new")==="1"){openProductEditor(host);}else if(query.get("product"))await renderProductWorkspace(host);else if(centerId&&centerById(centerId))await renderCenter(host,centerById(centerId),Math.max(0,Number(query.get("view")||0)));else renderRoot(host,query.get("view")||"overview");
   window.dispatchEvent(new CustomEvent("aione:page-aside-context",{detail:{state:"hidden"}}));return true;
 }

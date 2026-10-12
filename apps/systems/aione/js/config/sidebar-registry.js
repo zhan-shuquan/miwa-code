@@ -128,7 +128,10 @@ function buildRegistryHomeItems(rootId) {
       label: item.label,
       route: item.route || `${rootId}?center=${encodeURIComponent(item.id)}`,
       icon: item.icon || "",
-      children: [],
+      children: rootId === "product-home" && item.id === "product-center" ? [
+        { id: "product-list", label: "商品一览", route: "product-home?center=product-center&view=1", icon: "list" },
+        { id: "sku-list", label: "SKU一览", route: "product-home?center=product-center&view=2", icon: "layers" }
+      ] : [],
       sectionGapBefore: Boolean(item.sectionGapBefore)
     });
   });
