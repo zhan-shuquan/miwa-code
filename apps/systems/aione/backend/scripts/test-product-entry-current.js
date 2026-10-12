@@ -60,6 +60,9 @@ async function run(){
   assert.equal(original.skuOverrides.length,0);
   assert.equal(buildSkuEntries(original).length,1);
   assert.equal(buildSkuEntries(original)[0].stock,1000,"new product SKU stock defaults to 1000");
+  assert.equal(buildSkuEntries(original)[0].imageFile,"zjl238_c01.jpg","new default SKU image must use the locked _cNN naming");
+  assert.deepEqual(buildSkuEntries(normalizeProductEntry({...original,specs:[{name:"颜色",values:["黑色","白色"]}]})).map(x=>x.imageFile),["zjl238_c01.jpg","zjl238_c02.jpg"]);
+  assert.equal(buildSkuEntries(normalizeProductEntry({...original,skuOverrides:[{index:1,imageFile:"zjl238_sku01.jpg"}]}))[0].imageFile,"zjl238_sku01.jpg","historical explicit filenames remain readable; never rename source files");
   assert.equal(original.defaultStock,1000);
   assert(fixture.warnings.some(x=>x.includes("损坏引用")),"warn about broken formulas");
   assert(readinessWarnings(original).length>0);
