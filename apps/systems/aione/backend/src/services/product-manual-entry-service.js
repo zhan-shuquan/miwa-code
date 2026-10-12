@@ -107,7 +107,7 @@ async function syncSku(client, productId, code, entries, source, shape, allowDra
   // In the alternate schema, use a complete numeric suffix (never offset slices).
   const existingNumbers=existing.rows.map(row=>{
     if(shape.skuNo)return Number(row.sku_no);
-    const match=String(row.sku_code||"").match(/-(\d+)$/);
+    const match=String(row.sku_code||"").match(/-(?:c)?(\d+)$/i);
     return match?Number(match[1]):null;
   }).filter(n=>Number.isSafeInteger(n)&&n>0);
   let nextNumber=Math.max(0,existing.rows.length,...existingNumbers)+1;
@@ -120,7 +120,7 @@ async function syncSku(client, productId, code, entries, source, shape, allowDra
     // Reuse an existing SKU's database ID and code without re-numbering.
     // New rows always receive a never-used, increasing serial for this product.
     const serial=old?null:nextNumber++;
-    const skuCode=old?.sku_code || code+"-"+String(serial).padStart(2,"0");
+    const skuCode=old?.sku_code || code+"-c"+String(serial).padStart(2,"0");
     const data={...entry.attributes,__aioneManualEntry:true,__aioneSource:source};
     const name=Object.values(entry.attributes).join(" / ")||"单规格";
     if(old){
