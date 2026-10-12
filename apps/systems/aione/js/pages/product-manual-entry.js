@@ -129,21 +129,21 @@ async function scanLocalImages(){
   }
   files.sort((a,b)=>a.name.localeCompare(b.name,"en",{numeric:true}));
   if(files.length>60)throw new Error("一次最多同步60张图片，请分批处理。");
-  let uploaded=0,reused=0,blocked=0,failed=0;
+  let uploaded=0,reused=0,blocked=0,failed=0,firstError="";
   for(const file of files){
    const mime=file.type||({"png":"image/png","jpg":"image/jpeg","jpeg":"image/jpeg","webp":"image/webp"}[file.name.split(".").pop()?.toLowerCase()]||"");
    if(file.size<16||file.size>2*1024*1024){failed++;continue;}
    try {
     const result=await aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/local-image",{method:"POST",body:JSON.stringify({fileName:file.name,mimeType:mime,base64:await fileBase64(file)})});
     if(result.reused)reused++;else uploaded++;
-   }catch(error){if(error.status===409)blocked++;else failed++;}
+   }catch(error){if(error.status===409)blocked++;else failed++;firstError="文件 "+file.name+"｜HTTP "+(error.status||"网络异常")+"｜"+String(error.payload?.error||"request_failed")+"｜"+String(error.message||"请求失败").slice(0,140);break;}
   }
   if(uploaded){
    const result=await aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/assets");
    assets=result.assets||[];
    await refreshImage();
   }
-  localSyncMessage="文件夹："+localSyncHandle.name+"｜扫描 "+files.length+"｜新增 "+uploaded+"｜已存在 "+reused+"｜冲突 "+blocked+"｜失败 "+failed;
+  localSyncMessage="文件夹："+localSyncHandle.name+"｜扫描 "+files.length+"｜新增 "+uploaded+"｜已存在 "+reused+"｜冲突 "+blocked+"｜失败 "+failed+(firstError?"｜已停止："+firstError:"");
  }catch(error){localSyncMessage="图片同步失败："+error.message;}
  finally{localSyncBusy=false;display();}
 }
