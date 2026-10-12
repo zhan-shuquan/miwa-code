@@ -28,3 +28,7 @@ const main={id:"ast_old",asset_role:"source_main_image",metadata:{fileSha256:exp
 assert.equal(chooseExistingLocalImageAsset([main],{slotKey:"main:1",digest:expected,kind:"main"}).action,"reuse_primary");
 assert.throws(()=>chooseExistingLocalImageAsset([{...main,metadata:{fileSha256:"different"}}],{slotKey:"main:1",digest:expected,kind:"main"}),e=>e.code==="main_image_already_exists");
 assert.equal(chooseExistingLocalImageAsset([main],{slotKey:"sku:1",digest:expected,kind:"sku"}).action,"create");
+
+const oldPrimary={...main,metadata:{...main.metadata,localImageSlot:"main:1"}};
+assert.equal(chooseExistingLocalImageAsset([oldPrimary],{slotKey:"main:1",digest:expected,kind:"main"}).action,"reuse_slot");
+assert.throws(()=>chooseExistingLocalImageAsset([oldPrimary,oldPrimary],{slotKey:"main:1",digest:expected,kind:"main"}),e=>e.code==="image_slot_duplicate");
