@@ -17,3 +17,14 @@ export function minimumBreakEvenYen(fixedCost, percentRates=[], targetMargin=0){
   for(let price=start;price<start+1000;price++)if(qualifies(price))return price;
   return null;
 }
+
+/**
+ * 销售基础总成本（JPY）= 到日本仓成本 + 日本配送成本 + 平台交易成本。
+ * 这是按当前实际售价计算的平台交易费，不包含优惠券、积分、广告等运营费。
+ * 如任何成本尚未确认，则保持待核算（null），避免错误地用零代替。
+ */
+export function salesBaseCostJpy(warehouseCostJpy,japanDeliveryCostJpy,platformCostJpy){
+  const amounts=[warehouseCostJpy,japanDeliveryCostJpy,platformCostJpy];
+  if(amounts.some(n=>n===null||n===undefined||n===""||!Number.isFinite(Number(n))||Number(n)<0))return null;
+  return amounts.reduce((sum,n)=>sum+Math.round(Number(n)),0);
+}
