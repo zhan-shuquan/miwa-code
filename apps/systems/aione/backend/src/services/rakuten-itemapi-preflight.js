@@ -19,8 +19,8 @@ export function rakutenFirstItemPreflight({product,skus,assets,shopConfigured=fa
  requireField(rows.length>0&&rows.length<=12,"sku_count_invalid");
  if(rows.length){
   requireField(rows.every(s=>s.id&&s.sku_code),"sku_canonical_identity_missing");
-  requireField(rows.every(s=>Number.isInteger(Number(s.priceJpy))&&Number(s.priceJpy)>0),"sku_price_not_verified");
-  requireField(rows.every(s=>Number.isSafeInteger(Number(s.stock))&&Number(s.stock)>=0),"sku_inventory_not_verified");
+  requireField(rows.every(s=>s.priceJpy!==null&&s.priceJpy!==undefined&&s.priceJpy!==""&&Number.isInteger(Number(s.priceJpy))&&Number(s.priceJpy)>0),"sku_price_not_verified");
+  requireField(rows.every(s=>s.stock!==null&&s.stock!==undefined&&s.stock!==""&&Number.isSafeInteger(Number(s.stock))&&Number(s.stock)>=0),"sku_inventory_not_verified");
  }
  const images=Array.isArray(assets)?assets:[];
  requireField(images.some(a=>a.asset_role==="source_main_image"&&a.metadata?.gcsBucket&&a.metadata?.gcsObject),"rakuten_main_image_missing");
