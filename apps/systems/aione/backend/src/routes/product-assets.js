@@ -4,6 +4,7 @@ import pool, { withTransaction } from "../../db.js";
 import { requireWriteActor } from "../http/context.js";
 import { readGcsObject, uploadGcsObjectIfAbsent } from "../integrations/google-cloud-storage-client.js";
 import { recordBusinessEvent } from "../services/event-service.js";
+import { decodeSourceImage, SOURCE_IMAGE_PURPOSE, SOURCE_IMAGE_ROLE, MAX_SOURCE_IMAGES_PER_PRODUCT } from "../services/product-source-image-contract.js";
 
 const router = Router();
 
@@ -213,6 +214,51 @@ router.post("/products/:productId/primary-image", requireWriteActor, async (req,
     });
     res.status(result.reused ? 200 : 201).json(result);
   } catch (error) { next(error); }
+});
+
+
+/** Original SOURCE images for later AI recognition; never classified as finished listing media. */
+router.post("/products/:productId/source-image",requireWriteActor,async(req,res,next)=>{
+ try{
+  const productId=cleanText(req.params.productId,240);
+  const {buffer,mimeType,extension,originalName}=decodeSourceImage(req.body);
+  const product=await loadProduct(pool,productId);
+  const digest=createHash("sha256").update(buffer).digest("hex");
+  const bucket=cleanText(process.env.AIONE_PRODUCT_ASSET_BUCKET,512);
+  if(!bucket)return res.status(503).json({error:"asset_storage_unconfigured",message:"原始图片存储尚未配置。"});
+  const objectName="product/source/"+encodeURIComponent(String(product.id))+"/"+digest+"."+extension;
+  await uploadGcsObjectIfAbsent({bucketName:bucket,objectName,buffer,contentType:mimeType});
+  const context=req.aioneContext||{};
+  const result=await withTransaction(async client=>{
+   await client.query("SELECT id FROM public.products WHERE id=$1 FOR UPDATE",[productId]);
+   const existing=await client.query(
+     "SELECT * FROM public.product_assets WHERE product_id=$1 AND archived_at IS NULL AND metadata->>'imagePurpose'=$2 AND metadata->>'fileSha256'=$3 LIMIT 1",
+     [productId,SOURCE_IMAGE_PURPOSE,digest]
+   );
+   if(existing.rowCount)return {asset:existing.rows[0],reused:true};
+   const count=await client.query(
+    "SELECT COUNT(*)::int AS n FROM public.product_assets WHERE product_id=$1 AND archived_at IS NULL AND metadata->>'imagePurpose'=$2",
+    [productId,SOURCE_IMAGE_PURPOSE]
+   );
+   if(Number(count.rows[0]?.n)>=MAX_SOURCE_IMAGES_PER_PRODUCT){
+    const e=new Error("每件商品最多保存8张原始参考图片。");e.code="source_image_limit";e.statusCode=409;throw e;
+   }
+   const num=await client.query("SELECT COALESCE(MAX(asset_no),0)+1 AS next FROM public.product_assets WHERE product_id=$1",[productId]);
+   const assetNo=Number(num.rows[0].next);
+   if(assetNo>999){const e=new Error("商品图片数量达到上限。");e.code="asset_limit_reached";e.statusCode=409;throw e;}
+   const metadata={layer:"SOURCE",imagePurpose:SOURCE_IMAGE_PURPOSE,recognitionOnly:true,notForListing:true,gcsBucket:bucket,gcsObject:objectName,fileSha256:digest};
+   const saved=await client.query(
+    `INSERT INTO public.product_assets
+      (id,product_id,asset_no,asset_type,asset_role,source_provider,original_name,canonical_name,mime_type,lifecycle_status,metadata,created_by_person_id,updated_by_person_id,source_system)
+      VALUES($1,$2,$3,'image',$4,'aione_manual',$5,$6,$7,'formalized',$8::jsonb,$9,$9,$10) RETURNING *`,
+    [assetId(),productId,assetNo,SOURCE_IMAGE_ROLE,originalName,
+      product.product_code+"_source"+pad(assetNo)+"."+extension,mimeType,JSON.stringify(metadata),
+      context.personId||null,context.sourceSystem||"aione"]
+   );
+   return {asset:saved.rows[0],reused:false};
+  });
+  res.status(result.reused?200:201).json(result);
+ }catch(e){next(e);}
 });
 
 router.post("/products/:productId/assets/plan", requireWriteActor, async (req, res, next) => {
