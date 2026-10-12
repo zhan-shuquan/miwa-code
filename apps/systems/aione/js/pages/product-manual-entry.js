@@ -275,7 +275,7 @@ export async function showProducts(host,notice=""){
  host.querySelector("[data-pe-new]").onclick=()=>editor(host,{});
  host.querySelector("[data-pe-import-open]").onclick=()=>importer(host);
  host.querySelector("[data-pe-export]").onclick=async()=>{try{await aioneDownload(BASE+"/export.xlsx");}catch(e){alert("导出失败："+e.message);}};
- host.querySelector("[data-pe-template]").onclick=async()=>{try{await aioneDownload(BASE+"/export.xlsx?q=__AIONE_EMPTY_TEMPLATE__");}catch(e){alert("模板下载失败："+e.message);}};
+
  const load=async()=>{
    const value=host.querySelector("[data-pe-q]")?.value||"";
    const area=host.querySelector("[data-pe-table]");if(!area)return;
