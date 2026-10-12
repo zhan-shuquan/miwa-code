@@ -159,8 +159,44 @@ host.addEventListener("change",e=>{
 },{signal:editorEvents.signal});
 host.addEventListener("change",async e=>{const t=e.target;if(!t.matches("[data-primary-image]"))return;const file=t.files?.[0];if(!file||!p.id)return;try{if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>2*1024*1024)throw new Error("请选择不超过2MB的JPG、PNG或WebP图片");imageMessage="正在上传图片";display();const result=await aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/primary-image",{method:"POST",body:JSON.stringify({mimeType:file.type,base64:await fileBase64(file)})});if(!result.asset?.id)throw new Error("图片保存没有返回资产ID");const response=await aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/assets");assets=response.assets||[];await refreshImage();imageMessage="系统主图已保存";display();}catch(error){imageMessage="图片上传失败："+error.message;display();}},{signal:editorEvents.signal});
 host.addEventListener("change",e=>{const t=e.target;if(t.dataset.f){fieldChange(t.dataset.f,t.value);display()}else if(t.dataset.sku){rowChange(t);display()}else if(t.hasAttribute("data-finance")){selected=Number(t.value)||0;display()}else if(t.hasAttribute("data-image-type")){imageType=t.value;refreshImage().then(display)}},{signal:editorEvents.signal});
-host.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;if(t.hasAttribute("data-tab")){tab=t.dataset.tab;display()}else if(t.hasAttribute("data-add")){p.specs.push({name:"颜色",values:[]});display()}else if(t.hasAttribute("data-remove")){p.specs.splice(Number(t.dataset.remove),1);p.skuOverrides=p.skuOverrides.filter(x=>x.identity);display()}else if(t.hasAttribute("data-cost")){const i=Number(t.dataset.cost);opened.has(i)?opened.delete(i):opened.add(i);display()}else if(t.hasAttribute("data-back")){await showProducts(host)}else if(t.hasAttribute("data-save")){t.disabled=true;try{const payload={...p};["id","productCode","updatedAt","readOnly"].forEach(k=>delete payload[k]);const res=await aioneApi(p.id?BASE+"/"+encodeURIComponent(p.id):BASE,{method:p.id?"PATCH":"POST",body:JSON.stringify(payload)});Object.assign(p,res.product);await showProducts(host,"商品草稿已保存");}catch(error){failure="保存失败："+error.message;display()}}},{signal:editorEvents.signal});
-display();if(p.id)aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/assets").then(async r=>{assets=r.assets||[];await refreshImage();display()}).catch(()=>{});
+host.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;if(t.hasAttribute("data-tab")){tab=t.dataset.tab;display()}else if(t.hasAttribute("data-add")){p.specs.push({name:"颜色",values:[]});display()}else if(t.hasAttribute("data-remove")){p.specs.splice(Number(t.dataset.remove),1);p.skuOverrides=p.skuOverrides.filter(x=>x.identity);display()}else if(t.hasAttribute("data-cost")){const i=Number(t.dataset.cost);opened.has(i)?opened.delete(i):opened.add(i);display()}else if(t.hasAttribute("data-source-remove")){
+ const item=sourceFiles.splice(Number(t.dataset.sourceRemove),1)[0];
+ if(item){URL.revokeObjectURL(item.url);heldUrls.delete(item.url)}
+ recognition=null;display();
+}else if(t.hasAttribute("data-source-recognize")){
+ recognizing=true;sourceMessage="GPT正在识别图片";display();
+ try{
+  const picked=sourceFiles.slice(0,2);
+  const images=await Promise.all(picked.map(async x=>({mimeType:x.file.type,base64:await fileBase64(x.file),name:x.file.name})));
+  if(!images.length)throw new Error("请先选择原始图片，再使用GPT识别；已有图片需重新选择用于本次识别");
+  const res=await aioneApi(BASE+"/source-recognize",{method:"POST",body:JSON.stringify({name:p.nameZh||"",allowedCategories:CATS,images})});
+  recognition=res.suggestions||null;sourceMessage="识别完成，请核对建议";
+ }catch(err){sourceMessage="识别失败："+err.message}
+ finally{recognizing=false;display()}
+}else if(t.hasAttribute("data-source-apply")){
+ if(recognition){
+  for(const k of ["nameZh","category","sellingPointCore","sellingPointMaterial","sellingPointExperience","sellingPointDesign","sellingPointScene","sellingPointOther"]){
+   if(!p[k]&&recognition[k])p[k]=recognition[k];
+  }
+  if(p.category&&BRAND[p.category]&&!p.brand)p.brand=BRAND[p.category];
+  recognition=null;sourceMessage="已补充空白字段，请核实后保存";display();
+ }
+}else if(t.hasAttribute("data-back")){if(sourceFiles.length&&!confirm("尚有未保存的原始图片。离开后这些图片会丢失，确定离开吗？"))return;stopEditor(host);await showProducts(host)}else if(t.hasAttribute("data-save")){t.disabled=true;try{const payload={...p};["id","productCode","updatedAt","readOnly"].forEach(k=>delete payload[k]);const res=await aioneApi(p.id?BASE+"/"+encodeURIComponent(p.id):BASE,{method:p.id?"PATCH":"POST",body:JSON.stringify(payload)});Object.assign(p,res.product);
+ const errors=[];
+ for(const item of sourceFiles){
+  try{
+   await aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/source-image",{method:"POST",body:JSON.stringify({mimeType:item.file.type,name:item.file.name,base64:await fileBase64(item.file)})});
+   URL.revokeObjectURL(item.url);heldUrls.delete(item.url);item.saved=true;
+  }catch(err){errors.push(item.file.name+"："+err.message)}
+ }
+ sourceFiles=sourceFiles.filter(x=>!x.saved);
+ if(errors.length){failure="商品资料已保存，但原始图片上传失败："+errors.join("；");display();return}
+ stopEditor(host);await showProducts(host,"商品草稿与原始图片已保存");}catch(error){failure="保存失败："+error.message;display()}}},{signal:editorEvents.signal});
+display();if(p.id)aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/assets").then(async r=>{assets=r.assets||[];await refreshImage();
+ for(const a of assets.filter(x=>imageGroupType(x)==="source")){
+  try{const url=await aioneImageBlobUrl("/api/v1/product-assets/"+encodeURIComponent(a.id)+"/content");sourcePreviews.set(String(a.id),url);heldUrls.add(url)}catch{}
+ }
+ display()}).catch(()=>{});
 }
 
 async function fileBase64(file){
