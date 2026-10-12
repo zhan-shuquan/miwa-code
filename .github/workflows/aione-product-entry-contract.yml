@@ -4,6 +4,7 @@ on:
     branches:
       - main
     paths:
+      - data-code/migrations/0103_product_asset_sku_identity_link.sql
       - apps/systems/aione/backend/tools/windows/SYNC_AIONE_PRODUCT_IMAGES.ps1
       - apps/systems/aione/backend/src/services/product-local-image-sync-contract.js
       - apps/systems/aione/backend/scripts/test-product-local-image-sync-route.js
@@ -73,6 +74,12 @@ jobs:
         env:
           PGPASSWORD: aione_ci
         run: psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -f data-code/current/0001_aione_current_baseline.sql
+      - name: Validate SKU asset FK on disposable CURRENT baseline
+        env:
+          PGPASSWORD: aione_ci
+        run: |
+          psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -f data-code/migrations/0103_product_asset_sku_identity_link.sql
+          psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -Atc "SELECT CASE WHEN EXISTS (SELECT 1 FROM pg_constraint WHERE conname='fk_product_assets_product_sku_same_product') THEN 'PASS' ELSE 'FAIL' END" | grep -Fx PASS
       - name: Validate product image naming classifier
         working-directory: apps/systems/aione/backend
         run: node scripts/test-product-image-name-current.js
