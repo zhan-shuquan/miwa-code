@@ -6,6 +6,7 @@ on:
     paths:
       - apps/systems/aione/backend/tools/windows/SYNC_AIONE_PRODUCT_IMAGES.ps1
       - apps/systems/aione/backend/src/services/product-local-image-sync-contract.js
+      - apps/systems/aione/backend/scripts/test-product-local-image-sync-route.js
       - apps/systems/aione/backend/scripts/test-product-local-image-sync-contract.js
       - apps/systems/aione/backend/src/services/product-image-name-contract.js
       - apps/systems/aione/backend/src/routes/product-image-sync.js
@@ -54,6 +55,7 @@ jobs:
       - name: Validate changed JS syntax
         run: |
           node --check apps/systems/aione/backend/src/services/product-local-image-sync-contract.js
+          node --check apps/systems/aione/backend/scripts/test-product-local-image-sync-route.js
           node --check apps/systems/aione/backend/scripts/test-product-local-image-sync-contract.js
           node --check apps/systems/aione/backend/src/services/product-image-name-contract.js
           node --check apps/systems/aione/backend/src/routes/product-image-sync.js
@@ -77,6 +79,9 @@ jobs:
       - name: Validate safe local image sync contract (no external writes)
         working-directory: apps/systems/aione/backend
         run: node scripts/test-product-local-image-sync-contract.js
+      - name: Verify in-memory end-to-end image sync route (no GCS/Rakuten)
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-product-local-image-sync-route.js
       - name: Windows sync script safe dry-run smoke test
         shell: pwsh
         run: |
