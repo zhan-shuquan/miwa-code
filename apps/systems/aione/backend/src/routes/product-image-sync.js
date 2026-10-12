@@ -43,16 +43,38 @@ async function recordVerifiedPrimaryReuse({productId,assetId,slotKey,digest,file
   return assetId;
  });
 }
-function syncAllowed(req){
- const enabled=String(process.env.AIONE_LOCAL_IMAGE_SYNC_ENABLED||"false")==="true";
+const SYNC_ACCESS_MESSAGES=Object.freeze({
+ sync_disabled:"图片同步开关尚未启用。",
+ google_auth_disabled:"后端Google身份验证尚未启用。",
+ canonical_identity_required:"当前Google账号不是AIONE已登记的正式员工身份。",
+ email_allowlist_unconfigured:"图片同步邮箱白名单尚未正确配置。",
+ email_not_allowlisted:"当前Google登录邮箱不在图片同步白名单内。"
+});
+function syncDeniedReason(req){
+ if(String(process.env.AIONE_LOCAL_IMAGE_SYNC_ENABLED||"false").toLowerCase()!=="true")return "sync_disabled";
+ if(String(process.env.AIONE_REQUIRE_GOOGLE_AUTH||"false").toLowerCase()!=="true")return "google_auth_disabled";
  const identity=req.aioneIdentity;
- const addresses=String(process.env.AIONE_LOCAL_IMAGE_SYNC_ALLOWED_EMAILS||"").split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);
- return enabled&&String(process.env.AIONE_REQUIRE_GOOGLE_AUTH||"false")==="true"&&identity?.authSource==="google"&&identity?.identitySource==="canonical_database"&&!!identity?.personId&&addresses.includes(String(identity.authenticatedEmail||"").toLowerCase());
+ if(identity?.authSource!=="google"||identity?.identitySource!=="canonical_database"||!identity?.personId)return "canonical_identity_required";
+ const allowed=String(process.env.AIONE_LOCAL_IMAGE_SYNC_ALLOWED_EMAILS||"").split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);
+ if(!allowed.length)return "email_allowlist_unconfigured";
+ if(!allowed.includes(String(identity.authenticatedEmail||"").trim().toLowerCase()))return "email_not_allowlisted";
+ return null;
 }
 function gate(req,res,next){
- if(!syncAllowed(req))return res.status(403).json({error:"image_sync_not_authorized",message:"图片同步未启用或账户未获授权。"});
+ const reason=syncDeniedReason(req);
+ if(reason)return res.status(403).json({error:"image_sync_not_authorized",reason,message:SYNC_ACCESS_MESSAGES[reason]});
  next();
 }
+// Preflight uses the already verified Google identity, does not read or write
+// ProductAssets or GCS, and never discloses the allowlist itself.
+router.get("/products/:productId/local-images/authorization",(req,res)=>{
+ const reason=syncDeniedReason(req);
+ return res.json({
+  ok:true,authorized:!reason,reason:reason||null,
+  message:reason?SYNC_ACCESS_MESSAGES[reason]:"当前登录账号可以尝试图片同步。",
+  authenticatedEmail:req.aioneIdentity?.authenticatedEmail||null
+ });
+});
 
 // A single image per request keeps the existing 4MB JSON request cap and
 // allows local tools to checkpoint every verified file separately.

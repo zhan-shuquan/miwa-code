@@ -129,6 +129,11 @@ async function scanLocalImages(){
   }
   files.sort((a,b)=>a.name.localeCompare(b.name,"en",{numeric:true}));
   if(files.length>60)throw new Error("一次最多同步60张图片，请分批处理。");
+  const preflight=await aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/local-images/authorization");
+  if(!preflight.authorized){
+   localSyncMessage="同步已停止："+String(preflight.message||"当前账号未获得上传权限")+(preflight.authenticatedEmail?"｜当前登录："+preflight.authenticatedEmail:"");
+   return;
+  }
   let uploaded=0,reused=0,blocked=0,failed=0,firstError="";
   for(const file of files){
    const mime=file.type||({"png":"image/png","jpg":"image/jpeg","jpeg":"image/jpeg","webp":"image/webp"}[file.name.split(".").pop()?.toLowerCase()]||"");
