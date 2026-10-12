@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import pool, { withTransaction } from "../../db.js";
 import { normalizeProductEntry, buildSkuEntries, readinessWarnings } from "./product-entry-contract.js";
+import { evaluateProductEntryReadiness, evaluateProductPublicationStatus } from "./product-entry-status-service.js";
 
 function error(code, message, statusCode = 400) { const e = new Error(message);e.code=code;e.statusCode=statusCode;return e; }
 function metadataOf(row) { const raw=row?.metadata?.manualEntry;return raw && typeof raw==="object" ? raw : null; }
@@ -186,12 +187,47 @@ export async function saveManualProduct(input, context={}, options={}) {
     return {product:{...p,id,productCode,version},skus:sku,reused:!!existing,warnings:readinessWarnings(p)};
   });
 }
+
+// Read-only, bulk product status projection. Missing integrations stay "待核实".
+async function attachDerivedStatuses(products, shape) {
+  if (!products.length) return products;
+  const ids=products.map(p=>p.id);
+  let images=new Map(), publications=new Map(), assetAvailable=false, listingAvailable=false;
+  try {
+    const q=await pool.query("SELECT product_id::text AS product_id, COUNT(*)::int AS n FROM public.product_assets WHERE product_id::text = ANY($1::text[]) AND asset_type='image' AND archived_at IS NULL GROUP BY product_id",[ids]);
+    images=new Map(q.rows.map(row=>[String(row.product_id),Number(row.n)>0]));assetAvailable=true;
+  } catch(error) {
+    // Legacy schema may lack archived_at; try its canonical product-assets table.
+    if(error.code==="42703"){
+      try {
+        const q=await pool.query("SELECT product_id::text AS product_id, COUNT(*)::int AS n FROM public.product_assets WHERE product_id::text = ANY($1::text[]) AND asset_type='image' GROUP BY product_id",[ids]);
+        images=new Map(q.rows.map(row=>[String(row.product_id),Number(row.n)>0]));assetAvailable=true;
+      }catch { /* Do not turn an unknown into a false "missing". */ }
+    }
+  }
+  try {
+    if(shape.variant==="existing-lifecycle"){
+      const q=await pool.query("SELECT product_id::text AS product_id, channel,shop_ref,lifecycle_status,external_listing_id,last_published_at FROM public.channel_listings WHERE product_id::text=ANY($1::text[]) AND archived_at IS NULL",[ids]);
+      for(const row of q.rows){const key=String(row.product_id);if(!publications.has(key))publications.set(key,[]);publications.get(key).push(row);}
+    }else{
+      const q=await pool.query("SELECT l.product_id::text AS product_id,COALESCE(pl.code,'') AS channel,st.name AS shop_ref,l.status,l.external_item_id,l.listing_url,l.published_at FROM public.listings l JOIN public.stores st ON st.id=l.store_id LEFT JOIN public.platforms pl ON pl.id=st.platform_id WHERE l.product_id::text=ANY($1::text[])",[ids]);
+      for(const row of q.rows){const key=String(row.product_id);if(!publications.has(key))publications.set(key,[]);publications.get(key).push(row);}
+    }
+    listingAvailable=true;
+  }catch { /* Unknown listing state is never treated as unpublished. */ }
+  return products.map(p=>({
+    ...p,
+    readiness:evaluateProductEntryReadiness(p,assetAvailable?(images.get(String(p.id))||false):null),
+    publication:evaluateProductPublicationStatus(publications.get(String(p.id))||[],{sourceAvailable:listingAvailable})
+  }));
+}
+
 export async function listManualProducts({query="",limit=100,offset=0}={}) {
   const shape=await assertCurrentProductEntrySchema(pool);
   const q=String(query||"").trim();
   const lim=Math.min(201,Math.max(1,Number(limit)||100)),skip=Math.max(0,Number(offset)||0);
   const r=await pool.query("SELECT "+productFields(shape)+" FROM public.products WHERE ($1='' OR product_code ILIKE $2 OR "+shape.nameCol+" ILIKE $2 OR metadata->'manualEntry'->>'localCode' ILIKE $2) ORDER BY updated_at DESC LIMIT $3 OFFSET $4",[q,"%"+q+"%",lim,skip]);
-  return r.rows.map(unwrap);
+  return attachDerivedStatuses(r.rows.map(unwrap),shape);
 }
 export async function getManualProduct(ref) {
   const shape=await assertCurrentProductEntrySchema(pool);
