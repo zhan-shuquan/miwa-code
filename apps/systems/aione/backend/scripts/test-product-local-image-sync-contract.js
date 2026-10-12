@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { inspectLocalImageUpload, validProductIdentity, assertGcsImageMetadata, sortLocalImageFiles } from "../src/services/product-local-image-sync-contract.js";
+import { inspectLocalImageUpload, validProductIdentity, assertGcsImageMetadata, sortLocalImageFiles, chooseExistingLocalImageAsset } from "../src/services/product-local-image-sync-contract.js";
 
 const id="c61a3ec2-9e98-4892-8d08-985b7962f74a";
 assert.equal(validProductIdentity(id),true);
@@ -23,3 +23,8 @@ assert.throws(()=>assertGcsImageMetadata(null,{digest:expected,size:png.length,m
 const files=["zjl238_c02.png","zjl238_10.png","zjl238_01.png","gift.png","zjl238_c01.png","zjl238_02.png"];
 assert.deepEqual(sortLocalImageFiles(files,"zjl238").map(x=>x.originalName),["zjl238_01.png","zjl238_02.png","zjl238_10.png","zjl238_c01.png","zjl238_c02.png"]);
 console.log("PASS: identity, byte signature, SHA-256, cloud metadata and image ordering (no GCS/DB/Rakuten)");
+
+const main={id:"ast_old",asset_role:"source_main_image",metadata:{fileSha256:expected,gcsBucket:"test",gcsObject:"main.png"}};
+assert.equal(chooseExistingLocalImageAsset([main],{slotKey:"main:1",digest:expected,kind:"main"}).action,"reuse_primary");
+assert.throws(()=>chooseExistingLocalImageAsset([{...main,metadata:{fileSha256:"different"}}],{slotKey:"main:1",digest:expected,kind:"main"}),e=>e.code==="main_image_already_exists");
+assert.equal(chooseExistingLocalImageAsset([main],{slotKey:"sku:1",digest:expected,kind:"sku"}).action,"create");
