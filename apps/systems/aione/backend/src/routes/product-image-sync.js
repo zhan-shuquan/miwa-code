@@ -124,6 +124,37 @@ router.get("/products/:productId/local-images/status",gate,async(req,res,next)=>
  }catch(e){next(e);}
 });
 
+/**
+ * Explicit SKU identity link. _c01 is a picture position, never SKU identity.
+ * Caller must specify the existing SKU database ID AND business SKU code.
+ */
+router.post("/products/:productId/local-images/:assetId/bind-sku",gate,requireWriteActor,async(req,res,next)=>{
+ try{
+  const productId=String(req.params.productId||"").trim();
+  const assetId=String(req.params.assetId||"").trim();
+  const skuId=String(req.body?.skuId||"").trim();
+  const skuCode=String(req.body?.skuCode||"").trim();
+  if(!validProductIdentity(productId)||!/^ast_[0-9a-f-]{36}$/i.test(assetId)||!/^.{1,100}$/.test(skuId)||!/^[-\w]{2,100}$/.test(skuCode))
+   throw err(400,"sku_image_binding_invalid","需要有效的商品、图片和SKU身份。");
+  if(req.body?.confirmed!==true)throw err(400,"sku_binding_confirmation_required","SKU图片关联需要人工确认。");
+  const result=await transaction(async client=>{
+   await client.query("SELECT id FROM public.products WHERE id=$1 FOR UPDATE",[productId]);
+   const asset=await client.query("SELECT id,sku_id,asset_role,metadata FROM public.product_assets WHERE id=$1 AND product_id=$2 AND archived_at IS NULL FOR UPDATE",[assetId,productId]);
+   if(asset.rowCount!==1||asset.rows[0].asset_role!=="source_sku_image")
+    throw err(409,"sku_image_asset_invalid","图片不是当前商品的SKU图。");
+   const sku=await client.query("SELECT id,sku_code FROM public.product_skus WHERE product_id=$1 AND id=$2 AND sku_code=$3 AND archived_at IS NULL",[productId,skuId,skuCode]);
+   if(sku.rowCount!==1)throw err(409,"sku_identity_mismatch","SKU身份与当前商品或管理编号不一致。");
+   const old=asset.rows[0].sku_id;
+   if(old&&String(old)!==String(skuId))throw err(409,"sku_image_already_bound","图片已绑定其他SKU，不能自动改绑。");
+   const occupied=await client.query("SELECT id FROM public.product_assets WHERE product_id=$1 AND sku_id=$2 AND asset_role='source_sku_image' AND archived_at IS NULL AND id<>$3",[productId,skuId,assetId]);
+   if(occupied.rowCount)throw err(409,"sku_image_target_occupied","该SKU已有其他绑定图片，需要人工处理。");
+   if(!old)await client.query("UPDATE public.product_assets SET sku_id=$2,updated_by_person_id=$3,updated_at=NOW(),record_version=record_version+1 WHERE id=$1",[assetId,skuId,req.aioneContext?.personId||null]);
+   return {assetId,skuId,skuCode,reused:Boolean(old)};
+  });
+  res.json({ok:true,...result});
+ }catch(e){next(e);}
+});
+
 return router;
 }
 export default createProductImageSyncRouter();
