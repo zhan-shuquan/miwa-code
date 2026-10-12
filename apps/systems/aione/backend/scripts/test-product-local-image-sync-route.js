@@ -15,6 +15,17 @@ const queries=[];
 const db={async query(sql,params){
  queries.push(sql);
  if(sql.includes("FROM public.products"))return {rowCount:1,rows:[{id,product_code:"MH0000005",metadata:{manualEntry:{localCode:"zjl238"}}}]};
+ if(sql.includes("SELECT id,sku_id,asset_role,metadata FROM public.product_assets"))return {rowCount:current.filter(x=>x.id===params[0]).length,rows:current.filter(x=>x.id===params[0])};
+ if(sql.includes("SELECT id,sku_code FROM public.product_skus")){
+   const skus=[{id:"sku_a",sku_code:"zjl238-01"},{id:"sku_b",sku_code:"zjl238-02"}];
+   const found=skus.filter(x=>x.id===params[1]&&x.sku_code===params[2]);return {rowCount:found.length,rows:found};
+ }
+ if(sql.includes("SELECT id FROM public.product_assets WHERE product_id=$1 AND sku_id=$2")){
+   const found=current.filter(x=>x.sku_id===params[1]&&x.id!==params[2]&&x.asset_role==="source_sku_image");return {rowCount:found.length,rows:found};
+ }
+ if(sql.includes("UPDATE public.product_assets SET sku_id=$2")){
+   current.find(x=>x.id===params[0]).sku_id=params[1];return {rowCount:1};
+ }
  if(sql.includes("SELECT id,asset_role")&&sql.includes("FROM public.product_assets"))return {rows:current.map(x=>({...x}))};
  if(sql.includes("SELECT id,original_name,mime_type")&&sql.includes("FROM public.product_assets"))return {rows:current.filter(x=>x.metadata.localImageSlot)};
  if(sql.includes("SELECT COALESCE(MAX(asset_no)"))return {rows:[{next:current.length+1}]};
@@ -61,3 +72,24 @@ assert.equal(listed.body.verifiedCount,2);
 assert.deepEqual(new Set(listed.body.assets.map(a=>a.slot)),new Set(["main:1","sku:1"]));
 assert.equal(queries.some(q=>q.includes("rakuten")),false);
 console.log("PASS image sync route integration: manual primary reuse, byte audit, create, idempotent retry, read-only status; external calls ZERO");
+
+const bind=router.stack.find(x=>x.route?.path==="/products/:productId/local-images/:assetId/bind-sku").route.stack.at(-1).handle;
+const asset1=sku.body.assetId;
+const input=(assetId,skuId,skuCode,confirmed)=>({
+  params:{productId:id,assetId},body:{skuId,skuCode,confirmed},
+  aioneContext:{personId:"person_test"}
+});
+await assert.rejects(invoke(bind,input(asset1,"sku_a","zjl238-01",false)),e=>e.code==="sku_binding_confirmation_required");
+await assert.rejects(invoke(bind,input(asset1,"sku_a","zjl238-02",true)),e=>e.code==="sku_identity_mismatch");
+assert.equal(current.find(x=>x.id===asset1).sku_id,null);
+const accepted=await invoke(bind,input(asset1,"sku_a","zjl238-01",true));
+assert.equal(accepted.body.skuId,"sku_a");
+assert.equal(accepted.body.reused,false);
+const again=await invoke(bind,input(asset1,"sku_a","zjl238-01",true));
+assert.equal(again.body.reused,true);
+await assert.rejects(invoke(bind,input(asset1,"sku_b","zjl238-02",true)),e=>e.code==="sku_image_already_bound");
+const asset2=(await invoke(handler,req("zjl238_c02.png"))).body.assetId;
+await assert.rejects(invoke(bind,input(asset2,"sku_a","zjl238-01",true)),e=>e.code==="sku_image_target_occupied");
+assert.equal((await invoke(bind,input(asset2,"sku_b","zjl238-02",true))).body.skuId,"sku_b");
+assert.equal(current.filter(x=>x.sku_id).length,2);
+console.log("PASS explicit SKU image binding: human confirmation, same product, stable SKU ID, conflict protection and idempotency.");
