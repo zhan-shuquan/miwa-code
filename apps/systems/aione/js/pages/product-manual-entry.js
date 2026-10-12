@@ -271,7 +271,7 @@ function importer(host){
 }
 export async function showProducts(host,notice=""){
  stopEditor(host);style();
- host.innerHTML='<section class="phc pe-wrap"><div class="pe-toolbar"><div><h2>商品一览</h2><p class="pe-note">真实商品数据 · 单品编辑 · 批量导入与导出</p></div><div><button class="pe-main" data-pe-new>＋ 新建商品</button> <button data-pe-import-open>批量导入</button> <button data-pe-export>批量导出</button> <button data-pe-template>下载模板</button></div></div>'+(notice?'<p>'+esc(notice)+'</p>':"")+'<p><input data-pe-q placeholder="搜索货号/名称" style="padding:10px;border:1px solid #dce4df;border-radius:7px;width:320px"></p><div data-pe-table>读取中…</div><div data-pe-import></div></section>';
+ host.innerHTML='<section class="phc pe-wrap"><div class="pe-toolbar"><div><h2>商品一览</h2><p class="pe-note">真实商品数据 · 单品编辑 · 批量导入与导出</p></div><div><button class="pe-main" data-pe-new>＋ 新建商品</button> <button data-pe-import-open>批量导入</button> <button data-pe-export>批量导出</button> </div></div>'+(notice?'<p>'+esc(notice)+'</p>':"")+'<p><input data-pe-q placeholder="搜索货号/名称" style="padding:10px;border:1px solid #dce4df;border-radius:7px;width:320px"></p><div data-pe-table>读取中…</div><div data-pe-import></div></section>';
  host.querySelector("[data-pe-new]").onclick=()=>editor(host,{});
  host.querySelector("[data-pe-import-open]").onclick=()=>importer(host);
  host.querySelector("[data-pe-export]").onclick=async()=>{try{await aioneDownload(BASE+"/export.xlsx");}catch(e){alert("导出失败："+e.message);}};
