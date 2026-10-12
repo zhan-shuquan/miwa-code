@@ -155,14 +155,14 @@ async function run(){
   const legacyExpanded=await saveManualProduct({...legacy,specs:[{name:"颜色",values:["黑色","白色"]}]},{personId:"ci"},{updateOnly:true,productId:legacyAdded.product.id,expectedVersion:1});
   assert.equal(legacyExpanded.skus.length,2);
   assert.equal(legacyExpanded.skus.find(row=>row.id===legacySkuId).skuCode,legacyAdded.product.productCode+"-01");
-  assert.equal(legacyExpanded.skus.find(row=>row.id!==legacySkuId).skuCode,"zjl250-02");
+  assert.equal(legacyExpanded.skus.find(row=>row.id!==legacySkuId).skuCode,"zjl250-c02");
   const legacySaved=await getManualProduct(legacyAdded.product.id);
   assert.equal(legacySaved.skus.length,2);
-  assert.equal(legacySaved.skus.find(row=>row.sku_code==="zjl250-02").attributes["颜色"],"白色");
+  assert.equal(legacySaved.skus.find(row=>row.sku_code==="zjl250-c02").attributes["颜色"],"白色");
   const canonicalRename=await saveManualProduct({...legacy,localCode:"zjl251",specs:[{name:"颜色",values:["黑色","白色"]}]},{personId:"ci"},{updateOnly:true,productId:legacyAdded.product.id,expectedVersion:2});
   assert.equal(canonicalRename.product.id,legacyAdded.product.id);
   assert.equal(canonicalRename.skus.find(row=>row.id===legacySkuId).skuCode,legacyAdded.product.productCode+"-01");
-  assert.equal(canonicalRename.skus.find(row=>row.id!==legacySkuId).skuCode,"zjl251-02");
+  assert.equal(canonicalRename.skus.find(row=>row.id!==legacySkuId).skuCode,"zjl251-c02");
   // A channel listing makes SKU identity changes unsafe and must continue to block.
   await pool.query("INSERT INTO public.platforms(code,name) VALUES ('CI_RAKUTEN','Rakuten') ON CONFLICT DO NOTHING");
   const platform=await pool.query("SELECT id FROM public.platforms WHERE code='CI_RAKUTEN'");
@@ -194,7 +194,7 @@ async function run(){
   assert.equal(renamed.product.id,initial.product.id,"rename cannot create a second Product");
   assert.equal(renamed.product.productCode,initial.product.productCode);
   assert.equal(renamed.skus[0].id,initial.skus[0].id,"SKU UUID must remain unchanged");
-  assert.equal(renamed.skus[0].skuCode,"zjl241-01");
+  assert.equal(renamed.skus[0].skuCode,"zjl241-c01");
   assert.equal((await getManualProduct(initial.product.id)).product.remarks,"包装已确认");
   assert.equal((await listManualProducts({query:"zjl240"})).length,0);
   await expectCode(()=>saveManualProduct({...draft,localCode:"zjl238"},{personId:"ci"},{updateOnly:true,productId:initial.product.id,expectedVersion:2}),"product_exists");

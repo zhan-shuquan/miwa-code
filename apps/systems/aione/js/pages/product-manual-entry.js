@@ -51,7 +51,7 @@ function input(key,label,value,options=null,type="text",readonly=false){
  const o=options?'<select'+attrs+'>'+selectOptions.map(x=>'<option value="'+esc(x)+'" '+(x===value?"selected":"")+(x===""?' disabled':'')+'>'+esc(x||hint)+'</option>').join("")+'</select>':type==="textarea"?'<textarea'+attrs+' placeholder="'+placeholder+'">'+esc(value??"")+'</textarea>':'<input type="'+type+'" '+(type==="number"?'min="0" step="any" ':'')+(readonly?'readonly ':'')+attrs+' placeholder="'+placeholder+'" value="'+esc(value??"")+'">';
  return '<label class="field"><span>'+esc(label)+'</span>'+o+'</label>';
 }
-function skuRows(p){let combos=[[]];for(const s of p.specs||[]){if(!s.name||!s.values?.length)continue;combos=combos.flatMap(c=>s.values.map(v=>[...c,v]));}return combos.map((values,i)=>{const identity=(p.specs||[]).filter(y=>y.name&&y.values?.length).map((y,j)=>y.name+"="+values[j]).join("|")||"default";const o=(p.skuOverrides||[]).find(x=>x.index===i+1&&(!x.identity||x.identity===identity))||{};return {identity,index:i+1,label:values.join(" / ")||"默认规格",number:p.localCode+"-"+String(i+1).padStart(2,"0"),link:p.localCode+"-"+(values.map(v=>JP[v]||v).join("-")||"基本仕様"),price:p.salePriceJpy??0,stock:o.stock??p.defaultStock??1000,cost:o.purchaseCostCny??p.purchaseUnitCostCny??0,weight:o.weightG??p.weightG??0,image:o.imageFile||""}})}
+function skuRows(p){let combos=[[]];for(const s of p.specs||[]){if(!s.name||!s.values?.length)continue;combos=combos.flatMap(c=>s.values.map(v=>[...c,v]));}return combos.map((values,i)=>{const identity=(p.specs||[]).filter(y=>y.name&&y.values?.length).map((y,j)=>y.name+"="+values[j]).join("|")||"default";const o=(p.skuOverrides||[]).find(x=>x.index===i+1&&(!x.identity||x.identity===identity))||{};return {identity,index:i+1,label:values.join(" / ")||"默认规格",number:p.localCode+"-c"+String(i+1).padStart(2,"0"),link:p.localCode+"-"+(values.map(v=>JP[v]||v).join("-")||"基本仕様"),price:p.salePriceJpy??0,stock:o.stock??p.defaultStock??1000,cost:o.purchaseCostCny??p.purchaseUnitCostCny??0,weight:o.weightG??p.weightG??0,image:o.imageFile||""}})}
 function finance(p,row){const price=Number(row?.price??p.salePriceJpy)||0,qty=Number(p.setQuantity)||1,cost=Number(row?.cost??p.purchaseUnitCostCny)||0,weight=Number(p.actualShipmentWeightG)>0?Number(p.actualShipmentWeightG):Number(row?.weight??p.weightG)*qty||0,fx=25;const purchase=Math.round(cost*qty*fx),domestic=Math.round((Number(p.domesticFreightCny)||0)*fx),pack=p.packagingMethod==="真空包装"?50:0,shipping=Math.round(weight*.5),duty=Math.round(purchase*.1),warehouse=purchase+domestic+pack+shipping+duty;const jpack={"A4信封":11,"A4缓冲信封":30,"小缓冲信封":9,"小信封":4,"3cm纸盒":30,"60cm纸箱":30,"80cm纸箱":40,"100cm纸箱":85}[p.packagingMaterial]??0,deliveryQuote=quoteJapanDelivery(row?.sizeClass||p.sizeClass),delivery=deliveryQuote.amountJpy,japan=delivery===null?null:jpack+delivery;const rates=p.rates||{},platform=Math.round(price*(Number(rates.platform)||10)/100),fees={coupon:Math.round(price*(Number(rates.coupon)||0)/100),points:Math.round(price*(Number(rates.points)||0)/100),ads:Math.round(price*(Number(rates.ads)||0)/100),other:Math.round(price*(Number(rates.other)||0)/100)},operation=Object.values(fees).reduce((a,b)=>a+b,0);return {price,warehouse,japan,deliveryQuote,platform,operation,gross:japan===null?null:price-warehouse-japan-platform,net:japan===null?null:price-warehouse-japan-platform-operation,ledger:[["到日本仓成本",warehouse,[["商品采购成本",purchase],["中国国内运费",domestic],["中国包装成本",pack],["国际物流成本",shipping],["关税成本",duty]]],["日本配送成本",japan,[["日本包装成本",jpack],["日本配送运费",delivery]]],["平台交易成本",platform,[["乐天平台交易费",platform]]],["销售运营成本",operation,[["优惠券",fees.coupon],["积分",fees.points],["RPP广告",fees.ads],["其他运营费用",fees.other]]]]}}
 function imageKind(a){const n=String(a.original_name||a.canonical_name||"").toLowerCase();if(/[_-]ma\.(jpg|jpeg|png|webp)$/.test(n))return "ma";if(/[_-]01\.(jpg|jpeg|png|webp)$/.test(n))return "01";if(/[_-]c\d+\.(jpg|jpeg|png|webp)$/.test(n)||/[_-]sku\d+\.(jpg|jpeg|png|webp)$/.test(n))return "sku";return "";}
 function imageGroupType(a){const role=String(a.asset_role||"").toLowerCase(),name=String(a.original_name||a.canonical_name||"").toLowerCase(),purpose=String(a.metadata?.imagePurpose||"");if(/sku/.test(role)||/[_-]c\d+\.(jpg|jpeg|png|webp)$/.test(name)||/[_-]sku\d+\.(jpg|jpeg|png|webp)$/.test(name))return "sku";if(/white|white_bg|white-background/.test(role)||/[_-]ma\./.test(name))return "white";if(/detail/.test(role))return "detail";if(/main/.test(role)||purpose==="system_primary"||/[_-]0[1-9]\./.test(name))return "main";return "detail"}
@@ -76,15 +76,38 @@ input("productModel","规格型号",p.productModel)+input("barcode","条形码",
 '<div class="pw-v7-block"><h3>♧ 功能卖点 <small>只填中文 · 全部选填</small></h3><div class="pw-selling">'+selling.map(([key,label])=>input(key,label,p[key])).join("")+'</div></div>'+
 '<div class="pw-v7-block"><h3>▦ 上架平台</h3><p class="pw-helper">仅显示有真实上架记录的商品链接。尚未连接平台上架记录，不推断已发布。</p></div></div>';
 }
-function skuImageCell(row){
+function skuMatch(row){
  const attrs=Object.fromEntries(String(row.identity||"").split("|").filter(Boolean).map(part=>{const i=part.indexOf("=");return i<0?[part,""]:[part.slice(0,i),part.slice(i+1)]}));
- const persisted=matchPersistedSkuByAttributes(storedSkus,attrs);
+ return matchPersistedSkuByAttributes(storedSkus,attrs);
+}
+function skuCandidate(row){
+ const prefix=(String(p.localCode||"")+"_c"+String(row.index).padStart(2,"0")+".").toLowerCase();
+ const matches=assets.filter(a=>a.asset_role==="source_sku_image"&&!a.sku_id&&String(a.original_name||"").toLowerCase().startsWith(prefix));
+ return matches.length===1?matches[0]:null;
+}
+function skuImageCell(row){
+ const persisted=skuMatch(row);
  const bound=assets.find(a=>a.asset_role==="source_sku_image"&&a.sku_id&&String(a.sku_id)===String(persisted?.id));
  if(bound){const url=skuImageUrls.get(bound.id);return url?'<img class="sku-img" src="'+esc(url)+'" alt="'+esc(row.number)+'">':'已关联';}
- const prefix=(String(p.localCode||"")+"_c"+String(row.index).padStart(2,"0")+".").toLowerCase();
- const candidate=assets.find(a=>a.asset_role==="source_sku_image"&&!a.sku_id&&String(a.original_name||"").toLowerCase().startsWith(prefix));
- return candidate&&persisted?'<button class="btn" data-sku-image-bind="'+esc(candidate.id)+'" data-sku-bind-code="'+esc(persisted.sku_code)+'" data-sku-bind-id="'+esc(persisted.id)+'" data-sku-bind-label="'+esc(row.label)+'">确认关联 '+esc(candidate.original_name)+'</button>':'待关联';
+ const candidate=skuCandidate(row);
+ return candidate&&persisted?'自动关联中':'待关联';
 }
+async function autoBindSkuImages(){
+ if(!p.id||!storedSkus.length||!assets.length)return;
+ let changed=false;
+ for(const row of skuRows(p)){
+  const persisted=skuMatch(row),candidate=skuCandidate(row);
+  if(!persisted||!candidate)continue;
+  const other=assets.filter(a=>a.asset_role==="source_sku_image"&&String(a.sku_id||"")===String(persisted.id));
+  if(other.length)continue;
+  try{
+   await aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/local-images/"+encodeURIComponent(candidate.id)+"/bind-sku",{method:"POST",body:JSON.stringify({skuId:persisted.id,skuCode:persisted.sku_code,confirmed:true})});
+   candidate.sku_id=persisted.id;changed=true;
+  }catch(error){imageMessage="SKU自动关联待处理："+String(error.message||"关联冲突");}
+ }
+ if(changed){const result=await aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/assets");assets=result.assets||[];await refreshSkuImages();}
+}
+
 function sku(){return '<div class="block"><h3>规格设置</h3>'+(p.specs||[]).map((s,i)=>'<div class="spec">'+input("sn"+i,"规格名称"+(i+1),s.name,["颜色","款式","尺码","套数","型号","其他"])+input("sv"+i,"规格值",s.values?.join("，"))+'<button class="btn" data-remove="'+i+'">×</button></div>').join("")+'<button class="btn" data-add>＋ 添加规格维度</button></div><div class="block"><h3>自动生成的SKU <span class="muted">'+skuRows(p).length+'个实际SKU</span></h3><div class="tablewrap"><table><thead><tr><th>SKU图片</th><th>规格</th><th>SKU管理番号</th><th>システム連携用SKU番号</th><th>售价（¥）</th><th>库存</th><th>采购价（CNY）</th><th>重量（g）</th></tr></thead><tbody>'+skuRows(p).map(x=>'<tr><td>'+skuImageCell(x)+'</td><td>'+esc(x.label)+'</td><td>'+esc(x.number)+'</td><td>'+esc(x.link)+'</td>'+'<td><span class="pw-sku-price">'+MONEY(x.price)+'</span></td>'+[["stock","库存"],["cost","采购价"],["weight","重量"]].map(([k,t])=>'<td><input aria-label="'+esc(t)+'" data-sku="'+x.index+'" data-sku-field="'+k+'" type="number" min="0" value="'+esc(x[k])+'"></td>').join("")+'</tr>').join("")+'</tbody></table></div></div>'}
 function profit(){
  const rows=skuRows(p),row=selected?rows[selected-1]:null,m=finance(p,row),target=p.profitTargets,rate=p.rates;
@@ -156,6 +179,7 @@ async function scanLocalImages(){
   if(uploaded){
    const result=await aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/assets");
    assets=result.assets||[];
+   await autoBindSkuImages();
    await refreshImage();
   }
   localSyncMessage="文件夹："+localSyncHandle.name+"｜扫描 "+files.length+"｜新增 "+uploaded+"｜已存在 "+reused+"｜冲突 "+blocked+"｜失败 "+failed+(firstError?"｜已停止："+firstError:"");
@@ -198,7 +222,7 @@ async function refreshImage(){const {main:defaultPic}=imageSummary(assets);const
 host.addEventListener("change",async e=>{const t=e.target;if(!t.matches("[data-primary-image]"))return;const file=t.files?.[0];if(!file||!p.id)return;try{if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>2*1024*1024)throw new Error("请选择不超过2MB的JPG、PNG或WebP图片");imageMessage="正在上传图片";display();const result=await aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/primary-image",{method:"POST",body:JSON.stringify({mimeType:file.type,base64:await fileBase64(file)})});if(!result.asset?.id)throw new Error("图片保存没有返回资产ID");const response=await aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/assets");assets=response.assets||[];await refreshImage();imageMessage="系统主图已保存";display();}catch(error){imageMessage="图片上传失败："+error.message;display();}},{signal:editorEvents.signal});
 host.addEventListener("change",e=>{const t=e.target;if(t.dataset.f){fieldChange(t.dataset.f,t.value);display()}else if(t.dataset.sku){rowChange(t);display()}else if(t.hasAttribute("data-finance")){selected=Number(t.value)||0;display()}else if(t.hasAttribute("data-image-type")){imageType=t.value;refreshImage().then(display)}},{signal:editorEvents.signal});
 host.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;if(t.hasAttribute("data-purchase-open")){const raw=String(host.querySelector('[data-f="purchaseUrl"]')?.value||p.purchaseUrl||"").trim();try{const url=new URL(raw);if(!["https:","http:"].includes(url.protocol))throw Error("invalid");window.open(url.href,"_blank","noopener,noreferrer")}catch{failure="采购链接无效，请填写正确的HTTP或HTTPS链接";display()}return}if(t.hasAttribute("data-tab")){tab=t.dataset.tab;display()}else if(t.hasAttribute("data-add")){p.specs.push({name:"颜色",values:[]});display()}else if(t.hasAttribute("data-remove")){p.specs.splice(Number(t.dataset.remove),1);p.skuOverrides=p.skuOverrides.filter(x=>x.identity);display()}else if(t.hasAttribute("data-cost")){const i=Number(t.dataset.cost);opened.has(i)?opened.delete(i):opened.add(i);display()}else if(t.hasAttribute("data-back")){await showProducts(host)}else if(t.hasAttribute("data-save")){t.disabled=true;try{const payload={...p};["id","productCode","updatedAt","readOnly"].forEach(k=>delete payload[k]);const res=await aioneApi(p.id?BASE+"/"+encodeURIComponent(p.id):BASE,{method:p.id?"PATCH":"POST",body:JSON.stringify(payload)});Object.assign(p,res.product);await showProducts(host,"商品草稿已保存");}catch(error){failure="保存失败："+error.message;display()}}},{signal:editorEvents.signal});
-display();if(p.id)Promise.all([aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/assets"),aioneApi(BASE+"/"+encodeURIComponent(p.id))]).then(async ([r,d])=>{assets=r.assets||[];storedSkus=d.skus||[];await Promise.all([refreshImage(),refreshSkuImages()]);display()}).catch(()=>{});
+display();if(p.id)Promise.all([aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/assets"),aioneApi(BASE+"/"+encodeURIComponent(p.id))]).then(async ([r,d])=>{assets=r.assets||[];storedSkus=d.skus||[];await autoBindSkuImages();await Promise.all([refreshImage(),refreshSkuImages()]);display()}).catch(error=>{failure="商品图片加载失败："+String(error.message||"接口错误");display()});
 }
 
 async function fileBase64(file){
