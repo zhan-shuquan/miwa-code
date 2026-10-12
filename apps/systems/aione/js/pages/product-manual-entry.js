@@ -122,8 +122,8 @@ async function scanLocalImages(){
   const files=[];
   for await (const [name,handle] of localSyncHandle.entries()){
    if(handle.kind!=="file")continue;
-   const escaped=String(p.localCode||"").replace(/[.*+?^${}()|[\]\\]/g,"\\function fieldChange(k,value){");
-   if(!new RegExp("^"+escaped+"_(?:c)?[0-9]{2,4}\\.(?:jpg|jpeg|png|webp)$","i").test(name))continue;
+   const escaped=String(p.localCode||"");
+   if(!name.toLowerCase().startsWith(escaped.toLowerCase()+"_")||!/^(?:c)?[0-9]{2,4}\.(?:jpg|jpeg|png|webp)$/i.test(name.slice(escaped.length+1)))continue;
    const file=await handle.getFile();
    files.push(file);
   }
