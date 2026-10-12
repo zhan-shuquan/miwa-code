@@ -1,4 +1,5 @@
 import {Router} from "express";
+import {getItemV2ReadOnly} from "../integrations/rakuten-rms-client.js";
 import pool from "../../db.js";
 import {getManualProduct} from "../services/product-manual-entry-service.js";
 import {rakutenFirstItemPreflight} from "../services/rakuten-itemapi-preflight.js";
@@ -11,6 +12,14 @@ router.get("/integrations/rakuten/products/:productRef/itemapi-preflight",async(
   const evaluatedSkus=skus.map(s=>({id:s.id,sku_code:s.sku_code,priceJpy:null,stock:null}));
   const result=rakutenFirstItemPreflight({product,skus:evaluatedSkus,assets:assets.rows,shopConfigured:false});
   res.set("Cache-Control","no-store").json({ok:true,productId:product.id,localCode:product.localCode,...result});
+ }catch(error){next(error)}
+});
+router.get("/integrations/rakuten/products/:productRef/remote-existence",async(req,res,next)=>{
+ try{
+  const {product}=await getManualProduct(String(req.params.productRef||""));
+  const result=await getItemV2ReadOnly({shopRef:product.targetShopRef,manageNumber:product.localCode});
+  // Keep the raw provider item private; an existence check only needs boolean evidence.
+  res.set("Cache-Control","no-store").json({ok:true,productId:product.id,shopRef:result.shopRef,manageNumber:result.manageNumber,exists:result.exists,remoteStatus:result.httpStatus});
  }catch(error){next(error)}
 });
 export default router;
