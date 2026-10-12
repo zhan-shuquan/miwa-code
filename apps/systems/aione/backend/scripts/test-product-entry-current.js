@@ -142,6 +142,24 @@ async function run(){
   const reduced=await saveManualProduct({...original,specs:[{name:"颜色",values:["白色"]}]},{personId:"ci"},{updateOnly:true,expectedVersion:3});
   assert.equal(reduced.skus.length,1);
   assert.equal((await getManualProduct("zjl238")).skus.length,1);
+  // Regression: existing SKU may use canonical MH product-code prefix, while
+  // a manually entered local business SKU uses zjl*. A new SKU must never
+  // reuse the already occupied serial number 1.
+  const legacy=normalizeProductEntry({...original,localCode:"zjl250",specs:[{name:"颜色",values:["黑色"]}]});
+  const legacyAdded=await saveManualProduct(legacy,{personId:"ci"},{createOnly:true});
+  const legacySkuId=legacyAdded.skus[0].id;
+  await pool.query("UPDATE public.product_skus SET sku_code=$2 WHERE id=$1",[legacySkuId,legacyAdded.product.productCode+"-01"]);
+  const legacyExpanded=await saveManualProduct({...legacy,specs:[{name:"颜色",values:["黑色","白色"]}]},{personId:"ci"},{updateOnly:true,productId:legacyAdded.product.id,expectedVersion:1});
+  assert.equal(legacyExpanded.skus.length,2);
+  assert.equal(legacyExpanded.skus.find(row=>row.id===legacySkuId).skuCode,legacyAdded.product.productCode+"-01");
+  assert.equal(legacyExpanded.skus.find(row=>row.id!==legacySkuId).skuCode,"zjl250-02");
+  const legacySaved=await getManualProduct(legacyAdded.product.id);
+  assert.equal(legacySaved.skus.length,2);
+  assert.equal(legacySaved.skus.find(row=>row.sku_code==="zjl250-02").attributes["颜色"],"白色");
+  const canonicalRename=await saveManualProduct({...legacy,localCode:"zjl251",specs:[{name:"颜色",values:["黑色","白色"]}]},{personId:"ci"},{updateOnly:true,productId:legacyAdded.product.id,expectedVersion:2});
+  assert.equal(canonicalRename.product.id,legacyAdded.product.id);
+  assert.equal(canonicalRename.skus.find(row=>row.id===legacySkuId).skuCode,legacyAdded.product.productCode+"-01");
+  assert.equal(canonicalRename.skus.find(row=>row.id!==legacySkuId).skuCode,"zjl251-02");
   // A channel listing makes SKU identity changes unsafe and must continue to block.
   await pool.query("INSERT INTO public.platforms(code,name) VALUES ('CI_RAKUTEN','Rakuten') ON CONFLICT DO NOTHING");
   const platform=await pool.query("SELECT id FROM public.platforms WHERE code='CI_RAKUTEN'");

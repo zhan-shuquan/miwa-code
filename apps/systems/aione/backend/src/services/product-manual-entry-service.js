@@ -88,7 +88,7 @@ async function draftSkuCanChange(client, existing, shape) {
 async function syncSku(client, productId, code, entries, source, shape, allowDraftChange) {
   const dataCol=shape.skuDataCol, statusCol=shape.skuStatusCol;
   const existing=await client.query(
-    "SELECT id,sku_code,"+dataCol+" AS attributes FROM public.product_skus WHERE product_id=$1 ORDER BY sku_code FOR UPDATE",
+    "SELECT id,sku_code,"+(shape.skuNo?"sku_no,":"")+dataCol+" AS attributes FROM public.product_skus WHERE product_id=$1 ORDER BY sku_code FOR UPDATE",
     [productId]
   );
   for(const item of existing.rows)
@@ -100,15 +100,25 @@ async function syncSku(client, productId, code, entries, source, shape, allowDra
     const attrs=Object.fromEntries(Object.entries(row.attributes||{}).filter(([k])=>!k.startsWith("__aione")));
     return [comparableSkuAttributes(attrs),row];
   }));
-  const existingNumbers=existing.rows.map(row=>Number(String(row.sku_code).slice(code.length+1))).filter(Number.isSafeInteger);
-  let nextNumber=Math.max(0,...existingNumbers)+1;
+  // sku_no is authoritative in the existing-lifecycle schema. Old SKUs can be
+  // MHxxxxxxx-01 while the editable business code is zjl238; slicing the
+  // business-code prefix would produce NaN and reuse an occupied sku_no=1.
+  // In the alternate schema, use a complete numeric suffix (never offset slices).
+  const existingNumbers=existing.rows.map(row=>{
+    if(shape.skuNo)return Number(row.sku_no);
+    const match=String(row.sku_code||"").match(/-(\d+)$/);
+    return match?Number(match[1]):null;
+  }).filter(n=>Number.isSafeInteger(n)&&n>0);
+  let nextNumber=Math.max(0,existing.rows.length,...existingNumbers)+1;
   const output=[];
   for(const entry of entries){
     const identity=comparableSkuAttributes(entry.attributes);
     const old=byIdentity.get(identity);
     if(!old&&!allowDraftChange)
       throw error("sku_identity_changed","此商品已进入渠道流程，不能直接更改SKU规格组合。",409);
-    const serial=old?Number(String(old.sku_code).slice(code.length+1)):nextNumber++;
+    // Reuse an existing SKU's database ID and code without re-numbering.
+    // New rows always receive a never-used, increasing serial for this product.
+    const serial=old?null:nextNumber++;
     const skuCode=old?.sku_code || code+"-"+String(serial).padStart(2,"0");
     const data={...entry.attributes,__aioneManualEntry:true,__aioneSource:source};
     const name=Object.values(entry.attributes).join(" / ")||"单规格";
@@ -198,6 +208,11 @@ export async function saveManualProduct(input, context={}, options={}) {
       const rows=await client.query("SELECT id,sku_code FROM public.product_skus WHERE product_id=$1 FOR UPDATE",[id]);
       for(const row of rows.rows){
         const oldCode=String(row.sku_code);
+        if(oldCode.startsWith(existing.product_code+"-")){
+          // Canonical MH... SKU codes are permanent identities: renaming an
+          // employee-facing localCode must never alter them.
+          continue;
+        }
         if(!oldCode.startsWith(previousCode+"-"))throw error("sku_external_conflict","SKU编码不属于原货号，无法安全更名。",409);
         const suffix=oldCode.slice(previousCode.length);
         await client.query("UPDATE public.product_skus SET sku_code=$2 WHERE id=$1",[row.id,p.localCode+suffix]);
@@ -205,6 +220,12 @@ export async function saveManualProduct(input, context={}, options={}) {
     }
     const sku=await syncSku(client,id,p.localCode,buildSkuEntries(p),options.source||"aione-web",shape,await draftSkuCanChange(client,existing,shape));
     return {product:{...p,id,productCode,version},skus:sku,reused:!!existing,warnings:readinessWarnings(p)};
+  }).catch(e=>{
+    // Do not expose raw PostgreSQL constraint/column names to employees.
+    // withTransaction has already rolled back all product and SKU edits.
+    if(e.code==="23505"&&e.constraint==="product_skus_product_id_sku_no_key")
+      throw error("sku_serial_conflict","SKU序号冲突，已取消本次保存。请刷新后重试；如果继续发生，请联系管理员。",409);
+    throw e;
   });
 }
 
