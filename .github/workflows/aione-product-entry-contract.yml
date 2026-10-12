@@ -18,6 +18,8 @@ on:
       - apps/systems/aione/backend/scripts/test-product-entry-current.js
       - apps/systems/aione/js/config/product-pricing-math.js
       - apps/systems/aione/js/config/product-pricing-math.test.js
+      - apps/systems/aione/js/services/product-sku-image-identity.js
+      - apps/systems/aione/js/services/product-sku-image-identity.test.js
       - apps/systems/aione/js/pages/product-manual-entry.js
       - apps/systems/aione/js/pages/product-home-current.js
       - apps/systems/aione/backend/server.js
@@ -67,6 +69,8 @@ jobs:
           node --check apps/systems/aione/backend/scripts/test-product-entry-current.js
           node --check apps/systems/aione/js/config/product-pricing-math.js
           node --check apps/systems/aione/js/config/product-pricing-math.test.js
+          node --check apps/systems/aione/js/services/product-sku-image-identity.js
+          node --check apps/systems/aione/js/services/product-sku-image-identity.test.js
           node --check apps/systems/aione/js/pages/product-manual-entry.js
           node --check apps/systems/aione/js/pages/product-home-current.js
           node --check apps/systems/aione/backend/server.js
@@ -99,6 +103,8 @@ jobs:
           $out = & ./apps/systems/aione/backend/tools/windows/SYNC_AIONE_PRODUCT_IMAGES.ps1 -Folder $folder -ProductId 'prd_c61a3ec2-9e98-4892-8d08-985b7962f74a' | Out-String
           if ($out -notmatch 'DRY-RUN ONLY' -or $out -notmatch 'Files: 2') { throw 'Windows dry-run did not complete safely.' }
           if (!(Test-Path (Join-Path $folder 'zjl238_01.png'))) { throw 'Original image was modified.' }
+      - name: Validate product SKU image identity mapping
+        run: node apps/systems/aione/js/services/product-sku-image-identity.test.js
       - name: Validate actual break-even calculation
         run: node apps/systems/aione/js/config/product-pricing-math.test.js
       - name: Test Excel/WPS and CURRENT database roundtrip (no Rakuten)
