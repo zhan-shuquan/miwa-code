@@ -2,7 +2,7 @@ export function classifyEmployeeImageName(filename, localCode){
  const code=String(localCode||"").trim();
  const name=String(filename||"").trim();
  if(!/^[A-Za-z0-9-]{2,80}$/.test(code))return null;
- const prefix=code.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+ const prefix=code; // Validated to ASCII alphanumerics and hyphens above.
  const pattern=new RegExp("^"+prefix+"_(c)?([0-9]{2,4})\\.(jpg|jpeg|png|webp)$","i");
  const match=name.match(pattern);
  if(!match)return null;
