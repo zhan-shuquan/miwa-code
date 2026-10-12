@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { inspectLocalImageUpload, validProductIdentity, assertGcsImageMetadata, sortLocalImageFiles } from "../src/services/product-local-image-sync-contract.js";
+
+const id="c61a3ec2-9e98-4892-8d08-985b7962f74a";
+assert.equal(validProductIdentity(id),true);
+assert.equal(validProductIdentity("prd_"+id),true);
+assert.equal(validProductIdentity("../"+id),false);
+assert.equal(validProductIdentity("abc"),false);
+const png=Buffer.concat([Buffer.from("89504e470d0a1a0a","hex"),Buffer.alloc(32)]);
+const base64=png.toString("base64");
+const expected=createHash("sha256").update(png).digest("hex");
+const image=inspectLocalImageUpload({fileName:"zjl238_01.png",base64},"zjl238");
+assert.equal(image.image.kind,"main");
+assert.equal(image.digest,expected);
+assert.equal(image.slotKey,"main:1");
+assert.throws(()=>inspectLocalImageUpload({fileName:"zjl237_01.png",base64},"zjl238"),e=>e.code==="image_filename_invalid");
+assert.throws(()=>inspectLocalImageUpload({fileName:"zjl238_01.jpg",base64},"zjl238"),e=>e.code==="image_invalid");
+assert.throws(()=>inspectLocalImageUpload({fileName:"zjl238_01.png",base64:"AAA*"},"zjl238"),e=>e.code==="image_base64_invalid");
+assert.equal(assertGcsImageMetadata({size:String(png.length),contentType:"image/png",metadata:{fileSha256:expected}},{digest:expected,size:png.length,mime:"image/png"}),true);
+assert.throws(()=>assertGcsImageMetadata({size:"100",contentType:"image/png"},{digest:expected,size:png.length,mime:"image/png"}),e=>e.code==="image_storage_conflict");
+assert.throws(()=>assertGcsImageMetadata(null,{digest:expected,size:png.length,mime:"image/png"}),e=>e.code==="image_storage_missing");
+const files=["zjl238_c02.png","zjl238_10.png","zjl238_01.png","gift.png","zjl238_c01.png","zjl238_02.png"];
+assert.deepEqual(sortLocalImageFiles(files,"zjl238").map(x=>x.originalName),["zjl238_01.png","zjl238_02.png","zjl238_10.png","zjl238_c01.png","zjl238_c02.png"]);
+console.log("PASS: identity, byte signature, SHA-256, cloud metadata and image ordering (no GCS/DB/Rakuten)");
