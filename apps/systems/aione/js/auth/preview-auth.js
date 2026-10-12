@@ -226,13 +226,15 @@ async function initGoogleSignIn(host, onAuthenticated) {
           else setGoogleStatus(host, "Google登录或AIONE身份确认失败，请重试。", "error");
         }
       },
-      auto_select: false,
+      auto_select: true,
       cancel_on_tap_outside: false
     });
     buttonHost.innerHTML = "";
     const width = Math.max(240, Math.min(560, Math.floor(buttonHost.getBoundingClientRect().width || 560)));
     window.google.accounts.id.renderButton(buttonHost, { ...authConfig.googleButton, width });
-    setGoogleStatus(host, "请使用已登记的Google账号登录。", "neutral");
+    setGoogleStatus(host, "正在尝试恢复Google登录；如未自动完成，请点击下方登录按钮。", "neutral");
+    // GIS handles its own remembered-account policies; do not persist expired ID tokens.
+    window.google.accounts.id.prompt();
   } catch (error) {
     console.error(error);
     setGoogleStatus(host, "Google登录组件加载失败，请刷新页面后重试。", "error");
