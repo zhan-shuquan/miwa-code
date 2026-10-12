@@ -81,7 +81,7 @@ const input=(assetId,skuId,skuCode,confirmed)=>({
 });
 await assert.rejects(invoke(bind,input(asset1,"sku_a","zjl238-01",false)),e=>e.code==="sku_binding_confirmation_required");
 await assert.rejects(invoke(bind,input(asset1,"sku_a","zjl238-02",true)),e=>e.code==="sku_identity_mismatch");
-assert.equal(current.find(x=>x.id===asset1).sku_id,null);
+assert.equal(current.find(x=>x.id===asset1).sku_id??null,null);
 const accepted=await invoke(bind,input(asset1,"sku_a","zjl238-01",true));
 assert.equal(accepted.body.skuId,"sku_a");
 assert.equal(accepted.body.reused,false);
