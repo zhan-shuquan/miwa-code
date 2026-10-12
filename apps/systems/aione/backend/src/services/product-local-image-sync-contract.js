@@ -50,3 +50,28 @@ export function sortLocalImageFiles(names, localCode) {
       return type(a) - type(b) || a.index - b.index || a.originalName.localeCompare(b.originalName);
     });
 }
+
+/**
+ * Reconcile local naming slots against ALL existing ProductAssets.
+ * Especially important when _01 was already uploaded through the manual
+ * primary-image button. Never silently create a second primary.
+ */
+export function chooseExistingLocalImageAsset(rows, { slotKey, digest, kind }) {
+  const assets = Array.isArray(rows) ? rows : [];
+  const slots = assets.filter(a => a.metadata?.localImageSlot === slotKey);
+  const conflict = (code, message) => {
+    throw Object.assign(new Error(message), { code, statusCode: 409 });
+  };
+  if (slots.length > 1) conflict("image_slot_duplicate", "同一图片位置出现多条资产，需人工修复。");
+  if (slots.length === 1) {
+    if (slots[0].metadata?.fileSha256 !== digest)
+      conflict("image_slot_changed", "图片位置已有其他版本，不能自动覆盖。");
+    return { action: "reuse_slot", asset: slots[0] };
+  }
+  if (kind !== "main") return { action: "create", asset: null };
+  const primaries = assets.filter(a => a.asset_role === "source_main_image");
+  if (!primaries.length) return { action: "create", asset: null };
+  if (primaries.length !== 1 || primaries[0].metadata?.fileSha256 !== digest)
+    conflict("main_image_already_exists", "AIONE 已有不同或多张主图，禁止自动创建第二张主图；需要人工核对。");
+  return { action: "reuse_primary", asset: primaries[0] };
+}
