@@ -21,10 +21,11 @@ export function evaluateProductEntryReadiness(product, hasImage = null) {
   items.push({ key: "images", label: "商品图片", status: hasImage === null ? "unknown" : hasImage ? "complete" : "missing" });
   const completed = items.filter(x => x.status === "complete").length;
   const unresolved = items.some(x => x.status === "unknown");
+  const missing = items.some(x => x.status === "missing");
   const complete = completed === items.length && !unresolved;
   return {
-    code: complete ? "pending_platform_validation" : unresolved ? "needs_verification" : "incomplete",
-    label: complete ? "待平台校验" : unresolved ? "待核实图片" : "资料待完善",
+    code: complete ? "pending_platform_validation" : missing ? "incomplete" : "needs_verification",
+    label: complete ? "待平台校验" : missing ? "资料待完善" : "待核实图片",
     complete, completed, total: items.length, checks: items,
     note: "仅表示资料填写进度；尚未完成平台规则校验，不代表可以自动上架。"
   };
