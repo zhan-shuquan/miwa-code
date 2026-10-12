@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import pool, { withTransaction } from "../../db.js";
 import { requireWriteActor } from "../http/context.js";
 import { uploadGcsObjectIfAbsent, getGcsObjectMetadata } from "../integrations/google-cloud-storage-client.js";
@@ -7,7 +7,6 @@ import { inspectLocalImageUpload, validProductIdentity, assertGcsImageMetadata }
 
 const router=Router();
 const err=(status,code,message)=>Object.assign(new Error(message),{statusCode:status,code});
-const slotKey=x=>x.kind+":"+x.index;
 function syncAllowed(req){
  const enabled=String(process.env.AIONE_LOCAL_IMAGE_SYNC_ENABLED||"false")==="true";
  const identity=req.aioneIdentity;
@@ -24,6 +23,7 @@ function gate(req,res,next){
 router.post("/products/:productId/local-image",gate,requireWriteActor,async(req,res,next)=>{
  try {
   const productId=String(req.params.productId||"").trim();
+  if(!validProductIdentity(productId))throw err(400,"product_id_invalid","需要有效的商品内部ID。");
   const p=await pool.query("SELECT id,product_code,metadata FROM public.products WHERE id=$1 AND archived_at IS NULL",[productId]);
   if(p.rowCount!==1)throw err(404,"product_not_found","商品不存在或已归档。");
   const localCode=String(p.rows[0].metadata?.manualEntry?.localCode||"").trim();
