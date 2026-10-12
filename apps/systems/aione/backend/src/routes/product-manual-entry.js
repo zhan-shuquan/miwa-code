@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { suggestProductDataFromSource } from "../ai/product-source-recognition-provider.js";
 import { requireWriteActor } from "../http/context.js";
 import {
   getManualProduct, listManualProducts, saveManualProduct,
@@ -18,6 +19,14 @@ function readBytes(body){
 }
 function filename(body){return String(body?.filename||"upload.xlsx").replace(/[\\/:*?"<>|]/g,"").slice(0,180);}
 
+router.post("/source-recognize",requireWriteActor,async(req,res,next)=>{
+ try{
+  const images=Array.isArray(req.body?.images)?req.body.images:[];
+  if(images.length<1||images.length>2)return res.status(400).json({error:"invalid_image_count",message:"请选择1～2张原始图片识别。"});
+  const allowed=Array.isArray(req.body?.allowedCategories)?req.body.allowedCategories:[];
+  res.json({ok:true,...await suggestProductDataFromSource({name:req.body?.name,allowedCategories:allowed,images})});
+ }catch(e){next(e);}
+});
 router.get("/",async(req,res,next)=>{
   try{res.json({ok:true,items:await listManualProducts({query:req.query.q,limit:req.query.limit,offset:req.query.offset})});}
   catch(e){next(e);}
