@@ -157,7 +157,7 @@ export function buildSkuEntries(p) {
       stock: override.stock ?? p.defaultStock ?? 1000, purchaseCostCny: override.purchaseCostCny ?? p.purchaseUnitCostCny ?? null,
       weightG: override.weightG ?? p.weightG ?? null,
       sizeClass: override.sizeClass || p.sizeClass || "",
-      imageFile: override.imageFile || (p.localCode + "_sku" + String(i + 1).padStart(2, "0") + ".jpg")
+      imageFile: override.imageFile || (p.localCode + "_c" + String(i + 1).padStart(2, "0") + ".jpg")
     };
   });
 }
