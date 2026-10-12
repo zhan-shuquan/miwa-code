@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
+import { evaluateProductEntryReadiness, evaluateProductPublicationStatus } from "../src/services/product-entry-status-service.js";
 import pool from "../db.js";
 import {
   normalizeProductEntry, buildSkuEntries, parseProductEntryWorkbook,
@@ -73,7 +74,12 @@ async function run(){
   assert.equal(roundtrip.items[0].salePriceJpy,original.salePriceJpy);
   assert.equal(roundtrip.items[0].specs[0].name,"颜色");
   assert.deepEqual(roundtrip.items[0].specs[0].values,["黑色"]);
-  assert.equal(roundtrip.items[0].autoPublish,true);
+  assert.equal(roundtrip.items[0].autoPublish,false,"new exports must not perpetuate legacy auto-publish controls");
+  const workbook=new ExcelJS.Workbook();await workbook.xlsx.load(exported);
+  assert.equal(workbook.getWorksheet("商品一览").getRow(1).values.includes("自动上架"),false);
+  assert.equal(evaluateProductEntryReadiness(original,null).label,"资料待完善");
+  assert.equal(evaluateProductEntryReadiness({...original,pcDescription:"PC说明",spDescription:"移动说明",salesDescription:"销售说明"},true).label,"待平台校验");
+  assert.equal(evaluateProductPublicationStatus([]).label,"待核实");
    assert.equal(roundtrip.items[0].defaultStock,1000);
    assert.equal(roundtrip.items[0].profitTargets.productMargin,40);
 
@@ -135,6 +141,8 @@ async function run(){
   const list=await listManualProducts({query:"zjl238"});
   assert.equal(list.length,1);
   assert.equal(list[0].id,added.product.id);
+  assert.equal(list[0].publication.label,"未上架");
+  assert.equal(list[0].readiness.label,"资料待完善");
   const e=await exportProductEntries([current.product]);
   const parsed=await parseProductEntryWorkbook(e,"roundtrip.xlsx");
   assert.equal(parsed.items[0].salePriceJpy,1080);
