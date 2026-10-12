@@ -234,7 +234,7 @@ export async function saveManualProduct(input, context={}, options={}) {
 async function attachDerivedStatuses(products, shape) {
   if (!products.length) return products;
   const ids=products.map(p=>p.id);
-  let images=new Map(), publications=new Map(), assetAvailable=false, listingAvailable=false;
+  let images=new Map(), imagePreviews=new Map(), publications=new Map(), assetAvailable=false, listingAvailable=false;
   try {
     const q=await pool.query("SELECT product_id::text AS product_id, COUNT(*)::int AS n FROM public.product_assets WHERE product_id::text = ANY($1::text[]) AND asset_type='image' AND archived_at IS NULL GROUP BY product_id",[ids]);
     images=new Map(q.rows.map(row=>[String(row.product_id),Number(row.n)>0]));assetAvailable=true;
@@ -245,6 +245,43 @@ async function attachDerivedStatuses(products, shape) {
         const q=await pool.query("SELECT product_id::text AS product_id, COUNT(*)::int AS n FROM public.product_assets WHERE product_id::text = ANY($1::text[]) AND asset_type='image' GROUP BY product_id",[ids]);
         images=new Map(q.rows.map(row=>[String(row.product_id),Number(row.n)>0]));assetAvailable=true;
       }catch { /* Do not turn an unknown into a false "missing". */ }
+    }
+  }
+  // One ProductAsset per product supplies a representative image without
+  // duplicating image state in product metadata or making N+1 API calls.
+  try {
+    const previews=await pool.query(
+      `SELECT DISTINCT ON (product_id)
+                product_id::text AS product_id, id::text AS asset_id
+         FROM public.product_assets
+        WHERE product_id::text=ANY($1::text[])
+          AND asset_type='image'
+          AND asset_role <> 'source_sku_image'
+          AND archived_at IS NULL
+        ORDER BY product_id,
+                 CASE
+                   WHEN metadata->>'imagePurpose'='system_primary' THEN 0
+                   WHEN asset_role='source_main_image' THEN 1
+                   ELSE 2
+                 END,
+                 asset_no ASC`,
+      [ids]
+    );
+    imagePreviews=new Map(previews.rows.map(row=>[String(row.product_id),row.asset_id]));
+  }catch(error){
+    if(error.code==="42703"){
+      // Older baseline may not carry archived_at. Never invent an image URL.
+      try{
+        const previews=await pool.query(
+          `SELECT DISTINCT ON (product_id)
+                    product_id::text AS product_id,id::text AS asset_id
+             FROM public.product_assets
+            WHERE product_id::text=ANY($1::text[]) AND asset_type='image'
+              AND asset_role <> 'source_sku_image'
+            ORDER BY product_id,asset_no ASC`,[ids]
+        );
+        imagePreviews=new Map(previews.rows.map(row=>[String(row.product_id),row.asset_id]));
+      }catch {/* image thumbnail remains unavailable */}
     }
   }
   try {
@@ -259,6 +296,7 @@ async function attachDerivedStatuses(products, shape) {
   }catch { /* Unknown listing state is never treated as unpublished. */ }
   return products.map(p=>({
     ...p,
+    representativeImageAssetId:imagePreviews.get(String(p.id))||null,
     readiness:evaluateProductEntryReadiness(p,assetAvailable?(images.get(String(p.id))||false):null),
     publication:evaluateProductPublicationStatus(publications.get(String(p.id))||[],{sourceAvailable:listingAvailable})
   }));
@@ -277,7 +315,7 @@ export async function getManualProduct(ref) {
   if(result.rowCount!==1) throw error("product_not_found","找不到该商品或者出现重复货号。",404);
   const product=unwrap(result.rows[0]);
   if(product.readOnly)throw error("product_not_in_manual_entry","该商品由原有业务流程创建，请使用已有商品工作台。",409);
-  const sku=await pool.query("SELECT sku_code,name,"+shape.skuDataCol+" AS attributes,"+shape.skuStatusCol+" AS status FROM public.product_skus WHERE product_id=$1 ORDER BY sku_code",[result.rows[0].id]);
+  const sku=await pool.query("SELECT id,sku_code,name,"+shape.skuDataCol+" AS attributes,"+shape.skuStatusCol+" AS status FROM public.product_skus WHERE product_id=$1 ORDER BY sku_code",[result.rows[0].id]);
   return {product,skus:sku.rows,warnings:readinessWarnings(product)};
 }
 export async function previewImportProducts(items) {
