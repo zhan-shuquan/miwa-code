@@ -3,7 +3,7 @@ import {createHash} from "node:crypto";
 import {getGcsObjectMetadata,readGcsObject,uploadGcsObjectIfAbsent} from "../integrations/google-cloud-storage-client.js";
 export const displaySizes=[64,320,640];
 export function webpObjectName(assetId,digest,size){
- if(!/^[-\\w]{5,100}$/.test(String(assetId))||!/^[a-f0-9]{64}$/.test(String(digest))||!displaySizes.includes(size))throw Error("invalid_display_variant");
+ if(!/^[-A-Za-z0-9_]{5,100}$/.test(String(assetId))||!/^[a-f0-9]{64}$/.test(String(digest))||!displaySizes.includes(size))throw Error("invalid_display_variant");
  return "product/display-webp/v1/"+assetId+"/"+digest+"/"+size+".webp";
 }
 export async function convertWebp(bytes,size){
