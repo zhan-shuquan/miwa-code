@@ -4,6 +4,11 @@ on:
     branches:
       - main
     paths:
+      - data-code/migrations/0103_product_asset_sku_identity_link.sql
+      - apps/systems/aione/backend/tools/windows/SYNC_AIONE_PRODUCT_IMAGES.ps1
+      - apps/systems/aione/backend/src/services/product-local-image-sync-contract.js
+      - apps/systems/aione/backend/scripts/test-product-local-image-sync-route.js
+      - apps/systems/aione/backend/scripts/test-product-local-image-sync-contract.js
       - apps/systems/aione/backend/src/services/product-image-name-contract.js
       - apps/systems/aione/backend/src/routes/product-image-sync.js
       - apps/systems/aione/backend/scripts/test-product-image-name-current.js
@@ -50,6 +55,9 @@ jobs:
         run: npm install --package-lock=false --no-audit --no-fund
       - name: Validate changed JS syntax
         run: |
+          node --check apps/systems/aione/backend/src/services/product-local-image-sync-contract.js
+          node --check apps/systems/aione/backend/scripts/test-product-local-image-sync-route.js
+          node --check apps/systems/aione/backend/scripts/test-product-local-image-sync-contract.js
           node --check apps/systems/aione/backend/src/services/product-image-name-contract.js
           node --check apps/systems/aione/backend/src/routes/product-image-sync.js
           node --check apps/systems/aione/backend/scripts/test-product-image-name-current.js
@@ -66,9 +74,31 @@ jobs:
         env:
           PGPASSWORD: aione_ci
         run: psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -f data-code/current/0001_aione_current_baseline.sql
+      - name: Validate SKU asset FK on disposable CURRENT baseline
+        env:
+          PGPASSWORD: aione_ci
+        run: |
+          psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -f data-code/migrations/0103_product_asset_sku_identity_link.sql
+          psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -Atc "SELECT CASE WHEN EXISTS (SELECT 1 FROM pg_constraint WHERE conname='fk_product_assets_product_sku_same_product') THEN 'PASS' ELSE 'FAIL' END" | grep -Fx PASS
       - name: Validate product image naming classifier
         working-directory: apps/systems/aione/backend
         run: node scripts/test-product-image-name-current.js
+      - name: Validate safe local image sync contract (no external writes)
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-product-local-image-sync-contract.js
+      - name: Verify in-memory end-to-end image sync route (no GCS/Rakuten)
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-product-local-image-sync-route.js
+      - name: Windows sync script safe dry-run smoke test
+        shell: pwsh
+        run: |
+          $folder = Join-Path $env:RUNNER_TEMP 'zjl238'
+          New-Item -ItemType Directory -Path $folder -Force | Out-Null
+          [System.IO.File]::WriteAllBytes((Join-Path $folder 'zjl238_01.png'), [byte[]](1..32))
+          [System.IO.File]::WriteAllBytes((Join-Path $folder 'zjl238_c01.jpg'), [byte[]](1..32))
+          $out = & ./apps/systems/aione/backend/tools/windows/SYNC_AIONE_PRODUCT_IMAGES.ps1 -Folder $folder -ProductId 'prd_c61a3ec2-9e98-4892-8d08-985b7962f74a' | Out-String
+          if ($out -notmatch 'DRY-RUN ONLY' -or $out -notmatch 'Files: 2') { throw 'Windows dry-run did not complete safely.' }
+          if (!(Test-Path (Join-Path $folder 'zjl238_01.png'))) { throw 'Original image was modified.' }
       - name: Validate actual break-even calculation
         run: node apps/systems/aione/js/config/product-pricing-math.test.js
       - name: Test Excel/WPS and CURRENT database roundtrip (no Rakuten)

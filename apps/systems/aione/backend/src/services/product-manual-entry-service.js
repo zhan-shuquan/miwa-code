@@ -75,13 +75,14 @@ async function draftSkuCanChange(client, existing, shape) {
     [existing.id]
   );
   if(linked.rows[0]?.linked) return false;
-  if(shape.variant==="current-baseline"){
-    const assets=await client.query(
-      "SELECT EXISTS(SELECT 1 FROM public.product_assets WHERE product_id=$1 AND sku_id IS NOT NULL) AS linked",
-      [existing.id]
-    );
-    if(assets.rows[0]?.linked) return false;
-  }
+  // Both supported ProductAsset schemas now carry canonical sku_id after
+  // migration 0103. Once any image is bound, the SKU set must not be edited
+  // or deleted through the generic manual-entry draft editor.
+  const assets=await client.query(
+    "SELECT EXISTS(SELECT 1 FROM public.product_assets WHERE product_id=$1 AND sku_id IS NOT NULL) AS linked",
+    [existing.id]
+  );
+  if(assets.rows[0]?.linked) return false;
   return true;
 }
 
