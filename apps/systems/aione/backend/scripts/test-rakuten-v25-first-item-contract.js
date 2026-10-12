@@ -1,0 +1,17 @@
+import assert from "node:assert/strict";
+import {firstItemV25Policy} from "../src/services/rakuten-v25-first-item-contract.js";
+const p={localCode:"zjl238",targetShopRef:"永井GD",salePriceJpy:980,pcDescription:"",spDescription:"",salesDescription:""};
+const r=firstItemV25Policy(p,[{id:"sku_1",sku_code:"old_01",attributes:{"套数":"1個"}},{id:"sku_2",sku_code:"old_02",attributes:{"套数":"2個"}}]);
+assert.deepEqual(r.blockers,[]);
+assert.equal(r.taxRate,"0.1");
+assert.equal(r.freeShipping,true);
+assert.equal(r.skus[0].taxIncludedPriceJpy,980);
+assert.equal(r.skus[1].taxIncludedPriceJpy,980);
+assert.equal(r.skus[0].intendedSkuNumber,"zjl238-c01");
+assert.equal(r.skus[1].intendedSkuNumber,"zjl238-c02");
+assert.equal(r.skus[0].persistedSkuCode,"old_01");
+assert.equal(r.skus[0].inventoryQuantity,null);
+assert.equal(r.optionalDescriptions.pcDescription,null);
+assert.equal(r.safeToSubmit,false);
+assert.ok(firstItemV25Policy({...p,salePriceJpy:null},[]).blockers.includes("default_inclusive_price_missing"));
+console.log("PASS Rakuten V2.5 business policy, no live RMS call");
