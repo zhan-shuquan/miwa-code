@@ -1,4 +1,4 @@
-import { aioneApi, aioneDownload, aioneImageBlobUrl } from "../services/aione-api-client.js";
+import { aioneApi, aioneDownload, aioneImageBlobUrl, aioneImageBlobInfo } from "../services/aione-api-client.js";
 import { matchPersistedSkuByAttributes } from "../services/product-sku-image-identity.js";
 import { quoteJapanDelivery } from "../config/japan-delivery-cost.js?v=20261012-shipping-rates";
 import { minimumBreakEvenYen, salesBaseCostJpy } from "../config/product-pricing-math.js?v=20261012-sales-base-cost";
@@ -392,7 +392,7 @@ export async function showProducts(host,notice=""){
      const listState=new AbortController();ACTIVE_LIST_IMAGES.set(host,listState);
      const thumbs=Array.from(area.querySelectorAll("[data-pe-thumb]"));
      let next=0;
-     const loadThumb=async()=>{while(next<thumbs.length){const el=thumbs[next++];if(!el.isConnected)continue;try{const src=await aioneImageBlobUrl("/api/v1/product-assets/"+encodeURIComponent(el.dataset.peThumb)+"/content?webpSize=64");if(el.isConnected&&!listState.signal.aborted){const img=document.createElement("img");img.className="sku-img";img.alt="商品代表图";img.loading="lazy";img.decoding="async";img.src=src;const code=el.closest("tr")?.querySelector("td:nth-child(2)")?.textContent?.trim()||"product";img.title="右键保存图片时请选择 WebP 格式";img.dataset.downloadName=code+".webp";listState.signal.addEventListener("abort",()=>URL.revokeObjectURL(src),{once:true});el.replaceChildren(img)}else URL.revokeObjectURL(src)}catch{el.textContent="—"}}};
+     const loadThumb=async()=>{while(next<thumbs.length){const el=thumbs[next++];if(!el.isConnected)continue;try{const info=await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(el.dataset.peThumb)+"/content?webpSize=64");const src=info.url;if(el.isConnected&&!listState.signal.aborted){const img=document.createElement("img");img.className="sku-img";img.alt="商品代表图";img.loading="lazy";img.decoding="async";img.src=src;const code=el.closest("tr")?.querySelector("td:nth-child(2)")?.textContent?.trim()||"product";const link=document.createElement("a");link.href=src;link.download=code+(info.type==="image/webp"?".webp":info.type==="image/png"?".png":info.type==="image/jpeg"?".jpg":".img");link.title="点击保存 "+link.download;link.setAttribute("aria-label","保存图片 "+link.download);link.append(img);listState.signal.addEventListener("abort",()=>URL.revokeObjectURL(src),{once:true});el.replaceChildren(link)}else URL.revokeObjectURL(src)}catch{el.textContent="—"}}};
      await Promise.all(Array.from({length:Math.min(4,thumbs.length)},()=>loadThumb()));
      area.querySelectorAll("[data-pe-edit]").forEach(b=>b.onclick=async()=>{try{const d=await aioneApi(BASE+"/"+encodeURIComponent(b.dataset.peEdit));editor(host,d.product);}catch(e){alert("读取失败："+e.message);}});
    }catch(err){area.innerHTML='<div class="pe-alert">商品接口未就绪："+esc(err.message)+"。未显示任何模拟数据。</div>';}
