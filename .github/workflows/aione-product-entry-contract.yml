@@ -4,6 +4,9 @@ on:
     branches:
       - main
     paths:
+      - apps/systems/aione/backend/src/services/product-image-name-contract.js
+      - apps/systems/aione/backend/src/routes/product-image-sync.js
+      - apps/systems/aione/backend/scripts/test-product-image-name-current.js
       - apps/systems/aione/backend/src/services/product-entry-contract.js
       - apps/systems/aione/backend/src/services/product-manual-entry-service.js
       - apps/systems/aione/backend/src/routes/product-manual-entry.js
@@ -47,6 +50,9 @@ jobs:
         run: npm install --package-lock=false --no-audit --no-fund
       - name: Validate changed JS syntax
         run: |
+          node --check apps/systems/aione/backend/src/services/product-image-name-contract.js
+          node --check apps/systems/aione/backend/src/routes/product-image-sync.js
+          node --check apps/systems/aione/backend/scripts/test-product-image-name-current.js
           node --check apps/systems/aione/backend/src/services/product-entry-contract.js
           node --check apps/systems/aione/backend/src/services/product-manual-entry-service.js
           node --check apps/systems/aione/backend/src/routes/product-manual-entry.js
@@ -60,6 +66,9 @@ jobs:
         env:
           PGPASSWORD: aione_ci
         run: psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -f data-code/current/0001_aione_current_baseline.sql
+      - name: Validate product image naming classifier
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-product-image-name-current.js
       - name: Validate actual break-even calculation
         run: node apps/systems/aione/js/config/product-pricing-math.test.js
       - name: Test Excel/WPS and CURRENT database roundtrip (no Rakuten)
