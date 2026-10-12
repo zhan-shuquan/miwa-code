@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { minimumBreakEvenYen } from "./product-pricing-math.js";
+import { minimumBreakEvenYen, salesBaseCostJpy } from "./product-pricing-math.js";
 assert.equal(minimumBreakEvenYen(184+211,[10]),439);
 assert.equal(minimumBreakEvenYen(395,[10,0,2,0,0]),449);
 assert.equal(minimumBreakEvenYen(395,[10],40),790);
@@ -15,3 +15,7 @@ for(let fixed=0;fixed<1500;fixed+=71){
  }
 }
 console.log("PASS: exact whole-yen break-even without retail price rounding");
+
+assert.equal(salesBaseCostJpy(184,211,98),493);
+assert.equal(salesBaseCostJpy(184,null,98),null);
+assert.equal(salesBaseCostJpy(184,211,0),395);
