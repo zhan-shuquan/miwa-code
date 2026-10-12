@@ -38,6 +38,9 @@ async function run(){
   assert.equal(original.nameZh,"户外水龙头防冻罩");
   const detailed=normalizeProductEntry({...original,material:"EVA",productSpecifications:"长度约26cm；厚度约2cm"});
   assert.equal(detailed.material,"EVA");
+  const withRemarks=normalizeProductEntry({...detailed,remarks:"先确认样品包装后采购"});
+  const remarksRoundTrip=await parseProductEntryWorkbook(await exportProductEntries([withRemarks]),"remarks.xlsx");
+  assert.equal(remarksRoundTrip.items[0].remarks,"先确认样品包装后采购");
   assert.equal(detailed.productSpecifications,"长度约26cm；厚度约2cm");
   const detailedExport=await exportProductEntries([detailed]);
   const detailedRoundTrip=await parseProductEntryWorkbook(detailedExport,"product_details.xlsx");
@@ -155,6 +158,19 @@ async function run(){
   const skipped=await previewImportProducts([original,second]);
   assert.deepEqual(skipped.map(x=>x.action),["existing_requires_confirm","existing_requires_confirm"]);
 
+  // Draft product code rename stays on the same Product/SKU identities.
+  const draft=normalizeProductEntry({...original,localCode:"zjl240",remarks:"样品待核对"});
+  const initial=await saveManualProduct(draft,{personId:"ci"},{createOnly:true});
+  const renamed=await saveManualProduct({...draft,localCode:"zjl241",remarks:"包装已确认"},{personId:"ci"},{updateOnly:true,productId:initial.product.id,expectedVersion:1});
+  assert.equal(renamed.product.id,initial.product.id,"rename cannot create a second Product");
+  assert.equal(renamed.product.productCode,initial.product.productCode);
+  assert.equal(renamed.skus[0].id,initial.skus[0].id,"SKU UUID must remain unchanged");
+  assert.equal(renamed.skus[0].skuCode,"zjl241-01");
+  assert.equal((await getManualProduct(initial.product.id)).product.remarks,"包装已确认");
+  assert.equal((await listManualProducts({query:"zjl240"})).length,0);
+  await expectCode(()=>saveManualProduct({...draft,localCode:"zjl238"},{personId:"ci"},{updateOnly:true,productId:initial.product.id,expectedVersion:2}),"product_exists");
+  await pool.query("INSERT INTO public.listings(listing_code,product_id,store_id) VALUES ($1,$2,$3)",["CI_ZJL241",initial.product.id,store.rows[0].id]);
+  await expectCode(()=>saveManualProduct({...draft,localCode:"zjl242"},{personId:"ci"},{updateOnly:true,productId:initial.product.id,expectedVersion:2}),"local_code_linked");
   console.log("PASS: CURRENT baseline / real WPS pattern / Excel roundtrip / CRUD / versioning / SKU / duplicate / no publish.");
 }
 run().catch(e=>{console.error(e);process.exitCode=1}).finally(()=>pool.end());
