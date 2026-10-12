@@ -1,10 +1,11 @@
 import { aioneApi, aioneDownload, aioneImageBlobUrl } from "../services/aione-api-client.js";
+import { quoteJapanDelivery } from "../config/japan-delivery-cost.js?v=20261012-shipping-rates";
 const BASE="/api/v1/product-entry";
 const ACTIVE_EDITOR_EVENTS=new WeakMap();
 function stopEditor(host){ACTIVE_EDITOR_EVENTS.get(host)?.abort();ACTIVE_EDITOR_EVENTS.delete(host);}
 const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-const MONEY=n=>Number.isFinite(Number(n))?"¥"+Math.round(Number(n)).toLocaleString("ja-JP"):"—";
+const MONEY=n=>n!==null&&n!==undefined&&n!==""&&Number.isFinite(Number(n))?"¥"+Math.round(Number(n)).toLocaleString("ja-JP"):"—";
 const SPLIT=s=>[...new Set(String(s||"").split(/[|,，、;；\n\/／]/).map(x=>x.trim()).filter(Boolean))];
 const JP=Object.freeze({"黑色":"ブラック","白色":"ホワイト","灰色":"グレー","米色":"ベージュ","粉色":"ピンク","红色":"レッド","蓝色":"ブルー","绿色":"グリーン"});
 const SHOP=["永井GD","幸せ屋","PrimeLife"],LOGISTICS=["空运大件（普货）","空运小件（普货）","空运直发（普货）","海运大件（普货）","空运大件（特殊）","空运小件（特殊）","空运直发（特殊）","海运大件（特殊）"];
@@ -49,7 +50,7 @@ function input(key,label,value,options=null,type="text",readonly=false){
  return '<label class="field"><span>'+esc(label)+'</span>'+o+'</label>';
 }
 function skuRows(p){let combos=[[]];for(const s of p.specs||[]){if(!s.name||!s.values?.length)continue;combos=combos.flatMap(c=>s.values.map(v=>[...c,v]));}return combos.map((values,i)=>{const identity=(p.specs||[]).filter(y=>y.name&&y.values?.length).map((y,j)=>y.name+"="+values[j]).join("|")||"default";const o=(p.skuOverrides||[]).find(x=>x.index===i+1&&(!x.identity||x.identity===identity))||{};return {identity,index:i+1,label:values.join(" / ")||"默认规格",number:p.localCode+"-"+String(i+1).padStart(2,"0"),link:p.localCode+"-"+(values.map(v=>JP[v]||v).join("-")||"基本仕様"),price:p.salePriceJpy??0,stock:o.stock??p.defaultStock??1000,cost:o.purchaseCostCny??p.purchaseUnitCostCny??0,weight:o.weightG??p.weightG??0,image:o.imageFile||""}})}
-function finance(p,row){const price=Number(row?.price??p.salePriceJpy)||0,qty=Number(p.setQuantity)||1,cost=Number(row?.cost??p.purchaseUnitCostCny)||0,weight=Number(p.actualShipmentWeightG)>0?Number(p.actualShipmentWeightG):Number(row?.weight??p.weightG)*qty||0,fx=25;const purchase=Math.round(cost*qty*fx),domestic=Math.round((Number(p.domesticFreightCny)||0)*fx),pack=p.packagingMethod==="真空包装"?50:0,shipping=Math.round(weight*.5),duty=Math.round(purchase*.1),warehouse=purchase+domestic+pack+shipping+duty;const jpack={"A4信封":11,"A4缓冲信封":30,"小缓冲信封":9,"小信封":4,"3cm纸盒":30,"60cm纸箱":30,"80cm纸箱":40,"100cm纸箱":85}[p.packagingMaterial]??0,delivery=200,japan=jpack+delivery;const rates=p.rates||{},platform=Math.round(price*(Number(rates.platform)||10)/100),fees={coupon:Math.round(price*(Number(rates.coupon)||0)/100),points:Math.round(price*(Number(rates.points)||0)/100),ads:Math.round(price*(Number(rates.ads)||0)/100),other:Math.round(price*(Number(rates.other)||0)/100)},operation=Object.values(fees).reduce((a,b)=>a+b,0);return {price,warehouse,japan,platform,operation,gross:price-warehouse-japan-platform,net:price-warehouse-japan-platform-operation,ledger:[["到日本仓成本",warehouse,[["商品采购成本",purchase],["中国国内运费",domestic],["中国包装成本",pack],["国际物流成本",shipping],["关税成本",duty]]],["日本配送成本",japan,[["日本包装成本",jpack],["日本配送运费",delivery]]],["平台交易成本",platform,[["乐天平台交易费",platform]]],["销售运营成本",operation,[["优惠券",fees.coupon],["积分",fees.points],["RPP广告",fees.ads],["其他运营费用",fees.other]]]]}}
+function finance(p,row){const price=Number(row?.price??p.salePriceJpy)||0,qty=Number(p.setQuantity)||1,cost=Number(row?.cost??p.purchaseUnitCostCny)||0,weight=Number(p.actualShipmentWeightG)>0?Number(p.actualShipmentWeightG):Number(row?.weight??p.weightG)*qty||0,fx=25;const purchase=Math.round(cost*qty*fx),domestic=Math.round((Number(p.domesticFreightCny)||0)*fx),pack=p.packagingMethod==="真空包装"?50:0,shipping=Math.round(weight*.5),duty=Math.round(purchase*.1),warehouse=purchase+domestic+pack+shipping+duty;const jpack={"A4信封":11,"A4缓冲信封":30,"小缓冲信封":9,"小信封":4,"3cm纸盒":30,"60cm纸箱":30,"80cm纸箱":40,"100cm纸箱":85}[p.packagingMaterial]??0,deliveryQuote=quoteJapanDelivery(row?.sizeClass||p.sizeClass),delivery=deliveryQuote.amountJpy,japan=delivery===null?null:jpack+delivery;const rates=p.rates||{},platform=Math.round(price*(Number(rates.platform)||10)/100),fees={coupon:Math.round(price*(Number(rates.coupon)||0)/100),points:Math.round(price*(Number(rates.points)||0)/100),ads:Math.round(price*(Number(rates.ads)||0)/100),other:Math.round(price*(Number(rates.other)||0)/100)},operation=Object.values(fees).reduce((a,b)=>a+b,0);return {price,warehouse,japan,deliveryQuote,platform,operation,gross:japan===null?null:price-warehouse-japan-platform,net:japan===null?null:price-warehouse-japan-platform-operation,ledger:[["到日本仓成本",warehouse,[["商品采购成本",purchase],["中国国内运费",domestic],["中国包装成本",pack],["国际物流成本",shipping],["关税成本",duty]]],["日本配送成本",japan,[["日本包装成本",jpack],["日本配送运费",delivery]]],["平台交易成本",platform,[["乐天平台交易费",platform]]],["销售运营成本",operation,[["优惠券",fees.coupon],["积分",fees.points],["RPP广告",fees.ads],["其他运营费用",fees.other]]]]}}
 function imageKind(a){const n=String(a.original_name||a.canonical_name||"").toLowerCase();if(/[_-]ma\.(jpg|jpeg|png|webp)$/.test(n))return "ma";if(/[_-]01\.(jpg|jpeg|png|webp)$/.test(n))return "01";if(/[_-]sku\d+\.(jpg|jpeg|png|webp)$/.test(n))return "sku";return "";}
 function imageGroupType(a){const role=String(a.asset_role||"").toLowerCase(),name=String(a.original_name||a.canonical_name||"").toLowerCase(),purpose=String(a.metadata?.imagePurpose||"");if(/sku/.test(role)||/[_-]sku\d+\./.test(name))return "sku";if(/white|white_bg|white-background/.test(role)||/[_-]ma\./.test(name))return "white";if(/detail/.test(role))return "detail";if(/main/.test(role)||purpose==="system_primary"||/[_-]0[1-9]\./.test(name))return "main";return "detail"}
 function imageSummary(items){const active=(items||[]).filter(a=>!a.archived_at);const primary=active.filter(a=>a.metadata?.imagePurpose==="system_primary").sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")))[0];return {main:primary||active.find(a=>imageKind(a)==="ma")||active.find(a=>imageKind(a)==="01")||null,sku:active.filter(a=>imageKind(a)==="sku"||/sku/i.test(String(a.asset_role||"")))};}
@@ -79,22 +80,22 @@ function profit(){
  const hasActual=Number(p.actualShipmentWeightG)>0;
  const hasEstimated=Number(row?.weight??p.weightG)>0&&Number(p.setQuantity)>0;
  if(!hasActual&&!hasEstimated)return '<div class="pw-v7-block"><h3>利润分析 · 待核算</h3><p class="pw-helper">请先录入实际发货重量，或至少填写单个净重与套装数量。重量缺失时不可将运费显示为0。</p></div>';
- const fixed=m.warehouse+m.japan,platformRate=Number(rate.platform??10)/100;
+ const fixed=m.japan===null?null:m.warehouse+m.japan,platformRate=Number(rate.platform??10)/100;
  const operatingRate=(Number(rate.coupon||0)+Number(rate.points||0)+Number(rate.ads||0)+Number(rate.other||0))/100;
  const tail=n=>Number.isFinite(n)&&n>=0?Math.max(80,Math.ceil((n-80)/100)*100+80):null;
- const solve=(ops,margin)=>{const divisor=1-platformRate-ops-margin;return divisor>0?tail(fixed/divisor):null};
+ const solve=(ops,margin)=>{const divisor=1-platformRate-ops-margin;return fixed!==null&&divisor>0?tail(fixed/divisor):null};
  const unoperatedBreakEven=solve(0,0),operatedBreakEven=solve(operatingRate,0);
  const targetPrice=solve(0,Number(target.productMargin||0)/100);
- const percentage=(v)=>m.price?(v/m.price*100).toFixed(1)+"%":"—";
- const diff=(v,t)=>m.price?(100*v/m.price-Number(t||0)).toFixed(1):"—";
+ const percentage=(v)=>m.price&&v!==null?(v/m.price*100).toFixed(1)+"%":"—";
+ const diff=(v,t)=>m.price&&v!==null?(100*v/m.price-Number(t||0)).toFixed(1):"—";
  const signed=n=>n==="—"?"—":(Number(n)>=0?"+":"")+n+"百分点";
  const line=(label,value)=>'<div class="pw-metric-row"><span>'+label+'</span><b>'+value+'</b></div>';
  const card=(title,main,rows,cls="")=>'<div class="stat pw-decision-card '+cls+'"><div class="pw-card-label">'+title+'</div><strong>'+main+'</strong><div class="pw-metric-list">'+rows.join("")+'</div></div>';
  const targetGross=targetPrice===null?null:targetPrice-fixed-Math.round(targetPrice*platformRate);
  const targetGrossRate=targetPrice?((targetGross/targetPrice)*100).toFixed(1)+"%":"—";
- const status=(actual,goal)=>m.price<=0?"待定":actual/m.price*100>=Number(goal||0)-0.00001?"已达标":"未达标";
+ const status=(actual,goal)=>m.price<=0||actual===null?"待核算":actual/m.price*100>=Number(goal||0)-0.00001?"已达标":"未达标";
  const percentageControl=(key,label,value)=>'<label class="field pw-goal-field"><span>'+esc(label)+'</span><span class="pw-percent-wrap"><input type="number" min="0" step="any" data-f="'+esc(key)+'" value="'+esc(value??"")+'"><span class="pw-percent-mark">%</span></span></label>';
- return '<div class="head pw-finance-head"><h3>智能定价与利润</h3><div class="pw-finance-controls">'+
+ return (m.deliveryQuote.status!=="priced"?'<p class="message">日本配送费率尚未匹配；利润、保本价与建议售价显示待核算，请先确认发货尺寸档位。</p>':"")+'<div class="head pw-finance-head"><h3>智能定价与利润</h3><div class="pw-finance-controls">'+
  percentageControl("goal-productMargin","公司目标毛利率",target.productMargin)+
  percentageControl("goal-operationMargin","公司运营目标毛利率",target.operationMargin)+
  '<label class="pw-finance-chooser"><span>计算对象</span><select data-finance><option value="0" '+(selected===0?'selected':'')+'>商品默认</option>'+rows.map(x=>'<option value="'+x.index+'" '+(x.index===selected?'selected':'')+'>'+esc(x.label)+'</option>').join("")+'</select></label></div></div>'+
