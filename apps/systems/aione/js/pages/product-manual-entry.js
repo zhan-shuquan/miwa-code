@@ -127,32 +127,155 @@ async function fileBase64(file){
  return btoa(binary);
 }
 function importer(host){
- const target=host.querySelector("[data-pe-import]");
- target.innerHTML='<div class="pe-import"><h3>批量导入</h3><p class="pe-note">WPS单品表或AIONE批量模板，先预览、后确认，只新增草稿，不覆盖已有商品。</p><input type="file" accept=".xlsx" data-pe-file><div data-pe-preview></div><button data-pe-close>关闭</button></div>';
- target.querySelector("[data-pe-close]").onclick=()=>target.innerHTML="";
- target.querySelector("[data-pe-file]").onchange=async e=>{
-   const file=e.target.files?.[0];if(!file)return;
-   const panel=target.querySelector("[data-pe-preview]");panel.textContent="正在检查…";
-   try{
-     if(file.size>1900000)throw new Error("Excel超过1.9MB，请拆分批次。");
-     const body={filename:file.name,base64:await fileBase64(file)};
-     const data=await aioneApi(BASE+"/import/preview",{method:"POST",body:JSON.stringify(body)});
-     panel.innerHTML='<p>共'+data.validCount+'件商品</p><div class="pe-scroll"><table class="pe-table"><tr><th>货号</th><th>商品</th><th>处理方式</th></tr>'+data.items.map(i=>'<tr><td>'+esc(i.localCode)+'</td><td>'+esc(i.nameZh)+'</td><td>'+esc(i.action)+'</td></tr>').join("")+'</table></div>'+(data.warnings||[]).map(w=>'<p class="pe-note">'+esc(w)+'</p>').join("")+'<button data-pe-commit>确认导入新商品草稿</button>';
-     panel.querySelector("[data-pe-commit]").onclick=async()=>{
-       if(!confirm("确认导入新商品草稿？已存在货号不会覆盖，不会调用乐天API。"))return;
-       try{const res=await aioneApi(BASE+"/import/commit",{method:"POST",body:JSON.stringify({...body,confirmed:true})});await showProducts(host,"已导入："+res.successCount+"件；失败/重复："+res.failedCount+"件。");}
-       catch(err){panel.innerHTML='<div class="pe-alert">'+esc(err.message)+'</div>';}
-     };
-   }catch(err){panel.innerHTML='<div class="pe-alert">'+esc(err.message)+'</div>';}
+ const target=host.querySelector("[data-pe-import]");if(!target)return;
+ target.innerHTML=[
+  '<dialog class="selection-batch-dialog pe-batch-dialog" data-pe-dialog aria-labelledby="pe-batch-title">',
+  '<div class="selection-batch-dialog__body">',
+   '<header class="selection-batch-dialog__head"><div><small>商品中心</small><h2 id="pe-batch-title">批量导入商品</h2><p>复用选品中心三步式流程：下载模板、上传校验、确认批量创建。使用现有商品资料接口，不会覆盖已有商品或调用乐天API。</p></div>',
+    '<button type="button" class="selection-batch-dialog__close" data-pe-close aria-label="关闭">×</button></header>',
+   '<div class="selection-batch-steps" aria-label="批量导入步骤">',
+    '<div class="selection-batch-step is-current" data-pe-step="1"><b>01 下载模板</b><span>获取AIONE商品Excel模板</span></div>',
+    '<div class="selection-batch-step" data-pe-step="2"><b>02 上传校验</b><span>检查货号、字段与重复记录</span></div>',
+    '<div class="selection-batch-step" data-pe-step="3"><b>03 确认导入</b><span>仅创建新商品草稿</span></div>',
+   '</div>',
+   '<section class="selection-batch-template" aria-label="商品导入模板">',
+    '<div class="selection-batch-template__info"><span class="selection-batch-template__icon" aria-hidden="true">X</span><div>',
+     '<div class="selection-batch-template__title-line"><strong>AIONE商品批量导入模板</strong><span class="is-ready">已匹配</span></div>',
+     '<p>支持已有WPS单品表或AIONE批量Excel模板；不用重新录入商品资料。</p>',
+    '</div></div>',
+    '<button type="button" class="selection-batch-download-button" data-pe-template-inner>↓ 下载模板</button>',
+   '</section>',
+   '<section class="selection-batch-section"><h3>上传并校验</h3>',
+    '<label class="selection-batch-upload" data-pe-drop>',
+     '<span class="selection-batch-upload__icon" aria-hidden="true">⇧</span>',
+     '<strong>拖入商品Excel，或点击选择文件</strong>',
+     '<p>仅支持 .xlsx；当前上传上限1.9MB；校验通过后才能导入。</p>',
+     '<span class="selection-batch-file-button">选择文件</span>',
+     '<input type="file" accept=".xlsx" data-pe-file hidden>',
+    '</label>',
+    '<div class="selection-batch-file-status" data-pe-file-status hidden></div>',
+   '</section>',
+   '<div class="selection-batch-validation" data-pe-validation hidden aria-live="polite"></div>',
+   '<footer class="selection-batch-dialog__foot"><p>先校验，再确认。已存在货号不覆盖；导入结果可逐条核对。</p>',
+    '<div><button type="button" class="selection-batch-cancel-button" data-pe-close>取消</button>',
+    '<button type="button" class="selection-batch-action-button" data-pe-action disabled>校验Excel</button></div>',
+   '</footer>',
+  '</div></dialog>'
+ ].join("");
+ const dialog=target.querySelector("[data-pe-dialog]");
+ const drop=target.querySelector("[data-pe-drop]");
+ const picker=target.querySelector("[data-pe-file]");
+ const fileStatus=target.querySelector("[data-pe-file-status]");
+ const panel=target.querySelector("[data-pe-validation]");
+ const action=target.querySelector("[data-pe-action]");
+ const steps=[...target.querySelectorAll("[data-pe-step]")];
+ let currentFile=null,preview=null,requestBody=null,created=null,busy=false,commitAttempted=false;
+ const step=n=>steps.forEach(el=>{const k=Number(el.dataset.peStep);el.classList.toggle("is-current",n<=3&&k===n);el.classList.toggle("is-done",k<n);});
+ const showPanel=(html,error=false)=>{panel.hidden=false;panel.className="selection-batch-validation"+(error?" is-error":"");panel.innerHTML=html;};
+ const message=(text,isError=false)=>{fileStatus.hidden=!text;fileStatus.textContent=text;fileStatus.classList.toggle("is-error",isError);};
+ const refreshAction=()=>{
+   if(busy){action.disabled=true;return;}
+   if(created){action.disabled=false;action.textContent="完成，返回商品一览";return;}
+   if(commitAttempted){action.disabled=false;action.textContent="返回商品一览核对";return;}
+   if(preview){
+     const count=preview.items.filter(x=>x.action==="new_draft").length;
+     action.disabled=count===0;
+     action.textContent=count?"确认导入 "+count+" 件新商品草稿":"无可导入的新商品";
+     return;
+   }
+   action.disabled=!currentFile;
+   action.textContent="校验Excel";
  };
+ const acceptFile=file=>{
+   if(busy)return;
+   currentFile=null;preview=null;requestBody=null;created=null;commitAttempted=false;panel.hidden=true;panel.innerHTML="";
+   if(!file){message("");step(1);refreshAction();return;}
+   if(!String(file.name||"").toLowerCase().endsWith(".xlsx")||!file.size||file.size>1900000){
+     message("仅支持非空的 .xlsx 文件，且不能超过1.9MB。",true);
+     if(picker)picker.value="";
+     step(1);refreshAction();return;
+   }
+   currentFile=file;
+   message("已选择："+file.name+"｜"+(file.size/1024).toFixed(0)+"KB");
+   step(2);refreshAction();
+ };
+ const close=()=>{if(!busy)dialog.close();};
+ target.querySelectorAll("[data-pe-close]").forEach(b=>b.addEventListener("click",close));
+ dialog.addEventListener("cancel",event=>{if(busy)event.preventDefault();});
+ picker.addEventListener("change",()=>acceptFile(picker.files?.[0]));
+ ["dragenter","dragover"].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.add("is-dragging");}));
+ ["dragleave","drop"].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.remove("is-dragging");}));
+ drop.addEventListener("drop",event=>acceptFile(event.dataTransfer?.files?.[0]));
+ target.querySelector("[data-pe-template-inner]").addEventListener("click",async event=>{
+   const button=event.currentTarget;button.disabled=true;
+   try{await aioneDownload(BASE+"/export.xlsx?q=__AIONE_EMPTY_TEMPLATE__");}
+   catch(error){showPanel("<strong>模板下载失败</strong><p>"+esc(error.message)+"</p>",true);}
+   finally{button.disabled=false;}
+ });
+ action.addEventListener("click",async()=>{
+   if(busy)return;
+   if(created||commitAttempted){
+     dialog.close();
+     await showProducts(host,created?"已导入："+created.successCount+"件；未成功："+created.failedCount+"件。":"请核对商品一览中的导入结果后，再尝试上传。");
+     return;
+   }
+   if(!currentFile)return;
+   busy=true;action.disabled=true;
+   if(!preview){
+     action.textContent="正在校验…";
+     try{
+       const body={filename:currentFile.name,base64:await fileBase64(currentFile)};
+       const data=await aioneApi(BASE+"/import/preview",{method:"POST",body:JSON.stringify(body)});
+       const items=Array.isArray(data.items)?data.items:[];
+       const codes=items.map(x=>String(x.localCode||"").trim().toLowerCase());
+       const repeated=codes.filter((x,i)=>x&&codes.indexOf(x)!==i);
+       if(repeated.length)throw new Error("上传文件内有重复货号："+[...new Set(repeated)].join("、")+"。请先修正后重新上传。");
+       const newCount=items.filter(x=>x.action==="new_draft").length;
+       const conflictCount=items.length-newCount;
+       if(!items.length)throw new Error("文件中没有可导入的商品。");
+       const labels={new_draft:"新增草稿",existing_requires_confirm:"货号已存在（不会覆盖）",blocked_duplicate:"重复货号（禁止导入）"};
+       showPanel(
+         '<strong>校验完成｜'+items.length+'件：新增 '+newCount+'件，已存在／阻断 '+conflictCount+'件</strong>'+
+         '<div class="pe-scroll"><table class="pe-table"><thead><tr><th>商品货号</th><th>商品名称</th><th>处理结果</th></tr></thead><tbody>'+
+         items.map(item=>'<tr><td>'+esc(item.localCode)+'</td><td>'+esc(item.nameZh)+'</td><td>'+esc(labels[item.action]||"需核对")+'</td></tr>').join("")+
+         '</tbody></table></div>'+
+         (data.warnings||[]).map(w=>'<p class="pe-note">'+esc(w)+'</p>').join("")+
+         '<p class="pe-note">仅新增草稿；已存在货号提交时会被拒绝，不覆盖原商品。</p>'
+       );
+       preview=data;requestBody=body;step(3);
+     }catch(error){
+       preview=null;requestBody=null;step(2);
+       showPanel("<strong>校验未通过</strong><p>"+esc(error.message)+"</p>",true);
+     }finally{busy=false;refreshAction();}
+     return;
+   }
+   action.textContent="正在导入…";
+   // Submission may finish server-side even if the network response fails: never retry blindly.
+   commitAttempted=true;
+   try{
+     const result=await aioneApi(BASE+"/import/commit",{method:"POST",body:JSON.stringify({...requestBody,confirmed:true})});
+     created={successCount:Number(result.successCount)||0,failedCount:Number(result.failedCount)||0};
+     const failures=(result.results||[]).filter(x=>!x.ok);
+     showPanel(
+       '<strong>导入完成｜成功 '+created.successCount+'件，失败／重复 '+created.failedCount+'件</strong>'+
+       (failures.length?'<div class="pe-scroll"><table class="pe-table"><thead><tr><th>货号</th><th>未成功原因</th></tr></thead><tbody>'+
+        failures.map(item=>'<tr><td>'+esc(item.localCode)+'</td><td>'+esc(item.message||item.code||"未知错误")+'</td></tr>').join("")+
+        '</tbody></table></div>':'<p>新商品草稿已保存；可以在商品一览中打开编辑。</p>')
+     );
+     step(4);
+   }catch(error){
+     showPanel("<strong>导入结果尚未确认</strong><p>"+esc(error.message)+"。请先返回商品一览核对，避免重复提交。</p>",true);
+   }finally{busy=false;refreshAction();}
+ });
+ dialog.showModal();
 }
 export async function showProducts(host,notice=""){
  stopEditor(host);style();
- host.innerHTML='<section class="phc pe-wrap"><div class="pe-toolbar"><div><h2>商品一览</h2><p class="pe-note">真实商品数据 · 单品编辑 · 批量导入与导出</p></div><div><button class="pe-main" data-pe-new>＋ 新建商品</button> <button data-pe-import-open>批量导入</button> <button data-pe-export>批量导出</button> <button data-pe-template>下载模板</button></div></div>'+(notice?'<p>'+esc(notice)+'</p>':"")+'<p><input data-pe-q placeholder="搜索货号/名称" style="padding:10px;border:1px solid #dce4df;border-radius:7px;width:320px"></p><div data-pe-table>读取中…</div><div data-pe-import></div></section>';
+ host.innerHTML='<section class="phc pe-wrap"><div class="pe-toolbar"><div><h2>商品一览</h2><p class="pe-note">真实商品数据 · 单品编辑 · 批量导入与导出</p></div><div><button class="pe-main" data-pe-new>＋ 新建商品</button> <button data-pe-import-open>批量导入</button> <button data-pe-export>批量导出</button> </div></div>'+(notice?'<p>'+esc(notice)+'</p>':"")+'<p><input data-pe-q placeholder="搜索货号/名称" style="padding:10px;border:1px solid #dce4df;border-radius:7px;width:320px"></p><div data-pe-table>读取中…</div><div data-pe-import></div></section>';
  host.querySelector("[data-pe-new]").onclick=()=>editor(host,{});
  host.querySelector("[data-pe-import-open]").onclick=()=>importer(host);
  host.querySelector("[data-pe-export]").onclick=async()=>{try{await aioneDownload(BASE+"/export.xlsx");}catch(e){alert("导出失败："+e.message);}};
- host.querySelector("[data-pe-template]").onclick=async()=>{try{await aioneDownload(BASE+"/export.xlsx?q=__AIONE_EMPTY_TEMPLATE__");}catch(e){alert("模板下载失败："+e.message);}};
+
  const load=async()=>{
    const value=host.querySelector("[data-pe-q]")?.value||"";
    const area=host.querySelector("[data-pe-table]");if(!area)return;
