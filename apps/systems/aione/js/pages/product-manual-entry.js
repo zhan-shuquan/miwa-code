@@ -1,5 +1,6 @@
 import { aioneApi, aioneDownload, aioneImageBlobUrl } from "../services/aione-api-client.js";
 import { quoteJapanDelivery } from "../config/japan-delivery-cost.js?v=20261012-shipping-rates";
+import { minimumBreakEvenYen } from "../config/product-pricing-math.js?v=20261012-real-break-even";
 const BASE="/api/v1/product-entry";
 const ACTIVE_EDITOR_EVENTS=new WeakMap();
 function stopEditor(host){ACTIVE_EDITOR_EVENTS.get(host)?.abort();ACTIVE_EDITOR_EVENTS.delete(host);}
@@ -84,7 +85,8 @@ function profit(){
  const operatingRate=(Number(rate.coupon||0)+Number(rate.points||0)+Number(rate.ads||0)+Number(rate.other||0))/100;
  const tail=n=>Number.isFinite(n)&&n>=0?Math.max(80,Math.ceil((n-80)/100)*100+80):null;
  const solve=(ops,margin)=>{const divisor=1-platformRate-ops-margin;return fixed!==null&&divisor>0?tail(fixed/divisor):null};
- const unoperatedBreakEven=solve(0,0),operatedBreakEven=solve(operatingRate,0);
+ const unoperatedBreakEven=minimumBreakEvenYen(fixed,[Number(rate.platform??10)]);
+  const operatedBreakEven=minimumBreakEvenYen(fixed,[Number(rate.platform??10),Number(rate.coupon||0),Number(rate.points||0),Number(rate.ads||0),Number(rate.other||0)]);
  const targetPrice=solve(0,Number(target.productMargin||0)/100);
  const percentage=(v)=>m.price&&v!==null?(v/m.price*100).toFixed(1)+"%":"—";
  const diff=(v,t)=>m.price&&v!==null?(100*v/m.price-Number(t||0)).toFixed(1):"—";
