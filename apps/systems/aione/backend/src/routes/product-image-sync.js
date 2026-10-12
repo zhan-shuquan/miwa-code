@@ -7,10 +7,10 @@ import { inspectLocalImageUpload, validProductIdentity, assertGcsImageMetadata, 
 
 const router=Router();
 const err=(status,code,message)=>Object.assign(new Error(message),{statusCode:status,code});
-async function verifyStoredImage({bucketName,objectName,digest,size,mime}){
+async function verifyStoredImage({bucketName,objectName,digest,size,mime,readBack=false}){
  const metadata=await getGcsObjectMetadata({bucketName,objectName});
  const verifiedByMetadata=assertGcsImageMetadata(metadata,{digest,size,mime});
- if(!verifiedByMetadata){
+ if(readBack||!verifiedByMetadata){
   // Older blobs may lack custom SHA metadata. Re-read instead of claiming verified.
   const actual=await readGcsObject({bucketName,objectName});
   const actualHash=createHash("sha256").update(actual.bytes).digest("hex");
@@ -19,7 +19,7 @@ async function verifyStoredImage({bucketName,objectName,digest,size,mime}){
  }
  return true;
 }
-async function recordVerifiedPrimaryReuse({productId,assetId,slotKey,digest,fileName,personId}){
+async function recordVerifiedPrimaryReuse({productId,assetId,slotKey,digest,fileName,personId,size}){
  return withTransaction(async client=>{
   await client.query("SELECT id FROM public.products WHERE id=$1 FOR UPDATE",[productId]);
   const q=await client.query("SELECT id,asset_role,metadata FROM public.product_assets WHERE product_id=$1 AND archived_at IS NULL FOR UPDATE",[productId]);
@@ -30,7 +30,7 @@ async function recordVerifiedPrimaryReuse({productId,assetId,slotKey,digest,file
   if(decision.action==="reuse_primary"){
    await client.query(
     "UPDATE public.product_assets SET metadata=metadata || $2::jsonb,updated_by_person_id=$3,updated_at=NOW(),record_version=record_version+1 WHERE id=$1",
-    [assetId,JSON.stringify({localImageSlot:slotKey,localSyncedFileName:fileName,localVerifiedSha256:digest}),personId||null]
+    [assetId,JSON.stringify({localImageSlot:slotKey,localSyncedFileName:fileName,localVerifiedSha256:digest,byteSize:size}),personId||null]
    );
   }
   return assetId;
@@ -68,7 +68,7 @@ router.post("/products/:productId/local-image",gate,requireWriteActor,async(req,
    if(!m.gcsBucket||!m.gcsObject)throw err(409,"image_storage_missing","已登记图片缺少云端文件引用。");
    await verifyStoredImage({bucketName:m.gcsBucket,objectName:m.gcsObject,digest,size:bytes.length,mime});
    if(decision.action==="reuse_primary")await recordVerifiedPrimaryReuse({
-    productId,assetId:existing.id,slotKey:imageSlot,digest,fileName:name,personId:req.aioneContext?.personId
+    productId,assetId:existing.id,slotKey:imageSlot,digest,fileName:name,size:bytes.length,personId:req.aioneContext?.personId
    });
    return res.json({ok:true,reused:true,assetId:existing.id,originalName:name,kind:item.kind,slot:item.slot,verified:true});
   }
@@ -108,7 +108,7 @@ router.get("/products/:productId/local-images/status",gate,async(req,res,next)=>
    try{
     if(!m.gcsBucket||!m.gcsObject||!m.fileSha256||!Number.isSafeInteger(Number(m.byteSize))||Number(m.byteSize)<1)
      throw err(409,"image_asset_metadata_missing","云端图片登记资料不完整。");
-    await verifyStoredImage({bucketName:m.gcsBucket,objectName:m.gcsObject,digest:m.fileSha256,size:Number(m.byteSize),mime:item.mime_type});
+    await verifyStoredImage({bucketName:m.gcsBucket,objectName:m.gcsObject,digest:m.fileSha256,size:Number(m.byteSize),mime:item.mime_type,readBack:true});
     summary.verified=true;
    }catch(error){summary.error=String(error.code||"image_storage_check_failed");}
    assets.push(summary);
