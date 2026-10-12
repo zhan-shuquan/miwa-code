@@ -83,7 +83,7 @@ export async function aioneApi(path, options = {}) {
   return payload;
 }
 
-export async function aioneImageBlobUrl(path) {
+export async function aioneImageBlobInfo(path) {
   const response = await fetch(getAioneApiBaseUrl() + path, {
     method: "GET",
     headers: { ...actorHeaders(), Accept: "image/*" },
@@ -96,7 +96,11 @@ export async function aioneImageBlobUrl(path) {
   }
   const blob = await response.blob();
   if (!blob.type.startsWith("image/") || !blob.size) throw new Error("图片内容无效");
-  return URL.createObjectURL(blob);
+  return {url:URL.createObjectURL(blob),type:blob.type,size:blob.size};
+}
+
+export async function aioneImageBlobUrl(path) {
+  return (await aioneImageBlobInfo(path)).url;
 }
 
 function filenameFromDisposition(value, fallback = "download") {
