@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import {rakutenFirstItemPreflight} from "../src/services/rakuten-itemapi-preflight.js";
+const product={id:"prd_abc",localCode:"zjl238",targetShopRef:"永井GD",rakutenTitle:"防寒カバー",rakutenCatchCopy:"保温",rakutenGenreId:"123456",pcDescription:"PC",spDescription:"SP",salesDescription:"SALE"};
+const skus=[{id:"sku1",sku_code:"zjl238-01",priceJpy:980,stock:10}];
+const assets=[{asset_role:"source_main_image",metadata:{gcsBucket:"test",gcsObject:"a.png"}},{asset_role:"source_sku_image",sku_id:"sku1",metadata:{gcsObject:"c.png"}},{asset_role:"source_detail_image",metadata:{gcsObject:"d.png"}}];
+const base={product,skus,assets,shopConfigured:true,genreAttributesVerified:true,shippingConfigured:true,taxConfigured:true,remoteExistenceChecked:true};
+const result=rakutenFirstItemPreflight(base);
+assert.equal(result.canPublish,false);
+assert.deepEqual(result.blocking,["rakuten_cabinet_mapping_not_verified"]);
+const missing=rakutenFirstItemPreflight({product:{...product,rakutenGenreId:""},skus:[{...skus[0],stock:null}],assets:[]});
+assert.ok(missing.blocking.includes("rakuten_genre_id_missing"));
+assert.ok(missing.blocking.includes("sku_inventory_not_verified"));
+assert.ok(missing.blocking.includes("rakuten_main_image_missing"));
+assert.ok(missing.blocking.includes("rakuten_cabinet_mapping_not_verified"));
+console.log("PASS fail-closed Rakuten ItemAPI diagnostic contract: no publication or network");
