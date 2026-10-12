@@ -35,7 +35,7 @@ $body$;
 
 CREATE INDEX IF NOT EXISTS idx_product_assets_bound_sku
   ON public.product_assets(product_id, sku_id)
-  WHERE sku_id IS NOT NULL AND archived_at IS NULL;
+  WHERE sku_id IS NOT NULL;
 
 COMMENT ON COLUMN public.product_assets.sku_id IS
   'Optional immutable ProductSKU identity for explicitly confirmed SKU imagery; filename order is not identity.';
