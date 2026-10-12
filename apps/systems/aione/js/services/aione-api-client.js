@@ -87,7 +87,7 @@ export async function aioneImageBlobUrl(path) {
   const response = await fetch(getAioneApiBaseUrl() + path, {
     method: "GET",
     headers: { ...actorHeaders(), Accept: "image/*" },
-    cache: "no-store"
+    cache: "default"
   });
   if (!response.ok) {
     let payload = {};
