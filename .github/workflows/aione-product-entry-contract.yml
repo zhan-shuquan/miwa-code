@@ -10,6 +10,9 @@ on:
       - apps/systems/aione/backend/scripts/test-product-local-image-sync-route.js
       - apps/systems/aione/backend/scripts/test-product-local-image-sync-contract.js
       - apps/systems/aione/backend/src/services/product-image-name-contract.js
+      - apps/systems/aione/backend/src/services/product-image-webp-service.js
+      - apps/systems/aione/backend/scripts/test-product-image-webp.js
+      - apps/systems/aione/backend/src/routes/product-assets.js
       - apps/systems/aione/backend/src/routes/product-image-sync.js
       - apps/systems/aione/backend/scripts/test-product-image-name-current.js
       - apps/systems/aione/backend/src/services/product-entry-contract.js
@@ -61,6 +64,9 @@ jobs:
           node --check apps/systems/aione/backend/scripts/test-product-local-image-sync-route.js
           node --check apps/systems/aione/backend/scripts/test-product-local-image-sync-contract.js
           node --check apps/systems/aione/backend/src/services/product-image-name-contract.js
+          node --check apps/systems/aione/backend/src/services/product-image-webp-service.js
+          node --check apps/systems/aione/backend/scripts/test-product-image-webp.js
+          node --check apps/systems/aione/backend/src/routes/product-assets.js
           node --check apps/systems/aione/backend/src/routes/product-image-sync.js
           node --check apps/systems/aione/backend/scripts/test-product-image-name-current.js
           node --check apps/systems/aione/backend/src/services/product-entry-contract.js
@@ -105,6 +111,9 @@ jobs:
           if (!(Test-Path (Join-Path $folder 'zjl238_01.png'))) { throw 'Original image was modified.' }
       - name: Validate product SKU image identity mapping
         run: node apps/systems/aione/js/services/product-sku-image-identity.test.js
+      - name: Verify WebP display cache contract
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-product-image-webp.js
       - name: Validate actual break-even calculation
         run: node apps/systems/aione/js/config/product-pricing-math.test.js
       - name: Test Excel/WPS and CURRENT database roundtrip (no Rakuten)
