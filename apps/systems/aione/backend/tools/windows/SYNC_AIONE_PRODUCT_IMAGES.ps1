@@ -27,10 +27,10 @@ foreach ($f in $files) {
   $sha = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
   $record += [pscustomobject]@{ name=$f.Name; size=$f.Length; state='pending'; sha256=$sha }
 }
-Write-Host "Product: $code | Files: $($files.Count) | Mode: $(if($Upload){'UPLOAD'}else{'DRY-RUN'})"
+Write-Output "Product: $code | Files: $($files.Count) | Mode: $(if($Upload){'UPLOAD'}else{'DRY-RUN'})"
 if (!$Upload) {
   $record | Format-Table -AutoSize
-  Write-Host 'DRY-RUN ONLY. No network write, local file mutation or Rakuten operation.'
+  Write-Output 'DRY-RUN ONLY. No network write, local file mutation or Rakuten operation.'
   return
 }
 if (!$ApiBase -or $ApiBase -notmatch '^https://[^/?#]+$') { throw 'HTTPS ApiBase required; do not append a path.' }
