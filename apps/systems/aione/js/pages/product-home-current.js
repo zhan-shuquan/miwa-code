@@ -1,6 +1,6 @@
 import { PRODUCT_HOME_CENTERS } from "../config/home-registry.js?v=20261011-product-center-v7";
 import { aioneApi } from "../services/aione-api-client.js";
-import { showProducts, showSkuList, openProductEditor } from "./product-manual-entry.js?v=20261012-profit-ux";
+import { showProducts, showSkuList, openProductEditor } from "./product-manual-entry.js?v=20261012-real-break-even";
 
 const PRODUCT_REF="MH0000002";
 const SELECTION_REF="SEL-20260907-000001";

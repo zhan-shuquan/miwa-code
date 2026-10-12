@@ -8,6 +8,8 @@ on:
       - apps/systems/aione/backend/src/services/product-manual-entry-service.js
       - apps/systems/aione/backend/src/routes/product-manual-entry.js
       - apps/systems/aione/backend/scripts/test-product-entry-current.js
+      - apps/systems/aione/js/config/product-pricing-math.js
+      - apps/systems/aione/js/config/product-pricing-math.test.js
       - apps/systems/aione/js/pages/product-manual-entry.js
       - apps/systems/aione/js/pages/product-home-current.js
       - apps/systems/aione/backend/server.js
@@ -49,6 +51,8 @@ jobs:
           node --check apps/systems/aione/backend/src/services/product-manual-entry-service.js
           node --check apps/systems/aione/backend/src/routes/product-manual-entry.js
           node --check apps/systems/aione/backend/scripts/test-product-entry-current.js
+          node --check apps/systems/aione/js/config/product-pricing-math.js
+          node --check apps/systems/aione/js/config/product-pricing-math.test.js
           node --check apps/systems/aione/js/pages/product-manual-entry.js
           node --check apps/systems/aione/js/pages/product-home-current.js
           node --check apps/systems/aione/backend/server.js
@@ -56,6 +60,8 @@ jobs:
         env:
           PGPASSWORD: aione_ci
         run: psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -f data-code/current/0001_aione_current_baseline.sql
+      - name: Validate actual break-even calculation
+        run: node apps/systems/aione/js/config/product-pricing-math.test.js
       - name: Test Excel/WPS and CURRENT database roundtrip (no Rakuten)
         working-directory: apps/systems/aione/backend
         run: node scripts/test-product-entry-current.js
