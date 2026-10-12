@@ -8,3 +8,6 @@
   body[data-product-home="current"] .app-main{padding-left:16px;padding-right:18px}
   body[data-product-home="current"] #app-main-host.page-host{max-width:none;margin:0}
 }
+
+/* Shared product profit header: compact total, no fifth cost card. */
+.pw .pw-cost-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}.pw .pw-cost-head h3{margin:0}.pw .pw-cost-total{display:flex;align-items:baseline;gap:10px;color:#4d6658;font-size:13px}.pw .pw-cost-total strong{color:#176b4d;font-size:21px;font-weight:750;white-space:nowrap}
