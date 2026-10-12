@@ -40,11 +40,11 @@ $base = $ApiBase.TrimEnd('/')
 $success = 0; $reused=0; $blocked=0; $failed=0
 foreach ($row in $record) {
   if ($row.state -eq 'invalid_size') { $failed++; continue }
-  $file = $files | Where-Object Name -eq $row.name | Select-Object -First 1
+  $file = $files | Where-Object { $_.Name -eq $row.name } | Select-Object -First 1
   try {
     $bytes = [System.IO.File]::ReadAllBytes($file.FullName)
     if ($bytes.Length -ne $row.size) { throw 'File changed while scanning; skipped.' }
-    if (([BitConverter]::ToString([System.Security.Cryptography.SHA256]::HashData($bytes))).Replace('-','').ToLowerInvariant() -ne $row.sha256) {
+    if ((Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ne $row.sha256) {
       throw 'File hash changed while scanning; skipped.'
     }
     $body = @{ fileName=$row.name; base64=[Convert]::ToBase64String($bytes) } | ConvertTo-Json -Compress
