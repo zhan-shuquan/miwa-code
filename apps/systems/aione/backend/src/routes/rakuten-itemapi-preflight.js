@@ -4,6 +4,7 @@ import pool from "../../db.js";
 import {getManualProduct} from "../services/product-manual-entry-service.js";
 import {rakutenFirstItemPreflight} from "../services/rakuten-itemapi-preflight.js";
 import {firstItemV25Policy} from "../services/rakuten-v25-first-item-contract.js";
+import {getRakutenCanonicalPackReadiness} from "../services/rakuten-canonical-publish-service.js";
 const router=Router();
 router.get("/integrations/rakuten/products/:productRef/itemapi-preflight",async(req,res,next)=>{
  try{
@@ -33,12 +34,15 @@ router.get("/integrations/rakuten/products/:productRef/first-item-dry-run",async
   const remote=await getItemV2ReadOnly({shopRef:product.targetShopRef,manageNumber:product.localCode});
   const result=await pool.query("SELECT pa.id,pa.asset_role,pa.sku_id,cam.external_asset_id,cam.lifecycle_status AS mapping_status FROM public.product_assets pa LEFT JOIN public.channel_asset_mappings cam ON cam.asset_id=pa.id AND cam.channel='rakuten' AND cam.shop_ref=$2 AND cam.archived_at IS NULL WHERE pa.product_id=$1 AND pa.archived_at IS NULL",[product.id,product.targetShopRef]);
   const mapped=result.rows.filter(x=>x.mapping_status==="active"&&x.external_asset_id);
+  const cabinet=await getRakutenCanonicalPackReadiness({productId:product.id,shopRef:product.targetShopRef});
   const blockers=[...policy.blockers];
   if(remote.exists)blockers.push("remote_item_already_exists");
+  if(!cabinet.container)blockers.push("rakuten_cabinet_container_missing");
+  else if(!cabinet.container.rakutenFolderId)blockers.push("rakuten_cabinet_folder_not_resolved");
   if(!mapped.some(x=>x.asset_role==="source_main_image"))blockers.push("main_cabinet_image_not_published");
   if(!skus.every(s=>mapped.some(x=>x.asset_role==="source_sku_image"&&x.sku_id===s.id)))blockers.push("sku_cabinet_image_not_published");
   blockers.push("verified_itemapi_payload_and_shipping_attributes_still_required");
-  res.set("Cache-Control","no-store").json({ok:true,phase:"read_only_dry_run",manageNumber:product.localCode,shopRef:product.targetShopRef,remoteExists:remote.exists,remoteStatus:remote.httpStatus,skuCount:skus.length,imageCount:result.rows.length,mappedImageCount:mapped.length,policy:{taxRate:policy.taxRate,taxIncluded:policy.taxIncluded,freeShipping:policy.freeShipping,commonPriceJpy:policy.commonPriceJpy},blocking:[...new Set(blockers)],canPublish:false});
+  res.set("Cache-Control","no-store").json({ok:true,phase:"read_only_dry_run",manageNumber:product.localCode,shopRef:product.targetShopRef,remoteExists:remote.exists,remoteStatus:remote.httpStatus,skuCount:skus.length,imageCount:result.rows.length,mappedImageCount:mapped.length,cabinet:{containerCode:cabinet.container?.containerCode||null,folderConfigured:Boolean(cabinet.container?.rakutenFolderId),proposalCount:cabinet.proposal.length,proposalBlocking:cabinet.proposalValidation.blocking},policy:{taxRate:policy.taxRate,taxIncluded:policy.taxIncluded,freeShipping:policy.freeShipping,commonPriceJpy:policy.commonPriceJpy},blocking:[...new Set(blockers)],canPublish:false});
  }catch(error){next(error)}
 });
 export default router;
