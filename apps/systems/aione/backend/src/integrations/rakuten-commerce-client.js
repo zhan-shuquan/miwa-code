@@ -66,7 +66,7 @@ export async function putInventoryV2({shopRef,manageNumber,variantId,quantity,re
   const code=requireCode(manageNumber,"manageNumber");
   const sku=requireCode(variantId,"variantId");
   if(!Number.isSafeInteger(quantity)||quantity<0)throw fail("inventory_quantity_invalid","Absolute stock must be a non-negative integer.",400);
-  return jsonRequest({shopRef,path:INVENTORY_PATH(code,sku),method:"POST",payload:{mode:"ABSOLUTE",quantity},request,timeoutMs:30000});
+  return jsonRequest({shopRef,path:INVENTORY_PATH(code,sku),method:"PUT",payload:{mode:"ABSOLUTE",quantity},request,timeoutMs:30000});
 }
 export async function getGenreAttributesV2({shopRef,genreId,request=fetch}) {
   const genre=String(genreId||"").trim();
