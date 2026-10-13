@@ -195,7 +195,7 @@ host.addEventListener("click",async e=>{
  try{
   const ref=encodeURIComponent(p.localCode||p.id);
   const pre=await aioneApi("/api/v1/integrations/rakuten/products/"+ref+"/itemapi-preflight");
-  if(!pre.rmsConfiguration?.readyForRead){rmsReadState.message="目标店铺的RMS凭据或绑定未就绪，未执行远端查询。";return;}
+  if(!pre.rmsConfiguration?.readyForRead){rmsReadState.message="未执行远端查询｜目标店铺："+(p.targetShopRef||"未选择")+"｜凭据已配置："+(pre.rmsConfiguration?.credentialsPresent?"是":"否")+"｜店铺绑定匹配："+(pre.rmsConfiguration?.credentialShopBound?"是":"否")+"。请勿发送密钥到聊天。";return;}
   const remote=await aioneApi("/api/v1/integrations/rakuten/products/"+ref+"/remote-existence");
   rmsReadState.message=remote.exists?"RMS已存在该商品："+remote.manageNumber+"。禁止重复创建。":"RMS未找到该商品（404）："+remote.manageNumber+"。这不是上架授权。";
  }catch(error){rmsReadState.message="RMS查询未完成："+error.message+"；不能判断商品不存在。";}
