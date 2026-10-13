@@ -27,7 +27,7 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
  const normalizeLocation=asset=>{
    // The source path must be an exact persisted R-Cabinet file path.
    const path=str(asset?.location);
-   if(!/^\/cabinet\/[a-z0-9_-]+\/[a-z0-9_-]+\.(jpg|jpeg|png|gif)$/i.test(path)){
+   if(!/^[a-z0-9_-]+\/[a-z0-9_-]+\.(jpg|jpeg|png|gif)$/i.test(path)){
      fail(blocking,"cabinet_location_unverified");return null;
    }
    return {type:"CABINET",location:path};

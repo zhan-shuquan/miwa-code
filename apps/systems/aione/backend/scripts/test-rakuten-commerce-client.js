@@ -12,11 +12,13 @@ try{
  assert.equal(calls[0].method,"PUT");
  assert.match(calls[0].url,/items\/manage-numbers\/zjl238$/);
  await putInventoryV2({shopRef:"永井GD",manageNumber:"zjl238",variantId:"zjl238-c01",quantity:1000,request});
+ assert.equal(calls[1].method,"POST");
  assert.deepEqual(calls[1].body,{mode:"ABSOLUTE",quantity:1000});
  const read=await getInventoryV2({shopRef:"永井GD",manageNumber:"zjl238",variantId:"zjl238-c01",request});
  assert.equal(read.body.quantity,1000);
  const genre=await getGenreAttributesV2({shopRef:"永井GD",genreId:"123456",request});
  assert.deepEqual(genre.genre.attributes,[]);
+ assert.match(calls[3].url,/\/navigation\/genres\/123456\/attributes\/$/);
  const count=calls.length;
  await assert.rejects(putInventoryV2({shopRef:"PrimeLife",manageNumber:"zjl238",variantId:"c01",quantity:1000,request}),e=>e.code==="rakuten_shop_binding_mismatch");
  await assert.rejects(putInventoryV2({shopRef:"永井GD",manageNumber:"zjl238",variantId:"c01",quantity:-1,request}),e=>e.code==="inventory_quantity_invalid");
