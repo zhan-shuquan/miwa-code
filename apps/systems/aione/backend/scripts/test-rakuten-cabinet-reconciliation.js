@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import {parseCabinetFolderFilesXml} from "../src/integrations/rakuten-rms-client.js";
+const xml='<result><cabinetFolderFilesGetResult><resultCode>0</resultCode><fileAllCount>1</fileAllCount><fileCount>1</fileCount><files><file><FolderId>13839999</FolderId><FileId>44001</FileId><FileName>zjl238_01</FileName><FilePath>a1234.jpg</FilePath><FileUrl>https://image.rakuten.co.jp/shop/cabinet/a1234.jpg</FileUrl><FileWidth>960</FileWidth></file></files></cabinetFolderFilesGetResult></result>';
+const result=parseCabinetFolderFilesXml(xml);
+assert.equal(result.files.length,1);
+assert.equal(result.total,1);
+assert.equal(result.files[0].fileId,44001);
+assert.equal(result.files[0].filePath,"a1234.jpg");
+assert.throws(()=>parseCabinetFolderFilesXml('<result><resultCode>E001</resultCode></result>'),e=>e.code==="rakuten_cabinet_files_list_failed");
+assert.throws(()=>parseCabinetFolderFilesXml('<result><resultCode>0</resultCode><files><file><FileId>1</FileId></file></files></result>'),e=>e.code==="rakuten_cabinet_files_invalid");
+console.log("PASS Cabinet remote folder parsing (mock, no RMS write)");
