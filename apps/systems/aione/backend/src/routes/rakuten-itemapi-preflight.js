@@ -6,6 +6,7 @@ import {getManualProduct} from "../services/product-manual-entry-service.js";
 import {rakutenFirstItemPreflight} from "../services/rakuten-itemapi-preflight.js";
 import {firstItemV25Policy} from "../services/rakuten-v25-first-item-contract.js";
 import {buildRakutenFirstItemCandidate} from "../services/rakuten-first-item-candidate.js";
+import {buildRakutenSafeFilePath} from "../integrations/rakuten-cabinet-upload.js";
 import {getRakutenCanonicalPackReadiness} from "../services/rakuten-canonical-publish-service.js";
 const router=Router();
 router.get("/integrations/rakuten/products/:productRef/shipping-options",async(req,res,next)=>{
@@ -45,7 +46,7 @@ router.get("/integrations/rakuten/products/:productRef/itemapi-candidate",async(
   const assets=await pool.query(
    "SELECT pa.id AS asset_id,pa.asset_role,pa.sku_id,cam.external_asset_id,cam.lifecycle_status AS mapping_status,cam.external_path,cam.metadata AS mapping_metadata FROM public.product_assets pa LEFT JOIN public.channel_asset_mappings cam ON cam.asset_id=pa.id AND cam.channel='rakuten' AND cam.shop_ref=$2 AND cam.archived_at IS NULL WHERE pa.product_id=$1 AND pa.archived_at IS NULL ORDER BY pa.asset_no",
    [product.id,product.targetShopRef]);
-  const mappedImages=assets.rows.map(x=>({...x,location:x.mapping_metadata?.providerFileUrl||null}));
+  const mappedImages=assets.rows.map(x=>{const fileName=String(x.external_path||"").split("/").at(-1);return {...x,location:fileName?"/cabinet/rkc001/"+fileName:null};});
   const [genreResult,shippingResult]=await Promise.allSettled([
    product.rakutenGenreId?getGenreAttributesV2({shopRef:product.targetShopRef,genreId:product.rakutenGenreId}):Promise.resolve(null),
    getRakutenShopPublishingOptions()
@@ -54,8 +55,8 @@ router.get("/integrations/rakuten/products/:productRef/itemapi-candidate",async(
   const shipping=shippingResult.status==="fulfilled"?shippingResult.value:null;
   const candidate=buildRakutenFirstItemCandidate({product,skus,mappedImages,genre,shipping});
   const blockers=[...candidate.blocking];
-  if(genreResult.status==="rejected")blockers.push("rakuten_genre_api_read_failed");
-  if(shippingResult.status==="rejected")blockers.push("rakuten_shop_shipping_read_failed");
+  if(genreResult.status==="rejected")blockers.push("rakuten_genre_api_read_failed:"+String(genreResult.reason?.code||"unknown"));
+  if(shippingResult.status==="rejected")blockers.push("rakuten_shop_shipping_read_failed:"+String(shippingResult.reason?.code||"unknown"));
   res.set("Cache-Control","no-store").json({ok:true,phase:"candidate_read_only",...candidate,
    candidateReady:!blockers.length,blocking:[...new Set(blockers)],
    genreMetadataLoaded:Boolean(genre),shippingMetadataLoaded:Boolean(shipping),
