@@ -12,7 +12,7 @@ try{
  assert.equal(calls[0].method,"PUT");
  assert.match(calls[0].url,/items\/manage-numbers\/zjl238$/);
  await putInventoryV2({shopRef:"永井GD",manageNumber:"zjl238",variantId:"zjl238-c01",quantity:1000,request});
- assert.equal(calls[1].method,"POST");
+ assert.equal(calls[1].method,"PUT");
  assert.deepEqual(calls[1].body,{mode:"ABSOLUTE",quantity:1000});
  const read=await getInventoryV2({shopRef:"永井GD",manageNumber:"zjl238",variantId:"zjl238-c01",request});
  assert.equal(read.body.quantity,1000);
