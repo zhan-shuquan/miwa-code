@@ -14,6 +14,8 @@ on:
       - apps/systems/aione/backend/scripts/test-product-image-webp.js
       - apps/systems/aione/backend/src/routes/product-assets.js
       - apps/systems/aione/backend/src/routes/rakuten-itemapi-preflight.js
+      - apps/systems/aione/backend/src/integrations/rakuten-commerce-client.js
+      - apps/systems/aione/backend/scripts/test-rakuten-commerce-client.js
       - apps/systems/aione/backend/src/services/rakuten-v25-first-item-contract.js
       - apps/systems/aione/backend/scripts/test-rakuten-v25-first-item-contract.js
       - apps/systems/aione/backend/src/services/rakuten-attribute-mapper.js
@@ -86,6 +88,8 @@ jobs:
           node --check apps/systems/aione/backend/scripts/test-product-image-webp.js
           node --check apps/systems/aione/backend/src/routes/product-assets.js
           node --check apps/systems/aione/backend/src/routes/rakuten-itemapi-preflight.js
+          node --check apps/systems/aione/backend/src/integrations/rakuten-commerce-client.js
+          node --check apps/systems/aione/backend/scripts/test-rakuten-commerce-client.js
           node --check apps/systems/aione/backend/src/services/rakuten-v25-first-item-contract.js
           node --check apps/systems/aione/backend/scripts/test-rakuten-v25-first-item-contract.js
           node --check apps/systems/aione/backend/src/services/rakuten-attribute-mapper.js
@@ -155,6 +159,9 @@ jobs:
       - name: Verify Cabinet upload XML and fail-closed response (mocked)
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-cabinet-upload-contract.js
+      - name: Verify store-bound ItemAPI and InventoryAPI adapters
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-rakuten-commerce-client.js
       - name: Verify store-safe ItemAPI GET
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-itemapi-get.js
