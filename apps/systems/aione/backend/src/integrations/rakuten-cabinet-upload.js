@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { prepareRakutenCabinetImage } from "./rakuten-cabinet-image.js";
 
 const RMS_BASE_URL = "https://api.rms.rakuten.co.jp/es/1.0";
 
@@ -79,7 +80,7 @@ export function buildRakutenSafeFilePath(fileName, mimeType) {
   return `a${digest}.${ext}`;
 }
 
-export async function insertCabinetFile({ folderId, fileName, bytes, mimeType = "image/jpeg", overwrite = true }) {
+export async function insertCabinetFile({ folderId, fileName, bytes, mimeType = "image/jpeg", overwrite = false, request = fetch, prepare = prepareRakutenCabinetImage }) {
   if (!folderId && folderId !== 0) {
     const error = new Error("folderId is required.");
     error.statusCode = 400;
@@ -94,13 +95,14 @@ export async function insertCabinetFile({ folderId, fileName, bytes, mimeType = 
     throw error;
   }
 
-  const providerFilePath = buildRakutenSafeFilePath(cleanFileName, mimeType);
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><request><fileInsertRequest><file><fileName>${escapeXml(providerFilePath)}</fileName><folderId>${escapeXml(folderId)}</folderId><filePath>${escapeXml(providerFilePath)}</filePath><overwrite>${overwrite ? "true" : "false"}</overwrite></file></fileInsertRequest></request>`;
+  const image = await prepare({ bytes: Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes), mimeType });
+  const providerFilePath = buildRakutenSafeFilePath(cleanFileName, image.mimeType);
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><request><fileInsertRequest><file><fileName>${escapeXml(providerFilePath)}</fileName><folderId>${escapeXml(folderId)}</folderId><filePath>${escapeXml(providerFilePath)}</filePath><overWrite>${overwrite ? "true" : "false"}</overWrite></file></fileInsertRequest></request>`;
   const form = new FormData();
   form.append("xml", xml);
-  form.append("file", new Blob([bytes], { type: mimeType }), providerFilePath);
+  form.append("file", new Blob([image.bytes], { type: image.mimeType }), providerFilePath);
 
-  const response = await fetch(`${RMS_BASE_URL}/cabinet/file/insert`, {
+  const response = await request(`${RMS_BASE_URL}/cabinet/file/insert`, {
     method: "POST",
     headers: {
       Authorization: authorizationHeader(),
@@ -116,18 +118,32 @@ export async function insertCabinetFile({ folderId, fileName, bytes, mimeType = 
     error.code = "rakuten_cabinet_upload_http_error";
     error.rakutenStatus = response.status;
     error.rakutenBody = text.slice(0, 4000);
+    error.remoteCode = xmlText(text, "resultCode") || xmlText(text, "systemStatus") || undefined;
     throw error;
   }
   assertRakutenSuccess(text);
+  const providerId = numberOrNull(xmlText(text, "FileId") || xmlText(text, "fileId"));
+  if (!Number.isSafeInteger(providerId) || providerId <= 0) {
+    const error = new Error("Rakuten Cabinet response did not confirm a valid FileId; verify remotely before retry.");
+    error.statusCode = 502;
+    error.code = "rakuten_cabinet_file_id_unconfirmed";
+    error.remoteCode = xmlText(text, "resultCode") || undefined;
+    throw error;
+  }
 
   return {
     interfaceId: xmlText(text, "interfaceId"),
     systemStatus: xmlText(text, "systemStatus"),
     resultCode: xmlText(text, "resultCode"),
-    fileId: numberOrNull(xmlText(text, "fileId")),
+    fileId: providerId,
     folderId: numberOrNull(xmlText(text, "folderId")) ?? Number(folderId),
     fileName: xmlText(text, "fileName") || providerFilePath,
     filePath: xmlText(text, "filePath") || providerFilePath,
-    fileUrl: xmlText(text, "fileUrl") || xmlText(text, "fileURL") || null
+    fileUrl: xmlText(text, "fileUrl") || xmlText(text, "fileURL") || null,
+    sourceFormat: image.sourceFormat,
+    normalizedForRakuten: image.converted,
+    uploadWidth: image.width,
+    uploadHeight: image.height,
+    uploadBytes: image.bytes.length
   };
 }
