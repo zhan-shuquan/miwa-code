@@ -14,6 +14,8 @@ on:
       - apps/systems/aione/backend/scripts/test-product-image-webp.js
       - apps/systems/aione/backend/src/routes/product-assets.js
       - apps/systems/aione/backend/src/routes/rakuten-itemapi-preflight.js
+      - apps/systems/aione/backend/src/services/rakuten-itemapi2-payload-preview.js
+      - apps/systems/aione/backend/scripts/test-rakuten-itemapi2-payload-preview.js
       - apps/systems/aione/backend/src/integrations/rakuten-commerce-client.js
       - apps/systems/aione/backend/scripts/test-rakuten-commerce-client.js
       - apps/systems/aione/backend/src/services/rakuten-v25-first-item-contract.js
@@ -91,6 +93,8 @@ jobs:
           node --check apps/systems/aione/backend/scripts/test-product-image-webp.js
           node --check apps/systems/aione/backend/src/routes/product-assets.js
           node --check apps/systems/aione/backend/src/routes/rakuten-itemapi-preflight.js
+          node --check apps/systems/aione/backend/src/services/rakuten-itemapi2-payload-preview.js
+          node --check apps/systems/aione/backend/scripts/test-rakuten-itemapi2-payload-preview.js
           node --check apps/systems/aione/backend/src/integrations/rakuten-commerce-client.js
           node --check apps/systems/aione/backend/scripts/test-rakuten-commerce-client.js
           node --check apps/systems/aione/backend/src/services/rakuten-v25-first-item-contract.js
@@ -174,6 +178,9 @@ jobs:
       - name: Verify strict first-item candidate guards
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-first-item-candidate.js
+      - name: Verify ItemAPI2 read-only JSON preview
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-rakuten-itemapi2-payload-preview.js
       - name: Verify store-safe ItemAPI GET
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-itemapi-get.js
