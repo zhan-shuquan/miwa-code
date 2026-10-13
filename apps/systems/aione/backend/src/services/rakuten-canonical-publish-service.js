@@ -233,13 +233,34 @@ export async function publishRakutenCanonicalPack({ productId, shopRef, containe
       bucketName: asset.metadata.gcsBucket,
       objectName: asset.metadata.gcsObject
     });
-    const uploaded = await insertCabinetFile({
-      folderId: loaded.folderId,
-      fileName: asset.canonical_name,
-      bytes: canonical.bytes,
-      mimeType: canonical.contentType || asset.mime_type || "application/octet-stream",
-      overwrite: true
-    });
+    let uploaded;
+    try {
+      uploaded = await insertCabinetFile({
+        folderId: loaded.folderId,
+        fileName: asset.canonical_name,
+        bytes: canonical.bytes,
+        mimeType: canonical.contentType || asset.mime_type || "application/octet-stream",
+        overwrite: false
+      });
+    } catch (error) {
+      // Do not automatically retry an ambiguous RMS write; first inspect remote files.
+      console.error("[rakuten-cabinet-publish] upload failed", {
+        productId: normalizedProductId,
+        assetId: asset.id,
+        assetNo: asset.asset_no,
+        sourceName: asset.canonical_name,
+        bytes: canonical.bytes.length,
+        sourceMime: canonical.contentType,
+        providerStatus: error.rakutenStatus || null,
+        providerCode: error.remoteCode || null,
+        code: error.code || "unknown",
+        providerBody: String(error.rakutenBody || "").slice(0, 1600)
+      });
+      error.message = "R-Cabinet upload failed for image " + asset.asset_no
+        + " (" + String(error.code || "unknown") + ", RMS HTTP "
+        + String(error.rakutenStatus || "unknown") + "). See sanitized server diagnostics.";
+      throw error;
+    }
 
     const mappingMetadata = {
       packVersion: normalizedPackVersion,
@@ -251,6 +272,10 @@ export async function publishRakutenCanonicalPack({ productId, shopRef, containe
       gcsBucket: asset.metadata.gcsBucket,
       gcsObject: asset.metadata.gcsObject,
       providerFileUrl: uploaded.fileUrl || null,
+      uploadWidth: uploaded.uploadWidth || null,
+      uploadHeight: uploaded.uploadHeight || null,
+      uploadBytes: uploaded.uploadBytes || null,
+      normalizedForRakuten: Boolean(uploaded.normalizedForRakuten),
       publishedAt: new Date().toISOString()
     };
 
