@@ -22,7 +22,7 @@ process.env.AIONE_RAKUTEN_LICENSE_KEY="test-only";
 try {
  const request=async(url,opts)=>{
   assert.match(url,/cabinet\/file\/insert$/);
-  const xml=await opts.body.get("xml").text();
+  const xml=String(opts.body.get("xml"));
   assert.match(xml,/<overWrite>false<\/overWrite>/);
   assert.doesNotMatch(xml,/<overwrite>/);
   const blob=opts.body.get("file");
