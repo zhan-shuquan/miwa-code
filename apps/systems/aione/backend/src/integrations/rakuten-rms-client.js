@@ -198,3 +198,61 @@ export async function getItemV2ReadOnly({shopRef,manageNumber,request=fetch}) {
   let item;try{item=JSON.parse(raw)}catch{const e=new Error("Rakuten ItemAPI response was not JSON.");e.statusCode=502;e.code="rakuten_itemapi_invalid_response";throw e;}
   return {exists:true,httpStatus:response.status,manageNumber:code,shopRef,item};
 }
+
+function parseCabinetFile(block) {
+  return {
+    fileId: numericOrNull(xmlText(block, "FileId")),
+    folderId: numericOrNull(xmlText(block, "FolderId")),
+    filePath: xmlText(block, "FilePath"),
+    fileName: xmlText(block, "FileName"),
+    fileUrl: xmlText(block, "FileUrl"),
+    fileWidth: numericOrNull(xmlText(block, "FileWidth")),
+    fileHeight: numericOrNull(xmlText(block, "FileHeight"))
+  };
+}
+
+// Strict remote read for reconciling AIONE mappings with R-Cabinet before writes.
+export function parseCabinetFolderFilesXml(xml) {
+  const resultCode = xmlText(xml, "resultCode");
+  if (resultCode && resultCode !== "0") {
+    const e = new Error("Rakuten Cabinet folder listing returned an error.");
+    e.code = "rakuten_cabinet_files_list_failed";
+    e.statusCode = 502;
+    e.remoteCode = resultCode;
+    throw e;
+  }
+  const blocks = xmlBlocks(xml, "file");
+  const files = blocks.map(parseCabinetFile);
+  if (files.some(f => !Number.isSafeInteger(f.fileId) || f.fileId <= 0 || !f.filePath)) {
+    const e = new Error("Rakuten Cabinet folder listing contains invalid file records.");
+    e.code = "rakuten_cabinet_files_invalid";
+    e.statusCode = 502;
+    throw e;
+  }
+  return {
+    resultCode,
+    total: numericOrNull(xmlText(xml, "fileAllCount")),
+    files
+  };
+}
+
+export async function getAllCabinetFolderFiles({folderId, limit = 100, maxPages = 100} = {}) {
+  const id = Number(folderId);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    const e = new Error("A verified R-Cabinet folderId is required.");
+    e.code = "rakuten_cabinet_folder_unresolved";
+    e.statusCode = 409;
+    throw e;
+  }
+  const pageLimit = Math.min(100, Math.max(1, Math.trunc(Number(limit) || 100)));
+  const files = [];
+  for (let offset = 1; offset <= maxPages; offset++) {
+    const query = new URLSearchParams({ folderId: String(id), offset: String(offset), limit: String(pageLimit) });
+    const xml = await rmsFetch("/cabinet/folder/files/get?" + query, { method: "GET" });
+    const page = parseCabinetFolderFilesXml(xml);
+    files.push(...page.files);
+    if (page.files.length < pageLimit) return files;
+  }
+  throw Object.assign(new Error("R-Cabinet image listing exceeded safe pagination limit."),
+    { code: "rakuten_cabinet_files_limit", statusCode: 409 });
+}
