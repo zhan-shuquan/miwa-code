@@ -1,12 +1,24 @@
 import {Router} from "express";
-import {getItemV2ReadOnly} from "../integrations/rakuten-rms-client.js";
+import {getItemV2ReadOnly,getRakutenShopPublishingOptions} from "../integrations/rakuten-rms-client.js";
 import {getGenreAttributesV2} from "../integrations/rakuten-commerce-client.js";
 import pool from "../../db.js";
 import {getManualProduct} from "../services/product-manual-entry-service.js";
 import {rakutenFirstItemPreflight} from "../services/rakuten-itemapi-preflight.js";
 import {firstItemV25Policy} from "../services/rakuten-v25-first-item-contract.js";
+import {buildRakutenFirstItemCandidate} from "../services/rakuten-first-item-candidate.js";
 import {getRakutenCanonicalPackReadiness} from "../services/rakuten-canonical-publish-service.js";
 const router=Router();
+router.get("/integrations/rakuten/products/:productRef/shipping-options",async(req,res,next)=>{
+ try {
+  const {product}=await getManualProduct(String(req.params.productRef||""));
+  if(product.targetShopRef!==String(process.env.AIONE_RAKUTEN_SHOP_REF||"").trim())
+   return res.status(403).json({error:"rakuten_shop_binding_mismatch"});
+  const options=await getRakutenShopPublishingOptions();
+  res.set("Cache-Control","no-store").json({ok:true,shopRef:product.targetShopRef,productId:product.id,...options,
+   notice:"Read-only RMS shipping IDs; no ItemAPI write. Multiple options require an explicit verified choice."});
+ }catch(error){next(error)}
+});
+
 router.get("/integrations/rakuten/products/:productRef/genre-attributes",async(req,res,next)=>{
  try{
   const {product}=await getManualProduct(String(req.params.productRef||""));
@@ -22,6 +34,33 @@ router.get("/integrations/rakuten/products/:productRef/genre-attributes",async(r
   res.set("Cache-Control","no-store").json({ok:true,productId:product.id,shopRef:product.targetShopRef,
     genreId,genreName:result.genre.nameJa,lowest:true,version:result.version||null,definitions,
     mandatoryCount:definitions.filter(x=>x.mandatory).length,notice:"Read-only genre metadata; attributes and shipping must be validated before ItemAPI writes."});
+ }catch(error){next(error)}
+});
+
+router.get("/integrations/rakuten/products/:productRef/itemapi-candidate",async(req,res,next)=>{
+ try{
+  const {product,skus}=await getManualProduct(String(req.params.productRef||""));
+  if(product.targetShopRef!==String(process.env.AIONE_RAKUTEN_SHOP_REF||"").trim())
+   return res.status(403).json({error:"rakuten_shop_binding_mismatch"});
+  const assets=await pool.query(
+   "SELECT pa.id AS asset_id,pa.asset_role,pa.sku_id,cam.external_asset_id,cam.lifecycle_status AS mapping_status,cam.external_path,cam.metadata AS mapping_metadata FROM public.product_assets pa LEFT JOIN public.channel_asset_mappings cam ON cam.asset_id=pa.id AND cam.channel='rakuten' AND cam.shop_ref=$2 AND cam.archived_at IS NULL WHERE pa.product_id=$1 AND pa.archived_at IS NULL ORDER BY pa.asset_no",
+   [product.id,product.targetShopRef]);
+  const mappedImages=assets.rows.map(x=>({...x,location:x.mapping_metadata?.providerFileUrl||null}));
+  const [genreResult,shippingResult]=await Promise.allSettled([
+   product.rakutenGenreId?getGenreAttributesV2({shopRef:product.targetShopRef,genreId:product.rakutenGenreId}):Promise.resolve(null),
+   getRakutenShopPublishingOptions()
+  ]);
+  const genre=genreResult.status==="fulfilled"&&genreResult.value?{...genreResult.value.genre,genreId:String(genreResult.value.genre.genreId)}:null;
+  const shipping=shippingResult.status==="fulfilled"?shippingResult.value:null;
+  const candidate=buildRakutenFirstItemCandidate({product,skus,mappedImages,genre,shipping});
+  const blockers=[...candidate.blocking];
+  if(genreResult.status==="rejected")blockers.push("rakuten_genre_api_read_failed");
+  if(shippingResult.status==="rejected")blockers.push("rakuten_shop_shipping_read_failed");
+  res.set("Cache-Control","no-store").json({ok:true,phase:"candidate_read_only",...candidate,
+   candidateReady:!blockers.length,blocking:[...new Set(blockers)],
+   genreMetadataLoaded:Boolean(genre),shippingMetadataLoaded:Boolean(shipping),
+   verifiedShippingOptions:shipping?{deliverySets:shipping.deliverySets,deliveryDates:shipping.deliveryDates,defaultDeliverySetId:shipping.defaultDeliverySetId}:null,
+   notice:"This endpoint does not create items or modify inventory."});
  }catch(error){next(error)}
 });
 

@@ -39,6 +39,9 @@ on:
       - apps/systems/aione/backend/src/routes/rakuten-canonical-publish.js
       - apps/systems/aione/backend/src/integrations/rakuten-cabinet-upload.js
       - apps/systems/aione/backend/src/integrations/rakuten-rms-client.js
+      - apps/systems/aione/backend/scripts/test-rakuten-shop-publishing-options.js
+      - apps/systems/aione/backend/src/services/rakuten-first-item-candidate.js
+      - apps/systems/aione/backend/scripts/test-rakuten-first-item-candidate.js
       - apps/systems/aione/backend/src/services/rakuten-cabinet-reconciliation.js
       - apps/systems/aione/backend/scripts/test-rakuten-cabinet-reconciliation.js
       - apps/systems/aione/backend/src/integrations/rakuten-cabinet-image.js
@@ -113,6 +116,9 @@ jobs:
           node --check apps/systems/aione/backend/src/routes/rakuten-canonical-publish.js
           node --check apps/systems/aione/backend/src/integrations/rakuten-cabinet-upload.js
           node --check apps/systems/aione/backend/src/integrations/rakuten-rms-client.js
+          node --check apps/systems/aione/backend/scripts/test-rakuten-shop-publishing-options.js
+          node --check apps/systems/aione/backend/src/services/rakuten-first-item-candidate.js
+          node --check apps/systems/aione/backend/scripts/test-rakuten-first-item-candidate.js
           node --check apps/systems/aione/backend/src/services/rakuten-cabinet-reconciliation.js
           node --check apps/systems/aione/backend/scripts/test-rakuten-cabinet-reconciliation.js
           node --check apps/systems/aione/backend/src/integrations/rakuten-cabinet-image.js
@@ -162,6 +168,12 @@ jobs:
       - name: Verify store-bound ItemAPI and InventoryAPI adapters
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-commerce-client.js
+      - name: Verify store read-only shipping options
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-rakuten-shop-publishing-options.js
+      - name: Verify strict first-item candidate guards
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-rakuten-first-item-candidate.js
       - name: Verify store-safe ItemAPI GET
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-itemapi-get.js

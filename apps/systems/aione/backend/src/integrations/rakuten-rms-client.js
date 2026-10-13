@@ -256,3 +256,42 @@ export async function getAllCabinetFolderFiles({folderId, limit = 100, maxPages 
   throw Object.assign(new Error("R-Cabinet image listing exceeded safe pagination limit."),
     { code: "rakuten_cabinet_files_limit", statusCode: 409 });
 }
+
+// ShopAPI 1.0 read-only store settings: never infer shipping IDs from carrier names.
+function shopXmlBlocks(xml, tag) {
+  const normalized = String(xml||"").replace(/(<\/?)[A-Za-z_][A-Za-z0-9_.-]*:/g, "$1");
+  return xmlBlocks(normalized,tag);
+}
+function shopXmlText(block, tag) {
+  return xmlText(String(block||"").replace(/(<\/?)[A-Za-z_][A-Za-z0-9_.-]*:/g,"$1"),tag);
+}
+export function parseRakutenShopPublishingOptions(deliveryXml, leadTimeXml) {
+  const deliverySets = shopXmlBlocks(deliveryXml,"deliverySetInfo").map(item=>({
+    id:numericOrNull(shopXmlText(item,"deliverySetId")),
+    name:shopXmlText(item,"deliverySetName"),
+    default:shopXmlText(item,"deliverySetDefaultFlag")==="1"
+  })).filter(item=>Number.isSafeInteger(item.id)&&item.id>0);
+  const deliveryDates = shopXmlBlocks(leadTimeXml,"delvdateMaster").map(item=>({
+    id:numericOrNull(shopXmlText(item,"delvdateNumber")),
+    label:shopXmlText(item,"delvdateCaption"),
+    days:numericOrNull(shopXmlText(item,"appointDays"))
+  })).filter(item=>Number.isSafeInteger(item.id)&&item.id>0);
+  if(!deliverySets.length || !deliveryDates.length) {
+    const error=new Error("RMS ShopAPI did not return verifiable delivery set and delivery date options.");
+    error.code="rakuten_shipping_options_missing";error.statusCode=409;throw error;
+  }
+  const distinct=(rows)=>new Set(rows.map(x=>x.id)).size===rows.length;
+  if(!distinct(deliverySets)||!distinct(deliveryDates)){
+    const error=new Error("RMS ShopAPI returned duplicate shipping configuration IDs.");
+    error.code="rakuten_shipping_options_ambiguous";error.statusCode=409;throw error;
+  }
+  return {deliverySets,deliveryDates,
+    defaultDeliverySetId:deliverySets.filter(x=>x.default).length===1?deliverySets.find(x=>x.default).id:null};
+}
+export async function getRakutenShopPublishingOptions() {
+  const [delivery,dates]=await Promise.all([
+    rmsFetch("/shop/deliverySetInfo",{method:"GET"}),
+    rmsFetch("/shop/delvdateMaster",{method:"GET"})
+  ]);
+  return parseRakutenShopPublishingOptions(delivery,dates);
+}

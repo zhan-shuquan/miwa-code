@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import {parseRakutenShopPublishingOptions} from "../src/integrations/rakuten-rms-client.js";
+const delivery="<shopBizApiResponse><result><deliverySetInfoBizModel><deliverySetInfoList><deliverySetInfo><deliverySetId>12</deliverySetId><deliverySetName>Default</deliverySetName><deliverySetDefaultFlag>1</deliverySetDefaultFlag></deliverySetInfo></deliverySetInfoList></deliverySetInfoBizModel></result></shopBizApiResponse>";
+const dates="<shopBizApiResponse><result><delvdateMasterBizModel><delvdateMasterList><delvdateMaster><delvdateNumber>3</delvdateNumber><delvdateCaption>2-3 days</delvdateCaption><appointDays>3</appointDays></delvdateMaster></delvdateMasterList></delvdateMasterBizModel></result></shopBizApiResponse>";
+const result=parseRakutenShopPublishingOptions(delivery,dates);
+assert.equal(result.deliverySets[0].id,12);
+assert.equal(result.deliveryDates[0].id,3);
+assert.equal(result.defaultDeliverySetId,12);
+assert.throws(()=>parseRakutenShopPublishingOptions(delivery,"<result/>"),e=>e.code==="rakuten_shipping_options_missing");
+console.log("PASS Rakuten read-only shipping options parsing");
