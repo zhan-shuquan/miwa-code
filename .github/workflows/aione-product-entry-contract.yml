@@ -125,6 +125,9 @@ jobs:
           if (!(Test-Path (Join-Path $folder 'zjl238_01.png'))) { throw 'Original image was modified.' }
       - name: Validate product SKU image identity mapping
         run: node apps/systems/aione/js/services/product-sku-image-identity.test.js
+      - name: Verify store-safe ItemAPI GET
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-rakuten-itemapi-get.js
       - name: Verify Rakuten V2.5 first-item contract
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-v25-first-item-contract.js
