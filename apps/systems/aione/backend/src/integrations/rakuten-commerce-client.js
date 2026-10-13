@@ -66,12 +66,12 @@ export async function putInventoryV2({shopRef,manageNumber,variantId,quantity,re
   const code=requireCode(manageNumber,"manageNumber");
   const sku=requireCode(variantId,"variantId");
   if(!Number.isSafeInteger(quantity)||quantity<0)throw fail("inventory_quantity_invalid","Absolute stock must be a non-negative integer.",400);
-  return jsonRequest({shopRef,path:INVENTORY_PATH(code,sku),method:"PUT",payload:{mode:"ABSOLUTE",quantity},request,timeoutMs:30000});
+  return jsonRequest({shopRef,path:INVENTORY_PATH(code,sku),method:"POST",payload:{mode:"ABSOLUTE",quantity},request,timeoutMs:30000});
 }
 export async function getGenreAttributesV2({shopRef,genreId,request=fetch}) {
   const genre=String(genreId||"").trim();
   if(!/^\d{5,12}$/.test(genre))throw fail("genre_id_invalid","A valid leaf Rakuten genre ID is required.",400);
-  const result=await jsonRequest({shopRef,path:"/navigation/genres/"+encodeURIComponent(genre)+"/attributes",request});
+  const result=await jsonRequest({shopRef,path:"/navigation/genres/"+encodeURIComponent(genre)+"/attributes/",request});
   if(!Array.isArray(result.body?.genre?.attributes) || result.body?.genre?.lowest!==true) {
     throw fail("rakuten_genre_attributes_unverified","RMS did not return a verified leaf-genre attribute definition.",409);
   }
