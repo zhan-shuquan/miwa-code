@@ -32,6 +32,11 @@ jobs:
       - name: Syntax check
         run: npm run check
 
+      - name: Verify CURRENT backend image startup dependency closure
+        working-directory: .
+        run: |
+          docker build -f Dockerfile -t aione-backend-import-check .
+
       - name: Check Design Center syntax
         run: |
           node --check src/services/design-product-resolver.js
