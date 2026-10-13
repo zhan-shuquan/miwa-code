@@ -10,8 +10,11 @@ router.get("/integrations/rakuten/products/:productRef/itemapi-preflight",async(
   const assets=await pool.query("SELECT id,sku_id,asset_role,metadata FROM public.product_assets WHERE product_id=$1 AND archived_at IS NULL",[product.id]);
   // Stored SKU identity is real; per-SKU inventory and price still require a verified RMS contract.
   const evaluatedSkus=skus.map(s=>({id:s.id,sku_code:s.sku_code,priceJpy:null,stock:null}));
-  const result=rakutenFirstItemPreflight({product,skus:evaluatedSkus,assets:assets.rows,shopConfigured:false});
-  res.set("Cache-Control","no-store").json({ok:true,productId:product.id,localCode:product.localCode,...result});
+  const credentialShop=String(process.env.AIONE_RAKUTEN_SHOP_REF||"").trim();
+  const shopBound=Boolean(credentialShop&&credentialShop===product.targetShopRef);
+  const hasSecrets=Boolean(process.env.AIONE_RAKUTEN_SERVICE_SECRET&&process.env.AIONE_RAKUTEN_LICENSE_KEY);
+  const result=rakutenFirstItemPreflight({product,skus:evaluatedSkus,assets:assets.rows,shopConfigured:shopBound&&hasSecrets});
+  res.set("Cache-Control","no-store").json({ok:true,productId:product.id,localCode:product.localCode,rmsConfiguration:{credentialShopBound:shopBound,credentialsPresent:hasSecrets,readyForRead:shopBound&&hasSecrets},...result});
  }catch(error){next(error)}
 });
 router.get("/integrations/rakuten/products/:productRef/remote-existence",async(req,res,next)=>{
