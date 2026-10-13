@@ -6,6 +6,7 @@ import {getManualProduct} from "../services/product-manual-entry-service.js";
 import {rakutenFirstItemPreflight} from "../services/rakuten-itemapi-preflight.js";
 import {firstItemV25Policy} from "../services/rakuten-v25-first-item-contract.js";
 import {buildRakutenFirstItemCandidate} from "../services/rakuten-first-item-candidate.js";
+import {previewRakutenItemV2} from "../services/rakuten-itemapi2-payload-preview.js";
 import {getRakutenCanonicalPackReadiness} from "../services/rakuten-canonical-publish-service.js";
 const router=Router();
 router.get("/integrations/rakuten/products/:productRef/shipping-options",async(req,res,next)=>{
@@ -34,6 +35,29 @@ router.get("/integrations/rakuten/products/:productRef/genre-attributes",async(r
   res.set("Cache-Control","no-store").json({ok:true,productId:product.id,shopRef:product.targetShopRef,
     genreId,genreName:result.genre.nameJa,lowest:true,version:result.version||null,definitions,
     mandatoryCount:definitions.filter(x=>x.mandatory).length,notice:"Read-only genre metadata; attributes and shipping must be validated before ItemAPI writes."});
+ }catch(error){next(error)}
+});
+
+router.get("/integrations/rakuten/products/:productRef/itemapi-payload-preview",async(req,res,next)=>{
+ try{
+  const {product,skus}=await getManualProduct(String(req.params.productRef||""));
+  if(product.targetShopRef!==String(process.env.AIONE_RAKUTEN_SHOP_REF||"").trim())
+    return res.status(403).json({error:"rakuten_shop_binding_mismatch"});
+  const q=await pool.query(
+   "SELECT pa.id AS asset_id,pa.asset_role,pa.sku_id,cam.external_asset_id,cam.lifecycle_status AS mapping_status,cam.external_path FROM public.product_assets pa LEFT JOIN public.channel_asset_mappings cam ON cam.asset_id=pa.id AND cam.channel='rakuten' AND cam.shop_ref=$2 AND cam.archived_at IS NULL WHERE pa.product_id=$1 AND pa.archived_at IS NULL ORDER BY pa.asset_no",
+   [product.id,product.targetShopRef]);
+  const assets=q.rows.map(a=>({...a,location:a.external_path?"/cabinet/rkc001/"+String(a.external_path).split("/").at(-1):null}));
+  const [g,sh]=await Promise.allSettled([
+    product.rakutenGenreId?getGenreAttributesV2({shopRef:product.targetShopRef,genreId:product.rakutenGenreId}):Promise.resolve(null),
+    getRakutenShopPublishingOptions()
+  ]);
+  const genre=g.status==="fulfilled"&&g.value?{...g.value.genre,genreId:String(g.value.genre.genreId)}:null;
+  const shipping=sh.status==="fulfilled"?sh.value:null;
+  const result=previewRakutenItemV2({product,skus,assets,genre,shipping});
+  const blocking=[...result.blocking];
+  if(g.status==="rejected")blocking.push("genre_api:"+String(g.reason?.code||"unverified"));
+  if(sh.status==="rejected")blocking.push("shop_shipping_api:"+String(sh.reason?.code||"unverified"));
+  res.set("Cache-Control","no-store").json({...result,blocking:[...new Set(blocking)],readyForLiveCreate:!blocking.length});
  }catch(error){next(error)}
 });
 
