@@ -1,4 +1,5 @@
 import {buildSkuEntries} from "./product-entry-contract.js";
+import {matchPersistedSkuByAttributes} from "../../../js/services/product-sku-image-identity.js";
 
 // The candidate is evidence-oriented, not an automatic publication approval.
 // It deliberately refuses invented shipping IDs, image paths, or genre values.
@@ -18,13 +19,14 @@ export function buildRakutenFirstItemCandidate({product,skus=[],mappedImages=[],
  if(skus.length!==2||assignments.length!==2)fail("pilot_two_skus_required");
  const selector=product?.specs?.[0];
  if(product?.specs?.length!==1||!txt(selector?.name)||selector?.values?.length!==2)fail("pilot_selector_contract_unverified");
- const skusByCode=new Map(skus.map(s=>[txt(s.sku_code),s]));
+ const resolvedSkus=assignments.map(a=>matchPersistedSkuByAttributes(skus,a.attributes));
+ if(resolvedSkus.some(x=>!x)||new Set(resolvedSkus.filter(Boolean).map(x=>x.id)).size!==assignments.length)fail("persisted_sku_attributes_not_unique");
  const images=mappedImages.filter(x=>x.mapping_status==="active" && x.external_asset_id);
  if(images.length!==12 || new Set(images.map(x=>x.asset_id)).size!==12)fail("rakuten_12_cabinet_images_not_verified");
  const main=images.find(x=>x.asset_role==="source_main_image");
  if(!main)fail("rakuten_main_image_missing");
  if(images.filter(x=>x.asset_role==="source_sku_image").length!==2)fail("rakuten_two_sku_images_missing");
- const missingUrl=images.filter(x=>!/^\/?cabinet\//.test(txt(x.location)) && !/^https:\/\/image\.rakuten\.co\.jp\//.test(txt(x.location)));
+ const missingUrl=images.filter(x=>!/^\/cabinet\/[a-z0-9_/-]+\.(?:jpg|jpeg|png|gif)$/i.test(txt(x.location)));
  if(missingUrl.length)fail("rakuten_image_location_unverified");
  const options=shipping?.deliverySets||[];
  const selected=options.filter(x=>x.id===shipping?.deliverySetId);
@@ -38,11 +40,11 @@ export function buildRakutenFirstItemCandidate({product,skus=[],mappedImages=[],
   const raw=txt(genreValues[attr.nameJa]??genreValues[String(attr.id)]);
   if(!raw)fail("mandatory_attribute_missing:"+attr.id);
  }
- const variantIds=assignments.map((a,i)=>manageNumber+"-c"+String(i+1).padStart(2,"0"));
+ const variantIds=resolvedSkus.map(x=>x?.sku_code||null);
  for(let i=0;i<assignments.length;i++){
-  const persisted=skusByCode.get(variantIds[i]);
-  if(!persisted)fail("persisted_sku_identity_mismatch:"+variantIds[i]);
-  if(!images.some(x=>x.asset_role==="source_sku_image"&&x.sku_id===persisted?.id))fail("sku_image_mapping_missing:"+variantIds[i]);
+  const persisted=resolvedSkus[i];
+  if(!persisted)fail("persisted_sku_identity_unresolved:"+String(i+1));
+  if(!images.some(x=>x.asset_role==="source_sku_image"&&String(x.sku_id)===String(persisted?.id)))fail("sku_image_mapping_missing:"+String(persisted?.sku_code||i+1));
  }
  // ItemAPI expects explicit articleNumber information for each variant.
  // Do not borrow the historical exemption 5 without verifying its applicability.
