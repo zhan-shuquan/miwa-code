@@ -57,12 +57,12 @@ export async function prepareRakutenCabinetImage({ bytes, mimeType = "", convert
   if (!Buffer.isBuffer(bytes) || bytes.length < 16 || bytes.length > MAX_SOURCE_BYTES) {
     throw invalid("rakuten_image_source_invalid", "Source image is missing or exceeds 20 MB.");
   }
-  const source = await convert(["identify", "-ping", "-format", "%m %w %h\\n", "-"], bytes, 2048);
-  const lines = source.toString("utf8").trim().split(/\\r?\\n/);
+  const source = await convert(["identify", "-ping", "-format", "%m %w %h\n", "-"], bytes, 2048);
+  const lines = source.toString("utf8").trim().split(/\r?\n/);
   if (lines.length !== 1) {
     throw invalid("rakuten_image_multiframe_unsupported", "Animated or multi-page source image is not supported for this pilot.");
   }
-  const info = lines[0].match(/^([A-Za-z]+) (\\d+) (\\d+)$/);
+  const info = lines[0].match(/^([A-Za-z]+) (\d+) (\d+)$/);
   if (!info) throw invalid("rakuten_image_format_invalid", "Unable to determine source image format and dimensions.");
   const format = info[1].toUpperCase(), width = Number(info[2]), height = Number(info[3]);
   if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1 || width > 10000 || height > 10000) {
@@ -85,8 +85,8 @@ export async function prepareRakutenCabinetImage({ bytes, mimeType = "", convert
         "-quality", String(quality), "jpeg:-"], bytes, CABINET_IMAGE_LIMITS.maxBytes + 1024);
       if (converted.length > 16 && converted.length <= CABINET_IMAGE_LIMITS.maxBytes
           && converted[0] === 0xff && converted[1] === 0xd8 && converted[2] === 0xff) {
-        const output = await convert(["identify", "-ping", "-format", "%m %w %h\\n", "-"], converted, 2048);
-        const dimensions = output.toString("utf8").trim().match(/^JPEG (\\d+) (\\d+)$/);
+        const output = await convert(["identify", "-ping", "-format", "%m %w %h\n", "-"], converted, 2048);
+        const dimensions = output.toString("utf8").trim().match(/^JPEG (\d+) (\d+)$/);
         const w = Number(dimensions?.[1]), h = Number(dimensions?.[2]);
         if (w > 0 && h > 0 && w <= 1600 && h <= 1200) {
           return { bytes: converted, mimeType: "image/jpeg", width: w, height: h,
