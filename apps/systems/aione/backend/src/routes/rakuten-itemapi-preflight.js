@@ -1,5 +1,5 @@
 import {Router} from "express";
-import {getItemV2ReadOnly} from "../integrations/rakuten-rms-client.js";
+import {getItemV2ReadOnly,getRakutenShopPublishingOptions} from "../integrations/rakuten-rms-client.js";
 import {getGenreAttributesV2} from "../integrations/rakuten-commerce-client.js";
 import pool from "../../db.js";
 import {getManualProduct} from "../services/product-manual-entry-service.js";
@@ -7,6 +7,17 @@ import {rakutenFirstItemPreflight} from "../services/rakuten-itemapi-preflight.j
 import {firstItemV25Policy} from "../services/rakuten-v25-first-item-contract.js";
 import {getRakutenCanonicalPackReadiness} from "../services/rakuten-canonical-publish-service.js";
 const router=Router();
+router.get("/integrations/rakuten/products/:productRef/shipping-options",async(req,res,next)=>{
+ try {
+  const {product}=await getManualProduct(String(req.params.productRef||""));
+  if(product.targetShopRef!==String(process.env.AIONE_RAKUTEN_SHOP_REF||"").trim())
+   return res.status(403).json({error:"rakuten_shop_binding_mismatch"});
+  const options=await getRakutenShopPublishingOptions();
+  res.set("Cache-Control","no-store").json({ok:true,shopRef:product.targetShopRef,productId:product.id,...options,
+   notice:"Read-only RMS shipping IDs; no ItemAPI write. Multiple options require an explicit verified choice."});
+ }catch(error){next(error)}
+});
+
 router.get("/integrations/rakuten/products/:productRef/genre-attributes",async(req,res,next)=>{
  try{
   const {product}=await getManualProduct(String(req.params.productRef||""));
