@@ -36,6 +36,9 @@ on:
       - apps/systems/aione/backend/src/routes/integrations-rakuten.js
       - apps/systems/aione/backend/src/routes/rakuten-canonical-publish.js
       - apps/systems/aione/backend/src/integrations/rakuten-cabinet-upload.js
+      - apps/systems/aione/backend/src/integrations/rakuten-rms-client.js
+      - apps/systems/aione/backend/src/services/rakuten-cabinet-reconciliation.js
+      - apps/systems/aione/backend/scripts/test-rakuten-cabinet-reconciliation.js
       - apps/systems/aione/backend/src/integrations/rakuten-cabinet-image.js
       - apps/systems/aione/backend/src/services/rakuten-canonical-publish-service.js
       - apps/systems/aione/backend/scripts/test-rakuten-cabinet-upload-contract.js
@@ -105,6 +108,9 @@ jobs:
           node --check apps/systems/aione/backend/src/routes/integrations-rakuten.js
           node --check apps/systems/aione/backend/src/routes/rakuten-canonical-publish.js
           node --check apps/systems/aione/backend/src/integrations/rakuten-cabinet-upload.js
+          node --check apps/systems/aione/backend/src/integrations/rakuten-rms-client.js
+          node --check apps/systems/aione/backend/src/services/rakuten-cabinet-reconciliation.js
+          node --check apps/systems/aione/backend/scripts/test-rakuten-cabinet-reconciliation.js
           node --check apps/systems/aione/backend/src/integrations/rakuten-cabinet-image.js
           node --check apps/systems/aione/backend/src/services/rakuten-canonical-publish-service.js
           node --check apps/systems/aione/backend/scripts/test-rakuten-cabinet-upload-contract.js
@@ -143,6 +149,9 @@ jobs:
         run: node apps/systems/aione/js/services/product-sku-image-identity.test.js
       - name: Verify zjl238 Cabinet pilot workflow (mocked, no RMS writes)
         run: node apps/systems/aione/js/services/rakuten-pilot-publish.test.js
+      - name: Verify Cabinet read-only reconciliation parser
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-rakuten-cabinet-reconciliation.js
       - name: Verify Cabinet upload XML and fail-closed response (mocked)
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-cabinet-upload-contract.js
