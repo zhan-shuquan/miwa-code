@@ -26,6 +26,10 @@ router.get("/product-assets/products/:productId/rakuten-pack", async (req, res, 
 
 router.post("/integrations/rakuten/products/:productId/cabinet/publish-canonical", requireWriteActor, async (req, res, next) => {
   try {
+    const requestedShop = cleanText(req.body?.shopRef, 240);
+    if (!process.env.AIONE_RAKUTEN_SHOP_REF || requestedShop !== process.env.AIONE_RAKUTEN_SHOP_REF) {
+      return res.status(403).json({ error: "rakuten_shop_binding_mismatch" });
+    }
     const result = await publishRakutenCanonicalPack({
       productId: cleanText(req.params.productId, 240),
       shopRef: cleanText(req.body?.shopRef, 240),

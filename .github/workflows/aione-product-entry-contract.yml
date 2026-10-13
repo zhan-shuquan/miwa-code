@@ -31,6 +31,10 @@ on:
       - apps/systems/aione/js/services/product-sku-image-identity.js
       - apps/systems/aione/js/services/product-sku-image-identity.test.js
       - apps/systems/aione/js/pages/product-manual-entry.js
+      - apps/systems/aione/js/services/rakuten-pilot-publish.js
+      - apps/systems/aione/js/services/rakuten-pilot-publish.test.js
+      - apps/systems/aione/backend/src/routes/integrations-rakuten.js
+      - apps/systems/aione/backend/src/routes/rakuten-canonical-publish.js
       - apps/systems/aione/js/pages/product-home-current.js
       - apps/systems/aione/backend/server.js
       - .github/workflows/aione-product-entry-contract.yml
@@ -92,6 +96,10 @@ jobs:
           node --check apps/systems/aione/js/services/product-sku-image-identity.js
           node --check apps/systems/aione/js/services/product-sku-image-identity.test.js
           node --check apps/systems/aione/js/pages/product-manual-entry.js
+          node --check apps/systems/aione/js/services/rakuten-pilot-publish.js
+          node --check apps/systems/aione/js/services/rakuten-pilot-publish.test.js
+          node --check apps/systems/aione/backend/src/routes/integrations-rakuten.js
+          node --check apps/systems/aione/backend/src/routes/rakuten-canonical-publish.js
           node --check apps/systems/aione/js/pages/product-home-current.js
           node --check apps/systems/aione/backend/server.js
       - name: Initialize disposable CURRENT SQL baseline
@@ -125,6 +133,8 @@ jobs:
           if (!(Test-Path (Join-Path $folder 'zjl238_01.png'))) { throw 'Original image was modified.' }
       - name: Validate product SKU image identity mapping
         run: node apps/systems/aione/js/services/product-sku-image-identity.test.js
+      - name: Verify zjl238 Cabinet pilot workflow (mocked, no RMS writes)
+        run: node apps/systems/aione/js/services/rakuten-pilot-publish.test.js
       - name: Verify store-safe ItemAPI GET
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-itemapi-get.js

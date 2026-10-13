@@ -146,6 +146,10 @@ router.post("/cabinet/folders/ensure", requireWriteActor, async (req, res, next)
       });
     }
 
+    // The legacy folder endpoint must not send requests to another RMS shop.
+    if (!process.env.AIONE_RAKUTEN_SHOP_REF || shopRef !== process.env.AIONE_RAKUTEN_SHOP_REF) {
+      return res.status(403).json({ error: "rakuten_shop_binding_mismatch" });
+    }
     const result = await ensureRakutenFolder({
       shopRef,
       containerCode,
