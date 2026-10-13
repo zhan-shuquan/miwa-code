@@ -1,4 +1,5 @@
 import { Router } from "express";
+import {randomUUID} from "node:crypto";
 import pool from "../../db.js";
 import { requireWriteActor } from "../http/context.js";
 import {
@@ -112,6 +113,26 @@ router.get("/cabinet/folders", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+// Initialize only the current credential-bound shop's canonical Cabinet container.
+// This creates local configuration, not a remote folder or an image upload.
+router.post("/cabinet/containers/bootstrap",requireWriteActor,async(req,res,next)=>{
+ try{
+  const shopRef=cleanText(req.body?.shopRef,240);
+  const code=cleanText(req.body?.containerCode||"rkc001",120).toLowerCase();
+  if(!shopRef||!/^rkc[0-9]{3,}$/.test(code))return res.status(400).json({error:"invalid_cabinet_container"});
+  if(!process.env.AIONE_RAKUTEN_SHOP_REF||shopRef!==process.env.AIONE_RAKUTEN_SHOP_REF){
+   return res.status(403).json({error:"rakuten_shop_binding_mismatch"});
+  }
+  const result=await pool.query(`INSERT INTO public.channel_asset_containers
+   (id,channel,shop_ref,container_code,lifecycle_status,metadata,source_system)
+   VALUES($1,'rakuten',$2,$3,'active','{}'::jsonb,'aione-rakuten-container-bootstrap')
+   ON CONFLICT(channel,shop_ref,container_code) DO UPDATE SET updated_at=public.channel_asset_containers.updated_at
+   RETURNING id,shop_ref,container_code,lifecycle_status,metadata`,["ctr_"+randomUUID(),shopRef,code]);
+  const c=result.rows[0];
+  res.json({ok:true,shopRef:c.shop_ref,containerCode:c.container_code,containerId:c.id,active:c.lifecycle_status==="active",folderConfigured:Boolean(c.metadata?.rakutenFolderId),notice:"Only local container mapping initialized. Use existing folder ensure endpoint separately."});
+ }catch(error){next(error)}
 });
 
 router.post("/cabinet/folders/ensure", requireWriteActor, async (req, res, next) => {
