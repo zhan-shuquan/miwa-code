@@ -1,11 +1,30 @@
 import {Router} from "express";
 import {getItemV2ReadOnly} from "../integrations/rakuten-rms-client.js";
+import {getGenreAttributesV2} from "../integrations/rakuten-commerce-client.js";
 import pool from "../../db.js";
 import {getManualProduct} from "../services/product-manual-entry-service.js";
 import {rakutenFirstItemPreflight} from "../services/rakuten-itemapi-preflight.js";
 import {firstItemV25Policy} from "../services/rakuten-v25-first-item-contract.js";
 import {getRakutenCanonicalPackReadiness} from "../services/rakuten-canonical-publish-service.js";
 const router=Router();
+router.get("/integrations/rakuten/products/:productRef/genre-attributes",async(req,res,next)=>{
+ try{
+  const {product}=await getManualProduct(String(req.params.productRef||""));
+  const genreId=String(product.rakutenGenreId||"").trim();
+  if(!genreId)return res.status(409).json({error:"rakuten_genre_id_missing",message:"Please save a verified leaf genre ID before checking attributes."});
+  const result=await getGenreAttributesV2({shopRef:product.targetShopRef,genreId});
+  const definitions=result.genre.attributes.map(attr=>({
+   id:attr.id,nameJa:attr.nameJa,type:attr.dataType,unit:attr.unit||null,
+   mandatory:Boolean(attr.properties?.rmsMandatoryFlg),
+   inputMethod:attr.properties?.rmsInputMethod||null,
+   skuUnified:Boolean(attr.properties?.rmsSkuUnifyFlg)
+  }));
+  res.set("Cache-Control","no-store").json({ok:true,productId:product.id,shopRef:product.targetShopRef,
+    genreId,genreName:result.genre.nameJa,lowest:true,version:result.version||null,definitions,
+    mandatoryCount:definitions.filter(x=>x.mandatory).length,notice:"Read-only genre metadata; attributes and shipping must be validated before ItemAPI writes."});
+ }catch(error){next(error)}
+});
+
 router.get("/integrations/rakuten/products/:productRef/itemapi-preflight",async(req,res,next)=>{
  try{
   const {product,skus}=await getManualProduct(String(req.params.productRef||""));
