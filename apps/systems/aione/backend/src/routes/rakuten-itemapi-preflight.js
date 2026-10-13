@@ -6,7 +6,6 @@ import {getManualProduct} from "../services/product-manual-entry-service.js";
 import {rakutenFirstItemPreflight} from "../services/rakuten-itemapi-preflight.js";
 import {firstItemV25Policy} from "../services/rakuten-v25-first-item-contract.js";
 import {buildRakutenFirstItemCandidate} from "../services/rakuten-first-item-candidate.js";
-import {buildRakutenSafeFilePath} from "../integrations/rakuten-cabinet-upload.js";
 import {getRakutenCanonicalPackReadiness} from "../services/rakuten-canonical-publish-service.js";
 const router=Router();
 router.get("/integrations/rakuten/products/:productRef/shipping-options",async(req,res,next)=>{
