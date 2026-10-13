@@ -58,7 +58,7 @@ function numericOrNull(value) {
 function assertRakutenSuccess(xml) {
   const systemStatus = xmlText(xml, "systemStatus");
   const resultCode = xmlText(xml, "resultCode");
-  if ((systemStatus && systemStatus !== "OK") || (resultCode && resultCode !== "0")) {
+  if ((systemStatus && systemStatus !== "OK") || (resultCode && resultCode !== "0" && resultCode !== "N000")) {
     const error = new Error(`Rakuten RMS API returned systemStatus=${systemStatus || "unknown"}, resultCode=${resultCode || "unknown"}.`);
     error.statusCode = 502;
     error.code = "rakuten_rms_result_error";
@@ -288,10 +288,30 @@ export function parseRakutenShopPublishingOptions(deliveryXml, leadTimeXml) {
   return {deliverySets,deliveryDates,
     defaultDeliverySetId:deliverySets.filter(x=>x.default).length===1?deliverySets.find(x=>x.default).id:null};
 }
-export async function getRakutenShopPublishingOptions() {
-  const [delivery,dates]=await Promise.all([
-    rmsFetch("/shop/deliverySetInfo",{method:"GET"}),
-    rmsFetch("/shop/delvdateMaster",{method:"GET"})
-  ]);
-  return parseRakutenShopPublishingOptions(delivery,dates);
+export async function getRakutenShopPublishingOptions({readShopXml=rmsFetch}={}) {
+  // Inspect the two independent RMS reads separately. Never hide 403/404/500 as
+  // a generic 'shipping missing' error or claim a guessed shop configuration.
+  const endpoints=[
+    {key:"delivery_set",url:"/shop/deliverySetInfo"},
+    {key:"delivery_date",url:"/shop/delvdateMaster"}
+  ];
+  const results=await Promise.allSettled(endpoints.map(x=>readShopXml(x.url,{method:"GET"})));
+  const failureIndex=results.findIndex(x=>x.status==="rejected");
+  if(failureIndex>=0){
+    const reason=results[failureIndex].reason;
+    const error=new Error("Rakuten ShopAPI "+endpoints[failureIndex].key+" read failed.");
+    error.statusCode=reason?.statusCode||502;
+    error.code="rakuten_shipping_"+endpoints[failureIndex].key+"_read_failed";
+    error.rakutenStatus=reason?.rakutenStatus||undefined;
+    error.remoteCode=reason?.remoteCode||undefined;
+    throw error;
+  }
+  try {
+    return parseRakutenShopPublishingOptions(results[0].value,results[1].value);
+  } catch(reason) {
+    const error=new Error("Rakuten ShopAPI returned incomplete or ambiguous shipping data.");
+    error.statusCode=reason?.statusCode||409;
+    error.code=reason?.code||"rakuten_shipping_options_invalid";
+    throw error;
+  }
 }
