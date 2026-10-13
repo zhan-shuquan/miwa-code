@@ -46,7 +46,7 @@ router.get("/integrations/rakuten/products/:productRef/itemapi-payload-preview",
   const q=await pool.query(
    "SELECT pa.id AS asset_id,pa.asset_role,pa.sku_id,cam.external_asset_id,cam.lifecycle_status AS mapping_status,cam.external_path FROM public.product_assets pa LEFT JOIN public.channel_asset_mappings cam ON cam.asset_id=pa.id AND cam.channel='rakuten' AND cam.shop_ref=$2 AND cam.archived_at IS NULL WHERE pa.product_id=$1 AND pa.archived_at IS NULL ORDER BY pa.asset_no",
    [product.id,product.targetShopRef]);
-  const assets=q.rows.map(a=>({...a,location:a.external_path?"rkc001/"+String(a.external_path).split("/").at(-1):null}));
+  const assets=q.rows.map(a=>({...a,location:a.external_path?"/rkc001/"+String(a.external_path).split("/").at(-1):null}));
   const [g,sh]=await Promise.allSettled([
     product.rakutenGenreId?getGenreAttributesV2({shopRef:product.targetShopRef,genreId:product.rakutenGenreId}):Promise.resolve(null),
     getRakutenShopPublishingOptions()
