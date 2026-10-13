@@ -5,12 +5,12 @@ import { insertCabinetFile } from "../src/integrations/rakuten-cabinet-upload.js
 const sample = Buffer.concat([Buffer.from([0xff,0xd8,0xff]),Buffer.alloc(40)]);
 const prepared = await prepareRakutenCabinetImage({bytes:sample,mimeType:"image/jpeg",convert:async(args) => {
  assert.equal(args[0],"identify");
- return Buffer.from("JPEG 960 960\\n");
+ return Buffer.from("JPEG 960 960\n");
 }});
 assert.equal(prepared.converted,false);
 assert.strictEqual(prepared.bytes,sample);
 const png = await prepareRakutenCabinetImage({bytes:sample,mimeType:"image/png",convert:async(args) => {
- if(args[0]==="identify")return Buffer.from(args.at(-1)==="-"?"PNG 2000 1600\\n":"JPEG 1200 960\\n");
+ if(args[0]==="identify")return Buffer.from(args.at(-1)==="-"?"PNG 2000 1600\n":"JPEG 1200 960\n");
  throw Error("not expected");
 }}).catch(e=>e);
 assert.ok(png instanceof Error);
@@ -21,9 +21,9 @@ process.env.AIONE_RAKUTEN_SERVICE_SECRET="test-only";
 process.env.AIONE_RAKUTEN_LICENSE_KEY="test-only";
 try {
  const request=async(url,opts)=>{
-  assert.match(url,/cabinet\\/file\\/insert$/);
+  assert.match(url,/cabinet\/file\/insert$/);
   const xml=await opts.body.get("xml").text();
-  assert.match(xml,/<overWrite>false<\\/overWrite>/);
+  assert.match(xml,/<overWrite>false<\/overWrite>/);
   assert.doesNotMatch(xml,/<overwrite>/);
   const blob=opts.body.get("file");
   assert.equal(blob.type,"image/jpeg");
