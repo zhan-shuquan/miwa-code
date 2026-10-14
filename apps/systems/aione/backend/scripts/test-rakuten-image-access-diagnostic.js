@@ -1,0 +1,26 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {analyzeRmsImageReferences,probeRmsImageUrl,verifyRmsPublishedImageAccess} from "../src/services/rakuten-image-access-diagnostic.js";
+
+const base="https://image.rakuten.co.jp/global-dimensions/cabinet";
+const item={images:[{type:"CABINET",location:"/rkc001/a.jpg"}],variants:{"zjl238-04":{images:[{type:"CABINET",location:"/rkc001/b.jpg"}]}}};
+const cabinetFiles=[{fileId:10,filePath:"a.jpg",fileUrl:base+"/rkc001/a.jpg"},{fileId:20,filePath:"b.jpg",fileUrl:base+"/rkc001/b.jpg"}];
+const mappings=[{external_path:"a.jpg",external_asset_id:"10",mapping_status:"active"},{external_path:"b.jpg",external_asset_id:"20",mapping_status:"active"}];
+const ok=analyzeRmsImageReferences({item,cabinetFiles,mappings,expectedCount:2});
+assert.equal(ok.cabinetMatched,2);
+assert.deepEqual(ok.issues,[]);
+const bad=analyzeRmsImageReferences({item,cabinetFiles:[{...cabinetFiles[0],fileUrl:base+"/wrong/a.jpg"},cabinetFiles[1]],mappings,expectedCount:2});
+assert.ok(bad.issues.includes("provider_url_differs_from_itemapi:1"));
+const request=async(url,options)=>({status:206,headers:{get:()=> "image/jpeg"},body:{cancel:async()=>{}},method:options.method});
+assert.deepEqual((await probeRmsImageUrl(base+"/rkc001/a.jpg",{request})).ok,true);
+const blocked=await probeRmsImageUrl("https://evil.example.test/rkc001/a.jpg",{request});
+assert.equal(blocked.reason,"unsafe_or_invalid_image_url");
+const unknown=await probeRmsImageUrl(base+"/rkc001/a.jpg",{request:async()=>({status:404,headers:{get:()=> "text/html"},body:{cancel:async()=>{}}})});
+assert.equal(unknown.ok,false);
+const route=readFileSync(new URL("../src/routes/rakuten-itemapi-preflight.js",import.meta.url),"utf8");
+assert.ok(route.includes("verifyRmsPublishedImageAccess("));
+const frontend=readFileSync(new URL("../../js/pages/product-manual-entry.js",import.meta.url),"utf8");
+assert.ok(frontend.includes("imageVerification"));
+const service=readFileSync(new URL("../src/services/rakuten-image-access-diagnostic.js",import.meta.url),"utf8");
+assert.ok(!/\bputItemV2\b|\bputInventoryV2\b|UPDATE public|INSERT INTO public/.test(service));
+console.log("PASS Rakuten image integrity / public URL diagnostics (mock data, no RMS writes)");
