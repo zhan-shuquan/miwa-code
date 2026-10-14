@@ -64,7 +64,7 @@ router.get("/integrations/rakuten/products/:productRef/live-readback",async(req,
    title:item.title||null,genreId:item.genreId||null,
    skuRows,inventory,imageLocations,mainImageCount:imageLocations.length,
    listedImageCount:imageLocations.length+skuRows.reduce((n,r)=>n+r.skuImages.length,0),
-   salesVisibility:"not_independently_verified",skuDataVerified,imageVerification,checks:[...new Set(checks)],
+   readbackContract:"rakuten-zjl238-images-v2",salesVisibility:"not_independently_verified",skuDataVerified,imageVerification,checks:[...new Set(checks)],
    verified:checks.length===0,
    notice:"Independent RMS ItemAPI and InventoryAPI GET verification only. Storefront availability and detailed image appearance still require separate inspection."
   });

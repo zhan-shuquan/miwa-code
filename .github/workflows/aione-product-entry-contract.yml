@@ -41,6 +41,8 @@ on:
       - apps/systems/aione/backend/scripts/test-product-entry-current.js
       - apps/systems/aione/js/config/product-pricing-math.js
       - apps/systems/aione/js/config/product-pricing-math.test.js
+      - apps/systems/aione/js/services/rakuten-readback-acceptance.js
+      - apps/systems/aione/js/services/rakuten-readback-acceptance.test.js
       - apps/systems/aione/js/services/product-sku-image-identity.js
       - apps/systems/aione/js/services/product-sku-image-identity.test.js
       - apps/systems/aione/js/pages/product-manual-entry.js
@@ -129,6 +131,8 @@ jobs:
           node --check apps/systems/aione/backend/scripts/test-product-entry-current.js
           node --check apps/systems/aione/js/config/product-pricing-math.js
           node --check apps/systems/aione/js/config/product-pricing-math.test.js
+          node --check apps/systems/aione/js/services/rakuten-readback-acceptance.js
+          node --check apps/systems/aione/js/services/rakuten-readback-acceptance.test.js
           node --check apps/systems/aione/js/services/product-sku-image-identity.js
           node --check apps/systems/aione/js/services/product-sku-image-identity.test.js
           node --check apps/systems/aione/js/pages/product-manual-entry.js
@@ -205,6 +209,8 @@ jobs:
       - name: Verify RMS actual image file access without writes
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-image-access-diagnostic.js
+      - name: Reject stale or incomplete RMS readback responses
+        run: node apps/systems/aione/js/services/rakuten-readback-acceptance.test.js
       - name: Verify independent RMS GET-only reconciliation contract
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-live-readback-contract.js
