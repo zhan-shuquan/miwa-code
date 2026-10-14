@@ -16,7 +16,7 @@ router.get("/integrations/rakuten/products/:productRef/live-create-review",async
 });
 router.post("/integrations/rakuten/products/:productRef/live-create",requireWriteActor,async(req,res,next)=>{
  try {
-  const result=await publishFirstLive(req.params.productRef,{digest:req.body?.digest,confirmation:req.body?.confirmation,actor:req.aioneContext});
+  const result=await publishFirstLive(req.params.productRef,{digest:req.body?.digest,confirmation:req.body?.confirmation,skuAcknowledgementKey:req.body?.skuAcknowledgementKey,actor:req.aioneContext});
   res.set("Cache-Control","no-store").status(result.ok?200:207).json(result);
  }catch(e){next(e)}
 });
