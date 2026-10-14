@@ -8,7 +8,7 @@ import {
 } from "../src/services/product-entry-contract.js";
 import {
   assertCurrentProductEntrySchema, saveManualProduct, listManualProducts,
-  getManualProduct, previewImportProducts, importManualProducts
+  getManualProduct, previewImportProducts, importManualProducts, applyApprovedZjl238RakutenDraft, approvedZjl238MissingFields
 } from "../src/services/product-manual-entry-service.js";
 
 async function expectCode(fn, code) {
@@ -34,6 +34,7 @@ async function run(){
   assert.equal(fixture.sourceKind,"wps-single");
   assert.equal(fixture.items.length,1);
   const original=fixture.items[0];
+  original.targetShopRef="永井GD"; // explicit owner-approved pilot shop fixture
   assert.equal(original.localCode,"zjl238");
   assert.equal(original.nameZh,"户外水龙头防冻罩");
   const detailed=normalizeProductEntry({...original,material:"EVA",productSpecifications:"长度约26cm；厚度约2cm"});
@@ -179,6 +180,16 @@ async function run(){
   const parsed=await parseProductEntryWorkbook(e,"roundtrip.xlsx");
   assert.equal(parsed.items[0].salePriceJpy,1080);
 
+  // Approved zjl238 pilot must only fill empty Rakuten fields, never alter SKU
+  // identity, catalogue assets or overwrite a manually supplied title.
+  const pilot=normalizeProductEntry({...original,localCode:"zjl238",targetShopRef:"永井GD",rakutenTitle:"",rakutenGenreId:""});
+  const pilotDraft=await saveManualProduct(pilot,{personId:"ci"},{createOnly:true}).catch(err=>err);
+  assert.equal(pilotDraft.code,"product_exists","do not duplicate the existing pilot product");
+  const override=approvedZjl238MissingFields({...pilot,targetShopRef:"永井GD"});
+  assert.deepEqual(Object.keys(override).sort(),["rakutenGenreId","rakutenTitle"]);
+  assert.deepEqual(approvedZjl238MissingFields({...pilot,rakutenTitle:"手動商品名",rakutenGenreId:"565305"}),{});
+  await expectCode(async()=>approvedZjl238MissingFields({...pilot,targetShopRef:"PrimeLife"}),"rakuten_pilot_product_mismatch");
+  await expectCode(()=>applyApprovedZjl238RakutenDraft(added.product.id,{personId:"ci"},999),"product_version_conflict");
   const second=normalizeProductEntry({...original,localCode:"zjl239",autoPublish:"否"});
   const batch=await importManualProducts([original,second],{personId:"ci",sourceSystem:"controlled-ci"});
   assert.equal(batch.successCount,1);

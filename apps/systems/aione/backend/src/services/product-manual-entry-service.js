@@ -339,3 +339,84 @@ export async function importManualProducts(items, context={}) {
   }
   return {results,successCount:results.filter(x=>x.ok).length,failedCount:results.filter(x=>!x.ok).length};
 }
+
+/**
+ * Owner-approved first live Rakuten pilot draft, 2026-10-14.
+ * This is a narrowly scoped ONE-TIME data completion for zjl238 in 永井GD,
+ * not general AI auto-copy, and never a claim that the genre is RMS-verified.
+ * The permanent object remains products.metadata.manualEntry.
+ */
+export const APPROVED_ZJL238_RAKUTEN_DRAFT = Object.freeze({
+  localCode: "zjl238",
+  targetShopRef: "永井GD",
+  rakutenTitle: "蛇口 凍結防止カバー 屋外 水栓 保温 防寒 水道管 凍結対策 1個 2個セット",
+  rakutenGenreId: "565305"
+});
+
+export function approvedZjl238MissingFields(current) {
+  const approved=APPROVED_ZJL238_RAKUTEN_DRAFT;
+  if(current?.localCode!==approved.localCode || current?.targetShopRef!==approved.targetShopRef) {
+    throw error("rakuten_pilot_product_mismatch","仅允许给永井GD的 zjl238 草稿补齐已确认字段。",403);
+  }
+  const patch={};
+  for(const key of ["rakutenTitle","rakutenGenreId"]) {
+    // Never overwrite existing or concurrent manual values.
+    if(!String(current[key]??"").trim()) patch[key]=approved[key];
+  }
+  return patch;
+}
+
+export async function applyApprovedZjl238RakutenDraft(productRef, context={}, expectedVersion) {
+  const expected=Number(expectedVersion);
+  if(!Number.isSafeInteger(expected)||expected<1) {
+    throw error("version_required","自动补全必须提供当前商品草稿版本。",400);
+  }
+  return withTransaction(async client=>{
+    const shape=await assertCurrentProductEntrySchema(client);
+    const found=await client.query(
+      "SELECT "+productFields(shape)+" FROM public.products WHERE id::text=$1 FOR UPDATE",
+      [String(productRef)]
+    );
+    if(!found.rowCount)throw error("product_not_found","未找到要补全的商品草稿。",404);
+    const row=found.rows[0],current=metadataOf(row);
+    if(!current)throw error("product_not_in_manual_entry","商品不属于现有AIONE单品录入对象。",409);
+    const patch=approvedZjl238MissingFields(current);
+    if(row.entry_lifecycle!=="draft")throw error("product_not_draft","非草稿商品不允许自动修改。",409);
+    const version=Number(row.metadata.manualEntryVersion||1);
+    if(version!==expected)throw error("product_version_conflict","商品版本已变化，请重新打开后再核对。",409);
+    const fields=Object.keys(patch);
+    if(!fields.length) {
+      return {ok:true,applied:false,fields:[],genreVerification:"pending_rms",
+        product:unwrap(row)};
+    }
+    const nextManual={...current,...patch};
+    const nextMetadata={
+      ...row.metadata,
+      manualEntry:nextManual,
+      manualEntryVersion:version+1,
+      rakutenDraftSuggestionAudit:{
+        source:"owner_approved_2026_10_14",
+        productLocalCode:APPROVED_ZJL238_RAKUTEN_DRAFT.localCode,
+        shopRef:APPROVED_ZJL238_RAKUTEN_DRAFT.targetShopRef,
+        fields,
+        genreVerification:"pending_rms",
+        actorPersonId:context.personId||null,
+        savedAt:new Date().toISOString()
+      }
+    };
+    if(shape.variant==="existing-lifecycle") {
+      await client.query(
+        "UPDATE public.products SET metadata=$2::jsonb,updated_at=NOW(),record_version=record_version+1 WHERE id=$1",
+        [row.id,JSON.stringify(nextMetadata)]
+      );
+    } else {
+      await client.query(
+        "UPDATE public.products SET metadata=$2::jsonb,name_ja=$3,updated_at=NOW() WHERE id=$1",
+        [row.id,JSON.stringify(nextMetadata),nextManual.rakutenTitle]
+      );
+    }
+    // No product_skus, product_assets, channel mappings, ItemAPI or InventoryAPI writes.
+    return {ok:true,applied:true,fields,genreVerification:"pending_rms",
+      product:{...unwrap(row),...patch,version:version+1}};
+  });
+}
