@@ -194,16 +194,16 @@ host.addEventListener("click",async event=>{
  if(!event.target.closest("[data-itemapi-candidate]")||candidateState.loading||!isRakutenPilotProduct(p))return;
  candidateState.loading=true;candidateState.message="正在读取乐天分类、配送和商品候选数据…";display();
  try{
-  const result=await aioneApi("/api/v1/integrations/rakuten/products/"+encodeURIComponent(p.id)+"/itemapi-candidate");
+  const [result,preview]=await Promise.all([aioneApi("/api/v1/integrations/rakuten/products/"+encodeURIComponent(p.id)+"/itemapi-candidate"),aioneApi("/api/v1/integrations/rakuten/products/"+encodeURIComponent(p.id)+"/itemapi-payload-preview")]);
   candidateState.result=result;
-  const missing=(result.blocking||[]);
+  const missing=[...new Set([...(result.blocking||[]),...(preview.blocking||[])])];
   const sets=result.verifiedShippingOptions?.deliverySets||[];
   const dates=result.verifiedShippingOptions?.deliveryDates||[];
-  candidateState.message="商品 "+result.manageNumber+"｜SKU "+result.skuCount+"｜图片 "+result.imageCount+
+  candidateState.message="正式JSON预览 "+(preview.readyForLiveCreate?"字段就绪，仍需发布确认":"字段尚未齐备")+"｜商品 "+result.manageNumber+"｜SKU "+result.skuCount+"｜图片 "+result.imageCount+
    "｜分类元数据 "+(result.genreMetadataLoaded?"已读取":"未确认")+"｜配送元数据 "+(result.shippingMetadataLoaded?"已读取":"未确认")+
    "｜配送组 "+(sets.map(x=>x.id+":"+x.name).join("、")||"未返回")+
    "｜交期编号 "+(dates.map(x=>x.id+":"+x.label).join("、")||"未返回")+
-   "｜剩余阻断项 "+(missing.join("、")||"无")+
+   "｜正式配送组 "+(preview.shippingOptions?.deliverySetId??"未选定")+"｜正式交期 "+(preview.shippingOptions?.normalDeliveryDateId??"未选定")+"｜剩余阻断项 "+(missing.join("、")||"无")+
    "。本项只是只读候选检查，尚未创建RMS商品。";
  }catch(error){candidateState.message="正式字段检查失败："+error.message;}
  finally{candidateState.loading=false;display();}
