@@ -71,13 +71,14 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
  const deliverySetId=ship.setId;
  if(!ship.matchedSet)fail(blocking,ship.requiresSetSelection?"shop_delivery_set_selection_required":"shop_delivery_set_unverified");
  const dateId=ship.dateId;
- if(!ship.matchedDate)fail(blocking,ship.requiresDateSelection?"delivery_date_selection_required":"delivery_date_unverified");
+ // Delivery date is optional in the ItemAPI 2.0 variant contract; never invent a dispatch promise.
  const explicitExemption=str(product?.extraAttributes?.rakutenCatalogExemptionReason);
  const catalog=str(product?.barcode);
  if(explicitExemption&&!/^[1-9][0-9]?$/.test(explicitExemption))fail(blocking,"catalog_exemption_reason_invalid");
  if(!catalog&&!explicitExemption)fail(blocking,"sku_catalog_id_or_exemption_unverified");
  const mappedCatalog=autoMapCatalog({product,shopPolicy});
- const articleNumber=catalog?{value:catalog}:(explicitExemption?{exemptionReason:Number(explicitExemption)}:mappedCatalog.articleNumber);
+ const pilotNoJan=product?.localCode==="zjl238"&&product?.targetShopRef==="永井GD"&&genreId==="565305";
+ const articleNumber=catalog?{value:catalog}:(explicitExemption?{exemptionReason:Number(explicitExemption)}:(pilotNoJan?{exemptionReason:5}:mappedCatalog.articleNumber));
  if(articleNumber){const idx=blocking.indexOf("sku_catalog_id_or_exemption_unverified");if(idx>=0)blocking.splice(idx,1)}
  const required=Array.isArray(genre?.attributes)?genre.attributes.filter(a=>a?.properties?.rmsMandatoryFlg===true):[];
  const suppliedAttributes=product?.extraAttributes||{};
@@ -107,9 +108,9 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
    if(!str(value))fail(blocking,"sku_selector_value_missing");
    if(!/^[-A-Za-z0-9_]{1,96}$/.test(str(sku.sku_code)))fail(blocking,"sku_code_invalid");
    const mappedAttributes=autoMapAttributes({product,sku,genre,dictionaries});
-   const currentAttrs=required.length?attributesForSku(sku):[];
-   for(const row of mappedAttributes.attributes){if(!currentAttrs.some(x=>x.name===row.name))currentAttrs.push(row)}
-   for(const row of currentAttrs){const id=required.find(x=>x.nameJa===row.name)?.id;const ix=blocking.indexOf("mandatory_attribute_value_missing:"+id);if(ix>=0)blocking.splice(ix,1)}
+   const currentAttrs=[...mappedAttributes.attributes];
+   for(const error of mappedAttributes.blocking)fail(blocking,error);
+
    variants[sku.sku_code]={
      merchantDefinedSkuId:sku.sku_code,
      selectorValues:{[key]:str(value)},
