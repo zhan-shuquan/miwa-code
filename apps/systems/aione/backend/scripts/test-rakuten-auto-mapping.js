@@ -15,4 +15,8 @@ assert.ok(unknown.blocking.includes("dispatch_sla_requires_shop_rule"));
 assert.equal(unknown.deliverySetId,null);
 assert.ok(autoMapCatalog({product}).blocking.length);
 assert.equal(autoMapCatalog({product,shopPolicy:{noJanExemptionVerified:true,noJanExemptionReason:5,applicableGenreIds:["565305"]}}).articleNumber.exemptionReason,5);
+const pilot={...product,localCode:"zjl238",targetShopRef:"永井GD",productModel:"",extraAttributes:{},rakutenGenreId:"565305"};
+const pilotMapped=autoMapAttributes({product:pilot,sku:{attributes:{}},genre,dictionaries:{}});
+assert.deepEqual(pilotMapped.attributes.map(x=>x.values[0]),["-","-"]);
+assert.deepEqual(pilotMapped.blocking,[]);
 console.log("PASS deterministic Rakuten mapping; uncertain facts blocked");
