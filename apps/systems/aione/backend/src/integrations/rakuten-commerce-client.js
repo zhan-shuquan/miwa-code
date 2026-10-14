@@ -77,3 +77,15 @@ export async function getGenreAttributesV2({shopRef,genreId,request=fetch}) {
   }
   return result.body;
 }
+
+
+export async function getAttributeDictionaryV2({shopRef,genreId,attributeId,page=1,request=fetch}) {
+ const genre=String(genreId||"").trim(),attribute=String(attributeId||"").trim();
+ if(!/^\d{5,12}$/.test(genre)||!/^\d{1,12}$/.test(attribute))throw fail("dictionary_identity_invalid","A valid genre and attribute ID are required.",400);
+ if(!Number.isSafeInteger(page)||page<1||page>50)throw fail("dictionary_page_invalid","Invalid dictionary page.",400);
+ const result=await jsonRequest({shopRef,path:"/navigation/genres/"+encodeURIComponent(genre)+"/attributes/"+encodeURIComponent(attribute)+"/dictionaryValues?page="+page+"&limit=100",request});
+ const attrs=result.body?.genre?.attributes;
+ if(!Array.isArray(attrs)||attrs.length!==1||String(attrs[0].id)!==attribute||!Array.isArray(attrs[0].dictionaryValues))
+  throw fail("dictionary_response_unverified","RMS did not return the expected attribute dictionary.",409);
+ return attrs[0].dictionaryValues.map(x=>({id:x.id,nameJa:String(x.nameJa||"").trim()})).filter(x=>x.nameJa);
+}

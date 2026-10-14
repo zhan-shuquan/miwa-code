@@ -15,6 +15,8 @@ on:
       - apps/systems/aione/backend/src/routes/product-assets.js
       - apps/systems/aione/backend/src/routes/rakuten-itemapi-preflight.js
       - apps/systems/aione/backend/src/services/rakuten-itemapi2-payload-preview.js
+      - apps/systems/aione/backend/src/services/rakuten-auto-mapping.js
+      - apps/systems/aione/backend/scripts/test-rakuten-auto-mapping.js
       - apps/systems/aione/backend/scripts/test-rakuten-itemapi2-payload-preview.js
       - apps/systems/aione/backend/src/integrations/rakuten-commerce-client.js
       - apps/systems/aione/backend/scripts/test-rakuten-commerce-client.js
@@ -94,6 +96,8 @@ jobs:
           node --check apps/systems/aione/backend/src/routes/product-assets.js
           node --check apps/systems/aione/backend/src/routes/rakuten-itemapi-preflight.js
           node --check apps/systems/aione/backend/src/services/rakuten-itemapi2-payload-preview.js
+          node --check apps/systems/aione/backend/src/services/rakuten-auto-mapping.js
+          node --check apps/systems/aione/backend/scripts/test-rakuten-auto-mapping.js
           node --check apps/systems/aione/backend/scripts/test-rakuten-itemapi2-payload-preview.js
           node --check apps/systems/aione/backend/src/integrations/rakuten-commerce-client.js
           node --check apps/systems/aione/backend/scripts/test-rakuten-commerce-client.js
@@ -181,6 +185,9 @@ jobs:
       - name: Verify ItemAPI2 read-only JSON preview
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-itemapi2-payload-preview.js
+      - name: Verify deterministic Rakuten source mapping
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-rakuten-auto-mapping.js
       - name: Verify store-safe ItemAPI GET
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-itemapi-get.js

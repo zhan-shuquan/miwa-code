@@ -1,6 +1,6 @@
 import {Router} from "express";
 import {getItemV2ReadOnly,getRakutenShopPublishingOptions} from "../integrations/rakuten-rms-client.js";
-import {getGenreAttributesV2} from "../integrations/rakuten-commerce-client.js";
+import {getGenreAttributesV2,getAttributeDictionaryV2} from "../integrations/rakuten-commerce-client.js";
 import pool from "../../db.js";
 import {getManualProduct} from "../services/product-manual-entry-service.js";
 import {rakutenFirstItemPreflight} from "../services/rakuten-itemapi-preflight.js";
@@ -53,8 +53,15 @@ router.get("/integrations/rakuten/products/:productRef/itemapi-payload-preview",
   ]);
   const genre=g.status==="fulfilled"&&g.value?{...g.value.genre,genreId:String(g.value.genre.genreId)}:null;
   const shipping=sh.status==="fulfilled"?sh.value:null;
-  const result=previewRakutenItemV2({product,skus,assets,genre,shipping});
-  const blocking=[...result.blocking];
+  const selective=(genre?.attributes||[]).filter(a=>a.properties?.rmsMandatoryFlg===true&&String(a.properties?.rmsInputMethod).toUpperCase()==="SELECTIVE");
+  const dictionaries={};
+  const dictionaryErrors=[];
+  for(const attribute of selective){
+    try{dictionaries[String(attribute.id)]=await getAttributeDictionaryV2({shopRef:product.targetShopRef,genreId:product.rakutenGenreId,attributeId:attribute.id});}
+    catch(error){dictionaryErrors.push("rms_attribute_dictionary_unverified:"+attribute.id+":"+String(error.code||"error"));}
+  }
+  const result=previewRakutenItemV2({product,skus,assets,genre,shipping,dictionaries});
+  const blocking=[...result.blocking,...dictionaryErrors];
   if(g.status==="rejected")blocking.push("genre_api:"+String(g.reason?.code||"unverified"));
   if(sh.status==="rejected")blocking.push("shop_shipping_api:"+String(sh.reason?.code||"unverified"));
   res.set("Cache-Control","no-store").json({...result,blocking:[...new Set(blocking)],readyForLiveCreate:!blocking.length});
