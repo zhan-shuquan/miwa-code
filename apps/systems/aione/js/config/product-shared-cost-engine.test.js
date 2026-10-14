@@ -45,6 +45,8 @@ assert.equal(measuredSku.ledger[0][2][3][1],1500);
 const sharedFeeChanged=structuredClone(params);sharedFeeChanged.shop.platformFeeRate=12;
 assert.equal(calculateProductCosts(p,null,sharedFeeChanged).platform,238);
 assert.equal(calculateProductCosts({...p,purchaseUnitCostCny:null},null,params).status,"unconfigured");
+assert.equal(calculateProductCosts({...p,setQuantity:0},null,params).status,"unconfigured");
+assert.equal(calculateProductCosts({...p,packagingMethod:"无效包装"},null,params).status,"unconfigured");
 for(const mode of Object.values(params.commerce.logistics)){
  const result=calculateProductCosts({...p,logisticsMethod:mode.name},null,params);
  assert.equal(result.status,"priced",mode.name);
