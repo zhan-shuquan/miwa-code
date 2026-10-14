@@ -7,7 +7,7 @@ export const FIELD_KEYS = Object.freeze([
   ["purchaseUnitCostCny", "采购单价(CNY)"], ["domesticFreightCny", "国内运费(CNY)"],
   ["setQuantity", "套装数量"], ["weightG", "重量(g)"], ["category", "商品分类"],
   ["brand", "所属品牌"], ["logisticsMethod", "物流方式"], ["packagingMethod", "包装方式"],
-  ["sizeClass", "发货尺寸"], ["packagingMaterial", "日本包装物"],
+  ["sizeClass", "发货尺寸"], ["packagingMaterial", "日本包装物"], ["customPackagingCostCny", "定制中国包装成本(CNY)"],
   ["packageLengthCm", "发货长(cm)"], ["packageWidthCm", "发货宽(cm)"],
   ["packageHeightCm", "发货高(cm)"], ["salePriceJpy", "实际售价(JPY)"],
   ["spec1Name", "规格1名称"], ["spec1Values", "规格1值"],
@@ -25,7 +25,7 @@ export const FIELD_KEYS = Object.freeze([
 ]);
 
 export const SKU_EXPORT_HEADERS = ["商品货号", "SKU序号", "售价覆盖(JPY)", "库存覆盖", "采购价覆盖(CNY)", "重量覆盖(g)", "发货尺寸覆盖", "SKU图片文件", "规格组合身份"];
-const NUMBERS = ["purchaseUnitCostCny", "domesticFreightCny", "setQuantity", "weightG", "actualShipmentWeightG", "packageLengthCm", "packageWidthCm", "packageHeightCm", "salePriceJpy"];
+const NUMBERS = ["purchaseUnitCostCny", "domesticFreightCny", "setQuantity", "weightG", "actualShipmentWeightG", "customPackagingCostCny", "packageLengthCm", "packageWidthCm", "packageHeightCm", "salePriceJpy"];
 const TEXTS = ["nameZh", "material", "productSpecifications", "purchaseUrl", "category", "brand", "logisticsMethod", "packagingMethod", "sizeClass", "packagingMaterial", "rakutenTitle", "rakutenCatchCopy", "rakutenGenreId", "rakutenNotice", "pcDescription", "spDescription", "salesDescription", "targetShopRef", "sourcePlatform", "originCountry", "rakutenStoreCategory", "materialComposition", "productModel", "barcode", "remarks", "sellingPointCore", "sellingPointMaterial", "sellingPointExperience", "sellingPointDesign", "sellingPointScene", "sellingPointOther"];
 const BAD_EXCEL_ERRORS = ["#REF!", "#VALUE!", "#N/A", "#DIV/0!", "#NAME?", "#NUM!"];
 
@@ -77,6 +77,8 @@ export function normalizeProductEntry(input = {}) {
   }
   p.logisticsMethod ||= "空运大件（普货）";
   p.packagingMethod ||= "原装";
+  if(!["原装","真空包装","重新包装","定制包装"].includes(p.packagingMethod))throw bad("invalid_packaging_method","包装方式必须采用新的四种类型");
+  if(p.packagingMethod==="定制包装"&&(p.customPackagingCostCny===null||p.customPackagingCostCny<0))throw bad("custom_packaging_cost_required","定制包装需要实际中国包装成本");
   p.packagingMaterial ||= "A4信封";
   p.originCountry ||= "中国";
   p.setQuantity ??= 1;
@@ -109,7 +111,7 @@ export function normalizeProductEntry(input = {}) {
   p.autoPublish = yes(input.autoPublish);
   if (!p.nameZh) throw bad("name_required", "商品名称不能为空。");
   if (p.salePriceJpy !== null && (!Number.isInteger(p.salePriceJpy) || p.salePriceJpy < 0)) throw bad("invalid_price", "实际售价必须是非负整数日元。");
-  for (const key of ["purchaseUnitCostCny", "domesticFreightCny", "weightG", "packageLengthCm", "packageWidthCm", "packageHeightCm"]) {
+  for (const key of ["purchaseUnitCostCny", "domesticFreightCny", "weightG", "customPackagingCostCny", "packageLengthCm", "packageWidthCm", "packageHeightCm"]) {
     if (p[key] !== null && p[key] < 0) throw bad("invalid_cost_or_size", key + "不能为负数。");
   }
   if (p.setQuantity !== null && (!Number.isInteger(p.setQuantity) || p.setQuantity < 1)) throw bad("invalid_set_quantity", "套装数量必须是正整数。");

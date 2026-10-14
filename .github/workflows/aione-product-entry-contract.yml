@@ -35,6 +35,15 @@ on:
       - apps/systems/aione/backend/scripts/test-rakuten-itemapi-preflight.js
       - apps/systems/aione/backend/src/routes/product-image-sync.js
       - apps/systems/aione/backend/scripts/test-product-image-name-current.js
+      - data-code/migrations/0110_p0_unified_shared_parameters.sql
+      - apps/systems/aione/js/config/shared-parameter-defaults.js
+      - apps/systems/aione/js/config/product-shared-cost-engine.js
+      - apps/systems/aione/js/config/product-shared-cost-engine.test.js
+      - apps/systems/aione/backend/src/services/shared-parameters-service.js
+      - apps/systems/aione/backend/src/routes/shared-parameters.js
+      - apps/systems/aione/backend/scripts/test-shared-parameters-contract.js
+      - apps/systems/aione/js/shell/system-settings.js
+      - apps/systems/aione/components/shell/settings/global-settings.html
       - apps/systems/aione/backend/src/services/product-entry-contract.js
       - apps/systems/aione/backend/src/services/product-manual-entry-service.js
       - apps/systems/aione/backend/src/routes/product-manual-entry.js
@@ -129,6 +138,13 @@ jobs:
           node --check apps/systems/aione/backend/src/services/product-manual-entry-service.js
           node --check apps/systems/aione/backend/src/routes/product-manual-entry.js
           node --check apps/systems/aione/backend/scripts/test-product-entry-current.js
+          node --check apps/systems/aione/js/config/shared-parameter-defaults.js
+          node --check apps/systems/aione/js/config/product-shared-cost-engine.js
+          node --check apps/systems/aione/js/config/product-shared-cost-engine.test.js
+          node --check apps/systems/aione/backend/src/services/shared-parameters-service.js
+          node --check apps/systems/aione/backend/src/routes/shared-parameters.js
+          node --check apps/systems/aione/backend/scripts/test-shared-parameters-contract.js
+          node --check apps/systems/aione/js/shell/system-settings.js
           node --check apps/systems/aione/js/config/product-pricing-math.js
           node --check apps/systems/aione/js/config/product-pricing-math.test.js
           node --check apps/systems/aione/js/services/rakuten-readback-acceptance.js
@@ -235,6 +251,10 @@ jobs:
       - name: Verify WebP display cache contract
         working-directory: apps/systems/aione/backend
         run: node scripts/test-product-image-webp.js
+      - name: Verify owner-approved shared parameters and all eight logistics tariffs
+        run: |
+          node apps/systems/aione/js/config/product-shared-cost-engine.test.js
+          node apps/systems/aione/backend/scripts/test-shared-parameters-contract.js
       - name: Validate actual break-even calculation
         run: node apps/systems/aione/js/config/product-pricing-math.test.js
       - name: Test Excel/WPS and CURRENT database roundtrip (no Rakuten)

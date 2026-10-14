@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import {INITIAL_PARAMETERS} from "../../js/config/shared-parameter-defaults.js";
+import {validateSharedParameters} from "../src/services/shared-parameters-service.js";
+const p=structuredClone(INITIAL_PARAMETERS);
+assert.equal(validateSharedParameters(p).commerce.logistics.air_direct_special.firstFeeCny,45);
+assert.equal(p.commerce.chinaPackagingCny["原装"],0);
+assert.equal(p.commerce.chinaPackagingCny["真空包装"],2);
+assert.equal(p.commerce.chinaPackagingCny["重新包装"],1);
+assert.equal(p.shop.advertisingRate,0);
+assert.equal(p.shop.pointRate,0);
+assert.throws(()=>validateSharedParameters({...p,commerce:{...p.commerce,logistics:{}}}));
+assert.throws(()=>validateSharedParameters({...p,common:{...p.common,cnyToJpyRate:0}}));
+console.log("PASS P0 authoritative parameters schema, eight delivery modes, no local fallback.");
