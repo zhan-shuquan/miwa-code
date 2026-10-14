@@ -1,15 +1,16 @@
 import pool from "../../db.js";
 import {getRakutenCanonicalPackReadiness} from "./rakuten-canonical-publish-service.js";
 import {getAllCabinetFolderFiles} from "../integrations/rakuten-rms-client.js";
+import {publicCabinetImageUrl} from "./rakuten-cabinet-image-location.js";
 
 const IMAGE_ORIGIN="https://image.rakuten.co.jp";
 const IMAGE_PREFIX="/global-dimensions/cabinet";
-const VALID_LOCATION=/^\/rkc001\/[a-z0-9_-]+\.(?:jpe?g|png|gif)$/i;
+const VALID_LOCATION=/^\/\d{1,20}\/[a-z0-9_-]+\.(?:jpe?g|png|gif)$/i;
 const code=x=>String(x??"").trim();
 
 function canonicalUrl(location){
  const path=code(location);
- return VALID_LOCATION.test(path)?IMAGE_ORIGIN+IMAGE_PREFIX+path:null;
+ return VALID_LOCATION.test(path)?publicCabinetImageUrl(path):null;
 }
 
 export function analyzeRmsImageReferences({item={},cabinetFiles=[],mappings=[],expectedCount=12}={}){
@@ -48,7 +49,7 @@ export function analyzeRmsImageReferences({item={},cabinetFiles=[],mappings=[],e
 }
 
 export async function probeRmsImageUrl(url,{request=fetch,timeoutMs=5000}={}){
- if(!url||!url.startsWith(IMAGE_ORIGIN+IMAGE_PREFIX+"/rkc001/")||!VALID_LOCATION.test(url.slice((IMAGE_ORIGIN+IMAGE_PREFIX).length)))
+ if(!url||!url.startsWith(IMAGE_ORIGIN+IMAGE_PREFIX+"/")||!VALID_LOCATION.test(url.slice((IMAGE_ORIGIN+IMAGE_PREFIX).length)))
   return {ok:false,status:null,reason:"unsafe_or_invalid_image_url"};
  try{
   const response=await request(url,{method:"GET",headers:{Accept:"image/*",Range:"bytes=0-0"},redirect:"manual",signal:AbortSignal.timeout(timeoutMs)});

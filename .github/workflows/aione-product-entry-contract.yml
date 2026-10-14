@@ -17,6 +17,11 @@ on:
       - apps/systems/aione/backend/scripts/test-rakuten-live-readback-contract.js
       - apps/systems/aione/backend/src/services/rakuten-image-access-diagnostic.js
       - apps/systems/aione/backend/scripts/test-rakuten-image-access-diagnostic.js
+      - apps/systems/aione/backend/src/services/rakuten-cabinet-image-location.js
+      - apps/systems/aione/backend/src/services/rakuten-cabinet-asset-locations.js
+      - apps/systems/aione/backend/src/services/rakuten-image-repair-preview.js
+      - apps/systems/aione/backend/scripts/test-rakuten-cabinet-image-location.js
+      - apps/systems/aione/backend/scripts/test-rakuten-image-repair-preview.js
       - apps/systems/aione/backend/src/services/rakuten-itemapi2-payload-preview.js
       - apps/systems/aione/backend/src/services/rakuten-first-live-publish.js
       - apps/systems/aione/backend/src/services/rakuten-first-live-sku-review.js
@@ -107,6 +112,11 @@ jobs:
           node --check apps/systems/aione/backend/scripts/test-rakuten-live-readback-contract.js
           node --check apps/systems/aione/backend/src/services/rakuten-image-access-diagnostic.js
           node --check apps/systems/aione/backend/scripts/test-rakuten-image-access-diagnostic.js
+          node --check apps/systems/aione/backend/src/services/rakuten-cabinet-image-location.js
+          node --check apps/systems/aione/backend/src/services/rakuten-cabinet-asset-locations.js
+          node --check apps/systems/aione/backend/src/services/rakuten-image-repair-preview.js
+          node --check apps/systems/aione/backend/scripts/test-rakuten-cabinet-image-location.js
+          node --check apps/systems/aione/backend/scripts/test-rakuten-image-repair-preview.js
           node --check apps/systems/aione/backend/src/services/rakuten-itemapi2-payload-preview.js
           node --check apps/systems/aione/backend/src/services/rakuten-first-live-publish.js
           node --check apps/systems/aione/backend/src/services/rakuten-first-live-sku-review.js
@@ -206,6 +216,11 @@ jobs:
       - name: Verify first live SKU mapping
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-first-live-sku-review.js
+      - name: Verify actual Cabinet path mapping and image-only repair preview (no writes)
+        working-directory: apps/systems/aione/backend
+        run: |
+          node scripts/test-rakuten-cabinet-image-location.js
+          node scripts/test-rakuten-image-repair-preview.js
       - name: Verify RMS actual image file access without writes
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-image-access-diagnostic.js

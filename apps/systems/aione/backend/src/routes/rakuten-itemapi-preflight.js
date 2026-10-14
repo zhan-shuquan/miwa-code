@@ -4,6 +4,8 @@ import {prepareFirstLive,publishFirstLive,canFirstLivePublish} from "../services
 import {getItemV2ReadOnly,getRakutenShopPublishingOptions} from "../integrations/rakuten-rms-client.js";
 import {getInventoryV2} from "../integrations/rakuten-commerce-client.js";
 import {verifyRmsPublishedImageAccess} from "../services/rakuten-image-access-diagnostic.js";
+import {resolvePublishedCabinetAssetLocations} from "../services/rakuten-cabinet-asset-locations.js";
+import {buildZjl238ImageRepairPreview} from "../services/rakuten-image-repair-preview.js";
 import {getGenreAttributesV2,getAttributeDictionaryV2} from "../integrations/rakuten-commerce-client.js";
 import pool from "../../db.js";
 import {getManualProduct} from "../services/product-manual-entry-service.js";
@@ -70,6 +72,18 @@ router.get("/integrations/rakuten/products/:productRef/live-readback",async(req,
   });
  }catch(err){next(err)}
 });
+router.get("/integrations/rakuten/products/:productRef/image-repair-preview",async(req,res,next)=>{
+ try{
+  const {product}=await getManualProduct(String(req.params.productRef||""));
+  if(product.localCode!=="zjl238"||product.targetShopRef!=="永井GD")return res.status(403).json({error:"pilot_scope_rejected"});
+  const remote=await getItemV2ReadOnly({shopRef:"永井GD",manageNumber:"zjl238"});
+  if(!remote.exists)return res.status(409).json({error:"remote_item_missing"});
+  const assetsResult=await pool.query("SELECT pa.id AS asset_id,pa.asset_role,pa.sku_id,cam.external_asset_id,cam.lifecycle_status AS mapping_status,cam.external_path FROM public.product_assets pa LEFT JOIN public.channel_asset_mappings cam ON cam.asset_id=pa.id AND cam.channel='rakuten' AND cam.shop_ref=$2 AND cam.archived_at IS NULL WHERE pa.product_id=$1 AND pa.archived_at IS NULL ORDER BY pa.asset_no",[product.id,"永井GD"]);
+  const resolved=await resolvePublishedCabinetAssetLocations({productId:product.id,shopRef:"永井GD",assets:assetsResult.rows});
+  const proposed=buildZjl238ImageRepairPreview({item:remote.item,assets:resolved.assets});
+  res.set("Cache-Control","no-store").json({ok:true,phase:"read_only_image_repair_preview",shopRef:"永井GD",manageNumber:"zjl238",verifiedCabinetAssets:resolved.verifiedCount,remoteFolderId:resolved.folderId,...proposed});
+ }catch(error){next(error)}
+});
 router.get("/integrations/rakuten/products/:productRef/live-create-review",async(req,res,next)=>{
  try {
   const review=await prepareFirstLive(req.params.productRef);
@@ -120,7 +134,7 @@ router.get("/integrations/rakuten/products/:productRef/itemapi-payload-preview",
   const q=await pool.query(
    "SELECT pa.id AS asset_id,pa.asset_role,pa.sku_id,cam.external_asset_id,cam.lifecycle_status AS mapping_status,cam.external_path FROM public.product_assets pa LEFT JOIN public.channel_asset_mappings cam ON cam.asset_id=pa.id AND cam.channel='rakuten' AND cam.shop_ref=$2 AND cam.archived_at IS NULL WHERE pa.product_id=$1 AND pa.archived_at IS NULL ORDER BY pa.asset_no",
    [product.id,product.targetShopRef]);
-  const assets=q.rows.map(a=>({...a,location:a.external_path?"/rkc001/"+String(a.external_path).split("/").at(-1):null}));
+  const assets=(await resolvePublishedCabinetAssetLocations({productId:product.id,shopRef:product.targetShopRef,assets:q.rows})).assets;
   const [g,sh]=await Promise.allSettled([
     product.rakutenGenreId?getGenreAttributesV2({shopRef:product.targetShopRef,genreId:product.rakutenGenreId}):Promise.resolve(null),
     getRakutenShopPublishingOptions()
@@ -150,7 +164,7 @@ router.get("/integrations/rakuten/products/:productRef/itemapi-candidate",async(
   const assets=await pool.query(
    "SELECT pa.id AS asset_id,pa.asset_role,pa.sku_id,cam.external_asset_id,cam.lifecycle_status AS mapping_status,cam.external_path,cam.metadata AS mapping_metadata FROM public.product_assets pa LEFT JOIN public.channel_asset_mappings cam ON cam.asset_id=pa.id AND cam.channel='rakuten' AND cam.shop_ref=$2 AND cam.archived_at IS NULL WHERE pa.product_id=$1 AND pa.archived_at IS NULL ORDER BY pa.asset_no",
    [product.id,product.targetShopRef]);
-  const mappedImages=assets.rows.map(x=>{const fileName=String(x.external_path||"").split("/").at(-1);return {...x,location:fileName?"/cabinet/rkc001/"+fileName:null};});
+  const mappedImages=(await resolvePublishedCabinetAssetLocations({productId:product.id,shopRef:product.targetShopRef,assets:assets.rows})).assets;
   const [genreResult,shippingResult]=await Promise.allSettled([
    product.rakutenGenreId?getGenreAttributesV2({shopRef:product.targetShopRef,genreId:product.rakutenGenreId}):Promise.resolve(null),
    getRakutenShopPublishingOptions()

@@ -5,11 +5,11 @@ import {getManualProduct} from "./product-manual-entry-service.js";
 import {previewRakutenItemV2} from "./rakuten-itemapi2-payload-preview.js";
 import {getGenreAttributesV2,getAttributeDictionaryV2,putItemV2,getInventoryV2,putInventoryV2} from "../integrations/rakuten-commerce-client.js";
 import {getRakutenShopPublishingOptions,getItemV2ReadOnly} from "../integrations/rakuten-rms-client.js";
+import {resolvePublishedCabinetAssetLocations} from "./rakuten-cabinet-asset-locations.js";
 
 const fail=(code,message,statusCode=409)=>Object.assign(new Error(message),{code,statusCode});
 const hash=value=>createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const PILOT_CODE="zjl238",PILOT_SHOP="永井GD";
-const pathFor=remote=>remote?"/rkc001/"+String(remote).split("/").at(-1):null;
 // Pilot permission is server-owned, never inferred from a button being visible.
 // An empty allowlist intentionally blocks real RMS writes until provisioned.
 export function canFirstLivePublish(actor,allowlist=process.env.AIONE_RAKUTEN_LIVE_PUBLISHER_PERSON_IDS){
@@ -28,7 +28,8 @@ export async function buildLivePilotPlan(ref){
  if(product.localCode!==PILOT_CODE||product.targetShopRef!==PILOT_SHOP)throw fail("pilot_scope_rejected","Live pilot is restricted to zjl238 / 永井GD.",403);
  if(product.targetShopRef!==String(process.env.AIONE_RAKUTEN_SHOP_REF||"").trim())throw fail("rakuten_shop_binding_mismatch","Store credentials do not match.",403);
  const assetsResult=await pool.query("SELECT pa.id AS asset_id,pa.asset_role,pa.sku_id,cam.external_asset_id,cam.lifecycle_status AS mapping_status,cam.external_path FROM public.product_assets pa LEFT JOIN public.channel_asset_mappings cam ON cam.asset_id=pa.id AND cam.channel='rakuten' AND cam.shop_ref=$2 AND cam.archived_at IS NULL WHERE pa.product_id=$1 AND pa.archived_at IS NULL ORDER BY pa.asset_no",[product.id,PILOT_SHOP]);
- const assets=assetsResult.rows.map(x=>({...x,location:pathFor(x.external_path)}));
+ const resolved=await resolvePublishedCabinetAssetLocations({productId:product.id,shopRef:PILOT_SHOP,assets:assetsResult.rows});
+ const assets=resolved.assets;
  const [g,shipping]=await Promise.all([getGenreAttributesV2({shopRef:PILOT_SHOP,genreId:product.rakutenGenreId}),getRakutenShopPublishingOptions()]);
  const genre={...g.genre,genreId:String(g.genre.genreId)};
  const dictionaries={};
