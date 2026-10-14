@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {canFirstLivePublish} from "../src/services/rakuten-first-live-publish.js";
+
+const person={personId:"person_rakuten_publisher",identitySource:"canonical_database"};
+assert.equal(canFirstLivePublish(person,"person_rakuten_publisher,person_backup"),true);
+assert.equal(canFirstLivePublish(person,"person_backup"),false);
+assert.equal(canFirstLivePublish(person,""),false);
+assert.equal(canFirstLivePublish({...person,identitySource:"preview_header"},"person_rakuten_publisher"),false);
+assert.equal(canFirstLivePublish({...person,identitySource:"legacy_admin_bridge"},"person_rakuten_publisher"),false);
+assert.equal(canFirstLivePublish({identitySource:"canonical_database"},"person_rakuten_publisher"),false);
+const ui=readFileSync(new URL("../../js/pages/product-manual-entry.js",import.meta.url),"utf8");
+assert.match(ui,/data-rk-review[^\n]*发布到乐天/);
+assert.match(ui,/data-rk-live-create[^\n]*确认发布/);
+assert.match(ui,/confirmation:"confirmed"/);
+assert.doesNotMatch(ui,/window\.prompt\("请输入 CREATE zjl238/);
+assert.doesNotMatch(ui,/window\.confirm\("正式创建永井GD商品 zjl238/);
+const backend=readFileSync(new URL("../src/services/rakuten-first-live-publish.js",import.meta.url),"utf8");
+assert.match(backend,/rakuten_publisher_permission_denied/);
+assert.match(backend,/if\(digest!==data\.digest\)/);
+assert.match(backend,/if\(remote\.exists\)/);
+assert.match(backend,/rakutenFirstPublishPhase:"submitted"/);
+assert.match(backend,/item_variants_readback_mismatch/);
+assert.match(backend,/inventory_readback_mismatch/);
+console.log("PASS authorized two-button Rakuten publish flow (static + permission contract, no live writes)");

@@ -10,6 +10,12 @@ const fail=(code,message,statusCode=409)=>Object.assign(new Error(message),{code
 const hash=value=>createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const PILOT_CODE="zjl238",PILOT_SHOP="永井GD";
 const pathFor=remote=>remote?"/rkc001/"+String(remote).split("/").at(-1):null;
+// Pilot permission is server-owned, never inferred from a button being visible.
+// An empty allowlist intentionally blocks real RMS writes until provisioned.
+export function canFirstLivePublish(actor,allowlist=process.env.AIONE_RAKUTEN_LIVE_PUBLISHER_PERSON_IDS){
+ const eligible=String(allowlist||"").split(/[,;\s]+/).filter(Boolean);
+ return Boolean(actor?.personId&&actor.identitySource==="canonical_database"&&eligible.includes(String(actor.personId)));
+}
 export function checkFirstLiveEvidence(plan) {
  const blocks=[...(plan.blocking||[])];
  if(plan.shopRef!==PILOT_SHOP||plan.manageNumber!==PILOT_CODE)blocks.push("pilot_scope_rejected");
@@ -57,7 +63,8 @@ export async function prepareFirstLive(ref){
 }
 export async function publishFirstLive(ref,{digest,confirmation,skuAcknowledgementKey,actor}={}){
  if(!actor?.personId)throw fail("authenticated_actor_required","Live publication requires an authenticated human.",401);
- if(confirmation!=="CREATE zjl238 永井GD")throw fail("publish_confirmation_required","Explicit exact confirmation is required.",400);
+ if(!canFirstLivePublish(actor))throw fail("rakuten_publisher_permission_denied","This person is not authorized to publish to RMS.",403);
+ if(confirmation!=="confirmed")throw fail("publish_confirmation_required","Explicit exact confirmation is required.",400);
  const data=await buildLivePilotPlan(ref);
  if(!data.ready)throw fail("itemapi_payload_not_ready","Current source data is not ready to publish.");
  if(data.skuReview.requiresSkuCodeAcknowledgement&&skuAcknowledgementKey!==data.skuReview.skuAcknowledgementKey)

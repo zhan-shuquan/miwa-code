@@ -1,6 +1,6 @@
 import {Router} from "express";
 import {requireWriteActor} from "../http/context.js";
-import {prepareFirstLive,publishFirstLive} from "../services/rakuten-first-live-publish.js";
+import {prepareFirstLive,publishFirstLive,canFirstLivePublish} from "../services/rakuten-first-live-publish.js";
 import {getItemV2ReadOnly,getRakutenShopPublishingOptions} from "../integrations/rakuten-rms-client.js";
 import {getGenreAttributesV2,getAttributeDictionaryV2} from "../integrations/rakuten-commerce-client.js";
 import pool from "../../db.js";
@@ -12,11 +12,14 @@ import {previewRakutenItemV2} from "../services/rakuten-itemapi2-payload-preview
 import {getRakutenCanonicalPackReadiness} from "../services/rakuten-canonical-publish-service.js";
 const router=Router();
 router.get("/integrations/rakuten/products/:productRef/live-create-review",async(req,res,next)=>{
- try {res.set("Cache-Control","no-store").json(await prepareFirstLive(req.params.productRef));}catch(e){next(e)}
+ try {
+  const review=await prepareFirstLive(req.params.productRef);
+  res.set("Cache-Control","no-store").json({...review,publishAuthorized:canFirstLivePublish(req.aioneIdentity)});
+ }catch(e){next(e)}
 });
 router.post("/integrations/rakuten/products/:productRef/live-create",requireWriteActor,async(req,res,next)=>{
  try {
-  const result=await publishFirstLive(req.params.productRef,{digest:req.body?.digest,confirmation:req.body?.confirmation,skuAcknowledgementKey:req.body?.skuAcknowledgementKey,actor:req.aioneContext});
+  const result=await publishFirstLive(req.params.productRef,{digest:req.body?.digest,confirmation:req.body?.confirmation,skuAcknowledgementKey:req.body?.skuAcknowledgementKey,actor:{...req.aioneContext,identitySource:req.aioneIdentity?.identitySource||null}});
   res.set("Cache-Control","no-store").status(result.ok?200:207).json(result);
  }catch(e){next(e)}
 });
