@@ -9,9 +9,14 @@ export function calculateProductCosts(product,sku,params){
  const mode=Object.values(c.logistics||{}).find(x=>x.name===product.logisticsMethod);
  if(!mode)return {status:"unconfigured",reason:"物流方式尚未匹配共享参数"};
  const qty=Number(product.setQuantity||1);
- const cost=Number(sku?.cost??product.purchaseUnitCostCny);
- const actual=Number(product.actualShipmentWeightG);
- const estimate=Number(sku?.weight??product.weightG)*qty;
+ const sourceCost=sku?.cost??product.purchaseUnitCostCny;
+ const cost=(sourceCost===null||sourceCost===undefined||sourceCost==="")?NaN:Number(sourceCost);
+ // A measured product-level weight cannot override a SKU with a different weight.
+ const productWeight=Number(product.weightG);
+ const skuWeight=Number(sku?.weight);
+ const skuHasDistinctWeight=Boolean(sku)&&Number.isFinite(skuWeight)&&skuWeight>0&&skuWeight!==productWeight;
+ const actual=skuHasDistinctWeight?0:Number(product.actualShipmentWeightG);
+ const estimate=(skuHasDistinctWeight?skuWeight:Number(sku?.weight??product.weightG))*qty;
  const weight=actual>0?actual:estimate;
  if(!valid(weight)||weight<=0)return {status:"unconfigured",reason:"请录入实际发货重量，或者填写净重以预估"};
  if(!valid(cost)||!valid(qty)||qty<1||!valid(common.cnyToJpyRate))return {status:"unconfigured",reason:"采购成本或汇率未配置"};
@@ -34,7 +39,7 @@ export function calculateProductCosts(product,sku,params){
  const japan=jpack+delivery;
  const price=Number(sku?.price??product.salePriceJpy??0);
  const rates=product.rates||{};
- const platformRate=Number(rates.platform??shop.platformFeeRate);
+ const platformRate=Number(shop.platformFeeRate); // Single shared platform fee rate; UI has no per-product override.
  const platform=money(price*platformRate/100);
  const feeRates=["coupon","points","ads","other"].map(k=>Number(rates[k]??0));
  const operation=feeRates.reduce((a,r)=>a+money(price*r/100),0);
@@ -47,5 +52,5 @@ export function calculateProductCosts(product,sku,params){
  return {status:"priced",estimated:!(actual>0),sizeClass:size,mode,weight,
  price,warehouse,japan,deliveryQuote:{status:"priced",amountJpy:delivery},platform,operation,gross,net,baseCost,fixed,targetPrice,
  operatingBreakEven,unoperatedBreakEven:minimumBreakEvenYen(fixed,[platformRate]),platformRate,feeRates,
- ledger:[["到日本仓成本",warehouse,[["商品采购成本",purchase],["中国国内运费",domestic],["中国包装成本",pack],["国际物流成本",shipping],["关税成本",duty]]],["日本配送成本",japan,[["日本包装成本",jpack],["日本配送运费",delivery]]],["平台交易成本",platform,[["乐天平台交易费",platform]]],["销售运营成本",operation,["优惠券","积分","RPP广告","其他运营费用"].map((n,i)=>[n,money(price*feeRates[i]/100)])]]};
+ ledger:[[mode.fulfillment==="direct"?"直发履约成本":"到日本仓成本",warehouse,[["商品采购成本",purchase],["中国国内运费",domestic],["中国包装成本",pack],["国际物流成本",shipping],["关税成本",duty]]],["日本配送成本",japan,[["日本包装成本",jpack],["日本配送运费",delivery]]],["平台交易成本",platform,[["乐天平台交易费",platform]]],["销售运营成本",operation,["优惠券","积分","RPP广告","其他运营费用"].map((n,i)=>[n,money(price*feeRates[i]/100)])]]};
 }

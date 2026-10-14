@@ -6,6 +6,7 @@ const p={logisticsMethod:"空运直发（特殊）",purchaseUnitCostCny:24,setQu
 const q=calculateProductCosts(p,null,params);
 assert.equal(q.status,"priced");
 assert.equal(q.sizeClass,"直发");
+assert.equal(q.ledger[0][0],"直发履约成本");
 assert.equal(q.japan,0);
 assert.equal(q.weight,155);
 assert.equal(q.ledger[0][2].find(x=>x[0]==="中国包装成本")[1],50);
@@ -21,6 +22,7 @@ assert.equal(regular.ledger[0][2][3][1],875);
 assert.equal(regular.japan,0);
 const warehouse=calculateProductCosts({...p,logisticsMethod:"空运大件（特殊）",packagingMethod:"重新包装"},null,params);
 assert.equal(warehouse.sizeClass,"60cm");
+assert.equal(warehouse.ledger[0][0],"到日本仓成本");
 assert.equal(warehouse.japan,530);
 assert.equal(warehouse.ledger[0][2][2][1],25);
 assert.equal(warehouse.ledger[0][2][3][1],97);
@@ -37,6 +39,12 @@ const skuB=calculateProductCosts({...p,actualShipmentWeightG:0,weightG:155},{wei
 assert.equal(skuA.ledger[0][2][3][1],1125);
 assert.equal(skuB.ledger[0][2][3][1],1500);
 assert.equal(calculateProductCosts({...p,logisticsMethod:"空运大件（普货）"},null,params).japan,530);
+const measuredSku=calculateProductCosts({...p,weightG:155,actualShipmentWeightG:155},{weight:700,cost:24,price:1980},params);
+assert.equal(measuredSku.estimated,true,"distinct SKU weight must be separately estimated");
+assert.equal(measuredSku.ledger[0][2][3][1],1500);
+const sharedFeeChanged=structuredClone(params);sharedFeeChanged.shop.platformFeeRate=12;
+assert.equal(calculateProductCosts(p,null,sharedFeeChanged).platform,238);
+assert.equal(calculateProductCosts({...p,purchaseUnitCostCny:null},null,params).status,"unconfigured");
 for(const mode of Object.values(params.commerce.logistics)){
  const result=calculateProductCosts({...p,logisticsMethod:mode.name},null,params);
  assert.equal(result.status,"priced",mode.name);
