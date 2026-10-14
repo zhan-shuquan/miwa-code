@@ -156,7 +156,8 @@ function firstLivePublishActions(){
  return '<div class="block"><h3>zjl238 · RMS正式创建</h3><p class="muted">先只读核验远端是否已存在并生成最终确认清单；提交后可能成为可售商品。不能重复创建。</p>'+
  '<button class="btn" data-rk-review '+(publishState.loading?'disabled':'')+'>核对正式创建清单（只读）</button>'+
  (r?'<p class="muted">商品 '+esc(r.manageNumber)+'｜售价 '+esc(r.priceJpy)+'円｜SKU '+esc(r.skuCodes.join("、"))+'｜12张图片｜远端 '+(r.remoteExists?'已存在':'不存在')+'｜阻断 '+esc((r.blocking||[]).join("、")||"无")+'</p>':'')+
- '<p role="status">'+esc(publishState.message)+'</p>'+
+ (r?.skuReview?.rows?.length?'<div style="margin:12px 0"><strong>请核对真实SKU与规格绑定</strong>'+r.skuReview.rows.map(x=>'<div class="readiness"><span>'+esc(x.option)+'｜'+esc(x.skuCode)+(x.skuCode!==x.approvedCode?'（原计划 '+esc(x.approvedCode)+'）':'')+'</span><span>¥'+esc(x.priceJpy)+' / 库存'+esc(x.stock)+' / '+(x.skuImageLocation?'SKU图已关联':'缺少SKU图')+'</span></div>').join("")+'</div>':'')+
+ '<p role="status">'+esc(publishState.message)+'</p>'
  (r?.ready?'<button type="button" class="btn" data-rk-live-create '+(publishState.loading?'disabled':'')+'>确认后创建RMS商品并同步库存</button>':'')+'</div>';
 }
 function rakutenRequiredInputs(){
@@ -230,9 +231,10 @@ host.addEventListener("click",async event=>{
    const r=publishState.review;
    if(!r?.ready)throw Error("请重新运行只读清单");
    if(!window.confirm("正式创建永井GD商品 zjl238。此操作可能生成可售商品，并将两个SKU库存设置为"+Object.values(r.inventory).join("、")+"。确定继续？"))return;
+   if(r.skuReview?.requiresSkuCodeAcknowledgement && !window.confirm("注意：真实持久化SKU编号和之前计划不同。\n"+r.skuReview.rows.map(x=>x.option+": "+x.skuCode+"（原计划 "+x.approvedCode+"）").join("\n")+"\n已核对SKU规格、对应图片和库存，确认保留这些现有编号并上架？"))return;
    const typed=window.prompt("请输入 CREATE zjl238 永井GD 才能执行正式上架");
    if(typed!=="CREATE zjl238 永井GD"){publishState.message="未输入完整确认文字，已取消";return;}
-   const posted=await aioneApi("/api/v1/integrations/rakuten/products/"+encodeURIComponent(p.id)+"/live-create",{method:"POST",body:JSON.stringify({digest:r.digest,confirmation:typed})});
+   const posted=await aioneApi("/api/v1/integrations/rakuten/products/"+encodeURIComponent(p.id)+"/live-create",{method:"POST",body:JSON.stringify({digest:r.digest,confirmation:typed,skuAcknowledgementKey:r.skuReview?.requiresSkuCodeAcknowledgement?r.skuReview.skuAcknowledgementKey:null})});
    publishState.review=null;
    publishState.message=posted.ok?"RMS创建成功并通过两个SKU库存回读验收。":"ItemAPI可能已创建，但库存同步未全部通过；请先核对远端，不能再次执行创建。";
   }
