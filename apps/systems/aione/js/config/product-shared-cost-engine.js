@@ -8,7 +8,7 @@ export function calculateProductCosts(product,sku,params){
  if(!c||!shop||!common)return {status:"unconfigured",reason:"共享参数尚未加载"};
  const mode=Object.values(c.logistics||{}).find(x=>x.name===product.logisticsMethod);
  if(!mode)return {status:"unconfigured",reason:"物流方式尚未匹配共享参数"};
- const qty=Number(product.setQuantity||1);
+ const qty=product.setQuantity==null||product.setQuantity===""?1:Number(product.setQuantity);
  const sourceCost=sku?.cost??product.purchaseUnitCostCny;
  const cost=(sourceCost===null||sourceCost===undefined||sourceCost==="")?NaN:Number(sourceCost);
  // A measured product-level weight cannot override a SKU with a different weight.
@@ -19,11 +19,11 @@ export function calculateProductCosts(product,sku,params){
  const estimate=(skuHasDistinctWeight?skuWeight:Number(sku?.weight??product.weightG))*qty;
  const weight=actual>0?actual:estimate;
  if(!valid(weight)||weight<=0)return {status:"unconfigured",reason:"请录入实际发货重量，或者填写净重以预估"};
- if(!valid(cost)||!valid(qty)||qty<1||!valid(common.cnyToJpyRate))return {status:"unconfigured",reason:"采购成本或汇率未配置"};
+ if(!valid(cost)||!valid(qty)||qty<1||!valid(common.cnyToJpyRate)||common.cnyToJpyRate===0)return {status:"unconfigured",reason:"采购成本或汇率未配置"};
  const fx=common.cnyToJpyRate;
  const packName=product.packagingMethod;
  const packCny=packName==="定制包装"?(product.customPackagingCostCny===null||product.customPackagingCostCny===undefined||product.customPackagingCostCny===""?null:Number(product.customPackagingCostCny)):c.chinaPackagingCny[packName];
- if(packCny===null||!valid(packCny))return {status:"unconfigured",reason:"定制包装请填写实际中国包装费（CNY）"};
+ if(packCny===null||!valid(packCny))return {status:"unconfigured",reason:"中国包装成本尚未配置"};
  const purchase=money(cost*qty*fx),domestic=money(Number(product.domesticFreightCny||0)*fx),pack=money(packCny*fx);
  const freightCny=mode.billing==="step"?
  mode.firstFeeCny+Math.max(0,Math.ceil((weight-mode.firstWeightG)/mode.additionalWeightG))*mode.additionalFeeCny:
@@ -40,8 +40,10 @@ export function calculateProductCosts(product,sku,params){
  const price=Number(sku?.price??product.salePriceJpy??0);
  const rates=product.rates||{};
  const platformRate=Number(shop.platformFeeRate); // Single shared platform fee rate; UI has no per-product override.
+ if(!valid(platformRate)||platformRate>=100)return {status:"unconfigured",reason:"平台费率无效"};
  const platform=money(price*platformRate/100);
  const feeRates=["coupon","points","ads","other"].map(k=>Number(rates[k]??0));
+ if(feeRates.some(r=>!valid(r)||r>=100))return {status:"unconfigured",reason:"运营费率无效"};
  const operation=feeRates.reduce((a,r)=>a+money(price*r/100),0);
  const fixed=warehouse+japan;
  const roundPrice=minimum=>{if(minimum===null)return null;const step=c.priceRoundUnitJpy,tail=c.priceTailJpy;return Math.max(tail,Math.ceil((minimum-tail)/step)*step+tail)};
