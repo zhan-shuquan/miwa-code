@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {INITIAL_PARAMETERS} from "../../js/config/shared-parameter-defaults.js";
 import {validateSharedParameters} from "../src/services/shared-parameters-service.js";
+import {canEditSharedParameters} from "../src/routes/shared-parameters.js";
 const p=structuredClone(INITIAL_PARAMETERS);
 assert.equal(validateSharedParameters(p).commerce.logistics.air_direct_special.firstFeeCny,45);
 assert.equal(p.commerce.chinaPackagingCny["原装"],0);
@@ -10,4 +11,7 @@ assert.equal(p.shop.advertisingRate,0);
 assert.equal(p.shop.pointRate,0);
 assert.throws(()=>validateSharedParameters({...p,commerce:{...p.commerce,logistics:{}}}));
 assert.throws(()=>validateSharedParameters({...p,common:{...p.common,cnyToJpyRate:0}}));
+assert.equal(canEditSharedParameters({identitySource:"canonical_database",personId:"owner"},"owner"),true);
+assert.equal(canEditSharedParameters({identitySource:"preview_actor",personId:"owner"},"owner"),false);
+assert.equal(canEditSharedParameters({identitySource:"canonical_database",personId:"staff"},"owner"),false);
 console.log("PASS P0 authoritative parameters schema, eight delivery modes, no local fallback.");
