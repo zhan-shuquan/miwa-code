@@ -1,58 +1,13 @@
+import {aioneApi} from "../services/aione-api-client.js";
+import {INITIAL_PARAMETERS} from "../config/shared-parameter-defaults.js";
 /* ========================================
    MIWA Global System Settings｜美和全局系统参数
    一处配置、全局继承、版本化生效。保留既有价格参数键，兼容选品详情页。
 ======================================== */
 
-const STORAGE_KEY = 'miwa-aione:restored-preview:v0.4:pricing-profiles';
+// Cloud SQL is the single active parameter source; browser storage is not used.
+let activeRevision=0,parameterStatus="loading";
 
-const INITIAL_PARAMETERS = {
-  version: 'AIONE-PARAM-20260822-02', updatedBy: '系统建议值', updatedAt: '2026-08-22T13:43:00+09:00',
-  platform: { defaultLanguage: 'zh-CN', timeZone: 'Asia/Tokyo', pageSize: 12 },
-  governance: { inheritanceEnabled: true, defaultScope: 'group' },
-  permissions: { mode: 'open', defaultDataScope: 'group', allowCreate: true, allowImport: true, allowExport: true, auditSensitiveExport: true },
-  dictionaries: {
-    customerTypes: ['批发客户','电商客户','美和留学客户','物流客户','不动产客户','商务咨询客户'],
-    supplierTypes: ['商品供应商','服务供应商','物流供应商','其他供应商'],
-    applicationTypes: ['业务系统','物流应用','办公协作','云盘/文件','采购/购物平台','邮箱/通讯','其他应用'],
-    storeTypes: ['跨境电商店铺','实体/线下店铺','其他事业店铺'],
-    expenseTypes: ['固定支出','经营支出','采购成本','物流费用','人员费用','应用费用','广告费用','现金支出'],
-    incomeTypes: ['电商销售收入','批发收入','服务收入','其他收入'],
-    cashExpenseSources: ['Money软件导入','Excel/CSV导入','手工补录'],
-    talentTypes: ['正式员工','兼职/时薪','其他内部协作'],
-    categoryTypes: ['有形商品分类','无形业务分类','其他分类'],
-    productTypes: ['有形商品','无形商品/服务','其他商品'],
-    aiCapabilityTypes: ['AI人才','Skill','Agent','Connector','传统自动化/API','Computer Use'],
-    sharedResourceTypes: ['应用','工具','知识','代码','数据','模板','连接','服务','其他'],
-    miwaContentTypes: ['企业介绍','美和精神','美和准则','美和传承','发展历程','集团事业','组织与品牌','企业资料'],
-    knowledgeContentTypes: ['帮助中心','方法论','标准','制度','SOP','业务知识','培训资料','案例/研究','系统/AI知识'],
-    notificationTypes: ['重要通知','会议通知','制度/规则通知','业务通知','系统通知']
-  },
-  business: { priorityTypeCount: 3, overviewActionEnabled: true, createActionEnabled: true, requireMiwaNineElements: true },
-  finance: { defaultCurrency: 'JPY', moneyFactRequired: true, autoAggregateExpense: true, autoAggregateIncome: true },
-  assets: { checkStoreLinks: true, checkApplicationLinks: true, accountCompletenessReminder: true },
-  io: { allowCsv: true, allowExcel: true, duplicateCheck: true, keepSourceId: true },
-  notifications: { autoNotifyOnCreate: true, defaultScope: '相关人员', importantRequiresAck: true },
-  ai: { pageAssistantEnabled: true, autoClassify: true, autoFillConfidence: 85, humanConfirmHighRisk: true },
-  audit: { versionHistory: true, changeReasonRequired: true, lockedRuleProtection: true },
-  common: {
-    cnyToJpyRate: 25, internationalFreightRate: 20, packageCostPerSaleSetJPY: 50, importMiscRate: 10,
-    returnLossRate: 3, settlementFeeRate: 0, consumptionTaxRate: 10, costSafetyBufferRate: 1,
-    directShippingFirstWeightGram: 500, directShippingFirstWeightFeeCNY: 36,
-    directShippingAdditionalWeightUnitGram: 500, directShippingAdditionalWeightFeeCNY: 7
-  },
-  shop: { platformFeeRate: 10, advertisingRate: 15, couponRate: 0, pointRate: 1, otherOperatingCostJPY: 0, pricingScenario: 'normal' },
-  delivery: {
-    THIN_3CM: { name: '3cm薄型', fee: 200, enabled: true, sortOrder: 1 }, SIZE_60: { name: '60サイズ', fee: 500, enabled: true, sortOrder: 2 },
-    SIZE_80: { name: '80サイズ', fee: 600, enabled: true, sortOrder: 3 }, SIZE_100: { name: '100サイズ', fee: 700, enabled: true, sortOrder: 4 },
-    SIZE_120: { name: '120サイズ', fee: 800, enabled: true, sortOrder: 5 }
-  },
-  pricing: {
-    minimumGrossMarginRate: 50, targetContributionProfitJPY: 500, targetContributionMarginRate: 30,
-    directSelectionMinimumProfitJPY: 500, officialRetailMarkupRate: 50, officialRetailHighMarkupRate: 100,
-    minimumCampaignContributionMarginRate: 15, normalDisposalLossRate: 30, maximumDisposalLossRate: 50,
-    selectionPassScore: 70, priceRoundingUnit: 0, priceEndingRule: 80
-  }
-};
 
 const FIELD_LABELS = {
   'common.cnyToJpyRate':'CNY兑JPY汇率','common.internationalFreightRate':'国际运费单价','common.importMiscRate':'进口杂费率',
@@ -67,7 +22,7 @@ const FIELD_LABELS = {
 const clone = (value) => JSON.parse(JSON.stringify(value));
 let activeParameters = clone(INITIAL_PARAMETERS);
 let draftParameters = clone(INITIAL_PARAMETERS);
-let parameterHistory = [{ ...clone(INITIAL_PARAMETERS), active: true, changes: [] }];
+let parameterHistory=[];
 let returnHash = '#/selection';
 
 function getByPath(object, path) { return path.split('.').reduce((value, key) => value?.[key], object); }
@@ -79,8 +34,21 @@ function formatLocalTime(value) { if(!value) return '待形成'; const date=new 
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>'\"]/g,(char)=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;' }[char])); }
 function mergeDefaults(value, defaults) { if(!value||typeof value!=='object'||Array.isArray(value)) return clone(defaults); const result=clone(defaults); Object.entries(value).forEach(([key,current])=>{ if(current&&typeof current==='object'&&!Array.isArray(current)&&result[key]&&typeof result[key]==='object'&&!Array.isArray(result[key])) result[key]=mergeDefaults(current,result[key]); else result[key]=current; }); return result; }
 
-function loadState() { try { const raw=window.localStorage.getItem(STORAGE_KEY); if(raw){ const state=JSON.parse(raw); if(state?.active) activeParameters=mergeDefaults(state.active,INITIAL_PARAMETERS); if(Array.isArray(state?.history)&&state.history.length) parameterHistory=state.history.map((item)=>mergeDefaults(item,INITIAL_PARAMETERS)); } } catch(_){} draftParameters=clone(activeParameters); expose(); }
-function saveState() { try { window.localStorage.setItem(STORAGE_KEY,JSON.stringify({active:activeParameters,history:parameterHistory})); } catch(_){} expose(); }
+async function loadState(){
+ try{
+  const response=await aioneApi("/api/v1/shared-parameters");
+  activeRevision=response.version;
+  activeParameters=clone(response.parameters);
+  parameterHistory=[{...clone(activeParameters),active:true,changes:[]}];
+  draftParameters=clone(activeParameters);
+  parameterStatus="ready";
+  expose();window.dispatchEvent(new Event("aione:shared-parameters-loaded"));renderMeta();syncInputs();renderHistory();renderNotice();
+ }catch(error){
+  parameterStatus="error";renderNotice("共享参数读取失败，禁止保存："+error.message,true);
+ }
+}
+function saveState(){expose();}
+
 function expose(){ window.AIONESystemParameters=clone(activeParameters); }
 export function getActiveSystemParameters(){ return clone(activeParameters); }
 
@@ -94,9 +62,54 @@ function syncInputs(){ document.querySelectorAll('[data-global-param]').forEach(
 function renderMeta(){ const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;}; set('global-settings-current-version',activeParameters.version||'待形成');set('global-settings-updated-by',activeParameters.updatedBy||'系统');set('global-settings-updated-at',formatLocalTime(activeParameters.updatedAt)); }
 function renderNotice(message=null,error=false){ const notice=document.getElementById('global-settings-notice');if(!notice)return;notice.classList.toggle('is-error',Boolean(error));notice.textContent=message||(draftChanged()?'有未保存修改。所有业务页面仍读取当前生效版本；保存并设为当前生效后全局同步。':'当前草稿与生效参数一致。'); }
 function renderHistory(){ const host=document.getElementById('global-settings-history-list');if(!host)return;host.innerHTML=parameterHistory.map((item)=>`<details><summary><strong>${escapeHtml(item.version||'未命名版本')}</strong><span>全平台通用</span><span>${escapeHtml(formatLocalTime(item.updatedAt))}</span><span>${escapeHtml(item.updatedBy||'系统')}</span>${item.active?'<span class="active-tag">当前生效</span>':'<span>未生效</span>'}</summary>${item.changeReason?`<p><strong>变更原因：</strong>${escapeHtml(item.changeReason)}</p>`:''}${Array.isArray(item.changes)&&item.changes.length?`<ul>${item.changes.slice(0,80).map((change)=>`<li>${escapeHtml(FIELD_LABELS[change.path]||change.path)}：${escapeHtml(JSON.stringify(change.before))} → ${escapeHtml(JSON.stringify(change.after))}</li>`).join('')}</ul>`:'<p>初始建议值或无前版差异。</p>'}</details>`).join(''); }
-function saveDraft(activate){ const errors=validate(draftParameters);if(errors.length){renderNotice(`请修正参数：${errors.join('；')}`,true);return;} const reason=String(document.getElementById('global-settings-change-reason')?.value||'').trim(); if(draftChanged()&&draftParameters.audit?.changeReasonRequired!==false&&!reason){renderNotice('请填写本次参数变更原因后再保存。',true);document.getElementById('global-settings-change-reason')?.focus();return;} const candidate=clone(draftParameters);candidate.version=nextVersion();candidate.updatedAt=new Date().toISOString();candidate.updatedBy='当前用户';candidate.changeReason=reason;const changes=collectChanges(activeParameters,candidate);if(activate){parameterHistory=parameterHistory.map((item)=>({...item,active:false}));activeParameters=clone(candidate);draftParameters=clone(activeParameters);}parameterHistory=[{...clone(candidate),active:activate,changes},...parameterHistory];saveState();renderMeta();renderHistory();syncInputs();const reasonInput=document.getElementById('global-settings-change-reason');if(reasonInput)reasonInput.value='';renderNotice(activate?`新的系统参数版本 ${candidate.version} 已生效。所有二级业务页面将在下一次渲染时读取新参数。`:`已保存参数版本 ${candidate.version}，但未设为当前生效。`);if(activate){window.dispatchEvent(new CustomEvent('aione:global-pricing-updated',{detail:{parameters:clone(activeParameters)}}));window.dispatchEvent(new CustomEvent('aione:global-settings-updated',{detail:{parameters:clone(activeParameters)}}));}}
+async function saveDraft(activate){
+ if(parameterStatus!=="ready"){renderNotice("共享参数服务不可用，禁止提交",true);return;}
+ const errors=validate(draftParameters);
+ if(errors.length){renderNotice("请修正参数："+errors.join("；"),true);return;}
+ const reason=String(document.getElementById("global-settings-change-reason")?.value||"").trim();
+ if(!reason){renderNotice("请输入修改原因",true);return;}
+ if(!activate){renderNotice("本次只保存到Cloud SQL的正式生效版本，请点击「保存并生效」",true);return;}
+ try{
+  const updated=await aioneApi("/api/v1/shared-parameters",{method:"PATCH",body:JSON.stringify({expectedVersion:activeRevision,parameters:draftParameters,changeReason:reason})});
+  activeRevision=updated.version;
+  activeParameters=clone(updated.parameters);
+  draftParameters=clone(activeParameters);
+  parameterHistory=[{...clone(activeParameters),active:true,changes:[]},...parameterHistory.map(x=>({...x,active:false}))].slice(0,30);
+  saveState();renderMeta();renderHistory();syncInputs();
+  document.getElementById("global-settings-change-reason").value="";
+  renderNotice("云端参数版本 "+activeRevision+" 已生效");
+  window.dispatchEvent(new CustomEvent("aione:global-pricing-updated",{detail:{parameters:clone(activeParameters),version:activeRevision}}));
+  window.dispatchEvent(new CustomEvent("aione:global-settings-updated",{detail:{parameters:clone(activeParameters),version:activeRevision}}));
+ }catch(error){renderNotice("未保存："+error.message,true);}
+}
+
 function openSettings(){ const overlay=document.getElementById('miwa-global-settings');if(!overlay)return;overlay.hidden=false;document.body.classList.add('miwa-settings-open');renderMeta();syncInputs();renderHistory();renderNotice();requestAnimationFrame(()=>overlay.querySelector('[data-settings-close]')?.focus()); }
 function closeSettings(){ const overlay=document.getElementById('miwa-global-settings');if(!overlay)return;overlay.hidden=true;document.body.classList.remove('miwa-settings-open');if(window.location.hash.startsWith('#/settings')){history.replaceState(null,'',returnHash||'#/selection');window.dispatchEvent(new HashChangeEvent('hashchange'));}}
 function routeSettings(){ const isSettings=window.location.hash.startsWith('#/settings');if(isSettings)openSettings();else{const overlay=document.getElementById('miwa-global-settings');if(overlay&&!overlay.hidden){overlay.hidden=true;document.body.classList.remove('miwa-settings-open');}if(window.location.hash)returnHash=window.location.hash;}}
 
-export function initSystemSettings(){ const overlay=document.getElementById('miwa-global-settings');if(!overlay||overlay.dataset.initialized==='true')return;overlay.dataset.initialized='true';loadState();renderMeta();syncInputs();renderHistory();renderNotice();document.querySelectorAll('[data-global-param]').forEach((input)=>{const event=input.tagName==='SELECT'?'change':'input';input.addEventListener(event,()=>{setByPath(draftParameters,input.dataset.globalParam,readInput(input));renderNotice();});});document.querySelectorAll('[data-global-settings-tab]').forEach((button)=>button.addEventListener('click',()=>{document.querySelectorAll('[data-global-settings-tab]').forEach((item)=>item.classList.toggle('is-active',item===button));document.querySelectorAll('[data-global-settings-section]').forEach((section)=>{section.hidden=section.dataset.globalSettingsSection!==button.dataset.globalSettingsTab;});}));overlay.querySelectorAll('[data-settings-close]').forEach((button)=>button.addEventListener('click',closeSettings));overlay.addEventListener('click',(event)=>{if(event.target===overlay)closeSettings();});document.addEventListener('keydown',(event)=>{if(event.key==='Escape'&&!overlay.hidden)closeSettings();});document.getElementById('global-settings-reset')?.addEventListener('click',()=>{draftParameters=clone(INITIAL_PARAMETERS);syncInputs();renderNotice('已恢复系统建议值到草稿，尚未保存。');});document.getElementById('global-settings-save')?.addEventListener('click',()=>saveDraft(false));document.getElementById('global-settings-activate')?.addEventListener('click',()=>saveDraft(true));document.getElementById('global-settings-history-toggle')?.addEventListener('click',()=>{const history=document.getElementById('global-settings-history');if(history)history.hidden=!history.hidden;});window.addEventListener('hashchange',routeSettings);routeSettings();}
+export function initSystemSettings(){ const overlay=document.getElementById('miwa-global-settings');if(!overlay||overlay.dataset.initialized==='true')return;overlay.dataset.initialized='true';attachCommerceControls();void loadState();renderMeta();syncInputs();renderHistory();renderNotice();document.querySelectorAll('[data-global-param]').forEach((input)=>{const event=input.tagName==='SELECT'?'change':'input';input.addEventListener(event,()=>{setByPath(draftParameters,input.dataset.globalParam,readInput(input));renderNotice();});});document.querySelectorAll('[data-global-settings-tab]').forEach((button)=>button.addEventListener('click',()=>{document.querySelectorAll('[data-global-settings-tab]').forEach((item)=>item.classList.toggle('is-active',item===button));document.querySelectorAll('[data-global-settings-section]').forEach((section)=>{section.hidden=section.dataset.globalSettingsSection!==button.dataset.globalSettingsTab;});}));overlay.querySelectorAll('[data-settings-close]').forEach((button)=>button.addEventListener('click',closeSettings));overlay.addEventListener('click',(event)=>{if(event.target===overlay)closeSettings();});document.addEventListener('keydown',(event)=>{if(event.key==='Escape'&&!overlay.hidden)closeSettings();});document.getElementById('global-settings-reset')?.addEventListener('click',()=>{draftParameters=clone(INITIAL_PARAMETERS);syncInputs();renderNotice('已恢复系统建议值到草稿，尚未保存。');});document.getElementById('global-settings-save')?.addEventListener('click',()=>saveDraft(false));document.getElementById('global-settings-activate')?.addEventListener('click',()=>saveDraft(true));document.getElementById('global-settings-history-toggle')?.addEventListener('click',()=>{const history=document.getElementById('global-settings-history');if(history)history.hidden=!history.hidden;});window.addEventListener('hashchange',routeSettings);routeSettings();}
+
+function attachCommerceControls(){
+ const deliveryList=document.getElementById("global-settings-delivery-list");
+ if(!deliveryList||document.getElementById("aione-commerce-logistics-fields"))return;
+ const wrap=document.createElement("div");wrap.id="aione-commerce-logistics-fields";
+ deliveryList.after(wrap);
+ const render=()=>{
+  if(parameterStatus!=="ready")return;
+  wrap.innerHTML='<h3>统一物流费率（8种）</h3>'+Object.entries(draftParameters.commerce.logistics).map(([code,rule])=>{
+   const fields=rule.billing==="step"?[["firstWeightG","首重g"],["firstFeeCny","首重CNY"],["additionalWeightG","续重g"],["additionalFeeCny","续重CNY"]]:[["perKgCny","CNY/kg"]];
+   return '<div class="miwa-settings-delivery-row"><strong>'+escapeHtml(rule.name)+'</strong>'+fields.map(([key,label])=>'<label>'+label+'<input type="number" min="0" step="any" data-commerce-mode="'+code+'" data-commerce-key="'+key+'" value="'+rule[key]+'"></label>').join('')+'</div>';
+  }).join('')+'<h3>中国包装成本（CNY/套）</h3>'+Object.entries(draftParameters.commerce.chinaPackagingCny).map(([name,price])=>'<label>'+escapeHtml(name)+' <input type="number" min="0" step="any" data-china-pack="'+name+'" value="'+price+'"></label>').join('')+'<h3>日本包装物成本（JPY/套）</h3>'+Object.entries(draftParameters.commerce.japanPackagingJpy).map(([name,price])=>'<label>'+escapeHtml(name)+' <input type="number" min="0" step="any" data-japan-pack="'+name+'" value="'+price+'"></label>').join('')+'<h3>目标和计费</h3>'+[["tariffRatePct","预估关税%"],["productMarginTargetPct","目标毛利率%"],["operatingMarginTargetPct","运营目标利润率%"],["priceRoundUnitJpy","价格步长JPY"],["priceTailJpy","售价尾数JPY"]].map(([key,label])=>'<label>'+label+' <input type="number" min="0" step="any" data-commerce-scalar="'+key+'" value="'+draftParameters.commerce[key]+'"></label>').join('');
+  wrap.querySelectorAll("input").forEach(el=>el.addEventListener("change",()=>{
+   const v=Number(el.value);
+   if(el.dataset.commerceMode)draftParameters.commerce.logistics[el.dataset.commerceMode][el.dataset.commerceKey]=v;
+   else if(el.dataset.chinaPack)draftParameters.commerce.chinaPackagingCny[el.dataset.chinaPack]=v;
+   else if(el.dataset.japanPack)draftParameters.commerce.japanPackagingJpy[el.dataset.japanPack]=v;
+   else if(el.dataset.commerceScalar)draftParameters.commerce[el.dataset.commerceScalar]=v;
+   renderNotice();
+  }));
+ };
+ window.addEventListener("aione:shared-parameters-loaded",render);
+ document.getElementById("global-settings-reset")?.addEventListener("click",()=>queueMicrotask(render));
+ render();
+}
