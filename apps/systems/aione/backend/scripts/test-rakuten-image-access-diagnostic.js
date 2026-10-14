@@ -8,9 +8,16 @@ const cabinetFiles=[{fileId:10,filePath:"a.jpg",fileUrl:base+"/rkc001/a.jpg"},{f
 const mappings=[{external_path:"a.jpg",external_asset_id:"10",mapping_status:"active"},{external_path:"b.jpg",external_asset_id:"20",mapping_status:"active"}];
 const ok=analyzeRmsImageReferences({item,cabinetFiles,mappings,expectedCount:2});
 assert.equal(ok.cabinetMatched,2);
+assert.equal(ok.filesFound,2);
+assert.equal(ok.fileIdsMatched,2);
+assert.equal(ok.providerUrlsMatched,2);
 assert.deepEqual(ok.issues,[]);
 const bad=analyzeRmsImageReferences({item,cabinetFiles:[{...cabinetFiles[0],fileUrl:base+"/wrong/a.jpg"},cabinetFiles[1]],mappings,expectedCount:2});
 assert.ok(bad.issues.includes("provider_url_differs_from_itemapi:1"));
+assert.equal(bad.filesFound,2);
+assert.equal(bad.fileIdsMatched,2);
+assert.equal(bad.providerUrlsMatched,1);
+assert.equal(bad.cabinetMatched,1);
 const request=async(url,options)=>({status:206,headers:{get:()=> "image/jpeg"},body:{cancel:async()=>{}},method:options.method});
 assert.deepEqual((await probeRmsImageUrl(base+"/rkc001/a.jpg",{request})).ok,true);
 const blocked=await probeRmsImageUrl("https://evil.example.test/rkc001/a.jpg",{request});

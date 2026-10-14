@@ -44,7 +44,7 @@ export function analyzeRmsImageReferences({item={},cabinetFiles=[],mappings=[],e
   return {...ref,url,providerUrl,remoteFileId:remote?.fileId??null,remoteFileFound:Boolean(remote),mappingFound:Boolean(mapped.length===1),providerUrlMatches,access:null,issues:errors};
  });
  for(const [i,row] of rows.entries())for(const x of row.issues)issues.push(x+":"+String(i+1));
- return {rows,issues:[...new Set(issues)],total:rows.length,cabinetMatched:rows.filter(r=>r.remoteFileFound&&r.mappingFound&&r.providerUrlMatches&&r.issues.length===0).length};
+ return {rows,issues:[...new Set(issues)],total:rows.length,filesFound:rows.filter(r=>r.remoteFileFound).length,fileIdsMatched:rows.filter(r=>r.remoteFileFound&&r.mappingFound&&!r.issues.includes("mapped_file_identity_mismatch")).length,providerUrlsMatched:rows.filter(r=>r.providerUrlMatches).length,cabinetMatched:rows.filter(r=>r.remoteFileFound&&r.mappingFound&&r.providerUrlMatches&&r.issues.length===0).length};
 }
 
 export async function probeRmsImageUrl(url,{request=fetch,timeoutMs=5000}={}){
@@ -69,7 +69,7 @@ export async function verifyRmsPublishedImageAccess({
  const plan=await loadPlan({productId,shopRef,containerCode:"rkc001"});
  const folderId=Number(plan?.container?.rakutenFolderId);
  if(!Number.isSafeInteger(folderId)||folderId<=0)
-  return {verified:false,total:0,accessible:0,cabinetMatched:0,issues:["cabinet_folder_id_unresolved"],rows:[]};
+  return {verified:false,total:0,accessible:0,filesFound:0,fileIdsMatched:0,providerUrlsMatched:0,cabinetMatched:0,issues:["cabinet_folder_id_unresolved"],rows:[]};
  const [cabinetFiles,existing]=await Promise.all([
   readCabinetFiles({folderId}),
   db.query("SELECT pa.id AS asset_id,cam.external_path,cam.external_asset_id,cam.lifecycle_status AS mapping_status FROM public.product_assets pa LEFT JOIN public.channel_asset_mappings cam ON cam.asset_id=pa.id AND cam.channel='rakuten' AND cam.shop_ref=$2 AND cam.archived_at IS NULL WHERE pa.product_id=$1 AND pa.archived_at IS NULL ORDER BY pa.asset_no",[productId,shopRef])
@@ -88,6 +88,6 @@ export async function verifyRmsPublishedImageAccess({
  for(const [i,row] of rows.entries())if(!row.access?.ok)issues.push("image_url_unreachable:"+String(i+1));
  const accessible=rows.filter(row=>row.access?.ok).length;
  return {verified:!issues.length&&accessible===12,total:rows.length,accessible,
-  cabinetMatched:checked.cabinetMatched,issues,rows,
+  filesFound:checked.filesFound,fileIdsMatched:checked.fileIdsMatched,providerUrlsMatched:checked.providerUrlsMatched,cabinetMatched:checked.cabinetMatched,issues,rows,
   notice:"Read-only remote R-Cabinet file ID / FileUrl reconciliation and public image URL GET; does not change ItemAPI, stock or images."};
 }
