@@ -57,7 +57,7 @@ export async function prepareFirstLive(ref){
 }
 export async function publishFirstLive(ref,{digest,confirmation,skuAcknowledgementKey,actor}={}){
  if(!actor?.personId)throw fail("authenticated_actor_required","Live publication requires an authenticated human.",401);
- if(confirmation!=="CREATE zjl238 永井GD")throw fail("publish_confirmation_required","Explicit exact confirmation is required.",400);
+ if(confirmation!=="confirmed")throw fail("publish_confirmation_required","Explicit exact confirmation is required.",400);
  const data=await buildLivePilotPlan(ref);
  if(!data.ready)throw fail("itemapi_payload_not_ready","Current source data is not ready to publish.");
  if(data.skuReview.requiresSkuCodeAcknowledgement&&skuAcknowledgementKey!==data.skuReview.skuAcknowledgementKey)
