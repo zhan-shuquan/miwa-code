@@ -192,15 +192,11 @@ jobs:
           UPDATE public.aione_shared_parameters SET version=2,payload='{"commerce":{"logistics":{"updated":true}}}'::jsonb WHERE scope='global';
           INSERT INTO public.aione_shared_parameter_history(scope,version,payload,updated_by,change_reason)
             VALUES('global',2,'{"commerce":{"logistics":{"updated":true}}}'::jsonb,'ci','update');
-          DO $
-          BEGIN
-            IF (SELECT version FROM public.aione_shared_parameters WHERE scope='global') <> 2 THEN
-              RAISE EXCEPTION 'active parameter version incorrect';
-            END IF;
-            IF (SELECT count(*) FROM public.aione_shared_parameter_history WHERE scope='global') <> 2 THEN
-              RAISE EXCEPTION 'version history incomplete';
-            END IF;
-          END $;
+          -- Fail the CI transaction if either the live version or history is wrong.
+          SELECT 1 / CASE WHEN
+            (SELECT version FROM public.aione_shared_parameters WHERE scope='global') = 2
+            AND (SELECT count(*) FROM public.aione_shared_parameter_history WHERE scope='global') = 2
+            THEN 1 ELSE 0 END AS version_and_history_verified;
           ROLLBACK;
           SQL
       - name: Validate product image naming classifier
