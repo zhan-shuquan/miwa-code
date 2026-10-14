@@ -1,5 +1,6 @@
 import {buildSkuEntries} from "./product-entry-contract.js";
 import {matchPersistedSkuByAttributes} from "../../../js/services/product-sku-image-identity.js";
+import {autoMapAttributes,autoMapShipping,autoMapCatalog} from "./rakuten-auto-mapping.js";
 
 // Read-only, fail-closed ItemAPI 2.0 preview. Never send this object without
 // explicit final verification and a separate, confirmed write flow.
@@ -60,7 +61,13 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
  if(images.length>20)fail(blocking,"rakuten_item_images_over_limit");
  const price=Number(product?.salePriceJpy);
  if(!Number.isSafeInteger(price)||price<=0)fail(blocking,"tax_included_price_invalid");
+ const shopPolicy=product?.rakutenVerifiedShopPolicy||{};
+ const shippingMapping=autoMapShipping({product,shipping,shopPolicy});
  const ship=shippingChoices(product,shipping);
+ const automaticSet=shippingMapping.deliverySetId&&safeOption(ship.deliverySets,shippingMapping.deliverySetId);
+ const automaticDate=shippingMapping.normalDeliveryDateId&&safeOption(ship.deliveryDates,shippingMapping.normalDeliveryDateId);
+ if(automaticSet){ship.setId=automaticSet.id;ship.matchedSet=automaticSet}
+ if(automaticDate){ship.dateId=automaticDate.id;ship.matchedDate=automaticDate}
  const deliverySetId=ship.setId;
  if(!ship.matchedSet)fail(blocking,ship.requiresSetSelection?"shop_delivery_set_selection_required":"shop_delivery_set_unverified");
  const dateId=ship.dateId;
@@ -69,7 +76,9 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
  const catalog=str(product?.barcode);
  if(explicitExemption&&!/^[1-9][0-9]?$/.test(explicitExemption))fail(blocking,"catalog_exemption_reason_invalid");
  if(!catalog&&!explicitExemption)fail(blocking,"sku_catalog_id_or_exemption_unverified");
- const articleNumber=catalog?{value:catalog}:(explicitExemption?{exemptionReason:Number(explicitExemption)}:null);
+ const mappedCatalog=autoMapCatalog({product,shopPolicy});
+ const articleNumber=catalog?{value:catalog}:(explicitExemption?{exemptionReason:Number(explicitExemption)}:mappedCatalog.articleNumber);
+ if(articleNumber){const idx=blocking.indexOf("sku_catalog_id_or_exemption_unverified");if(idx>=0)blocking.splice(idx,1)}
  const required=Array.isArray(genre?.attributes)?genre.attributes.filter(a=>a?.properties?.rmsMandatoryFlg===true):[];
  const suppliedAttributes=product?.extraAttributes||{};
  const attributesForSku=(sku)=>{
@@ -97,6 +106,10 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
    const value=selections[i]&&Object.values(selections[i].attributes)[0];
    if(!str(value))fail(blocking,"sku_selector_value_missing");
    if(!/^[-A-Za-z0-9_]{1,96}$/.test(str(sku.sku_code)))fail(blocking,"sku_code_invalid");
+   const mappedAttributes=autoMapAttributes({product,sku,genre,dictionaries:product?.rakutenVerifiedDictionaries||{}});
+   const currentAttrs=required.length?attributesForSku(sku):[];
+   for(const row of mappedAttributes.attributes){if(!currentAttrs.some(x=>x.name===row.name))currentAttrs.push(row)}
+   for(const row of currentAttrs){const id=required.find(x=>x.nameJa===row.name)?.id;const ix=blocking.indexOf("mandatory_attribute_value_missing:"+id);if(ix>=0)blocking.splice(ix,1)}
    variants[sku.sku_code]={
      merchantDefinedSkuId:sku.sku_code,
      selectorValues:{[key]:str(value)},
@@ -104,7 +117,7 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
      ...(skuImage?{images:[skuImage]}:{}),
      ...(ship.matchedDate?{normalDeliveryDateId:Number(dateId)}:{}),
      ...(articleNumber?{articleNumber}:{}),
-     ...(required.length?{attributes:attributesForSku(sku)}:{}),
+     ...(required.length?{attributes:currentAttrs}:{}),
      shipping:{postageIncluded:true,...(ship.matchedSet?{shippingMethodGroup:String(deliverySetId)}:{})}
    };
  }
@@ -125,5 +138,6 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
   shippingOptions:{deliverySets:ship.deliverySets,deliveryDates:ship.deliveryDates,deliverySetId:ship.matchedSet?.id??null,normalDeliveryDateId:ship.matchedDate?.id??null},
   missingGenreAttributes:blocking.filter(x=>x.startsWith("mandatory_attribute_")),
   humanApprovalRequired:true,
+  automaticMapping:{shipping:shippingMapping.trace,catalogSource:mappedCatalog.source},
   notice:"No ItemAPI or InventoryAPI write is performed. A separate confirmed write flow and RMS GET verification are mandatory."};
 }
