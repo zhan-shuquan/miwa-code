@@ -15,6 +15,7 @@ on:
       - apps/systems/aione/backend/src/routes/product-assets.js
       - apps/systems/aione/backend/src/routes/rakuten-itemapi-preflight.js
       - apps/systems/aione/backend/src/services/rakuten-itemapi2-payload-preview.js
+      - apps/systems/aione/backend/src/services/rakuten-first-live-publish.js
       - apps/systems/aione/backend/src/services/rakuten-auto-mapping.js
       - apps/systems/aione/backend/scripts/test-rakuten-auto-mapping.js
       - apps/systems/aione/backend/scripts/test-rakuten-itemapi2-payload-preview.js
@@ -96,6 +97,7 @@ jobs:
           node --check apps/systems/aione/backend/src/routes/product-assets.js
           node --check apps/systems/aione/backend/src/routes/rakuten-itemapi-preflight.js
           node --check apps/systems/aione/backend/src/services/rakuten-itemapi2-payload-preview.js
+          node --check apps/systems/aione/backend/src/services/rakuten-first-live-publish.js
           node --check apps/systems/aione/backend/src/services/rakuten-auto-mapping.js
           node --check apps/systems/aione/backend/scripts/test-rakuten-auto-mapping.js
           node --check apps/systems/aione/backend/scripts/test-rakuten-itemapi2-payload-preview.js
