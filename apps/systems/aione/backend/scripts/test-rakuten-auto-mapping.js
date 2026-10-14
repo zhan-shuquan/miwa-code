@@ -6,7 +6,7 @@ const mapping=autoMapAttributes({product,genre,sku:{attributes:{}},dictionaries:
 assert.deepEqual(mapping.attributes.map(x=>x.values[0]),["FROST-01","ブラック"]);
 assert.deepEqual(mapping.blocking,[]);
 const noFact=autoMapAttributes({product:{...product,productModel:"",extraAttributes:{}},genre,sku:{attributes:{}},dictionaries:{}});
-assert.ok(noFact.blocking.includes("required_attribute_unresolved:8"));
+assert.ok(noFact.blocking.includes("required_attribute_no_compatible_value:8"));
 const shipping={deliverySets:[{id:2,name:"ネコポス"},{id:3,name:"ゆうパック"}],deliveryDates:[{id:1,days:0},{id:3,days:2}]};
 const sh=autoMapShipping({product,shipping,shopPolicy:{confirmedDispatchDays:2,dispatchPolicyVerified:true}});
 assert.equal(sh.deliverySetId,2);assert.equal(sh.normalDeliveryDateId,3);
