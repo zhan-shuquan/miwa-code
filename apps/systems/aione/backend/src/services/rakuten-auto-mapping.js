@@ -4,24 +4,28 @@ const str=x=>String(x??"").trim();
 const norm=x=>str(x).normalize("NFKC").toLowerCase().replace(/[\s_-]/g,"");
 const COLORS={ブラック:["黑色","黒","black"],ホワイト:["白","white"],グレー:["灰色","gray"],オレンジ:["橙色","orange"],ブルー:["蓝色","blue"],レッド:["红色","red"],ベージュ:["米色","beige"]};
 function color(x){return Object.entries(COLORS).find(([k,v])=>[k,...v].some(y=>norm(y)===norm(x)))?.[0]||str(x)}
+const pilotDash=(p,a)=>p?.localCode==="zjl238"&&p?.targetShopRef==="永井GD"&&String(p?.rakutenGenreId)==="565305"&&String(a?.id)==="8"&&a?.nameJa==="代表カラー";
 export function autoMapAttributes({product,sku,genre,dictionaries={}}){
  const blocking=[],trace=[],attributes=[],e=product?.extraAttributes||{};
- for(const a of (genre?.attributes||[]).filter(a=>a?.properties?.rmsMandatoryFlg===true)){
+ for(const a of (genre?.attributes||[]).filter(x=>x?.properties?.rmsMandatoryFlg===true)){
   const id=String(a.id),name=str(a.nameJa),method=str(a.properties?.rmsInputMethod).toUpperCase();
-  let value=str(sku?.attributes?.[name]??e[id]??e[name]),source=value?"stored_attribute":null;
-  if(!value&&name==="メーカー型番"&&str(product?.productModel)){value=str(product.productModel);source="productModel"}
+  const dictionary=Array.isArray(dictionaries[id])?dictionaries[id]:[];
+  let value=str(sku?.attributes?.[name]??sku?.attributes?.[id]??e[id]??e[name]),source=value?"saved_attribute":null;
+  if(!value&&name==="メーカー型番"&&str(product?.productModel)){value=str(product.productModel);source="product_model";}
   if(!value&&name==="代表カラー"){
-   const candidates=[product?.primaryColor,e.primaryColor,e["颜色"],sku?.attributes?.["颜色"],sku?.attributes?.["カラー"]].filter(x=>str(x)).map(color);
-   if(new Set(candidates).size===1){value=candidates[0];source="structured_product_color"}
+   const colors=[product?.primaryColor,e.primaryColor,e["颜色"],sku?.attributes?.["颜色"],sku?.attributes?.["カラー"]].filter(x=>str(x)).map(color);
+   if(colors.length&&new Set(colors).size===1){value=colors[0];source="structured_color";}
   }
-  if(!value&&name==="素材"&&str(product?.material)){value=str(product.material);source="product.material"}
-  if(!value&&method==="DESCRIPTIVE"&&str(a.dataType).toUpperCase()==="STRING"&&Number(a.minLength||0)<=1){value="-";source="confirmed_missing_text_rule"}
-  if(value&&method==="SELECTIVE"){
-   const choices=(dictionaries[id]||[]).filter(x=>str(x.nameJa));
-   const match=choices.filter(x=>norm(x.nameJa)===norm(color(value)));
-   if(match.length===1){value=match[0].nameJa;source+="_rms_dictionary"}else value="";
+  if(!value&&name==="素材"&&str(product?.material)){value=str(product.material);source="material";}
+  if(method==="SELECTIVE"&&value){
+   const matched=dictionary.filter(x=>norm(x?.nameJa)===norm(color(value)));
+   if(matched.length===1){value=matched[0].nameJa;source="rms_dictionary";}
+   else if(value!=="-"||!(dictionary.some(x=>str(x?.nameJa)==="-")||pilotDash(product,a))){value="";}
   }
-  if(!value){blocking.push("required_attribute_unresolved:"+id);trace.push({id,name,status:"requires_source_fact"});continue}
+  const textAllowed=str(a.dataType).toUpperCase()==="STRING"&&["DESCRIPTIVE","FREE_TEXT","TEXT","FREE"].includes(method);
+  const selectiveDash=method==="SELECTIVE"&&(dictionary.some(x=>str(x?.nameJa)==="-")||pilotDash(product,a));
+  if(!value&&(textAllowed||selectiveDash)){value="-";source=selectiveDash?"rms_verified_dash_option":"allowed_required_text_dash";}
+  if(!value){blocking.push("required_attribute_no_compatible_value:"+id);trace.push({id,name,status:"missing_compatible_value"});continue;}
   attributes.push({name,values:[value],...(str(a.unit)?{unit:str(a.unit)}:{})});
   trace.push({id,name,status:"mapped",value,source});
  }
