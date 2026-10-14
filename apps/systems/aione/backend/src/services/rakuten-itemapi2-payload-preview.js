@@ -27,7 +27,7 @@ const isSupportedTextMissingValue=(a)=>{
  return ["STRING","TEXT"].includes(type)&&["FREE_TEXT","TEXT","FREE"].includes(method);
 };
 
-export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipping=null}={}){
+export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipping=null,dictionaries={}}={}){
  const blocking=[];
  const code=str(product?.localCode);
  const title=str(product?.rakutenTitle);
@@ -106,7 +106,7 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
    const value=selections[i]&&Object.values(selections[i].attributes)[0];
    if(!str(value))fail(blocking,"sku_selector_value_missing");
    if(!/^[-A-Za-z0-9_]{1,96}$/.test(str(sku.sku_code)))fail(blocking,"sku_code_invalid");
-   const mappedAttributes=autoMapAttributes({product,sku,genre,dictionaries:product?.rakutenVerifiedDictionaries||{}});
+   const mappedAttributes=autoMapAttributes({product,sku,genre,dictionaries});
    const currentAttrs=required.length?attributesForSku(sku):[];
    for(const row of mappedAttributes.attributes){if(!currentAttrs.some(x=>x.name===row.name))currentAttrs.push(row)}
    for(const row of currentAttrs){const id=required.find(x=>x.nameJa===row.name)?.id;const ix=blocking.indexOf("mandatory_attribute_value_missing:"+id);if(ix>=0)blocking.splice(ix,1)}
