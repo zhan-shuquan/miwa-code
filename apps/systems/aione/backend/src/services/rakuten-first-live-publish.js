@@ -78,6 +78,20 @@ export async function publishFirstLive(ref,{digest,confirmation,actor}={}){
  }
  const created=await getItemV2ReadOnly({shopRef:PILOT_SHOP,manageNumber:PILOT_CODE});
  if(!created.exists){await audit(id,"uncertain","item_readback_missing");throw fail("itemapi_readback_missing","Created item was not confirmed by GET.",502);}
+ const remoteVariants=created.item?.variants||{};
+ const actualCodes=new Set(Object.keys(remoteVariants));
+ const expectedCodes=new Set(data.plan.skuCodes);
+ if(actualCodes.size!==expectedCodes.size || [...expectedCodes].some(code=>!actualCodes.has(code))){
+  await audit(id,"uncertain","item_variants_mismatch",{expectedCount:expectedCodes.size,actualCount:actualCodes.size});
+  throw fail("item_variants_readback_mismatch","The created RMS item SKU identities did not match. Inventory will not be written.",502);
+ }
+ const actualImages=created.item?.images||[];
+ const expectedImages=data.plan.item.images||[];
+ const locations=new Set(actualImages.map(x=>x.location));
+ if(actualImages.length!==expectedImages.length||expectedImages.some(x=>!locations.has(x.location))){
+  await audit(id,"uncertain","item_image_readback_mismatch",{expectedCount:expectedImages.length,actualCount:actualImages.length});
+  throw fail("item_images_readback_mismatch","RMS image readback did not match the approved payload.",502);
+ }
  await audit(id,"item_verified","itemapi_created_readback",{manageNumber:PILOT_CODE,skuCodes:data.plan.skuCodes,actor:actor.personId});
  const results=[];
  for(const variantId of data.plan.skuCodes){
