@@ -181,7 +181,7 @@ async function run(){
 
   // Approved zjl238 pilot must only fill empty Rakuten fields, never alter SKU
   // identity, catalogue assets or overwrite a manually supplied title.
-  const pilot=normalizeProductEntry({...original,localCode:"zjl238",rakutenTitle:"",rakutenGenreId:""});
+  const pilot=normalizeProductEntry({...original,localCode:"zjl238",targetShopRef:"永井GD",rakutenTitle:"",rakutenGenreId:""});
   const pilotDraft=await saveManualProduct(pilot,{personId:"ci"},{createOnly:true}).catch(err=>err);
   assert.equal(pilotDraft.code,"product_exists","do not duplicate the existing pilot product");
   const override=approvedZjl238MissingFields({...pilot,targetShopRef:"永井GD"});
