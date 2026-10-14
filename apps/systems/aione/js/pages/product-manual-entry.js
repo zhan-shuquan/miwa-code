@@ -153,12 +153,15 @@ function cabinetActions(){if(!isRakutenPilotProduct(p))return "";return '<div cl
 function firstLivePublishActions(){
  if(!isRakutenPilotProduct(p))return "";
  const r=publishState.review;
- return '<div class="block"><h3>zjl238 · RMS正式创建</h3><p class="muted">先只读核验远端是否已存在并生成最终确认清单；提交后可能成为可售商品。不能重复创建。</p>'+
- '<button class="btn" data-rk-review '+(publishState.loading?'disabled':'')+'>核对正式创建清单（只读）</button>'+
- (r?'<p class="muted">商品 '+esc(r.manageNumber)+'｜售价 '+esc(r.priceJpy)+'円｜SKU '+esc(r.skuCodes.join("、"))+'｜12张图片｜远端 '+(r.remoteExists?'已存在':'不存在')+'｜阻断 '+esc((r.blocking||[]).join("、")||"无")+'</p>':'')+
- (r?.skuReview?.rows?.length?'<div style="margin:12px 0"><strong>请核对真实SKU与规格绑定</strong>'+r.skuReview.rows.map(x=>'<div class="readiness"><span>'+esc(x.option)+'｜'+esc(x.skuCode)+(x.skuCode!==x.approvedCode?'（原计划 '+esc(x.approvedCode)+'）':'')+'</span><span>¥'+esc(x.priceJpy)+' / 库存'+esc(x.stock)+' / '+(x.skuImageLocation?'SKU图已关联':'缺少SKU图')+'</span></div>').join("")+'</div>':'')+
- '<p role="status">'+esc(publishState.message)+'</p>'+ 
- (r?.ready?'<button type="button" class="btn" data-rk-live-create '+(publishState.loading?'disabled':'')+'>确认后创建RMS商品并同步库存</button>':'')+'</div>';
+ const rows=Array.isArray(r?.skuReview?.rows)?r.skuReview.rows:[];
+ const summary=r?'<div class="muted" style="margin:12px 0"><p>店铺：'+esc(r.shopRef)+'｜商品管理番号：'+esc(r.manageNumber)+'</p><p>商品名：'+esc(r.title||"—")+'</p><p>ジャンルID：'+esc(r.genreId||"—")+'｜图片：'+esc(r.images)+'张｜RMS：'+(r.remoteExists?'已存在（不可重复发布）':'尚未创建')+'</p><p>阻断项：'+esc((r.blocking||[]).join("、")||"无")+'</p></div>':"";
+ const specs=rows.length?'<div style="margin:12px 0"><strong>最终SKU、规格、售价、库存与图片</strong>'+rows.map(x=>'<div class="readiness"><span>'+esc(x.option)+'｜'+esc(x.skuCode)+'</span><span>¥'+esc(x.priceJpy)+' / 库存'+esc(x.stock)+' / '+(x.skuImageLocation?'SKU图已关联':'缺少SKU图')+'</span></div>').join("")+'</div>':"";
+ return '<div class="block"><h3>zjl238 · 乐天正式发布</h3><p class="muted">点击「发布到乐天」只读生成最终清单，核对后点击「确认发布」才会创建RMS商品并同步库存；已存在的商品不会再次创建。</p>'+
+ '<button type="button" class="btn" data-rk-review '+(publishState.loading?'disabled':'')+'>发布到乐天</button>'+
+ summary+specs+
+ (r&&!r.publishAuthorized?'<p class="message">当前账号没有乐天发布权限。请联系管理员配置授权。</p>':"")+
+ '<p role="status">'+esc(publishState.message)+'</p>'+
+ (r?.ready&&r?.publishAuthorized?'<button type="button" class="btn" data-rk-live-create '+(publishState.loading?'disabled':'')+'>确认发布</button>':'')+'</div>';
 }
 function rakutenRequiredInputs(){
  const preview=candidateState.preview;
@@ -226,14 +229,12 @@ host.addEventListener("click",async event=>{
   if(review){
    const r=await aioneApi("/api/v1/integrations/rakuten/products/"+encodeURIComponent(p.id)+"/live-create-review");
    publishState.review=r;
-   publishState.message=r.ready?"全部只读检查已通过；正式创建须由你确认。":"还有阻断项："+(r.blocking||[]).join("、");
+   publishState.message=!r.ready?"还有阻断项："+(r.blocking||[]).join("、"):r.publishAuthorized?"最终清单已生成；核对无误后请点击「确认发布」。":"只读清单已生成，但当前账号未获得乐天发布权限。";
   } else {
    const r=publishState.review;
-   if(!r?.ready)throw Error("请重新运行只读清单");
-   if(!window.confirm("正式创建永井GD商品 zjl238。此操作可能生成可售商品，并将两个SKU库存设置为"+Object.values(r.inventory).join("、")+"。确定继续？"))return;
-   // The approved SKU identity is now enforced server-side.
-   const typed="confirmed";
-   const posted=await aioneApi("/api/v1/integrations/rakuten/products/"+encodeURIComponent(p.id)+"/live-create",{method:"POST",body:JSON.stringify({digest:r.digest,confirmation:typed,skuAcknowledgementKey:r.skuReview?.requiresSkuCodeAcknowledgement?r.skuReview.skuAcknowledgementKey:null})});
+   if(!r?.ready||!r.publishAuthorized)throw Error("请使用具有发布权限的账号重新核对最终清单");
+   // Explicit second-button action carries the reviewed digest; no text prompt or extra dialog.
+   const posted=await aioneApi("/api/v1/integrations/rakuten/products/"+encodeURIComponent(p.id)+"/live-create",{method:"POST",body:JSON.stringify({digest:r.digest,confirmation:"confirmed",skuAcknowledgementKey:r.skuReview?.requiresSkuCodeAcknowledgement?r.skuReview.skuAcknowledgementKey:null})});
    publishState.review=null;
    publishState.message=posted.ok?"RMS创建成功并通过两个SKU库存回读验收。":"ItemAPI可能已创建，但库存同步未全部通过；请先核对远端，不能再次执行创建。";
   }

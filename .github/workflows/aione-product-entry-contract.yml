@@ -18,6 +18,7 @@ on:
       - apps/systems/aione/backend/src/services/rakuten-first-live-publish.js
       - apps/systems/aione/backend/src/services/rakuten-first-live-sku-review.js
       - apps/systems/aione/backend/scripts/test-rakuten-first-live-sku-review.js
+      - apps/systems/aione/backend/scripts/test-rakuten-first-live-permission.js
       - apps/systems/aione/backend/src/services/rakuten-auto-mapping.js
       - apps/systems/aione/backend/scripts/test-rakuten-auto-mapping.js
       - apps/systems/aione/backend/scripts/test-rakuten-itemapi2-payload-preview.js
@@ -102,6 +103,7 @@ jobs:
           node --check apps/systems/aione/backend/src/services/rakuten-first-live-publish.js
           node --check apps/systems/aione/backend/src/services/rakuten-first-live-sku-review.js
           node --check apps/systems/aione/backend/scripts/test-rakuten-first-live-sku-review.js
+          node --check apps/systems/aione/backend/scripts/test-rakuten-first-live-permission.js
           node --check apps/systems/aione/backend/src/services/rakuten-auto-mapping.js
           node --check apps/systems/aione/backend/scripts/test-rakuten-auto-mapping.js
           node --check apps/systems/aione/backend/scripts/test-rakuten-itemapi2-payload-preview.js
@@ -194,6 +196,9 @@ jobs:
       - name: Verify first live SKU mapping
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-first-live-sku-review.js
+      - name: Verify final review, two-button confirmation and publisher permission (no RMS writes)
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-rakuten-first-live-permission.js
       - name: Verify deterministic Rakuten source mapping
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-auto-mapping.js
