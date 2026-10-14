@@ -47,9 +47,10 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
  const published=assets.filter(x=>x.mapping_status==="active"&&x.external_asset_id);
  if(published.length!==12||new Set(published.map(x=>x.asset_id)).size!==12)fail(blocking,"twelve_mapped_images_required");
  const normalizeLocation=asset=>{
-   // The source path must be an exact persisted R-Cabinet file path.
+   // Paths are resolved upstream from R-Cabinet FileUrl and exact FileId;
+    // directory names may be numeric (13839999) or named (zjl01).
    const path=str(asset?.location);
-   if(!/^\/\d{1,20}\/[a-z0-9_-]+\.(jpg|jpeg|png|gif)$/i.test(path)){
+   if(!/^\/[a-z0-9_-]{1,64}\/[a-z0-9_-]+\.(jpg|jpeg|png|gif)$/i.test(path)){
      fail(blocking,"cabinet_location_unverified");return null;
    }
    return {type:"CABINET",location:path};
