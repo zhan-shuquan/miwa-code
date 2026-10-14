@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const route=readFileSync(new URL("../src/routes/rakuten-itemapi-preflight.js",import.meta.url),"utf8");
+const block=route.split('router.get("/integrations/rakuten/products/:productRef/live-readback"')[1].split('router.get("/integrations/rakuten/products/:productRef/live-create-review"')[0];
+assert.ok(block.includes('getItemV2ReadOnly('));
+assert.ok(block.includes('getInventoryV2('));
+assert.ok(block.includes('zjl238-04')&&block.includes('zjl238-05'));
+assert.ok(block.includes('salesVisibility:"not_independently_verified"'));
+assert.ok(!/putItemV2|putInventoryV2|UPDATE public|INSERT INTO public/.test(block));
+const ui=readFileSync(new URL("../../js/pages/product-manual-entry.js",import.meta.url),"utf8");
+assert.ok(ui.includes("只读复核RMS现有商品"));
+assert.ok(ui.includes("data-rk-readback"));
+assert.ok(ui.includes("/live-readback"));
+console.log("PASS independent RMS GET-only verification endpoint and UI, no live RMS writes");
