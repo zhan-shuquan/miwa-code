@@ -1,4 +1,5 @@
 import {createHash} from "node:crypto";
+import {reviewFirstLiveSkuRows} from "./rakuten-first-live-sku-review.js";
 import pool,{withTransaction} from "../../db.js";
 import {getManualProduct} from "./product-manual-entry-service.js";
 import {previewRakutenItemV2} from "./rakuten-itemapi2-payload-preview.js";
@@ -29,11 +30,13 @@ export async function buildLivePilotPlan(ref){
  for(const a of selective){dictionaries[String(a.id)]=await getAttributeDictionaryV2({shopRef:PILOT_SHOP,genreId:product.rakutenGenreId,attributeId:a.id});}
  const preview=previewRakutenItemV2({product,skus,assets,genre,shipping,dictionaries});
  const blocking=checkFirstLiveEvidence(preview);
- const skuCodes=skus.map(x=>String(x.sku_code)).sort();
- const inventory=Object.fromEntries(skuCodes.map(code=>[code,Number(product.skuOverrides?.find(o=>o.skuCode===code)?.stock??product.defaultStock)]));
+ const skuReview=reviewFirstLiveSkuRows({product,skus,item:preview.item});
+ blocking.push(...skuReview.blocking);
+ const skuCodes=skuReview.rows.map(x=>x.skuCode);
+ const inventory=Object.fromEntries(skuReview.rows.map(x=>[x.skuCode,x.stock]));
  if(Object.values(inventory).some(v=>!Number.isSafeInteger(v)||v<0))blocking.push("inventory_quantities_invalid");
- const plan={shopRef:PILOT_SHOP,manageNumber:PILOT_CODE,productId:product.id,productVersion:product.version,item:preview.item,inventory,skuCodes};
- return {plan,digest:hash(plan),blocking:[...new Set(blocking)],ready:blocking.length===0,preview};
+ const plan={shopRef:PILOT_SHOP,manageNumber:PILOT_CODE,productId:product.id,productVersion:product.version,item:preview.item,inventory,skuCodes,skuReview:skuReview.rows};
+ return {plan,digest:hash(plan),blocking:[...new Set(blocking)],ready:blocking.length===0,preview,skuReview};
 }
 async function audit(productId,phase,event,details={}){
  return withTransaction(async db=>{
@@ -50,13 +53,15 @@ async function audit(productId,phase,event,details={}){
 export async function prepareFirstLive(ref){
  const prepared=await buildLivePilotPlan(ref);
  const remote=await getItemV2ReadOnly({shopRef:PILOT_SHOP,manageNumber:PILOT_CODE});
- return {ok:true,phase:"review_only",productId:prepared.plan.productId,shopRef:PILOT_SHOP,manageNumber:PILOT_CODE,skuCodes:prepared.plan.skuCodes,inventory:prepared.plan.inventory,priceJpy:prepared.plan.item?.variants?.[prepared.plan.skuCodes[0]]?.standardPrice||null,images:prepared.preview.mappedImageCount,genreId:prepared.plan.item?.genreId,title:prepared.plan.item?.title,shipping:prepared.preview.shippingOptions,remoteExists:remote.exists,digest:prepared.digest,ready:prepared.ready&&!remote.exists,blocking:[...prepared.blocking,...(remote.exists?["remote_item_exists"]:[])],notice:"Read-only. Confirming this digest separately will create a sellable RMS item."};
+ return {ok:true,phase:"review_only",productId:prepared.plan.productId,shopRef:PILOT_SHOP,manageNumber:PILOT_CODE,skuCodes:prepared.plan.skuCodes,skuReview:prepared.skuReview,inventory:prepared.plan.inventory,priceJpy:prepared.plan.item?.variants?.[prepared.plan.skuCodes[0]]?.standardPrice||null,images:prepared.preview.mappedImageCount,genreId:prepared.plan.item?.genreId,title:prepared.plan.item?.title,shipping:prepared.preview.shippingOptions,remoteExists:remote.exists,digest:prepared.digest,ready:prepared.ready&&!remote.exists,blocking:[...prepared.blocking,...(remote.exists?["remote_item_exists"]:[])],notice:"Read-only. Confirming this digest separately will create a sellable RMS item."};
 }
-export async function publishFirstLive(ref,{digest,confirmation,actor}={}){
+export async function publishFirstLive(ref,{digest,confirmation,skuAcknowledgementKey,actor}={}){
  if(!actor?.personId)throw fail("authenticated_actor_required","Live publication requires an authenticated human.",401);
  if(confirmation!=="CREATE zjl238 永井GD")throw fail("publish_confirmation_required","Explicit exact confirmation is required.",400);
  const data=await buildLivePilotPlan(ref);
  if(!data.ready)throw fail("itemapi_payload_not_ready","Current source data is not ready to publish.");
+ if(data.skuReview.requiresSkuCodeAcknowledgement&&skuAcknowledgementKey!==data.skuReview.skuAcknowledgementKey)
+  throw fail("sku_code_acknowledgement_required","Persisted SKU IDs differ from the earlier approved names. Review actual SKU, image and stock before publication.");
  if(digest!==data.digest)throw fail("publish_plan_changed","ItemAPI payload changed. Review again.");
  const id=data.plan.productId;
  const remote=await getItemV2ReadOnly({shopRef:PILOT_SHOP,manageNumber:PILOT_CODE});
