@@ -1,9 +1,9 @@
 import {buildSkuEntries} from "./product-entry-contract.js";
 import {matchPersistedSkuByAttributes} from "../../../js/services/product-sku-image-identity.js";
 
-// Compare original owner-approved zjl238 plan with *persisted* SKU identities.
-// Never rename a SKU that already has SKU-image bindings.
-const expectedByQuantity=Object.freeze({"1個":"zjl238-c01","2個":"zjl238-c02"});
+// Owner explicitly approved these persistent SKU codes for the first live pilot.
+// Never rename or reconstruct SKU identities after product images are bound.
+const expectedByQuantity=Object.freeze({"1個":"zjl238-04","2個":"zjl238-05"});
 const normalizeQuantity=value=>String(value??"").normalize("NFKC").replace(/[\s\u3000]/g,"").replace(/セット$/,"");
 export function reviewFirstLiveSkuRows({product,skus,item}={}){
  const blocking=[],rows=[],seenIds=new Set(),seenQuantities=new Set();
@@ -42,7 +42,8 @@ export function reviewFirstLiveSkuRows({product,skus,item}={}){
  if(rows.length!==2||seenQuantities.size!==2||!seenQuantities.has("1個")||!seenQuantities.has("2個"))
   blocking.push("pilot_sku_option_set_mismatch");
  const ordered=rows.sort((a,b)=>a.option.localeCompare(b.option,"ja"));
- const requiresSkuCodeAcknowledgement=ordered.some(x=>x.skuCode!==x.approvedCode);
+ if(ordered.some(x=>x.skuCode!==x.approvedCode))blocking.push("persisted_sku_differs_from_owner_approved_mapping");
+ const requiresSkuCodeAcknowledgement=false; // owner has approved precisely -04 / -05; no repeated second approval
  const skuAcknowledgementKey=ordered.map(x=>x.option+"="+x.skuCode).join("|");
- return {rows:ordered,blocking:[...new Set(blocking)],requiresSkuCodeAcknowledgement,skuAcknowledgementKey};
+ return {rows:ordered,blocking:[...new Set(blocking)],requiresSkuCodeAcknowledgement,skuAcknowledgementKey,ownerApprovedSkuMapping:true};
 }
