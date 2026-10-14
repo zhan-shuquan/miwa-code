@@ -157,7 +157,7 @@ function firstLivePublishActions(){
  const summary=r?'<div class="muted" style="margin:12px 0"><p>店铺：'+esc(r.shopRef)+'｜商品管理番号：'+esc(r.manageNumber)+'</p><p>商品名：'+esc(r.title||"—")+'</p><p>ジャンルID：'+esc(r.genreId||"—")+'｜图片：'+esc(r.images)+'张｜RMS：'+(r.remoteExists?'已存在（不可重复发布）':'尚未创建')+'</p><p>阻断项：'+esc((r.blocking||[]).join("、")||"无")+'</p></div>':"";
  const specs=rows.length?'<div style="margin:12px 0"><strong>最终SKU、规格、售价、库存与图片</strong>'+rows.map(x=>'<div class="readiness"><span>'+esc(x.option)+'｜'+esc(x.skuCode)+'</span><span>¥'+esc(x.priceJpy)+' / 库存'+esc(x.stock)+' / '+(x.skuImageLocation?'SKU图已关联':'缺少SKU图')+'</span></div>').join("")+'</div>':"";
  return '<div class="block"><h3>zjl238 · 乐天正式发布</h3><p class="muted">点击「发布到乐天」只读生成最终清单，核对后点击「确认发布」才会创建RMS商品并同步库存；已存在的商品不会再次创建。</p>'+
- '<button type="button" class="btn" data-rk-review '+(publishState.loading?'disabled':'')+'>发布到乐天</button>'+
+ '<button type="button" class="btn" data-rk-review '+(publishState.loading?'disabled':'')+'>发布到乐天</button>'+'<button type="button" class="btn" data-rk-readback '+(publishState.loading?'disabled':'')+'>只读复核RMS现有商品</button>'+(publishState.readback?'<p class="muted">远端：'+(publishState.readback.exists?'存在':'不存在')+'｜商品名：'+esc(publishState.readback.title||'—')+'｜分类：'+esc(publishState.readback.genreId||'—')+'｜图片记录：'+esc(publishState.readback.listedImageCount??'—')+'｜销售状态：需在店铺页面另行确认｜复核结果：'+esc((publishState.readback.checks||[]).join('、')||'API数据核验通过')+'</p>':'')+
  summary+specs+
  (r&&!r.publishAuthorized?'<p class="message">当前账号没有乐天发布权限。请联系管理员配置授权。</p>':"")+
  '<p role="status">'+esc(publishState.message)+'</p>'+
@@ -222,11 +222,15 @@ async function scanLocalImages(){
  finally{localSyncBusy=false;display();}
 }
 host.addEventListener("click",async event=>{
- const review=event.target.closest("[data-rk-review]"),submit=event.target.closest("[data-rk-live-create]");
- if((!review&&!submit)||publishState.loading||!isRakutenPilotProduct(p))return;
- publishState.loading=true;publishState.message=review?"正在重新核对RMS及AIONE资料…":"正在提交；请勿刷新或重复点击…";display();
+ const review=event.target.closest("[data-rk-review]"),submit=event.target.closest("[data-rk-live-create]"),readback=event.target.closest("[data-rk-readback]");
+ if((!review&&!submit&&!readback)||publishState.loading||!isRakutenPilotProduct(p))return;
+ publishState.loading=true;publishState.message=readback?"正在只读复核RMS已创建商品…":review?"正在重新核对RMS及AIONE资料…":"正在提交；请勿刷新或重复点击…";display();
  try{
-  if(review){
+  if(readback){
+   const x=await aioneApi("/api/v1/integrations/rakuten/products/"+encodeURIComponent(p.id)+"/live-readback");
+   publishState.readback=x;
+   publishState.message=x.verified?"RMS商品及两SKU的API只读复核通过；销售状态仍需独立确认。":"只读复核有待处理项："+(x.checks||[]).join("、");
+  }else if(review){
    const r=await aioneApi("/api/v1/integrations/rakuten/products/"+encodeURIComponent(p.id)+"/live-create-review");
    publishState.review=r;
    publishState.message=!r.ready?"还有阻断项："+(r.blocking||[]).join("、"):r.publishAuthorized?"最终清单已生成；核对无误后请点击「确认发布」。":"只读清单已生成，但当前账号未获得乐天发布权限。";

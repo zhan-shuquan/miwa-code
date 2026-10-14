@@ -14,6 +14,7 @@ on:
       - apps/systems/aione/backend/scripts/test-product-image-webp.js
       - apps/systems/aione/backend/src/routes/product-assets.js
       - apps/systems/aione/backend/src/routes/rakuten-itemapi-preflight.js
+      - apps/systems/aione/backend/scripts/test-rakuten-live-readback-contract.js
       - apps/systems/aione/backend/src/services/rakuten-itemapi2-payload-preview.js
       - apps/systems/aione/backend/src/services/rakuten-first-live-publish.js
       - apps/systems/aione/backend/src/services/rakuten-first-live-sku-review.js
@@ -99,6 +100,7 @@ jobs:
           node --check apps/systems/aione/backend/scripts/test-product-image-webp.js
           node --check apps/systems/aione/backend/src/routes/product-assets.js
           node --check apps/systems/aione/backend/src/routes/rakuten-itemapi-preflight.js
+          node --check apps/systems/aione/backend/scripts/test-rakuten-live-readback-contract.js
           node --check apps/systems/aione/backend/src/services/rakuten-itemapi2-payload-preview.js
           node --check apps/systems/aione/backend/src/services/rakuten-first-live-publish.js
           node --check apps/systems/aione/backend/src/services/rakuten-first-live-sku-review.js
@@ -196,6 +198,9 @@ jobs:
       - name: Verify first live SKU mapping
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-first-live-sku-review.js
+      - name: Verify independent RMS GET-only reconciliation contract
+        working-directory: apps/systems/aione/backend
+        run: node scripts/test-rakuten-live-readback-contract.js
       - name: Verify final review, two-button confirmation and publisher permission (no RMS writes)
         working-directory: apps/systems/aione/backend
         run: node scripts/test-rakuten-first-live-permission.js

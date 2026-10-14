@@ -2,6 +2,7 @@ import {Router} from "express";
 import {requireWriteActor} from "../http/context.js";
 import {prepareFirstLive,publishFirstLive,canFirstLivePublish} from "../services/rakuten-first-live-publish.js";
 import {getItemV2ReadOnly,getRakutenShopPublishingOptions} from "../integrations/rakuten-rms-client.js";
+import {getInventoryV2} from "../integrations/rakuten-commerce-client.js";
 import {getGenreAttributesV2,getAttributeDictionaryV2} from "../integrations/rakuten-commerce-client.js";
 import pool from "../../db.js";
 import {getManualProduct} from "../services/product-manual-entry-service.js";
@@ -11,6 +12,54 @@ import {buildRakutenFirstItemCandidate} from "../services/rakuten-first-item-can
 import {previewRakutenItemV2} from "../services/rakuten-itemapi2-payload-preview.js";
 import {getRakutenCanonicalPackReadiness} from "../services/rakuten-canonical-publish-service.js";
 const router=Router();
+// Independent read-only post-creation reconciliation; never invokes PUT or changes a publication latch.
+router.get("/integrations/rakuten/products/:productRef/live-readback",async(req,res,next)=>{
+ try{
+  const {product}=await getManualProduct(String(req.params.productRef||""));
+  if(product.localCode!=="zjl238"||product.targetShopRef!=="永井GD")
+   return res.status(403).json({error:"pilot_scope_rejected"});
+  const remote=await getItemV2ReadOnly({shopRef:"永井GD",manageNumber:"zjl238"});
+  if(!remote.exists)return res.set("Cache-Control","no-store").json({ok:true,exists:false,manageNumber:"zjl238",verified:false,checks:["remote_item_missing"]});
+  const item=remote.item||{};
+  const expectedCodes=["zjl238-04","zjl238-05"];
+  const variants=item.variants||{};
+  const actualCodes=Object.keys(variants);
+  const checks=[];
+  if(String(item.manageNumber||"zjl238")!=="zjl238")checks.push("manage_number_mismatch");
+  if(actualCodes.length!==expectedCodes.length||expectedCodes.some(x=>!Object.hasOwn(variants,x)))checks.push("sku_identity_mismatch");
+  const inventory=[];
+  for(const code of expectedCodes){
+   try{
+    const stock=await getInventoryV2({shopRef:"永井GD",manageNumber:"zjl238",variantId:code});
+    const n=Number(stock.body?.quantity);
+    inventory.push({skuCode:code,quantity:Number.isSafeInteger(n)?n:null});
+    if(n!==1000)checks.push("inventory_mismatch:"+code);
+   }catch(err){
+    inventory.push({skuCode:code,quantity:null,error:String(err.code||"inventory_read_failed")});
+    checks.push("inventory_read_failed:"+code);
+   }
+  }
+  const skuRows=expectedCodes.map(code=>{
+   const variant=variants[code]||{};
+   const price=Number(variant.standardPrice);
+   if(!Number.isFinite(price)||price!==980)checks.push("price_mismatch:"+code);
+   if(!Array.isArray(variant.images)||!variant.images.length)checks.push("sku_image_missing:"+code);
+   return {skuCode:code,standardPrice:Number.isFinite(price)?price:null,selectorValues:variant.selectorValues||null,skuImages:(variant.images||[]).map(x=>x.location).filter(Boolean)};
+  });
+  const imageLocations=(item.images||[]).map(x=>x.location).filter(Boolean);
+  if(!imageLocations.length)checks.push("main_images_missing");
+  // A populated ItemAPI object alone is not evidence that the storefront is visible/sellable.
+  res.set("Cache-Control","no-store").json({
+   ok:checks.length===0,exists:true,shopRef:"永井GD",manageNumber:"zjl238",
+   title:item.title||null,genreId:item.genreId||null,
+   skuRows,inventory,imageLocations,mainImageCount:imageLocations.length,
+   listedImageCount:imageLocations.length+skuRows.reduce((n,r)=>n+r.skuImages.length,0),
+   salesVisibility:"not_independently_verified",checks:[...new Set(checks)],
+   verified:checks.length===0,
+   notice:"Independent RMS ItemAPI and InventoryAPI GET verification only. Storefront availability and detailed image appearance still require separate inspection."
+  });
+ }catch(err){next(err)}
+});
 router.get("/integrations/rakuten/products/:productRef/live-create-review",async(req,res,next)=>{
  try {
   const review=await prepareFirstLive(req.params.productRef);
