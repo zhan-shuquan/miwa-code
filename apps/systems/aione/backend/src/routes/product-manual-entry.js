@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireWriteActor } from "../http/context.js";
 import {
   getManualProduct, listManualProducts, saveManualProduct,
-  previewImportProducts, importManualProducts
+  previewImportProducts, importManualProducts, applyApprovedZjl238RakutenDraft
 } from "../services/product-manual-entry-service.js";
 import {
   parseProductEntryWorkbook, exportProductEntries, normalizeProductEntry
@@ -36,6 +36,12 @@ router.get("/export.xlsx",async(req,res,next)=>{
 router.get("/:ref",async(req,res,next)=>{
   try{res.json({ok:true,...await getManualProduct(req.params.ref)});}
   catch(e){next(e);}
+});
+router.post("/:ref/approved-rakuten-draft",requireWriteActor,async(req,res,next)=>{
+ try{
+  const result=await applyApprovedZjl238RakutenDraft(req.params.ref,req.aioneContext,req.body?.version);
+  res.set("Cache-Control","no-store").json(result);
+ }catch(e){next(e)}
 });
 router.post("/",requireWriteActor,async(req,res,next)=>{
   try{res.status(201).json({ok:true,...await saveManualProduct(req.body,req.aioneContext,{createOnly:true,source:"aione-web"})});}
