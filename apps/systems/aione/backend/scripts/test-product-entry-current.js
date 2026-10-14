@@ -34,6 +34,7 @@ async function run(){
   assert.equal(fixture.sourceKind,"wps-single");
   assert.equal(fixture.items.length,1);
   const original=fixture.items[0];
+  original.targetShopRef="永井GD"; // explicit owner-approved pilot shop fixture
   assert.equal(original.localCode,"zjl238");
   assert.equal(original.nameZh,"户外水龙头防冻罩");
   const detailed=normalizeProductEntry({...original,material:"EVA",productSpecifications:"长度约26cm；厚度约2cm"});
