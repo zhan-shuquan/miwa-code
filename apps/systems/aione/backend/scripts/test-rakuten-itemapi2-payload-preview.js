@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {previewRakutenItemV2} from "../src/services/rakuten-itemapi2-payload-preview.js";
 const product={id:"prd_test",localCode:"zjl238",targetShopRef:"永井GD",rakutenTitle:"凍結防止カバー",rakutenGenreId:"123456",salePriceJpy:980,specs:[{name:"セット数",values:["1個","2個"]}],extraAttributes:{rakutenCatalogExemptionReason:"5"}};
 const skus=[{id:"sku1",sku_code:"zjl238-01",attributes:{"セット数":"1個",__aioneManualEntry:true}},{id:"sku2",sku_code:"zjl238-02",attributes:{"セット数":"2個",__aioneManualEntry:true}}];
-const assets=Array.from({length:12},(_,i)=>({asset_id:"a"+i,mapping_status:"active",external_asset_id:String(i+1),asset_role:i===0?"source_main_image":i<3?"source_sku_image":"source_detail_image",sku_id:i===1?"sku1":i===2?"sku2":null,location:"/rkc001/a"+i+".jpg"}));
+const assets=Array.from({length:12},(_,i)=>({asset_id:"a"+i,mapping_status:"active",external_asset_id:String(i+1),asset_role:i===0?"source_main_image":i<3?"source_sku_image":"source_detail_image",sku_id:i===1?"sku1":i===2?"sku2":null,location:"/13839999/a"+i+".jpg"}));
 const genre={lowest:true,genreId:"123456",attributes:[]};
 const shipping={defaultDeliverySetId:1,deliverySets:[{id:1}],deliveryDates:[{id:2}],};
 const result=previewRakutenItemV2({product,skus,assets,genre,shipping});
@@ -17,6 +17,11 @@ assert.equal(result.item.variants["zjl238-01"].shipping.shippingMethodGroup,"1")
 assert.equal(result.item.variants["zjl238-01"].normalDeliveryDateId,2);
 assert.equal(result.item.variants["zjl238-01"].images.length,1);
 assert.equal(result.mappedImageCount,12);
+assert.equal(result.item.images[0].location,"/13839999/a0.jpg");
+const namedAssets=assets.map(a=>({...a,location:a.location.replace("/13839999/","/zjl01/")}));
+const named=previewRakutenItemV2({product,skus,assets:namedAssets,genre,shipping});
+assert.equal(named.readyForLiveCreate,true);
+assert.equal(named.item.images[0].location,"/zjl01/a0.jpg");
 for(const [overrides,reason] of [
  [{assets:assets.slice(1)},"twelve_mapped_images_required"],
  [{shipping:{...shipping,defaultDeliverySetId:100}},"shop_delivery_set_unverified"],
