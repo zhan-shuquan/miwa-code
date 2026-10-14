@@ -3,6 +3,7 @@ import {requireWriteActor} from "../http/context.js";
 import {prepareFirstLive,publishFirstLive,canFirstLivePublish} from "../services/rakuten-first-live-publish.js";
 import {getItemV2ReadOnly,getRakutenShopPublishingOptions} from "../integrations/rakuten-rms-client.js";
 import {getInventoryV2} from "../integrations/rakuten-commerce-client.js";
+import {verifyRmsPublishedImageAccess} from "../services/rakuten-image-access-diagnostic.js";
 import {getGenreAttributesV2,getAttributeDictionaryV2} from "../integrations/rakuten-commerce-client.js";
 import pool from "../../db.js";
 import {getManualProduct} from "../services/product-manual-entry-service.js";
@@ -48,13 +49,22 @@ router.get("/integrations/rakuten/products/:productRef/live-readback",async(req,
   });
   const imageLocations=(item.images||[]).map(x=>x.location).filter(Boolean);
   if(!imageLocations.length)checks.push("main_images_missing");
+  // File paths returned by ItemAPI are not proof that the image CDN serves a real image.
+  let imageVerification;
+  try {
+   imageVerification=await verifyRmsPublishedImageAccess({productId:product.id,item,shopRef:"永井GD"});
+  }catch(err){
+   imageVerification={verified:false,total:null,accessible:0,cabinetMatched:0,issues:["image_diagnostics_failed:"+String(err.code||"unknown")],rows:[]};
+  }
+  const skuDataVerified=checks.length===0;
+  if(!imageVerification.verified)checks.push("image_files_unverified");
   // A populated ItemAPI object alone is not evidence that the storefront is visible/sellable.
   res.set("Cache-Control","no-store").json({
    ok:checks.length===0,exists:true,shopRef:"永井GD",manageNumber:"zjl238",
    title:item.title||null,genreId:item.genreId||null,
    skuRows,inventory,imageLocations,mainImageCount:imageLocations.length,
    listedImageCount:imageLocations.length+skuRows.reduce((n,r)=>n+r.skuImages.length,0),
-   salesVisibility:"not_independently_verified",checks:[...new Set(checks)],
+   salesVisibility:"not_independently_verified",skuDataVerified,imageVerification,checks:[...new Set(checks)],
    verified:checks.length===0,
    notice:"Independent RMS ItemAPI and InventoryAPI GET verification only. Storefront availability and detailed image appearance still require separate inspection."
   });
