@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {addSpecCatalogPresets,specNameOptions,specValueOptions,translateSpec,validateProductSpecSettings} from '../../js/config/product-spec-settings.js';
+import {addSpecCatalogPresets,newProductSpec,defaultSpecValues,specNameOptions,specValueOptions,translateSpec,validateProductSpecSettings} from '../../js/config/product-spec-settings.js';
 import {validateCustomSettings,assertCustomSchemaTransition,customProductSelections} from '../../js/config/custom-settings.js';
 import {customSettingsWorkbook,parseCustomSettingsWorkbook} from '../src/services/custom-settings-workbook.js';
 import {autoMapAttributes} from '../src/services/rakuten-auto-mapping.js';
@@ -7,6 +7,7 @@ import {previewRakutenItemV2} from '../src/services/rakuten-itemapi2-payload-pre
 const p={};p.customSettings=addSpecCatalogPresets(p);validateCustomSettings(p.customSettings);assert.equal(addSpecCatalogPresets(p).categories.length,2);assert.throws(()=>customProductSelections(p,{spec_colors:'r_0'}),/规格字段/);
 const [names,colors]=p.customSettings.categories;
 assert.equal(specNameOptions(p)[0].value,'颜色');assert.equal(translateSpec(p,'颜色').value,'カラー');assert.equal(translateSpec(p,'カラー','黑色').value,'ブラック');
+colors.rows[0].isDefault=true;assert.deepEqual(newProductSpec(p),{name:'颜色',values:['黑色']});assert.deepEqual(defaultSpecValues(p,'カラー'),['黑色']);colors.rows[0].isDefault=false;
 let product={specs:[{name:'颜色',values:['黑色','白色']}]};validateProductSpecSettings(product,null,p);
 const prior=structuredClone(p.customSettings);colors.rows[0].name='黑色展示名';colors.fields.push({id:'name_fr',label:'法语名称',type:'text',required:false});colors.rows[0].values.name_fr='Noir';
 assertCustomSchemaTransition(prior,p.customSettings);assert.equal(translateSpec(p,'颜色','黑色','fr').value,'Noir');assert.equal(specValueOptions(p,'颜色')[0].value,'黑色');

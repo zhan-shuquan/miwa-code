@@ -16,6 +16,13 @@ export function specValueOptions(p,name,selected=[],usage={}){
  const c=specValueCatalog(p,name);if(!c)return null;
  return sortedCustomRows(c,usage[c.id]).filter(r=>c.enabled&&r.enabled||selected.some(v=>refs(r).includes(v))).map(r=>({value:selected.find(v=>refs(r).includes(v))||r.businessValue,label:r.name+(r.values.name_ja?' / '+r.values.name_ja:'')+(!c.enabled||!r.enabled?'（已停用）':'')}));
 }
+export function defaultSpecValues(p,name){const c=specValueCatalog(p,name),row=c?.enabled&&c.rows.find(r=>r.enabled&&r.isDefault);return row?[row.businessValue]:[];}
+export function newProductSpec(p,existing=[],usage={}){
+ const available=specNameOptions(p,'',usage).filter(o=>!existing.some(s=>(specDimension(p,s.name)?.businessValue||s.name)===o.value));
+ const defaultRow=nameRows(p)?.rows.find(r=>r.enabled&&r.isDefault);
+ const chosen=available.find(o=>o.value===defaultRow?.businessValue)||available[0];
+ return chosen?{name:chosen.value,values:defaultSpecValues(p,chosen.value)}:null;
+}
 export function translateSpec(p,name,value,language='ja'){
  const c=value===undefined?nameRows(p):specValueCatalog(p,name);
  const source=value===undefined?name:value,normalized=String(source||'').normalize('NFKC').toLowerCase(),matches=c?.rows.filter(r=>[...refs(r),r.values.name_ja,r.values.name_en].filter(Boolean).some(v=>String(v).normalize('NFKC').toLowerCase()===normalized))||[],r=matches.length===1?matches[0]:undefined;
