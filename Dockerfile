@@ -18,6 +18,7 @@ COPY apps/systems/aione/js/services/product-sku-image-identity.js /app/apps/syst
 COPY apps/systems/aione/js/config/shared-parameter-defaults.js /app/apps/systems/aione/js/config/shared-parameter-defaults.js
 # Catalog selection validation shares the frontend catalog definitions.
 COPY apps/systems/aione/js/config/settings-catalog.js /app/apps/systems/aione/js/config/settings-catalog.js
+COPY apps/systems/aione/js/config/product-setting-catalogs.js /app/apps/systems/aione/js/config/product-setting-catalogs.js
 COPY apps/systems/aione/js/config/custom-settings.js /app/apps/systems/aione/js/config/custom-settings.js
 COPY apps/systems/aione/js/config/home-registry.js /app/apps/systems/aione/js/config/home-registry.js
 COPY apps/systems/aione/js/config/business-code-rules.js /app/apps/systems/aione/js/config/business-code-rules.js
