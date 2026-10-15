@@ -10,6 +10,7 @@ const text=(v,max=80)=>typeof v==='string'&&v.trim().length>0&&v.length<=max;
 export const customCategories=p=>p?.customSettings?.categories||[];
 export function validateCustomRow(category,row){
  if(!object(row)||!id(row.id)||!text(row.name)||typeof row.enabled!=='boolean'||typeof row.isDefault!=='boolean'||!Number.isSafeInteger(row.sortOrder)||row.sortOrder<0||row.isDefault&&!row.enabled||!object(row.values))fail('资料编号、名称、排序、状态或默认项无效');
+ if(row.pinned!==undefined&&typeof row.pinned!=='boolean')fail('置顶状态无效');
  const keys=new Set(category.fields.map(f=>f.id));
  if(Object.keys(row.values).some(k=>!keys.has(k)))fail('资料包含未定义字段');
  for(const f of category.fields){const v=row.values[f.id];const blank=v===undefined||v===null||v==='';
@@ -28,16 +29,21 @@ export function validateCustomSettings(settings){
  const ids=new Set(),names=new Set();
  for(const c of settings.categories){
   if(!object(c)||!id(c.id)||ids.has(c.id)||!text(c.name)||names.has(c.name)||!SETTINGS_OWNERS.includes(c.owner)||typeof c.enabled!=='boolean'||typeof c.productBinding!=='boolean'||!Array.isArray(c.fields)||c.fields.length>20||!Array.isArray(c.rows)||c.rows.length>500)fail('分类编号/名称重复，或分类定义无效（每类最多20字段、500条资料）');
+  if(c.dropdownSort!==undefined&&!['usage','manual','name'].includes(c.dropdownSort))fail('下拉排序方式无效');
   ids.add(c.id);names.add(c.name);const fields=new Set(),labels=new Set();
   for(const f of c.fields){
    if(!object(f)||!id(f.id)||fields.has(f.id)||!text(f.label)||labels.has(f.label)||!CUSTOM_FIELD_TYPES.includes(f.type)||typeof f.required!=='boolean')fail('字段名称重复或类型无效');
    fields.add(f.id);labels.add(f.label);
+   if(f.hidden!==undefined&&typeof f.hidden!=='boolean'||f.hidden&&f.required)fail('隐藏字段不能设为必填');
    if(f.type==='select'&&(!Array.isArray(f.options)||!f.options.length||f.options.length>50||f.options.some(x=>!text(x,100))||new Set(f.options).size!==f.options.length))fail('单选字段需要1至50个不重复选项');
   }
   const rows=new Set(),rowNames=new Set();let defaults=0;
   for(const r of c.rows){validateCustomRow(c,r);if(rows.has(r.id)||rowNames.has(r.name))fail('资料编号或名称重复');rows.add(r.id);rowNames.add(r.name);if(r.isDefault&&++defaults>1)fail('每类只能有一个默认项');}
  }
  if(JSON.stringify(settings).length>500000)fail('自定义设置总量超过限制，请拆分资料');
+}
+export function sortedCustomRows(category,usage={},mode=category.dropdownSort||'usage'){
+ return [...category.rows].sort((a,b)=>Number(b.pinned===true)-Number(a.pinned===true)||(mode==='usage'?(Number(usage[b.id])||0)-(Number(usage[a.id])||0):mode==='name'?a.name.localeCompare(b.name):0)||a.sortOrder-b.sortOrder||a.name.localeCompare(b.name));
 }
 export function customProductSelections(parameters,input,previous){
  const selections=input===undefined?{...(previous||{})}:input;

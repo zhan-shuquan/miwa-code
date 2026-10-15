@@ -63,7 +63,7 @@ function get(sheet, cell) { return sheet ? cellText(sheet.getCell(cell)) : ""; }
 export function normalizeProductEntry(input = {}) {
   const p = {};
   p.localCode = str(input.localCode).toLowerCase();
-  if (!/^[a-z]{2,8}[0-9]{2,6}$/.test(p.localCode)) throw bad("invalid_local_code", "商品货号必须类似zjl238、zsq081。");
+  if (!/^[a-z][a-z0-9-]{2,63}$/.test(p.localCode)) throw bad("invalid_local_code", "商品货号须为3至64位英文、数字或短横线，以字母开头。");
   for (const key of TEXTS) p[key] = str(input[key]);
   for (const key of NUMBERS) p[key] = num(input[key], key);
   if (!p.sourcePlatform && p.purchaseUrl) {

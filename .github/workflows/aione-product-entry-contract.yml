@@ -52,6 +52,12 @@ on:
       - apps/systems/aione/backend/src/routes/product-image-sync.js
       - apps/systems/aione/backend/scripts/test-product-image-name-current.js
       - data-code/migrations/0110_p0_unified_shared_parameters.sql
+      - data-code/migrations/0111_business_number_counters.sql
+      - apps/systems/aione/js/config/business-code-rules.js
+      - apps/systems/aione/js/pages/settings-*.js
+      - apps/systems/aione/backend/src/services/settings-reference-usage.js
+      - apps/systems/aione/backend/src/services/business-code-numbering.js
+      - apps/systems/aione/backend/scripts/test-settings-foundation*.js
       - apps/systems/aione/js/config/shared-parameter-defaults.js
       - apps/systems/aione/js/config/product-shared-cost-engine.js
       - apps/systems/aione/js/config/product-shared-cost-engine.test.js
@@ -188,6 +194,10 @@ jobs:
         env:
           PGPASSWORD: aione_ci
         run: psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -f data-code/current/0001_aione_current_baseline.sql
+      - name: Initialize configurable business number counters
+        env:
+          PGPASSWORD: aione_ci
+        run: psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -f data-code/migrations/0111_business_number_counters.sql
       - name: Validate SKU asset FK on disposable CURRENT baseline
         env:
           PGPASSWORD: aione_ci
@@ -316,5 +326,9 @@ jobs:
       - name: Verify custom settings and product editor interactions
         run: |
           npm install --prefix /tmp/aione-ui-tests --no-package-lock --ignore-scripts jsdom@30.1.3
+          AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-settings-foundation-ui.js
           AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-custom-settings-ui.js
           AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-settings-center-ui.js
+
+      - name: Verify settings foundation on disposable Postgres
+        run: node apps/systems/aione/backend/scripts/test-settings-foundation-db.js

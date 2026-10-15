@@ -2,7 +2,9 @@ import {exportCatalogWorkbook,parseCatalogWorkbook} from "../services/settings-c
 import {customSettingsWorkbook,parseCustomSettingsWorkbook} from "../services/custom-settings-workbook.js";
 import {Router} from "express";
 import {getRequestContext,requireWriteActor} from "../http/context.js";
-import {readSharedParameters,activateSharedParameters} from "../services/shared-parameters-service.js";
+import {readSharedParameters,activateSharedParameters,validateSharedParameters} from "../services/shared-parameters-service.js";
+import {readSettingsReferenceUsage} from '../services/settings-reference-usage.js';
+import pool from '../../db.js';
 const router=Router();
 export function canEditSharedParameters(identity,allowlist=process.env.AIONE_SHARED_PARAMETER_EDITOR_PERSON_IDS){
  const ids=String(allowlist||"").split(/[,;\s]+/).filter(Boolean);
@@ -13,7 +15,7 @@ function requireSettingsEditor(req,res,next){
  next();
 }
 router.get("/shared-parameters",async(req,res,next)=>{try{
- res.set("Cache-Control","no-store").json({...await readSharedParameters(),capabilities:{canEdit:canEditSharedParameters(req.aioneIdentity),customSettings:true}});
+ res.set("Cache-Control","no-store").json({...await readSharedParameters(),usage:await readSettingsReferenceUsage(),capabilities:{canEdit:canEditSharedParameters(req.aioneIdentity),customSettings:true,fieldManagerV2:true}});
 }catch(error){next(error)}});
 router.patch("/shared-parameters",requireWriteActor,requireSettingsEditor,async(req,res,next)=>{try{
  const actor=getRequestContext(req);
@@ -26,6 +28,26 @@ router.patch("/shared-parameters",requireWriteActor,requireSettingsEditor,async(
  res.set("Cache-Control","no-store").json(result);
 }catch(error){next(error)}});
 const workbookType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+router.get('/shared-parameters/history',async(req,res,next)=>{try{
+ const before=req.query.before===undefined?Number.MAX_SAFE_INTEGER:Number(req.query.before);
+ if(!Number.isSafeInteger(before)||before<1)throw Object.assign(new Error('历史版本无效'),{statusCode:400});
+ const result=await pool.query("SELECT version,updated_at,updated_by,change_reason FROM public.aione_shared_parameter_history WHERE scope='global' AND version<$1 ORDER BY version DESC LIMIT 20",[before]);
+ res.set('Cache-Control','no-store').json({items:result.rows});
+}catch(e){next(e);}});
+router.get('/shared-parameters/history/:version',async(req,res,next)=>{try{
+ const version=Number(req.params.version);if(!Number.isSafeInteger(version)||version<1)throw Object.assign(new Error('历史版本无效'),{statusCode:400});
+ const result=await pool.query("SELECT version,payload,updated_at,updated_by,change_reason FROM public.aione_shared_parameter_history WHERE scope='global' AND version=$1",[version]);
+ if(!result.rows.length)throw Object.assign(new Error('历史版本不存在'),{statusCode:404});
+ const row=result.rows[0];res.set('Cache-Control','no-store').json({...row,parameters:validateSharedParameters(row.payload),payload:undefined});
+}catch(e){next(e);}});
+router.post('/shared-parameters/backup',async(req,res,next)=>{try{
+ const parameters=validateSharedParameters(req.body?.parameters);
+ res.set({'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="aione-settings-backup.json"','Cache-Control':'no-store'}).send(JSON.stringify({format:'AIONE_SETTINGS_V1',parameters},null,2));
+}catch(e){next(e);}});
+router.post('/shared-parameters/backup-preview',requireWriteActor,requireSettingsEditor,async(req,res,next)=>{try{
+ if(req.body?.format!=='AIONE_SETTINGS_V1')throw Object.assign(new Error('配置备份格式不正确'),{statusCode:400});
+ res.set('Cache-Control','no-store').json({parameters:validateSharedParameters(req.body.parameters)});
+}catch(e){next(e);}});
 router.get("/shared-parameters/catalogs/:kind/template.xlsx",async(req,res,next)=>{try{
  const bytes=await exportCatalogWorkbook(req.params.kind,[],{template:true});
  res.set({"Content-Type":workbookType,"Content-Disposition":'attachment; filename="aione-'+req.params.kind+'-template.xlsx"',"Cache-Control":"no-store"}).send(bytes);

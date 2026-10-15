@@ -1,4 +1,5 @@
 // Cloud SQL single source of active shared parameters, with versioned audit.
+import {validateCodeRules} from "../../../js/config/business-code-rules.js";
 import pool,{withTransaction} from "../../db.js";
 import {INITIAL_PARAMETERS} from "../../../js/config/shared-parameter-defaults.js";
 import {validateCustomSettings,assertCustomSchemaTransition,customCategories} from "../../../js/config/custom-settings.js";
@@ -38,8 +39,10 @@ export function validateSharedParameters(p){
   const values={chinaPackaging:c.chinaPackagingCny,japanPackaging:c.japanPackagingJpy,logistics:c.logistics}[kind];
   if(!["chinaPackaging","japanPackaging","logistics"].includes(kind)||!values||!items||Array.isArray(items))throw fail("invalid_catalog_metadata","设置目录无效");
   if(Object.values(items).filter(item=>item?.isDefault===true).length>1)throw fail("invalid_catalog_default","每个目录只能有一个默认选项");
-  for(const [key,item] of Object.entries(items))if(Object.keys(item||{}).some(k=>!["enabled","sortOrder","isDefault"].includes(k))||(item?.isDefault!==undefined&&typeof item.isDefault!=="boolean")||(item?.isDefault===true&&item.enabled===false)||!Object.hasOwn(values,key)||!item||typeof item.enabled!=="boolean"||!Number.isSafeInteger(item.sortOrder)||item.sortOrder<0)throw fail("invalid_catalog_metadata","设置状态或排序无效");
+  for(const [key,item] of Object.entries(items))if(Object.keys(item||{}).some(k=>!["enabled","sortOrder","isDefault","pinned"].includes(k))||(item?.pinned!==undefined&&typeof item.pinned!=="boolean")||(item?.isDefault!==undefined&&typeof item.isDefault!=="boolean")||(item?.isDefault===true&&item.enabled===false)||!Object.hasOwn(values,key)||!item||typeof item.enabled!=="boolean"||!Number.isSafeInteger(item.sortOrder)||item.sortOrder<0)throw fail("invalid_catalog_metadata","设置状态或排序无效");
  }
+ if(p.settingsCatalogSort!==undefined&&(!p.settingsCatalogSort||Array.isArray(p.settingsCatalogSort)||Object.entries(p.settingsCatalogSort).some(([k,v])=>!['chinaPackaging','japanPackaging','logistics'].includes(k)||!['usage','manual','name'].includes(v))))throw fail('invalid_settings_sort','选项排序方式无效');
+ validateCodeRules(p.codeRules);
  validateCustomSettings(p.customSettings);
  return clone(p);
 }

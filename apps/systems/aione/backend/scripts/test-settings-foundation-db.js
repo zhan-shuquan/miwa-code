@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import pool from '../db.js';
+import {readSharedParameters,activateSharedParameters} from '../src/services/shared-parameters-service.js';
+import {saveManualProduct,getManualProduct} from '../src/services/product-manual-entry-service.js';
+import {readSettingsReferenceUsage} from '../src/services/settings-reference-usage.js';
+import {sortedCustomRows} from '../../js/config/custom-settings.js';
+import {DEFAULT_CODE_RULES} from '../../js/config/business-code-rules.js';
+import {customSettingsWorkbook,parseCustomSettingsWorkbook} from '../src/services/custom-settings-workbook.js';
+if(process.env.AIONE_ENV!=='controlled-ci'||!process.env.DATABASE_URL)throw new Error('Requires disposable controlled-ci database');
+async function run(){
+ let state=await readSharedParameters();
+ const activate=p=>activateSharedParameters({expectedVersion:state.version,parameters:p,updatedBy:'ci-foundation',changeReason:'settings foundation acceptance'});
+ const config=structuredClone(state.parameters);
+ const colors={id:'c_colors',name:'基础工程颜色测试',owner:'商品之家',enabled:true,productBinding:true,dropdownSort:'usage',fields:[{id:'f_ja',label:'日文名称',type:'text',required:false}],rows:['黑色','白色'].map((name,i)=>({id:'r_color'+i,name,values:{f_ja:i?'ホワイト':'ブラック'},enabled:true,isDefault:false,sortOrder:i}))};
+ config.customSettings??={categories:[]};const ci=config.customSettings.categories.length;config.customSettings.categories.push(colors);config.codeRules=structuredClone(DEFAULT_CODE_RULES);config.codeRules.product.prefix='cfg';config.codeRules.sku.prefix='s';state=await activate(config);
+ const input={nameZh:'设置基础工程验收商品',packagingMethod:'原装',packagingMaterial:'A4信封',logisticsMethod:'空运大件（普货）',specs:[{name:'颜色',values:['黑色']}]};
+ const products=await Promise.all([0,1,2].map(i=>saveManualProduct({...input,localCode:'fnd90'+i,customSettings:{c_colors:i===2?'r_color1':'r_color0'}},{personId:'ci'},{createOnly:true})));
+ let usage=await readSettingsReferenceUsage();assert.equal(usage.c_colors.r_color0,2);assert.equal(usage.c_colors.r_color1,1);
+ let product=products[0].product;
+ const resaved=await saveManualProduct({...product,remarks:'重复保存不能增加引用数'},{personId:'ci'},{updateOnly:true,expectedVersion:product.version});product=resaved.product;
+ usage=await readSettingsReferenceUsage();assert.equal(usage.c_colors.r_color0,2);
+ assert.equal(sortedCustomRows(colors,usage.c_colors)[0].name,'黑色');
+ const french=structuredClone(state.parameters);french.customSettings.categories[ci].fields.push({id:'f_fr',label:'法语名称',type:'text',required:false});french.customSettings.categories[ci].rows[0].values.f_fr='Noir';state=await activate(french);
+ const saved=await getManualProduct('fnd900');assert.equal(saved.product.customSettings.c_colors,'r_color0');
+ const roundtrip=await parseCustomSettingsWorkbook(state.parameters.customSettings.categories[ci],await customSettingsWorkbook(state.parameters.customSettings.categories[ci]));assert.equal(roundtrip.rows[0].values.f_fr,'Noir');
+ const hide=structuredClone(state.parameters);hide.customSettings.categories[ci].fields[1].hidden=true;state=await activate(hide);assert.equal(state.parameters.customSettings.categories[ci].rows[0].values.f_fr,'Noir');
+ const keepCode=products[0].skus[0].skuCode;
+ const changed=structuredClone(state.parameters);changed.codeRules.sku.prefix='new';state=await activate(changed);
+ const extended=await saveManualProduct({...product,specs:[{name:'颜色',values:['黑色','白色']}]},{personId:'ci'},{updateOnly:true,expectedVersion:product.version});assert.ok(extended.skus.some(x=>x.skuCode===keepCode));assert.ok(extended.skus.some(x=>x.skuCode.includes('-new02')));
+ const auto=await Promise.all([0,1].map(()=>saveManualProduct({...input,generateLocalCode:true},{personId:'ci'},{createOnly:true})));
+ assert.equal(new Set(auto.map(x=>x.product.localCode)).size,2);assert.deepEqual(auto.map(x=>x.product.localCode).sort(),['cfg081','cfg082']);
+ const dates=structuredClone(state.parameters);dates.codeRules.product.dateFormat='YYYYMM';dates.codeRules.product.separator='-';state=await activate(dates);
+ const dated=await saveManualProduct({...input,generateLocalCode:true},{personId:'ci'},{createOnly:true});assert.match(dated.product.localCode,/^cfg-\d{6}-081$/);
+ console.log('PASS database foundation: French field expansion without new table, XLSX schema follows, hidden data retained, exact reference counts, repeated save invariance, concurrent auto numbering, SKU identity preservation and dated rules');
+}
+run().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>pool.end());

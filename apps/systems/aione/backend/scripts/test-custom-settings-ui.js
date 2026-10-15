@@ -34,6 +34,11 @@ await mountSettingsCenter(host);click('[data-kind=custom]');assert.ok(host.textC
 // Pending category/row edits must block global save and directory changes.
 click('[data-custom=edit-category]');click('[data-action=save]');await tick();assert.equal(writes,1);assert.ok(host.textContent.includes('请先完成'));
 click('[data-cancel-custom]');
+// Extend the same table with French; preserve existing ID, fields and rows.
+click('[data-custom=edit-category]');click('[data-add-field]');const frBox=host.querySelector('[data-field-index="1"]');frBox.querySelector('[data-field-key=label]').value='法语名称';submit();
+click('[data-edit-row]');const frId=host.querySelectorAll('[data-custom-form] input[name^=f_]')[1].name;host.querySelector('[name="'+frId+'"]').value='Noir';submit();host.querySelector('[data-reason]').value='同一张表增加法语';click('[data-action=save]');await tick();
+assert.equal(saved.customSettings.categories[0].id,c.id);assert.equal(saved.customSettings.categories[0].rows[0].id,r.id);assert.equal(saved.customSettings.categories[0].rows[0].values[frId],'Noir');assert.equal(saved.customSettings.categories[0].rows[0].values[c.fields[0].id],'防潮袋');
+click('[data-custom=edit-category]');host.querySelector('[data-field-index="1"] [data-field-key=hidden]').checked=true;submit();host.querySelector('[data-reason]').value='隐藏法语保留数据';click('[data-action=save]');await tick();assert.equal(saved.customSettings.categories[0].rows[0].values[frId],'Noir');
 const {openProductEditor}=await import('../../js/pages/product-manual-entry.js');
 openProductEditor(host);await tick();const dropdown=host.querySelector('[data-custom-category]');assert.ok(dropdown);assert.equal(dropdown.value,r.id);
 host.querySelector('[data-f=localCode]').value='test986';host.querySelector('[data-f=localCode]').dispatchEvent(new Event('input',{bubbles:true}));

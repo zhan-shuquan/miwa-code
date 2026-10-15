@@ -5,8 +5,8 @@ export const SETTINGS_CATALOGS = Object.freeze({
  logistics: {label:'物流方式与运费', owner:'往来之家', path:['commerce','logistics'], currency:'CNY'}
 });
 export function catalogValues(parameters,kind){const def=SETTINGS_CATALOGS[kind];return def?def.path.reduce((v,k)=>v?.[k],parameters)||{}:{};}
-export function catalogRows(parameters,kind){return Object.entries(catalogValues(parameters,kind)).map(([key,value],i)=>({key,name:kind==='logistics'?value.name:key,value,...(parameters.settingsCatalogMeta?.[kind]?.[key]||{}),enabled:parameters.settingsCatalogMeta?.[kind]?.[key]?.enabled!==false,isDefault:parameters.settingsCatalogMeta?.[kind]?.[key]?.isDefault===true,sortOrder:parameters.settingsCatalogMeta?.[kind]?.[key]?.sortOrder??i+1})).sort((a,b)=>a.sortOrder-b.sortOrder||a.name.localeCompare(b.name));}
-export function catalogOptions(parameters,kind,current){const rows=catalogRows(parameters,kind).filter(r=>r.enabled!==false||r.name===current);if(current&&!rows.some(r=>r.name===current))rows.unshift({name:current});return rows.map(r=>r.name);}
+export function catalogRows(parameters,kind,usage){return Object.entries(catalogValues(parameters,kind)).map(([key,value],i)=>({key,name:kind==='logistics'?value.name:key,value,...(parameters.settingsCatalogMeta?.[kind]?.[key]||{}),enabled:parameters.settingsCatalogMeta?.[kind]?.[key]?.enabled!==false,isDefault:parameters.settingsCatalogMeta?.[kind]?.[key]?.isDefault===true,sortOrder:parameters.settingsCatalogMeta?.[kind]?.[key]?.sortOrder??i+1})).sort((a,b)=>a.sortOrder-b.sortOrder||a.name.localeCompare(b.name)).sort((a,b)=>Number(b.pinned===true)-Number(a.pinned===true)||(parameters.settingsCatalogSort?.[kind]==='name'?a.name.localeCompare(b.name):parameters.settingsCatalogSort?.[kind]==='manual'||!usage?0:(Number(usage[b.name])||0)-(Number(usage[a.name])||0))||a.sortOrder-b.sortOrder||a.name.localeCompare(b.name));}
+export function catalogOptions(parameters,kind,current,usage){const rows=catalogRows(parameters,kind,usage).filter(r=>r.enabled!==false||r.name===current);if(current&&!rows.some(r=>r.name===current))rows.unshift({name:current});return rows.map(r=>r.name);}
 export function setCatalogRow(parameters,kind,row){
  const def=SETTINGS_CATALOGS[kind];if(!def)throw new Error('未知设置分类');
  const key=String(row.key||'').trim();
@@ -16,7 +16,7 @@ export function setCatalogRow(parameters,kind,row){
  map[key]=kind==='logistics'?{...row.value,name:String(row.value?.name||'').trim()}:Number(row.value);
  parameters.settingsCatalogMeta??={};parameters.settingsCatalogMeta[kind]??={};
  if(row.isDefault===true){if(row.enabled===false)throw new Error('默认选项必须启用');for(const item of Object.values(parameters.settingsCatalogMeta[kind]))item.isDefault=false;}
- parameters.settingsCatalogMeta[kind][key]={enabled:row.enabled!==false,sortOrder:Number(row.sortOrder??1),isDefault:row.isDefault===true};
+ parameters.settingsCatalogMeta[kind][key]={enabled:row.enabled!==false,sortOrder:Number(row.sortOrder??1),isDefault:row.isDefault===true,...(row.pinned!==undefined?{pinned:row.pinned}:parameters.settingsCatalogMeta[kind][key]?.pinned!==undefined?{pinned:parameters.settingsCatalogMeta[kind][key].pinned}:{})};
  return parameters;
 }
 export function catalogDefault(parameters,kind,fallback=''){
