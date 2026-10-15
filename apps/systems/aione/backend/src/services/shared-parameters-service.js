@@ -66,12 +66,12 @@ export async function activateSharedParameters({expectedVersion,parameters,updat
   assertCustomSchemaTransition(oldCustom,candidate.customSettings);
   const removedCustom=[];
   for(const c of oldCustom?.categories||[]){const next=customCategories(candidate).find(x=>x.id===c.id);
-   for(const row of c.rows)if(!next?.rows.some(x=>x.id===row.id))removedCustom.push([c.id,row.id]);
+   for(const row of c.rows)if(!next?.rows.some(x=>x.id===row.id))removedCustom.push([c.id,row.id,c.productField,row.businessValue]);
   }
   if(removedCustom.length){
    await db.query("LOCK TABLE public.products IN SHARE MODE");
-   for(const [category,row] of removedCustom){
-    const used=await db.query("SELECT product_code FROM public.products WHERE metadata->'manualEntry'->'customSettings'->>$1=$2 LIMIT 1",[category,row]);
+   for(const [category,row,field,value] of removedCustom){
+    const used=await db.query("SELECT product_code FROM public.products WHERE metadata->'manualEntry'->'customSettings'->>$1=$2 OR metadata->'customSettings'->>$1=$2 OR ($3::text IS NOT NULL AND (metadata->'manualEntry'->>$3=$4 OR metadata->>$3=$4)) LIMIT 1",[category,row,field||null,value||null]);
     if(used.rows.length)throw fail('settings_item_in_use','资料被商品 '+used.rows[0].product_code+' 引用，请停用而非删除',409);
    }
   }

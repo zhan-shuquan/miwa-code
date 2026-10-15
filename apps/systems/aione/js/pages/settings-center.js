@@ -43,7 +43,7 @@ export async function mountSettingsCenter(host,{kind:initialKind,onSaved}={}){
  <footer>${removedRows.length?'<button data-action="undo-delete">撤销最近删除</button>':''}<input data-reason aria-label="变更原因" placeholder="填写变更原因后保存生效" value="${esc(reasonDraft)}" ${!canEdit||busy?'disabled':''}><button class="primary" data-action="save" ${!canEdit||busy?'disabled':''}>${busy?'保存中…':'保存并生效'}</button><button data-action="reload" ${busy?'disabled':''}>重新读取</button></footer><p>修改使用版本校验并记录维护人和变更原因。删除在保存时检查商品引用，已引用资料请停用。</p></article></div></section>`;
  if(kind==='codes')customEditor=mountCodeRules(host.querySelector('[data-custom-settings-host]'),{parameters:draft,canEdit,onChange:()=>{}});
  if(kind==='maintenance')customEditor=mountSettingsMaintenance(host.querySelector('[data-custom-settings-host]'),{parameters:draft,canEdit,onRestore:next=>{draft=copy(next);message='恢复内容已进入草稿，请核对并填写原因后保存。';render();}});
- if(kind==='custom')customEditor=mountCustomSettingsEditor(host.querySelector('[data-custom-settings-host]'),{parameters:draft,canEdit,onChange:()=>{},usage:response.usage||{}});
+ if(kind==='custom')customEditor=mountCustomSettingsEditor(host.querySelector('[data-custom-settings-host]'),{parameters:draft,canEdit,productCatalogBindings:response.capabilities?.productCatalogBindings===true,onChange:()=>{},usage:response.usage||{}});
  const catalogSort=host.querySelector('[data-catalog-sort]');if(catalogSort)catalogSort.onchange=()=>{draft.settingsCatalogSort??={};draft.settingsCatalogSort[kind]=catalogSort.value;render();};
  if(editing)renderEditor();
  host.querySelector('[data-reason]').oninput=e=>{reasonDraft=e.target.value;};

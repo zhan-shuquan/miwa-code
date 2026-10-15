@@ -15,7 +15,7 @@ function requireSettingsEditor(req,res,next){
  next();
 }
 router.get("/shared-parameters",async(req,res,next)=>{try{
- res.set("Cache-Control","no-store").json({...await readSharedParameters(),usage:await readSettingsReferenceUsage(),capabilities:{canEdit:canEditSharedParameters(req.aioneIdentity),customSettings:true,fieldManagerV2:true}});
+ res.set("Cache-Control","no-store").json({...await readSharedParameters(),usage:await readSettingsReferenceUsage(),capabilities:{canEdit:canEditSharedParameters(req.aioneIdentity),customSettings:true,fieldManagerV2:true,productCatalogBindings:true}});
 }catch(error){next(error)}});
 router.patch("/shared-parameters",requireWriteActor,requireSettingsEditor,async(req,res,next)=>{try{
  const actor=getRequestContext(req);

@@ -322,7 +322,9 @@ jobs:
         run: node apps/systems/aione/backend/scripts/test-settings-catalog-workbook.js
 
       - name: Verify custom settings schema, product adapter and dynamic Excel
-        run: node apps/systems/aione/backend/scripts/test-custom-settings.js
+        run: |
+          node apps/systems/aione/backend/scripts/test-custom-settings.js
+          node apps/systems/aione/backend/scripts/test-product-setting-catalogs.js
       - name: Verify custom settings and product editor interactions
         run: |
           npm install --prefix /tmp/aione-ui-tests --no-package-lock --ignore-scripts jsdom@30.1.3
@@ -332,3 +334,6 @@ jobs:
 
       - name: Verify settings foundation on disposable Postgres
         run: node apps/systems/aione/backend/scripts/test-settings-foundation-db.js
+
+      - name: Verify bound product catalogs on disposable Postgres
+        run: node apps/systems/aione/backend/scripts/test-product-setting-catalogs-db.js

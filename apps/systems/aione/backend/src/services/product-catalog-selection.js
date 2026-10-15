@@ -1,3 +1,4 @@
+import {applyBoundProductSelections} from '../../../js/config/product-setting-catalogs.js';
 import {catalogRows,catalogDefault} from '../../../js/config/settings-catalog.js';
 import {customProductSelections} from '../../../js/config/custom-settings.js';
 const fields={packagingMethod:'chinaPackaging',packagingMaterial:'japanPackaging',logisticsMethod:'logistics'};
@@ -12,5 +13,5 @@ export function applyProductCatalogSelections(product,input,previous,parameters)
   if(previous?.[field]===name)continue; // Historical or retired choices remain editable.
   if(!row||row.enabled===false)throw Object.assign(new Error('请选择启用的'+({packagingMethod:'包装方式',packagingMaterial:'日本包装物',logisticsMethod:'物流方式'}[field])),{code:'inactive_product_setting',statusCode:400});
  }
- return product;
+ return applyBoundProductSelections(product,input,previous,parameters);
 }

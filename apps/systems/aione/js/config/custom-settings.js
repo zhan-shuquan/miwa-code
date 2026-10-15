@@ -1,6 +1,7 @@
 import {HOME_REGISTRY} from './home-registry.js';
 // Validated extension namespace in the existing versioned Cloud SQL settings payload.
 // Extension selections store IDs; display labels are never product references.
+export const PRODUCT_CATALOG_FIELDS={category:'商品分类',brand:'所属品牌',material:'主要材质',originCountry:'原产地'};
 export const CUSTOM_FIELD_TYPES=['text','number','select','boolean','date'];
 export const SETTINGS_OWNERS=Object.values(HOME_REGISTRY).map(home=>home.label);
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
@@ -26,9 +27,10 @@ export function validateCustomRow(category,row){
 export function validateCustomSettings(settings){
  if(settings===undefined)return;
  if(!object(settings)||Object.keys(settings).some(k=>k!=='categories')||!Array.isArray(settings.categories)||settings.categories.length>30)fail('自定义分类最多30个');
- const ids=new Set(),names=new Set();
+ const ids=new Set(),names=new Set(),bindings=new Set();
  for(const c of settings.categories){
   if(!object(c)||!id(c.id)||ids.has(c.id)||!text(c.name)||names.has(c.name)||!SETTINGS_OWNERS.includes(c.owner)||typeof c.enabled!=='boolean'||typeof c.productBinding!=='boolean'||!Array.isArray(c.fields)||c.fields.length>20||!Array.isArray(c.rows)||c.rows.length>500)fail('分类编号/名称重复，或分类定义无效（每类最多20字段、500条资料）');
+  if(c.productField!==undefined){if(!Object.hasOwn(PRODUCT_CATALOG_FIELDS,c.productField)||bindings.has(c.productField)||!c.productBinding)fail('商品字段绑定无效或重复');bindings.add(c.productField);}
   if(c.dropdownSort!==undefined&&!['usage','manual','name'].includes(c.dropdownSort))fail('下拉排序方式无效');
   ids.add(c.id);names.add(c.name);const fields=new Set(),labels=new Set();
   for(const f of c.fields){
@@ -37,8 +39,8 @@ export function validateCustomSettings(settings){
    if(f.hidden!==undefined&&typeof f.hidden!=='boolean'||f.hidden&&f.required)fail('隐藏字段不能设为必填');
    if(f.type==='select'&&(!Array.isArray(f.options)||!f.options.length||f.options.length>50||f.options.some(x=>!text(x,100))||new Set(f.options).size!==f.options.length))fail('单选字段需要1至50个不重复选项');
   }
-  const rows=new Set(),rowNames=new Set();let defaults=0;
-  for(const r of c.rows){validateCustomRow(c,r);if(rows.has(r.id)||rowNames.has(r.name))fail('资料编号或名称重复');rows.add(r.id);rowNames.add(r.name);if(r.isDefault&&++defaults>1)fail('每类只能有一个默认项');}
+  const rows=new Set(),rowNames=new Set(),businessValues=new Set();let defaults=0;
+  for(const r of c.rows){validateCustomRow(c,r);if(c.productField){if(!text(r.businessValue)||businessValues.has(r.businessValue))fail('业务引用值为空或重复');businessValues.add(r.businessValue);}if(rows.has(r.id)||rowNames.has(r.name))fail('资料编号或名称重复');rows.add(r.id);rowNames.add(r.name);if(r.isDefault&&++defaults>1)fail('每类只能有一个默认项');}
  }
  if(JSON.stringify(settings).length>500000)fail('自定义设置总量超过限制，请拆分资料');
 }
@@ -54,15 +56,17 @@ export function customProductSelections(parameters,input,previous){
   if(!value)continue;
   const c=customCategories(parameters).find(x=>x.id===key),r=c?.rows.find(x=>x.id===value);
   if(!c||!r)fail('商品自定义选项已不存在，请重新选择');
-  if((!c.enabled||!c.productBinding||!r.enabled)&&previous?.[key]!==value)fail(c.name+'已停用或未绑定商品');
+  if(!c.productField&&(!c.enabled||!c.productBinding||!r.enabled)&&previous?.[key]!==value)fail(c.name+'已停用或未绑定商品');
   result[key]=value;
  }
- for(const c of customCategories(parameters))if(c.enabled&&c.productBinding&&!Object.hasOwn(selections,c.id)&&!previous?.[c.id]){const row=c.rows.find(r=>r.enabled&&r.isDefault);if(row)result[c.id]=row.id;}
+ for(const c of customCategories(parameters))if(!c.productField&&c.enabled&&c.productBinding&&!Object.hasOwn(selections,c.id)&&!previous?.[c.id]){const row=c.rows.find(r=>r.enabled&&r.isDefault);if(row)result[c.id]=row.id;}
  return result;
 }
 export function assertCustomSchemaTransition(previous,next){
  for(const old of previous?.categories||[]){const c=next?.categories?.find(x=>x.id===old.id);
   if(!c)continue; // Database reference protection checks category/row removal.
+  if(old.productField!==c.productField)fail('已有分类不能更换商品字段绑定');
+  for(const row of old.rows){const nr=c.rows.find(r=>r.id===row.id);if(old.productField&&nr&&nr.businessValue!==row.businessValue)fail('已有资料的业务引用值不能更改');}
   for(const f of old.fields){const nf=c.fields.find(x=>x.id===f.id);
    if(old.rows.some(r=>r.values[f.id]!==undefined&&r.values[f.id]!==null&&r.values[f.id]!=='')){
     if(!nf||nf.type!==f.type)fail('字段“'+f.label+'”已有资料，不能删除或改变类型');

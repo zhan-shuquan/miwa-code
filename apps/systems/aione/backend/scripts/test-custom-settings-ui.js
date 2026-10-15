@@ -18,7 +18,7 @@ globalThis.fetch=async(url,options={})=>{
  }
  if(url.includes('/product-entry'))return {ok:true,json:async()=>({items:[],total:0})};
  if(options.method==='PATCH'){writes++;const body=JSON.parse(options.body);assert.equal(body.expectedVersion,version);saved=validateSharedParameters(body.parameters);version++;}
- return {ok:true,json:async()=>({parameters:structuredClone(saved),version,capabilities:{canEdit:allow,customSettings:true}})};
+ return {ok:true,json:async()=>({parameters:structuredClone(saved),version,capabilities:{canEdit:allow,customSettings:true,productCatalogBindings:true}})};
 };
 const {mountSettingsCenter}=await import('../../js/pages/settings-center.js');
 const host=document.getElementById('app-main-host'),tick=()=>new Promise(r=>setTimeout(r,20));
@@ -47,6 +47,19 @@ click('[data-save]');await tick();assert.equal(storedProduct.customSettings[c.id
 // Display labels change while product references remain stable.
 saved.customSettings.categories[0].rows[0].name='更名防护';
 openProductEditor(host,storedProduct);await tick();assert.equal(host.querySelector('[data-custom-category]').value,r.id);assert.ok(host.textContent.includes('更名防护'));
+// Install shared catalogs in a draft and exercise the original product selectors.
+await mountSettingsCenter(host);click('[data-kind=custom]');click('[data-custom=product-presets]');
+host.querySelector('[data-reason]').value='商品基础资料接入';click('[data-action=save]');await tick();
+const brands=saved.customSettings.categories.find(c=>c.productField==='brand');
+click('[data-category="'+brands.id+'"]');click('[data-custom=new-row]');host.querySelector('[name=rowName]').value='NEWONE';submit();
+host.querySelector('[data-reason]').value='新增品牌';click('[data-action=save]');await tick();
+openProductEditor(host);await tick();assert.ok(host.querySelector('[data-f=brand] option[value=NEWONE]'));
+assert.equal(host.querySelector('[data-custom-category="'+brands.id+'"]'),null);
+const brandSelect=host.querySelector('[data-f=brand]');brandSelect.value='NEWONE';brandSelect.dispatchEvent(new Event('change',{bubbles:true}));
+for(const [key,value] of [['localCode','test985'],['nameZh','接入品牌验收']]){const el=host.querySelector('[data-f="'+key+'"]');el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));}
+click('[data-save]');await tick();assert.equal(storedProduct.brand,'NEWONE');assert.equal(storedProduct.customSettings[brands.id],saved.customSettings.categories.find(c=>c.id===brands.id).rows.at(-1).id);
+// A label rename keeps both the business value and saved row ID unchanged.
+saved.customSettings.categories.find(c=>c.id===brands.id).rows.at(-1).name='NEWONE 新品牌';openProductEditor(host,storedProduct);await tick();assert.equal(host.querySelector('[data-f=brand]').value,'NEWONE');assert.ok(host.querySelector('[data-f=brand]').textContent.includes('NEWONE 新品牌'));
 // Read-only mode cannot create categories or rows.
 allow=false;await mountSettingsCenter(host);click('[data-kind=custom]');assert.equal(host.querySelector('[data-custom=new-category]').disabled,true);assert.equal(host.querySelector('[data-custom=new-row]').disabled,true);
 console.log('PASS custom settings DOM: category + field + row creation, audited save, remount persistence, pending-edit protection, product selection/default/save adapter, rename-safe references and readonly controls');

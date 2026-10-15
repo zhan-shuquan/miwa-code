@@ -10,6 +10,14 @@ export async function readSettingsReferenceUsage(db=pool){
  UNION ALL
  SELECT ref.category,data->>ref.field AS row_id FROM saved
  CROSS JOIN (VALUES ('chinaPackaging','packagingMethod'),('japanPackaging','packagingMaterial'),('logistics','logisticsMethod')) ref(category,field)
+ UNION ALL
+ SELECT c->>'id',r->>'id' FROM saved
+ CROSS JOIN public.aione_shared_parameters params
+ CROSS JOIN LATERAL jsonb_array_elements(COALESCE(params.payload->'customSettings'->'categories','[]'::jsonb)) c
+ CROSS JOIN LATERAL jsonb_array_elements(c->'rows') r
+ WHERE params.scope='global' AND c->>'productField' IS NOT NULL
+ AND data->>(c->>'productField')=r->>'businessValue'
+ AND COALESCE(data->'customSettings'->>(c->>'id'),'')=''
  ) SELECT category,row_id,count(*)::text AS total FROM refs
  WHERE row_id IS NOT NULL AND row_id<>'' GROUP BY category,row_id`);
  const counts={};
