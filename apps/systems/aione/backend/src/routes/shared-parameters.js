@@ -11,7 +11,7 @@ function requireSettingsEditor(req,res,next){
  next();
 }
 router.get("/shared-parameters",async(req,res,next)=>{try{
- res.set("Cache-Control","no-store").json(await readSharedParameters());
+ res.set("Cache-Control","no-store").json({...await readSharedParameters(),capabilities:{canEdit:canEditSharedParameters(req.aioneIdentity)}});
 }catch(error){next(error)}});
 router.patch("/shared-parameters",requireWriteActor,requireSettingsEditor,async(req,res,next)=>{try{
  const actor=getRequestContext(req);
