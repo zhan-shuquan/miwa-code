@@ -1,4 +1,5 @@
 import {exportCatalogWorkbook,parseCatalogWorkbook} from "../services/settings-catalog-workbook.js";
+import {customSettingsWorkbook,parseCustomSettingsWorkbook} from "../services/custom-settings-workbook.js";
 import {Router} from "express";
 import {getRequestContext,requireWriteActor} from "../http/context.js";
 import {readSharedParameters,activateSharedParameters} from "../services/shared-parameters-service.js";
@@ -12,7 +13,7 @@ function requireSettingsEditor(req,res,next){
  next();
 }
 router.get("/shared-parameters",async(req,res,next)=>{try{
- res.set("Cache-Control","no-store").json({...await readSharedParameters(),capabilities:{canEdit:canEditSharedParameters(req.aioneIdentity)}});
+ res.set("Cache-Control","no-store").json({...await readSharedParameters(),capabilities:{canEdit:canEditSharedParameters(req.aioneIdentity),customSettings:true}});
 }catch(error){next(error)}});
 router.patch("/shared-parameters",requireWriteActor,requireSettingsEditor,async(req,res,next)=>{try{
  const actor=getRequestContext(req);
@@ -37,5 +38,15 @@ router.post("/shared-parameters/catalogs/:kind/import-preview",requireWriteActor
  const raw=req.body?.base64;
  if(typeof raw!=="string"||raw.length>2796204||!raw||raw.length%4!==0||!/^[a-zA-Z0-9+/]*={0,2}$/.test(raw))return res.status(400).json({error:"invalid_workbook_upload",message:"请上传不超过2MB的Excel .xlsx文件"});
  res.set("Cache-Control","no-store").json(await parseCatalogWorkbook(req.params.kind,Buffer.from(raw,"base64")));
+}catch(e){next(e);}});
+// Preview endpoints validate the supplied draft schema and never activate settings.
+router.post('/shared-parameters/custom-workbook',async(req,res,next)=>{try{
+ const bytes=await customSettingsWorkbook(req.body?.category,{template:req.body?.template===true});
+ res.set({'Content-Type':workbookType,'Content-Disposition':'attachment; filename="aione-custom-settings.xlsx"','Cache-Control':'no-store'}).send(bytes);
+}catch(e){next(e);}});
+router.post('/shared-parameters/custom-import-preview',requireWriteActor,requireSettingsEditor,async(req,res,next)=>{try{
+ const raw=req.body?.base64;
+ if(typeof raw!=='string'||!raw||raw.length>2796204||raw.length%4||!/^[a-zA-Z0-9+/]*={0,2}$/.test(raw))throw Object.assign(new Error('请上传不超过2MB的xlsx文件'),{statusCode:400});
+ res.set('Cache-Control','no-store').json(await parseCustomSettingsWorkbook(req.body.category,Buffer.from(raw,'base64')));
 }catch(e){next(e);}});
 export default router;

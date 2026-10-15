@@ -1,6 +1,7 @@
 // Cloud SQL single source of active shared parameters, with versioned audit.
 import pool,{withTransaction} from "../../db.js";
 import {INITIAL_PARAMETERS} from "../../../js/config/shared-parameter-defaults.js";
+import {validateCustomSettings,assertCustomSchemaTransition,customCategories} from "../../../js/config/custom-settings.js";
 
 const fail=(code,message,statusCode=400)=>Object.assign(new Error(message),{code,statusCode});
 const clone=x=>JSON.parse(JSON.stringify(x));
@@ -39,6 +40,7 @@ export function validateSharedParameters(p){
   if(Object.values(items).filter(item=>item?.isDefault===true).length>1)throw fail("invalid_catalog_default","每个目录只能有一个默认选项");
   for(const [key,item] of Object.entries(items))if(Object.keys(item||{}).some(k=>!["enabled","sortOrder","isDefault"].includes(k))||(item?.isDefault!==undefined&&typeof item.isDefault!=="boolean")||(item?.isDefault===true&&item.enabled===false)||!Object.hasOwn(values,key)||!item||typeof item.enabled!=="boolean"||!Number.isSafeInteger(item.sortOrder)||item.sortOrder<0)throw fail("invalid_catalog_metadata","设置状态或排序无效");
  }
+ validateCustomSettings(p.customSettings);
  return clone(p);
 }
 export async function readSharedParameters(db=pool){
@@ -57,6 +59,19 @@ export async function activateSharedParameters({expectedVersion,parameters,updat
   const locked=await db.query("SELECT version,payload FROM public.aione_shared_parameters WHERE scope='global' FOR UPDATE");
   const current=Number(locked.rows[0]?.version);
   if(current!==expectedVersion)throw fail("shared_parameters_version_conflict","共享参数版本已变化，请刷新再修改",409);
+  const oldCustom=locked.rows[0].payload?.customSettings;
+  assertCustomSchemaTransition(oldCustom,candidate.customSettings);
+  const removedCustom=[];
+  for(const c of oldCustom?.categories||[]){const next=customCategories(candidate).find(x=>x.id===c.id);
+   for(const row of c.rows)if(!next?.rows.some(x=>x.id===row.id))removedCustom.push([c.id,row.id]);
+  }
+  if(removedCustom.length){
+   await db.query("LOCK TABLE public.products IN SHARE MODE");
+   for(const [category,row] of removedCustom){
+    const used=await db.query("SELECT product_code FROM public.products WHERE metadata->'manualEntry'->'customSettings'->>$1=$2 LIMIT 1",[category,row]);
+    if(used.rows.length)throw fail('settings_item_in_use','资料被商品 '+used.rows[0].product_code+' 引用，请停用而非删除',409);
+   }
+  }
   const previous=locked.rows[0].payload?.commerce;
   if(previous){
    const fields={chinaPackagingCny:"packagingMethod",japanPackagingJpy:"packagingMaterial",logistics:"logisticsMethod"};

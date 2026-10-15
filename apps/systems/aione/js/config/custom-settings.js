@@ -1,0 +1,67 @@
+import {HOME_REGISTRY} from './home-registry.js';
+// Validated extension namespace in the existing versioned Cloud SQL settings payload.
+// Extension selections store IDs; display labels are never product references.
+export const CUSTOM_FIELD_TYPES=['text','number','select','boolean','date'];
+export const SETTINGS_OWNERS=Object.values(HOME_REGISTRY).map(home=>home.label);
+const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
+const fail=message=>{throw Object.assign(new Error(message),{code:'invalid_custom_settings',statusCode:400});};
+const id=v=>typeof v==='string'&&/^[a-z][a-z0-9_-]{0,63}$/.test(v)&&!['constructor','prototype','__proto__'].includes(v);
+const text=(v,max=80)=>typeof v==='string'&&v.trim().length>0&&v.length<=max;
+export const customCategories=p=>p?.customSettings?.categories||[];
+export function validateCustomRow(category,row){
+ if(!object(row)||!id(row.id)||!text(row.name)||typeof row.enabled!=='boolean'||typeof row.isDefault!=='boolean'||!Number.isSafeInteger(row.sortOrder)||row.sortOrder<0||row.isDefault&&!row.enabled||!object(row.values))fail('资料编号、名称、排序、状态或默认项无效');
+ const keys=new Set(category.fields.map(f=>f.id));
+ if(Object.keys(row.values).some(k=>!keys.has(k)))fail('资料包含未定义字段');
+ for(const f of category.fields){const v=row.values[f.id];const blank=v===undefined||v===null||v==='';
+  if(blank){if(f.required)fail(f.label+'为必填项');continue;}
+  if(f.type==='number'&&(typeof v!=='number'||!Number.isFinite(v)))fail(f.label+'必须是数字');
+  if(f.type==='boolean'&&typeof v!=='boolean')fail(f.label+'必须是是或否');
+  if(['text','select','date'].includes(f.type)&&(typeof v!=='string'||v.length>500))fail(f.label+'格式无效或超过500字');
+  if(f.type==='select'&&!f.options.includes(v))fail(f.label+'请选择有效选项');
+  if(f.type==='date'&&(!/^\d{4}-\d{2}-\d{2}$/.test(v)||!Number.isFinite(Date.parse(v))||new Date(v).toISOString().slice(0,10)!==v))fail(f.label+'日期无效');
+ }
+ return row;
+}
+export function validateCustomSettings(settings){
+ if(settings===undefined)return;
+ if(!object(settings)||Object.keys(settings).some(k=>k!=='categories')||!Array.isArray(settings.categories)||settings.categories.length>30)fail('自定义分类最多30个');
+ const ids=new Set(),names=new Set();
+ for(const c of settings.categories){
+  if(!object(c)||!id(c.id)||ids.has(c.id)||!text(c.name)||names.has(c.name)||!SETTINGS_OWNERS.includes(c.owner)||typeof c.enabled!=='boolean'||typeof c.productBinding!=='boolean'||!Array.isArray(c.fields)||c.fields.length>20||!Array.isArray(c.rows)||c.rows.length>500)fail('分类编号/名称重复，或分类定义无效（每类最多20字段、500条资料）');
+  ids.add(c.id);names.add(c.name);const fields=new Set(),labels=new Set();
+  for(const f of c.fields){
+   if(!object(f)||!id(f.id)||fields.has(f.id)||!text(f.label)||labels.has(f.label)||!CUSTOM_FIELD_TYPES.includes(f.type)||typeof f.required!=='boolean')fail('字段名称重复或类型无效');
+   fields.add(f.id);labels.add(f.label);
+   if(f.type==='select'&&(!Array.isArray(f.options)||!f.options.length||f.options.length>50||f.options.some(x=>!text(x,100))||new Set(f.options).size!==f.options.length))fail('单选字段需要1至50个不重复选项');
+  }
+  const rows=new Set(),rowNames=new Set();let defaults=0;
+  for(const r of c.rows){validateCustomRow(c,r);if(rows.has(r.id)||rowNames.has(r.name))fail('资料编号或名称重复');rows.add(r.id);rowNames.add(r.name);if(r.isDefault&&++defaults>1)fail('每类只能有一个默认项');}
+ }
+ if(JSON.stringify(settings).length>500000)fail('自定义设置总量超过限制，请拆分资料');
+}
+export function customProductSelections(parameters,input,previous){
+ const selections=input===undefined?{...(previous||{})}:input;
+ if(!object(selections)||Object.keys(selections).length>30)fail('商品自定义选项格式无效');
+ const result={};
+ for(const [key,value] of Object.entries(selections)){
+  if(!id(key)||typeof value!=='string'||value&&!id(value))fail('商品选项编号无效');
+  if(!value)continue;
+  const c=customCategories(parameters).find(x=>x.id===key),r=c?.rows.find(x=>x.id===value);
+  if(!c||!r)fail('商品自定义选项已不存在，请重新选择');
+  if((!c.enabled||!c.productBinding||!r.enabled)&&previous?.[key]!==value)fail(c.name+'已停用或未绑定商品');
+  result[key]=value;
+ }
+ for(const c of customCategories(parameters))if(c.enabled&&c.productBinding&&!Object.hasOwn(selections,c.id)&&!previous?.[c.id]){const row=c.rows.find(r=>r.enabled&&r.isDefault);if(row)result[c.id]=row.id;}
+ return result;
+}
+export function assertCustomSchemaTransition(previous,next){
+ for(const old of previous?.categories||[]){const c=next?.categories?.find(x=>x.id===old.id);
+  if(!c)continue; // Database reference protection checks category/row removal.
+  for(const f of old.fields){const nf=c.fields.find(x=>x.id===f.id);
+   if(old.rows.some(r=>r.values[f.id]!==undefined&&r.values[f.id]!==null&&r.values[f.id]!=='')){
+    if(!nf||nf.type!==f.type)fail('字段“'+f.label+'”已有资料，不能删除或改变类型');
+    if(f.type==='select'&&old.rows.some(r=>r.values[f.id]&&!nf.options.includes(r.values[f.id])))fail('单选选项仍被资料使用，请先调整资料');
+   }
+  }
+ }
+}
