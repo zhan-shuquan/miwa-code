@@ -27,6 +27,7 @@ export function mountCustomSettingsEditor(host,{parameters,canEdit,onChange,usag
  const state=host.querySelector('[data-custom-status]');if(state)state.onchange=()=>{status=state.value;render();};
  const order=host.querySelector('[data-custom-sort]');if(order)order.onchange=()=>{sort=order.value;render();};
  const file=host.querySelector('[data-custom-file]');if(file)file.onchange=()=>void upload(file.files?.[0]);
+ if(form||preview)host.querySelectorAll('[data-custom-query],[data-custom-status],[data-custom-sort],[data-check]').forEach(el=>el.disabled=true);
  if(form)renderForm();
  }
  function filtered(){return sortedCustomRows(category()||{rows:[]},usage[category()?.id]||{},sort==='sortOrder'?'manual':sort).filter(r=>(status==='all'||r.enabled===(status==='enabled'))&&JSON.stringify([r.name,...Object.values(r.values)]).toLowerCase().includes(query.toLowerCase()));}

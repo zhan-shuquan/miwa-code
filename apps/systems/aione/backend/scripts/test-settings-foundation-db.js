@@ -31,6 +31,8 @@ async function run(){
  assert.equal(new Set(auto.map(x=>x.product.localCode)).size,2);assert.deepEqual(auto.map(x=>x.product.localCode).sort(),['cfg081','cfg082']);
  const dates=structuredClone(state.parameters);dates.codeRules.product.dateFormat='YYYYMM';dates.codeRules.product.separator='-';state=await activate(dates);
  const dated=await saveManualProduct({...input,generateLocalCode:true},{personId:'ci'},{createOnly:true});assert.match(dated.product.localCode,/^cfg-\d{6}-081$/);
+ await pool.query("UPDATE public.products SET metadata=(metadata-'manualEntry') || jsonb_build_object('packagingMaterial','直接资料引用测试') WHERE id=$1",[auto[0].product.id]);
+ assert.equal((await readSettingsReferenceUsage()).japanPackaging['直接资料引用测试'],1);
  console.log('PASS database foundation: French field expansion without new table, XLSX schema follows, hidden data retained, exact reference counts, repeated save invariance, concurrent auto numbering, SKU identity preservation and dated rules');
 }
 run().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>pool.end());

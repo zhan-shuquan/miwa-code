@@ -42,7 +42,7 @@ router.get('/shared-parameters/history/:version',async(req,res,next)=>{try{
 }catch(e){next(e);}});
 router.post('/shared-parameters/backup',async(req,res,next)=>{try{
  const parameters=validateSharedParameters(req.body?.parameters);
- res.set({'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="aione-settings-backup.json"','Cache-Control':'no-store'}).send(JSON.stringify({format:'AIONE_SETTINGS_V1',parameters},null,2));
+ res.set({'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="aione-settings-backup.json"','Cache-Control':'no-store'}).send(JSON.stringify({format:'AIONE_SETTINGS_V1',parameters}));
 }catch(e){next(e);}});
 router.post('/shared-parameters/backup-preview',requireWriteActor,requireSettingsEditor,async(req,res,next)=>{try{
  if(req.body?.format!=='AIONE_SETTINGS_V1')throw Object.assign(new Error('配置备份格式不正确'),{statusCode:400});

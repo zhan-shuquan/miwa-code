@@ -48,6 +48,11 @@ try{
   assert.equal((await request('/reader/shared-parameters/custom-import-preview',{category,base64})).status,403);
   const preview=await request('/editor/shared-parameters/custom-import-preview',{category,base64});assert.equal(preview.status,200);assert.equal((await preview.json()).rows[0].id,'r_one');
   assert.equal((await request('/editor/shared-parameters/custom-import-preview',{category,base64:'bad!'})).status,400);
+  const backup=await request('/reader/shared-parameters/backup',{parameters:p});assert.equal(backup.status,200);assert.match(backup.headers.get('content-disposition'),/backup.json/);const document=await backup.json();assert.equal(document.format,'AIONE_SETTINGS_V1');
+  assert.equal((await request('/reader/shared-parameters/backup-preview',document)).status,403);
+  assert.equal((await request('/editor/shared-parameters/backup-preview',document)).status,200);
+  assert.equal((await request('/editor/shared-parameters/backup-preview',{format:'wrong',parameters:p})).status,400);
+
  }finally{await new Promise(r=>server.close(r));if(oldAllow===undefined)delete process.env.AIONE_SHARED_PARAMETER_EDITOR_PERSON_IDS;else process.env.AIONE_SHARED_PARAMETER_EDITOR_PERSON_IDS=oldAllow;}
 }finally{pool.connect=original;await pool.end();}
 console.log('PASS custom settings: schema, stable references, defaults, retired selections, protected schema changes, product save adapter, dynamic XLSX, formula rejection, template versions, referenced deletion rollback');
