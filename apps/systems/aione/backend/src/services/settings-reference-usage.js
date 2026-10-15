@@ -18,6 +18,21 @@ export async function readSettingsReferenceUsage(db=pool){
  WHERE params.scope='global' AND c->>'productField' IS NOT NULL
  AND data->>(c->>'productField')=r->>'businessValue'
  AND COALESCE(data->'customSettings'->>(c->>'id'),'')=''
+ UNION ALL
+ SELECT c->>'id',r->>'id' FROM saved
+ CROSS JOIN public.aione_shared_parameters params
+ CROSS JOIN LATERAL jsonb_array_elements(COALESCE(params.payload->'customSettings'->'categories','[]'::jsonb)) c
+ CROSS JOIN LATERAL jsonb_array_elements(c->'rows') r
+ WHERE params.scope='global' AND c->>'specBinding' IS NOT NULL
+ AND EXISTS (SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(data->'specs')='array' THEN data->'specs' ELSE '[]'::jsonb END) spec
+ WHERE (c->>'specBinding'='$dimensions' AND COALESCE(r->'referenceNames',jsonb_build_array(r->>'businessValue')) ? (spec->>'name'))
+ OR (c->>'specBinding'<>'$dimensions' AND EXISTS (
+ SELECT 1 FROM jsonb_array_elements(params.payload->'customSettings'->'categories') dims
+ CROSS JOIN LATERAL jsonb_array_elements(dims->'rows') dimension
+ WHERE dims->>'specBinding'='$dimensions' AND dimension->>'businessValue'=c->>'specBinding'
+ AND COALESCE(dimension->'referenceNames',jsonb_build_array(dimension->>'businessValue')) ? (spec->>'name'))
+ AND EXISTS (SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(spec->'values')='array' THEN spec->'values' ELSE '[]'::jsonb END) value
+ WHERE COALESCE(r->'referenceNames',jsonb_build_array(r->>'businessValue')) ? value)))
  ) SELECT category,row_id,count(*)::text AS total FROM refs
  WHERE row_id IS NOT NULL AND row_id<>'' GROUP BY category,row_id`);
  const counts={};

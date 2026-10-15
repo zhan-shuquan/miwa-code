@@ -1,10 +1,10 @@
 import ExcelJS from 'exceljs';
 import {validateCustomSettings,validateCustomRow} from '../../../js/config/custom-settings.js';
 const bad=message=>Object.assign(new Error(message),{code:'invalid_custom_workbook',statusCode:400});
-const signature=c=>JSON.stringify({id:c.id,productField:c.productField,fields:c.fields});
+const signature=c=>JSON.stringify({id:c.id,productField:c.productField,specBinding:c.specBinding,fields:c.fields});
 const headers=c=>['固定编号（新增留空）','名称',...c.fields.map(f=>f.label),'排序','状态','默认项'];
 export async function customSettingsWorkbook(category,{template=false}={}){
- validateCustomSettings({categories:[category]});
+ validateCustomSettings({categories:[category]},{singleCategory:true});
  const book=new ExcelJS.Workbook(),ws=book.addWorksheet('设置资料',{views:[{state:'frozen',ySplit:1}]});
  ws.addRow(headers(category));
  if(!template)for(const r of category.rows)ws.addRow([r.id,r.name,...category.fields.map(f=>f.type==='boolean'?(r.values[f.id]===undefined?null:r.values[f.id]?'是':'否'):r.values[f.id]??null),r.sortOrder,r.enabled?'启用':'停用',r.isDefault?'是':'否']);
@@ -16,7 +16,7 @@ export async function customSettingsWorkbook(category,{template=false}={}){
  return Buffer.from(await book.xlsx.writeBuffer());
 }
 export async function parseCustomSettingsWorkbook(category,buffer){
- validateCustomSettings({categories:[category]});
+ validateCustomSettings({categories:[category]},{singleCategory:true});
  if(!buffer?.length||buffer.length>2*1024*1024)throw bad('请选择不超过2MB的xlsx文件');
  const book=new ExcelJS.Workbook();try{await book.xlsx.load(buffer);}catch{throw bad('无法读取Excel文件');}
  const meta=book.getWorksheet('模板信息');if(meta?.getCell('A1').value!=='AIONE_CUSTOM_V1'||meta?.getCell('B1').value!==signature(category))throw bad('分类或字段版本不一致，请重新下载模板');
@@ -36,7 +36,7 @@ export async function parseCustomSettingsWorkbook(category,buffer){
    const offset=2+category.fields.length,state=cells[offset+1],def=cells[offset+2];
    if(!['启用','停用'].includes(state)||!['是','否',null,undefined,''].includes(def))throw bad('状态或默认项无效');
    const existing=category.rows.find(r=>r.id===id);
-   const row={...(existing||{}),...(category.productField?{businessValue:existing?.businessValue||name}:{}),id,name,values:{},sortOrder:cells[offset]===null?totalRows:Number(cells[offset]),enabled:state==='启用',isDefault:def==='是'};
+   const row={...(existing||{}),...((category.productField||category.specBinding)?{businessValue:existing?.businessValue||name}:{}),id,name,values:{},sortOrder:cells[offset]===null?totalRows:Number(cells[offset]),enabled:state==='启用',isDefault:def==='是'};
    category.fields.forEach((f,i)=>{const raw=cells[i+2];if(raw===null||raw===undefined||raw==='')return;
     if(f.type==='boolean'){if(!['是','否'].includes(raw))throw bad(f.label+'必须填写是/否');row.values[f.id]=raw==='是';}
     else row.values[f.id]=f.type==='number'?Number(raw):String(raw);

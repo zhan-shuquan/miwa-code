@@ -66,13 +66,26 @@ export async function activateSharedParameters({expectedVersion,parameters,updat
   assertCustomSchemaTransition(oldCustom,candidate.customSettings);
   const removedCustom=[];
   for(const c of oldCustom?.categories||[]){const next=customCategories(candidate).find(x=>x.id===c.id);
-   for(const row of c.rows)if(!next?.rows.some(x=>x.id===row.id))removedCustom.push([c.id,row.id,c.productField,row.businessValue]);
+   for(const row of c.rows)if(!next?.rows.some(x=>x.id===row.id))removedCustom.push([c.id,row.id,c.productField,row.businessValue,c.specBinding,row.referenceNames||[row.businessValue]]);
   }
   if(removedCustom.length){
    await db.query("LOCK TABLE public.products IN SHARE MODE");
-   for(const [category,row,field,value] of removedCustom){
+   for(const [category,row,field,value,specBinding,referenceNames] of removedCustom){
     const used=await db.query("SELECT product_code FROM public.products WHERE metadata->'manualEntry'->'customSettings'->>$1=$2 OR metadata->'customSettings'->>$1=$2 OR ($3::text IS NOT NULL AND (metadata->'manualEntry'->>$3=$4 OR metadata->>$3=$4)) LIMIT 1",[category,row,field||null,value||null]);
     if(used.rows.length)throw fail('settings_item_in_use','资料被商品 '+used.rows[0].product_code+' 引用，请停用而非删除',409);
+    if(specBinding){
+     const dimension=oldCustom.categories.find(c=>c.specBinding==='$dimensions')?.rows.find(r=>r.businessValue===specBinding);
+     const dimensionNames=dimension?.referenceNames||[specBinding];
+     const specUsed=await db.query(`SELECT product_code FROM public.products WHERE EXISTS (
+      SELECT 1 FROM jsonb_array_elements(CASE
+       WHEN jsonb_typeof(metadata->'manualEntry'->'specs')='array' THEN metadata->'manualEntry'->'specs'
+       WHEN jsonb_typeof(metadata->'specs')='array' THEN metadata->'specs' ELSE '[]'::jsonb END) spec
+      WHERE ($3::boolean AND $1::jsonb ? (spec->>'name')) OR
+      (NOT $3::boolean AND $2::jsonb ? (spec->>'name') AND EXISTS (
+       SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(spec->'values')='array' THEN spec->'values' ELSE '[]'::jsonb END) value
+       WHERE $1::jsonb ? value))) LIMIT 1`,[JSON.stringify(referenceNames),JSON.stringify(dimensionNames),specBinding==='$dimensions']);
+     if(specUsed.rows.length)throw fail('settings_item_in_use','规格资料被商品 '+specUsed.rows[0].product_code+' 引用，请停用而非删除',409);
+    }
    }
   }
   const previous=locked.rows[0].payload?.commerce;

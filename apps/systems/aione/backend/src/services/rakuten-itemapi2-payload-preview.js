@@ -1,3 +1,4 @@
+import {translateSpec} from '../../../js/config/product-spec-settings.js';
 import {buildSkuEntries} from "./product-entry-contract.js";
 import {matchPersistedSkuByAttributes} from "../../../js/services/product-sku-image-identity.js";
 import {autoMapAttributes,autoMapShipping,autoMapCatalog} from "./rakuten-auto-mapping.js";
@@ -27,7 +28,7 @@ const isSupportedTextMissingValue=(a)=>{
  return ["STRING","TEXT"].includes(type)&&["FREE_TEXT","TEXT","FREE"].includes(method);
 };
 
-export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipping=null,dictionaries={}}={}){
+export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipping=null,dictionaries={},parameters={}}={}){
  const blocking=[];
  const code=str(product?.localCode);
  const title=str(product?.rakutenTitle);
@@ -42,6 +43,11 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
  if(selections.length!==2||skus.length!==2||product?.specs?.length!==1)fail(blocking,"two_sku_selector_unverified");
  const spec=product?.specs?.[0];
  if(!str(spec?.name)||spec?.values?.length!==2)fail(blocking,"selector_values_invalid");
+ const selectorName=translateSpec(parameters,spec?.name||'');
+ const selectorValues=(spec?.values||[]).map(v=>translateSpec(parameters,spec.name,v));
+ if(selectorName.missing||selectorValues.some(v=>v.missing))fail(blocking,'selector_japanese_translation_missing');
+ const normalizedValues=selectorValues.map(v=>str(v.value).normalize('NFKC').toLowerCase());
+ if(new Set(normalizedValues).size!==normalizedValues.length)fail(blocking,'selector_japanese_values_duplicate');
  const chosen=selections.map(entry=>matchPersistedSkuByAttributes(skus,entry.attributes));
  if(chosen.some(x=>!x)||new Set(chosen.filter(Boolean).map(x=>x.id)).size!==2)fail(blocking,"canonical_sku_identity_unverified");
  const published=assets.filter(x=>x.mapping_status==="active"&&x.external_asset_id);
@@ -108,13 +114,13 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
    const value=selections[i]&&Object.values(selections[i].attributes)[0];
    if(!str(value))fail(blocking,"sku_selector_value_missing");
    if(!/^[-A-Za-z0-9_]{1,96}$/.test(str(sku.sku_code)))fail(blocking,"sku_code_invalid");
-   const mappedAttributes=autoMapAttributes({product,sku,genre,dictionaries});
+   const mappedAttributes=autoMapAttributes({product,sku,genre,dictionaries,parameters});
    const currentAttrs=[...mappedAttributes.attributes];
    for(const error of mappedAttributes.blocking)fail(blocking,error);
 
    variants[sku.sku_code]={
      merchantDefinedSkuId:sku.sku_code,
-     selectorValues:{[key]:str(value)},
+     selectorValues:{[key]:str(translateSpec(parameters,spec.name,value).value)},
      standardPrice:String(price),
      ...(skuImage?{images:[skuImage]}:{}),
      ...(ship.matchedDate?{normalDeliveryDateId:Number(dateId)}:{}),
@@ -132,7 +138,7 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
    ...(str(product?.rakutenCatchCopy)?{tagline:str(product.rakutenCatchCopy)}:{}),
    ...(str(product?.pcDescription)||str(product?.spDescription)?{productDescription:{...(str(product.pcDescription)?{pc:str(product.pcDescription)}:{}),...(str(product.spDescription)?{sp:str(product.spDescription)}:{})}}:{}),
    ...(str(product?.salesDescription)?{salesDescription:str(product.salesDescription)}:{}),
-   ...(spec?.values?.length===2?{variantSelectors:[{key,displayName:str(spec.name),values:spec.values.map(x=>({displayValue:str(x)}))}]}:{}),
+   ...(spec?.values?.length===2?{variantSelectors:[{key,displayName:str(selectorName.value),values:selectorValues.map(x=>({displayValue:str(x.value)}))}]}:{}),
    variants
  };
  return {ok:true,phase:"read_only_itemapi_payload",productId:product?.id,shopRef:product?.targetShopRef,manageNumber:code,

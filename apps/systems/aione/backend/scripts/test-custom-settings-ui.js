@@ -18,7 +18,7 @@ globalThis.fetch=async(url,options={})=>{
  }
  if(url.includes('/product-entry'))return {ok:true,json:async()=>({items:[],total:0})};
  if(options.method==='PATCH'){writes++;const body=JSON.parse(options.body);assert.equal(body.expectedVersion,version);saved=validateSharedParameters(body.parameters);version++;}
- return {ok:true,json:async()=>({parameters:structuredClone(saved),version,capabilities:{canEdit:allow,customSettings:true,productCatalogBindings:true}})};
+ return {ok:true,json:async()=>({parameters:structuredClone(saved),version,capabilities:{canEdit:allow,customSettings:true,productCatalogBindings:true,specCatalogBindings:true}})};
 };
 const {mountSettingsCenter}=await import('../../js/pages/settings-center.js');
 const host=document.getElementById('app-main-host'),tick=()=>new Promise(r=>setTimeout(r,20));
@@ -60,6 +60,24 @@ for(const [key,value] of [['localCode','test985'],['nameZh','接入品牌验收'
 click('[data-save]');await tick();assert.equal(storedProduct.brand,'NEWONE');assert.equal(storedProduct.customSettings[brands.id],saved.customSettings.categories.find(c=>c.id===brands.id).rows.at(-1).id);
 // A label rename keeps both the business value and saved row ID unchanged.
 saved.customSettings.categories.find(c=>c.id===brands.id).rows.at(-1).name='NEWONE 新品牌';openProductEditor(host,storedProduct);await tick();assert.equal(host.querySelector('[data-f=brand]').value,'NEWONE');assert.ok(host.querySelector('[data-f=brand]').textContent.includes('NEWONE 新品牌'));
+// Spec catalogs use the original specification/SKU workflow and preserve ordering.
+await mountSettingsCenter(host);click('[data-kind=custom]');click('[data-custom=spec-presets]');
+host.querySelector('[data-reason]').value='规格与颜色接入';click('[data-action=save]');await tick();
+click('[data-category=spec_colors]');click('[data-custom=new-row]');host.querySelector('[name=rowName]').value='藏青';host.querySelector('[name=name_ja]').value='ネイビー';submit();
+host.querySelector('[data-reason]').value='新增颜色资料';click('[data-action=save]');await tick();
+openProductEditor(host);await tick();click('[data-tab=sku]');click('[data-add]');
+let colorPicker=host.querySelector('[data-spec-add="0"]');assert.ok(colorPicker);assert.ok(colorPicker.textContent.includes('ネイビー'));
+for(const value of ['藏青','黑色']){colorPicker=host.querySelector('[data-spec-add="0"]');colorPicker.value=value;colorPicker.dispatchEvent(new Event('change',{bubbles:true}));}
+assert.ok(host.textContent.includes('ネイビー'));assert.ok(host.textContent.includes('ブラック'));
+click('[data-tab=basic]');for(const [key,value] of [['localCode','test984'],['nameZh','颜色规格验收']]){const el=host.querySelector('[data-f="'+key+'"]');el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));}
+click('[data-save]');await tick();assert.deepEqual(storedProduct.specs,[{name:'颜色',values:['藏青','黑色']}]);
+assert.equal(storedProduct.customSettings.spec_colors,undefined);
+// Manual creation of a new dimension and its value table needs no source-code change.
+await mountSettingsCenter(host);click('[data-kind=custom]');click('[data-category=spec_dimensions]');click('[data-custom=new-row]');host.querySelector('[name=rowName]').value='口径';host.querySelector('[name=name_ja]').value='口径';submit();
+click('[data-custom=new-category]');host.querySelector('[name=name]').value='口径资料';host.querySelector('[name=specBinding]').value='口径';submit();
+click('[data-custom=new-row]');host.querySelector('[name=rowName]').value='20mm';submit();
+host.querySelector('[data-reason]').value='新增规格名称与资料';click('[data-action=save]');await tick();
+openProductEditor(host);await tick();click('[data-tab=sku]');click('[data-add]');const dimensionSelect=host.querySelector('[data-f=sn0]');dimensionSelect.value='口径';dimensionSelect.dispatchEvent(new Event('change',{bubbles:true}));assert.ok(host.querySelector('[data-spec-add="0"] option[value="20mm"]'));
 // Read-only mode cannot create categories or rows.
 allow=false;await mountSettingsCenter(host);click('[data-kind=custom]');assert.equal(host.querySelector('[data-custom=new-category]').disabled,true);assert.equal(host.querySelector('[data-custom=new-row]').disabled,true);
 console.log('PASS custom settings DOM: category + field + row creation, audited save, remount persistence, pending-edit protection, product selection/default/save adapter, rename-safe references and readonly controls');

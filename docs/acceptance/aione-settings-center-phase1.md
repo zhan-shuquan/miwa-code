@@ -106,3 +106,12 @@ node apps/systems/aione/backend/scripts/test-settings-catalog-workbook.js
 - 修复商品编辑已离开后，参数刷新事件可能重绘覆盖设置页的问题；编辑器只刷新自己仍拥有的页面。
 - 本轮本地通过模型/Excel/HTTP/DOM回归；新增独立PostgreSQL测试加入CI，数据库结果以CI为准。线上后端和真实商品验收仍未完成。
 - 完整分组与剩余范围见 `aione-product-settings-inventory.md`。规格、颜色、店铺、配送档位及乐天模板等没有因这四项接入而自动完成。
+
+
+## 2026-10-16 规格与颜色接入增量
+
+- 添加规格名称、颜色资料模板和新规格值表用途，直接供规格页使用；多语言字段与动态Excel沿用统一编辑器。
+- 显示名称/翻译与业务引用分离，保留历史中文/日文引用；旧SKU身份不因改名重建。按商品保存事实统计规格引用，增加删除及并发保存保护。
+- 乐天预览和受控发布计划读取共享设置，日文缺失/重复阻断，颜色匹配平台核验候选；保留既有发布范围、图片验证、人工确认和权限。
+- 新共享模块已加入后端Docker镜像依赖清单。新增测试：test-product-spec-settings.js、test-product-spec-settings-db.js，并扩展通用DOM流程。
+- 详细边界及剩余范围见 aione-product-settings-inventory.md；店铺/配送档位/平台完整模板及线上实际验收仍未完成。
