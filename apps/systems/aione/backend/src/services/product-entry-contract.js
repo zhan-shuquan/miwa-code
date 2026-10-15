@@ -77,7 +77,8 @@ export function normalizeProductEntry(input = {}) {
   }
   p.logisticsMethod ||= "空运大件（普货）";
   p.packagingMethod ||= "原装";
-  if(!["原装","真空包装","重新包装","定制包装"].includes(p.packagingMethod))throw bad("invalid_packaging_method","包装方式必须采用新的四种类型");
+  // Catalog membership is checked against active shared settings inside the save transaction.
+  if(p.packagingMethod.length>80)throw bad("invalid_packaging_method","包装方式名称过长");
   if(p.packagingMethod==="定制包装"&&(p.customPackagingCostCny===null||p.customPackagingCostCny<0))throw bad("custom_packaging_cost_required","定制包装需要实际中国包装成本");
   p.packagingMaterial ||= "A4信封";
   p.originCountry ||= "中国";

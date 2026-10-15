@@ -4,6 +4,7 @@ const root=new URL('../../',import.meta.url).pathname.replace(/\/$/,'');
 const {INITIAL_PARAMETERS}=await import(root+'/js/config/shared-parameter-defaults.js');
 const dom=new JSDOM('<!doctype html><div id="app-main-host"></div>',{url:'http://localhost:4179/#/shared-settings'});
 for(const key of ['window','document','location','localStorage','sessionStorage','CustomEvent','Event','FormData','HTMLElement','HTMLDialogElement','AbortController'])globalThis[key]=dom.window[key];
+window.confirm=()=>true;
 window.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
 window.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new Event('close'));};
 let saved=structuredClone(INITIAL_PARAMETERS),version=1,writes=0,allow=true,conflict=false;
@@ -14,10 +15,10 @@ const host=document.getElementById('app-main-host');
 await mountSettingsCenter(host);
 const click=selector=>{const el=host.querySelector(selector);assert.ok(el,selector);el.click();};
 click('[data-kind="japanPackaging"]');click('[data-action="new"]');
-host.querySelector('[name=key]').value='新纸盒';host.querySelector('[name=cost]').value='77';host.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+host.querySelector('[name=key]').value='新纸盒';host.querySelector('[name=cost]').value='77';host.querySelector('[name=isDefault]').checked=true;host.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
 assert.ok(host.textContent.includes('新纸盒'));assert.equal(writes,0);
 host.querySelector('[data-reason]').value='新增包装验收';click('[data-action="save"]');await tick();
-assert.equal(saved.commerce.japanPackagingJpy['新纸盒'],77);assert.equal(writes,1);
+assert.equal(saved.commerce.japanPackagingJpy['新纸盒'],77);assert.equal(writes,1);assert.equal(saved.settingsCatalogMeta.japanPackaging['新纸盒'].isDefault,true);
 click('[data-edit="新纸盒"]');host.querySelector('[name=cost]').value='88';host.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));conflict=true;host.querySelector('[data-reason]').value='并发修改';click('[data-action="save"]');await tick();
 assert.ok(host.textContent.includes('版本冲突'));assert.ok(host.textContent.includes('88'));assert.equal(saved.commerce.japanPackagingJpy['新纸盒'],77);
 conflict=false;
@@ -29,6 +30,9 @@ assert.ok(host.querySelector('[data-action=apply-import]'));
 assert.equal(saved.commerce.japanPackagingJpy['导入纸盒'],undefined);
 click('[data-action=apply-import]');host.querySelector('[data-reason]').value='导入验收';click('[data-action=save]');await tick();
 assert.equal(saved.commerce.japanPackagingJpy['导入纸盒'],21);
+click('[data-delete="导入纸盒"]');assert.ok(!host.querySelector('[data-edit="导入纸盒"]'));
+click('[data-action="undo-delete"]');assert.ok(host.querySelector('[data-edit="导入纸盒"]'));
+click('[data-delete="导入纸盒"]');host.querySelector('[data-reason]').value='删除未引用测试包装';click('[data-action="save"]');await tick();assert.equal(saved.commerce.japanPackagingJpy['导入纸盒'],undefined);
 // Read-only UI cannot create or save.
 allow=false;await mountSettingsCenter(host);assert.equal(host.querySelector('[data-action=new]').disabled,true);assert.equal(host.querySelector('[data-action=save]').disabled,true);
 allow=true;
@@ -36,6 +40,7 @@ saved.settingsCatalogMeta.japanPackaging['A4信封']={enabled:false,sortOrder:1}
 // Use the real product editor and the same settings dialog, preserving unsaved input.
 const {openProductEditor}=await import(root+'/js/pages/product-manual-entry.js');
 openProductEditor(host);await tick();
+assert.equal(host.querySelector('[data-f=packagingMaterial]').value,'新纸盒');
 assert.ok(![...host.querySelector('[data-f=packagingMaterial]').options].some(x=>x.value==='A4信封'));
 const input=host.querySelector('[data-f=nameZh]');input.value='尚未保存的商品名称';input.dispatchEvent(new Event('input',{bubbles:true}));
 click('[data-product-settings]');await tick();const dialog=document.querySelector('dialog');assert.ok(dialog?.open);

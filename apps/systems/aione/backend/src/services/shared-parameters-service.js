@@ -28,17 +28,16 @@ export function validateSharedParameters(p){
   if(rule.billing==="step" && (![rule.firstWeightG,rule.additionalWeightG].every(v=>Number.isSafeInteger(v)&&v>0)||![rule.firstFeeCny,rule.additionalFeeCny].every(nonneg)))throw fail("invalid_step_rate","首重续重参数无效");
   if(rule.billing==="kg"&&!nonneg(rule.perKgCny))throw fail("invalid_kg_rate","每kg费率无效");
  }
- for(const key of ["原装","真空包装","重新包装"]){if(!nonneg(c.chinaPackagingCny?.[key]))throw fail("missing_china_packaging","中国包装费率缺失");}
- for(const key of ["无","A4信封","A4缓冲信封","小缓冲信封","小信封","3cm纸盒","60cm纸箱","80cm纸箱","100cm纸箱","120cm纸箱"]){if(!nonneg(c.japanPackagingJpy?.[key]))throw fail("missing_japan_packaging","日本包装费率缺失");}
  for(const key of ["THIN_3CM","SIZE_60","SIZE_80","SIZE_100","SIZE_120"]){if(!nonneg(delivery[key]?.fee))throw fail("missing_japan_delivery","日本配送费率缺失");}
  for(const map of [c.chinaPackagingCny,c.japanPackagingJpy]){
-  if(!map||Array.isArray(map)||Object.keys(map).length>500)throw fail("invalid_packaging_catalog","包装目录无效");
+  if(!map||Array.isArray(map)||!Object.keys(map).length||Object.keys(map).length>500)throw fail("invalid_packaging_catalog","包装目录无效");
   for(const [name,cost] of Object.entries(map))if(!name.trim()||name.length>80||["__proto__","constructor","prototype","定制包装"].includes(name)||!nonneg(cost))throw fail("invalid_packaging_cost","包装名称或成本无效");
  }
  for(const [kind,items] of Object.entries(p.settingsCatalogMeta||{})){
   const values={chinaPackaging:c.chinaPackagingCny,japanPackaging:c.japanPackagingJpy,logistics:c.logistics}[kind];
-  if(!values||!items||Array.isArray(items))throw fail("invalid_catalog_metadata","设置目录无效");
-  for(const [key,item] of Object.entries(items))if(!Object.hasOwn(values,key)||!item||typeof item.enabled!=="boolean"||!Number.isSafeInteger(item.sortOrder)||item.sortOrder<0)throw fail("invalid_catalog_metadata","设置状态或排序无效");
+  if(!["chinaPackaging","japanPackaging","logistics"].includes(kind)||!values||!items||Array.isArray(items))throw fail("invalid_catalog_metadata","设置目录无效");
+  if(Object.values(items).filter(item=>item?.isDefault===true).length>1)throw fail("invalid_catalog_default","每个目录只能有一个默认选项");
+  for(const [key,item] of Object.entries(items))if(Object.keys(item||{}).some(k=>!["enabled","sortOrder","isDefault"].includes(k))||(item?.isDefault!==undefined&&typeof item.isDefault!=="boolean")||(item?.isDefault===true&&item.enabled===false)||!Object.hasOwn(values,key)||!item||typeof item.enabled!=="boolean"||!Number.isSafeInteger(item.sortOrder)||item.sortOrder<0)throw fail("invalid_catalog_metadata","设置状态或排序无效");
  }
  return clone(p);
 }
@@ -58,13 +57,24 @@ export async function activateSharedParameters({expectedVersion,parameters,updat
   const locked=await db.query("SELECT version,payload FROM public.aione_shared_parameters WHERE scope='global' FOR UPDATE");
   const current=Number(locked.rows[0]?.version);
   if(current!==expectedVersion)throw fail("shared_parameters_version_conflict","共享参数版本已变化，请刷新再修改",409);
-  // Existing product records reference these keys/names. Require retirement until
-  // reference-aware migration/deletion is implemented; the older editor is covered too.
   const previous=locked.rows[0].payload?.commerce;
   if(previous){
-   for(const field of ["chinaPackagingCny","japanPackagingJpy","logistics"]){
+   const fields={chinaPackagingCny:"packagingMethod",japanPackagingJpy:"packagingMaterial",logistics:"logisticsMethod"};
+   const removed=[];
+   for(const [field,productField] of Object.entries(fields)){
     for(const [key,value] of Object.entries(previous[field]||{})){
-     if(!Object.hasOwn(candidate.commerce[field],key)||(field==="logistics"&&candidate.commerce.logistics[key].name!==value.name))throw fail("referenced_catalog_change","已有名称或编号不能删除、改名，请先停用");
+     if(Object.hasOwn(candidate.commerce[field],key)){
+      if(field==="logistics"&&candidate.commerce.logistics[key].name!==value.name)throw fail("referenced_catalog_change","已有物流名称不能直接改名，请新增方式");
+     }else removed.push({productField,name:field==="logistics"?value.name:key});
+    }
+   }
+   if(removed.length){
+    // Product writers acquire the parameter row in SHARE mode before product locks.
+    // The table lock additionally excludes older writers during reference checking.
+    await db.query("LOCK TABLE public.products IN SHARE MODE");
+    for(const {productField,name} of removed){
+     const used=await db.query("SELECT product_code FROM public.products WHERE metadata->'manualEntry'->>$1=$2 OR metadata->>$1=$2 LIMIT 1",[productField,name]);
+     if(used.rows.length)throw fail("settings_item_in_use",name+" 已被商品 "+used.rows[0].product_code+" 引用，请恢复该项并停用",409);
     }
    }
   }

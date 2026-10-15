@@ -1,3 +1,5 @@
+import {applyProductCatalogSelections} from "./product-catalog-selection.js";
+import {readSharedParameters} from "./shared-parameters-service.js";
 import { randomUUID } from "node:crypto";
 import pool, { withTransaction } from "../../db.js";
 import { normalizeProductEntry, buildSkuEntries, readinessWarnings } from "./product-entry-contract.js";
@@ -156,12 +158,15 @@ async function syncSku(client, productId, code, entries, source, shape, allowDra
 export async function saveManualProduct(input, context={}, options={}) {
   const p=normalizeProductEntry(input);
   return withTransaction(async client=>{
+    let settings=await client.query("SELECT payload FROM public.aione_shared_parameters WHERE scope='global' FOR SHARE");
+    if(!settings.rows.length){await readSharedParameters(client);settings=await client.query("SELECT payload FROM public.aione_shared_parameters WHERE scope='global' FOR SHARE");}
     const shape=await assertCurrentProductEntrySchema(client);
     // Lock per business code, to protect concurrent manual/save and batch imports.
     await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",["aione-manual:"+p.localCode]);
     const identity=options.productId?await client.query("SELECT "+productFields(shape)+" FROM public.products WHERE id::text=$1 FOR UPDATE",[String(options.productId)]):null;
     const existing=options.productId?(identity.rows[0]||null):await getProductByLocalCode(client,p.localCode,shape,true);
     if(existing && options.productId && !metadataOf(existing))throw error("product_not_in_manual_entry","该商品不是此录入流程所建，禁止修改。",409);
+    applyProductCatalogSelections(p,input,metadataOf(existing),settings.rows[0].payload);
     const previousCode=existing?metadataOf(existing)?.localCode:null;
     const renamed=Boolean(existing&&previousCode!==p.localCode);
     if(renamed){

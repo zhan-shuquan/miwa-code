@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import {INITIAL_PARAMETERS} from '../../js/config/shared-parameter-defaults.js';
-import {catalogRows,catalogOptions,setCatalogRow} from '../../js/config/settings-catalog.js';
+import {catalogRows,catalogOptions,setCatalogRow,catalogDefault,removeCatalogRow} from '../../js/config/settings-catalog.js';
+import {applyProductCatalogSelections} from '../src/services/product-catalog-selection.js';
+import {normalizeProductEntry} from '../src/services/product-entry-contract.js';
 import {calculateProductCosts} from '../../js/config/product-shared-cost-engine.js';
 import {validateSharedParameters,activateSharedParameters} from '../src/services/shared-parameters-service.js';
 import pool from '../db.js';
@@ -24,15 +26,32 @@ assert.deepEqual(catalogOptions(p,'japanPackaging','历史包装').slice(0,1),['
 assert.throws(()=>setCatalogRow(p,'japanPackaging',{key:'__proto__',value:1}));
 for(const bad of [-1,NaN,'10',Infinity]){const x=structuredClone(p);x.commerce.japanPackagingJpy['新纸盒']=bad;assert.throws(()=>validateSharedParameters(x));}
 const invalidMeta=structuredClone(p);invalidMeta.settingsCatalogMeta.japanPackaging['新纸盒'].sortOrder=-1;assert.throws(()=>validateSharedParameters(invalidMeta));
+// Defaults are unique, enabled, and apply only to new product selections.
+setCatalogRow(p,'chinaPackaging',{key:'防潮包装',value:3,enabled:true,sortOrder:2,isDefault:true});
+assert.equal(catalogDefault(p,'chinaPackaging','原装'),'防潮包装');
+const normalized=normalizeProductEntry({localCode:'test901',nameZh:'新增包装保存测试',packagingMethod:'防潮包装'});
+assert.equal(applyProductCatalogSelections(normalized,{packagingMethod:'防潮包装'},null,p).packagingMethod,'防潮包装');
+const defaults=applyProductCatalogSelections(normalizeProductEntry({localCode:'test902',nameZh:'默认值'}),{},null,p);
+assert.equal(defaults.packagingMethod,'防潮包装');
+assert.throws(()=>applyProductCatalogSelections({...product},product,null,p),e=>e.code==='inactive_product_setting');
+assert.equal(applyProductCatalogSelections({...product},product,product,p).packagingMaterial,'新纸盒');
+const twoDefaults=structuredClone(p);twoDefaults.settingsCatalogMeta.chinaPackaging['原装']={enabled:true,isDefault:true,sortOrder:0};assert.throws(()=>validateSharedParameters(twoDefaults));
+const inactiveDefault=structuredClone(p);inactiveDefault.settingsCatalogMeta.chinaPackaging['防潮包装'].enabled=false;assert.throws(()=>validateSharedParameters(inactiveDefault));
 // Exercise the real transaction boundary and optimistic concurrency without a production DB.
-const originalConnect=pool.connect;let statements=[],currentVersion=3;
-pool.connect=async()=>({query:async(sql,args)=>{statements.push({sql,args});if(sql.startsWith('SELECT version,payload FROM'))return {rows:[{version:currentVersion,payload:INITIAL_PARAMETERS}]};if(sql.startsWith('SELECT version,payload'))return {rowCount:1,rows:[{version:currentVersion,payload:INITIAL_PARAMETERS}]};return {rows:[],rowCount:1};},release(){statements.push({sql:'RELEASE'});}});
+const originalConnect=pool.connect;let statements=[],currentVersion=3,usedReference=false;
+pool.connect=async()=>({query:async(sql,args)=>{statements.push({sql,args});if(sql.startsWith('SELECT product_code FROM'))return {rows:usedReference?[{product_code:'MH0000001'}]:[]};if(sql.startsWith('SELECT version,payload FROM'))return {rows:[{version:currentVersion,payload:INITIAL_PARAMETERS}]};if(sql.startsWith('SELECT version,payload'))return {rowCount:1,rows:[{version:currentVersion,payload:INITIAL_PARAMETERS}]};return {rows:[],rowCount:1};},release(){statements.push({sql:'RELEASE'});}});
 try{
  await assert.rejects(activateSharedParameters({expectedVersion:2,parameters:p,updatedBy:'tester',changeReason:'conflict'}),e=>e.statusCode===409);
  assert.ok(statements.some(x=>x.sql==='ROLLBACK'));assert.ok(!statements.some(x=>x.sql.startsWith('UPDATE ')));
  statements=[];
  const renamed=structuredClone(p);renamed.commerce.logistics.air_direct_normal.name='改名';
  await assert.rejects(activateSharedParameters({expectedVersion:3,parameters:renamed,updatedBy:'tester',changeReason:'rename'}),e=>e.code==='referenced_catalog_change');
+ const deletion=structuredClone(p);removeCatalogRow(deletion,'japanPackaging','A4信封');usedReference=true;
+ await assert.rejects(activateSharedParameters({expectedVersion:3,parameters:deletion,updatedBy:'tester',changeReason:'in use'}),e=>e.code==='settings_item_in_use');
+ usedReference=false;
+ await activateSharedParameters({expectedVersion:3,parameters:deletion,updatedBy:'tester',changeReason:'unused delete'});
+ assert.ok(statements.some(x=>x.sql==='LOCK TABLE public.products IN SHARE MODE'));
+ statements=[];
  const saved=await activateSharedParameters({expectedVersion:3,parameters:p,updatedBy:'tester',changeReason:'new packaging'});
  assert.equal(saved.version,4);assert.equal(saved.parameters.commerce.japanPackagingJpy['新纸盒'],77);
  assert.ok(statements.some(x=>x.sql==='COMMIT'));

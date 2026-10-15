@@ -4,6 +4,10 @@ on:
     branches:
       - main
     paths:
+      - apps/systems/aione/js/config/settings-catalog.js
+      - apps/systems/aione/js/pages/settings-center.js
+      - apps/systems/aione/backend/src/services/product-catalog-selection.js
+      - apps/systems/aione/backend/scripts/test-settings-center*.js
       - data-code/migrations/0103_product_asset_sku_identity_link.sql
       - apps/systems/aione/backend/tools/windows/SYNC_AIONE_PRODUCT_IMAGES.ps1
       - apps/systems/aione/backend/src/services/product-local-image-sync-contract.js
@@ -291,3 +295,8 @@ jobs:
       - name: Test Excel/WPS and CURRENT database roundtrip (no Rakuten)
         working-directory: apps/systems/aione/backend
         run: node scripts/test-product-entry-current.js
+
+      - name: Validate settings center schema and permissions
+        run: node apps/systems/aione/backend/scripts/test-settings-center.js
+      - name: Verify settings center persistence and concurrent deletion on disposable Postgres
+        run: node apps/systems/aione/backend/scripts/test-settings-center-db.js

@@ -11,9 +11,20 @@ export function setCatalogRow(parameters,kind,row){
  const def=SETTINGS_CATALOGS[kind];if(!def)throw new Error('未知设置分类');
  const key=String(row.key||'').trim();
  if(!key||key.length>80||['__proto__','constructor','prototype'].includes(key))throw new Error('名称或编号无效');
+ if(row.isDefault===true&&row.enabled===false)throw new Error('默认选项必须启用');
  const map=catalogValues(parameters,kind);
  map[key]=kind==='logistics'?{...row.value,name:String(row.value?.name||'').trim()}:Number(row.value);
  parameters.settingsCatalogMeta??={};parameters.settingsCatalogMeta[kind]??={};
- parameters.settingsCatalogMeta[kind][key]={enabled:row.enabled!==false,sortOrder:Number(row.sortOrder??1)};
+ if(row.isDefault===true){if(row.enabled===false)throw new Error('默认选项必须启用');for(const item of Object.values(parameters.settingsCatalogMeta[kind]))item.isDefault=false;}
+ parameters.settingsCatalogMeta[kind][key]={enabled:row.enabled!==false,sortOrder:Number(row.sortOrder??1),isDefault:row.isDefault===true};
  return parameters;
+}
+export function catalogDefault(parameters,kind,fallback=''){
+ const rows=catalogRows(parameters,kind).filter(r=>r.enabled!==false);
+ return rows.find(r=>r.isDefault)?.name||rows.find(r=>r.name===fallback)?.name||rows[0]?.name||'';
+}
+export function removeCatalogRow(parameters,kind,key){
+ if(!SETTINGS_CATALOGS[kind]||!Object.hasOwn(catalogValues(parameters,kind),key))throw new Error('设置项不存在');
+ delete catalogValues(parameters,kind)[key];
+ if(parameters.settingsCatalogMeta?.[kind])delete parameters.settingsCatalogMeta[kind][key];
 }
