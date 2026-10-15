@@ -72,6 +72,15 @@ try{
   assert.equal((await (await fetch(base+'/reader/shared-parameters')).json()).capabilities.canEdit,false);
   assert.equal((await (await fetch(base+'/editor/shared-parameters')).json()).capabilities.canEdit,true);
   assert.equal((await fetch(base+'/editor/shared-parameters',options)).status,200);
+  const workbook=await fetch(base+'/reader/shared-parameters/catalogs/japanPackaging/template.xlsx');
+  assert.equal(workbook.status,200);assert.match(workbook.headers.get('content-type'),/spreadsheetml/);
+  const workbookBytes=Buffer.from(await workbook.arrayBuffer());assert.equal(workbookBytes.subarray(0,2).toString(),'PK');
+  const exported=await fetch(base+'/reader/shared-parameters/catalogs/japanPackaging/export.xlsx',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows:catalogRows(p,'japanPackaging')})});
+  assert.equal(exported.status,200);
+  const imported=Buffer.from(await exported.arrayBuffer());const upload={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64:imported.toString('base64')})};
+  assert.equal((await fetch(base+'/reader/shared-parameters/catalogs/japanPackaging/import-preview',upload)).status,403);
+  const preview=await (await fetch(base+'/editor/shared-parameters/catalogs/japanPackaging/import-preview',upload)).json();assert.deepEqual(preview.errors,[]);assert.equal(preview.rows.length,catalogRows(p,'japanPackaging').length);
+
  }finally{await new Promise(r=>server.close(r));pool.query=originalQuery;if(previousAllowlist===undefined)delete process.env.AIONE_SHARED_PARAMETER_EDITOR_PERSON_IDS;else process.env.AIONE_SHARED_PARAMETER_EDITOR_PERSON_IDS=previousAllowlist;}
 }finally{pool.connect=originalConnect;await pool.end();}
 console.log('PASS settings catalogs: arbitrary additions, cost consumption, disable/legacy selection, validation, version conflict rollback, audited commit');

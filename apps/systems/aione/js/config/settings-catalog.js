@@ -5,7 +5,7 @@ export const SETTINGS_CATALOGS = Object.freeze({
  logistics: {label:'物流方式与运费', owner:'往来之家', path:['commerce','logistics'], currency:'CNY'}
 });
 export function catalogValues(parameters,kind){const def=SETTINGS_CATALOGS[kind];return def?def.path.reduce((v,k)=>v?.[k],parameters)||{}:{};}
-export function catalogRows(parameters,kind){return Object.entries(catalogValues(parameters,kind)).map(([key,value],i)=>({key,name:kind==='logistics'?value.name:key,value,...(parameters.settingsCatalogMeta?.[kind]?.[key]||{}),sortOrder:parameters.settingsCatalogMeta?.[kind]?.[key]?.sortOrder??i+1})).sort((a,b)=>a.sortOrder-b.sortOrder||a.name.localeCompare(b.name));}
+export function catalogRows(parameters,kind){return Object.entries(catalogValues(parameters,kind)).map(([key,value],i)=>({key,name:kind==='logistics'?value.name:key,value,...(parameters.settingsCatalogMeta?.[kind]?.[key]||{}),enabled:parameters.settingsCatalogMeta?.[kind]?.[key]?.enabled!==false,isDefault:parameters.settingsCatalogMeta?.[kind]?.[key]?.isDefault===true,sortOrder:parameters.settingsCatalogMeta?.[kind]?.[key]?.sortOrder??i+1})).sort((a,b)=>a.sortOrder-b.sortOrder||a.name.localeCompare(b.name));}
 export function catalogOptions(parameters,kind,current){const rows=catalogRows(parameters,kind).filter(r=>r.enabled!==false||r.name===current);if(current&&!rows.some(r=>r.name===current))rows.unshift({name:current});return rows.map(r=>r.name);}
 export function setCatalogRow(parameters,kind,row){
  const def=SETTINGS_CATALOGS[kind];if(!def)throw new Error('未知设置分类');
