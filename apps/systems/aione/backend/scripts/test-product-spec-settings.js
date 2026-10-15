@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import {addSpecCatalogPresets,specNameOptions,specValueOptions,translateSpec,validateProductSpecSettings} from '../../js/config/product-spec-settings.js';
-import {validateCustomSettings,assertCustomSchemaTransition} from '../../js/config/custom-settings.js';
+import {validateCustomSettings,assertCustomSchemaTransition,customProductSelections} from '../../js/config/custom-settings.js';
 import {customSettingsWorkbook,parseCustomSettingsWorkbook} from '../src/services/custom-settings-workbook.js';
 import {autoMapAttributes} from '../src/services/rakuten-auto-mapping.js';
 import {previewRakutenItemV2} from '../src/services/rakuten-itemapi2-payload-preview.js';
-const p={};p.customSettings=addSpecCatalogPresets(p);validateCustomSettings(p.customSettings);assert.equal(addSpecCatalogPresets(p).categories.length,2);
+const p={};p.customSettings=addSpecCatalogPresets(p);validateCustomSettings(p.customSettings);assert.equal(addSpecCatalogPresets(p).categories.length,2);assert.throws(()=>customProductSelections(p,{spec_colors:'r_0'}),/规格字段/);
 const [names,colors]=p.customSettings.categories;
 assert.equal(specNameOptions(p)[0].value,'颜色');assert.equal(translateSpec(p,'颜色').value,'カラー');assert.equal(translateSpec(p,'カラー','黑色').value,'ブラック');
 let product={specs:[{name:'颜色',values:['黑色','白色']}]};validateProductSpecSettings(product,null,p);

@@ -59,6 +59,7 @@ export function customProductSelections(parameters,input,previous){
   if(!value)continue;
   const c=customCategories(parameters).find(x=>x.id===key),r=c?.rows.find(x=>x.id===value);
   if(!c||!r)fail('商品自定义选项已不存在，请重新选择');
+  if(c.specBinding)fail('规格资料请通过规格字段选用');
   if(!c.productField&&!c.specBinding&&(!c.enabled||!c.productBinding||!r.enabled)&&previous?.[key]!==value)fail(c.name+'已停用或未绑定商品');
   result[key]=value;
  }

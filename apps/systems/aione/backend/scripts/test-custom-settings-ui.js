@@ -78,6 +78,8 @@ click('[data-custom=new-category]');host.querySelector('[name=name]').value='口
 click('[data-custom=new-row]');host.querySelector('[name=rowName]').value='20mm';submit();
 host.querySelector('[data-reason]').value='新增规格名称与资料';click('[data-action=save]');await tick();
 openProductEditor(host);await tick();click('[data-tab=sku]');click('[data-add]');const dimensionSelect=host.querySelector('[data-f=sn0]');dimensionSelect.value='口径';dimensionSelect.dispatchEvent(new Event('change',{bubbles:true}));assert.ok(host.querySelector('[data-spec-add="0"] option[value="20mm"]'));
+// A Japanese legacy color dimension must not be added again under its Chinese name.
+openProductEditor(host,{...storedProduct,specs:[{name:'カラー',values:['ブラック']}]});await tick();click('[data-tab=sku]');click('[data-add]');assert.notEqual(host.querySelector('[data-f=sn1]').value,'颜色');
 // Read-only mode cannot create categories or rows.
 allow=false;await mountSettingsCenter(host);click('[data-kind=custom]');assert.equal(host.querySelector('[data-custom=new-category]').disabled,true);assert.equal(host.querySelector('[data-custom=new-row]').disabled,true);
 console.log('PASS custom settings DOM: category + field + row creation, audited save, remount persistence, pending-edit protection, product selection/default/save adapter, rename-safe references and readonly controls');
