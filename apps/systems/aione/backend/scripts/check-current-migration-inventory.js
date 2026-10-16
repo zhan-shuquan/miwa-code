@@ -10,7 +10,7 @@ const directory=process.env.AIONE_MIGRATIONS_DIR||defaultDir;
 const fail=(message)=>{console.error('[AIONE][BLOCK] '+message);process.exitCode=2;};
 
 try {
-  const files=(await readdir(directory)).filter(name=>/^\\d+_.*\\.sql$/.test(name)).sort();
+  const files=(await readdir(directory)).filter(name=>/^\d+_.*\.sql$/.test(name)).sort();
   const entries=files.map(file=>({version:file.split('_')[0],file}));
   if(new Set(entries.map(x=>x.version)).size!==entries.length)throw new Error('Duplicate migration version in Repo; release blocked');
   const check=await pool.query("SELECT to_regclass('public.schema_migrations') AS relation");
