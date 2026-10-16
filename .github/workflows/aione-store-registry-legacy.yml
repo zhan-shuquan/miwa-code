@@ -75,6 +75,8 @@ jobs:
             ) THEN RAISE EXCEPTION 'Store FK/read contract failed'; END IF;
           END $check$;
           SQL
+      - name: Check migration inventory script syntax (no live DB connection)
+        run: node --check apps/systems/aione/backend/scripts/check-current-migration-inventory.js
       - name: Validate required column contract
         run: |
           psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name='stores' AND column_name IN ('id','code','name','status','platform_id')) OR (table_name='platforms' AND column_name IN ('id','code','name','status')))" | grep -Fx 9
