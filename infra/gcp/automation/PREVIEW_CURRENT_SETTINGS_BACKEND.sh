@@ -11,7 +11,7 @@ assert_aione_current_baseline
 SHORT_SHA="${AIONE_PREVIEW_COMMIT:0:7}"
 echo '[AIONE] Existing CURRENT pipeline, preview stop-mode.'
 echo "[AIONE] REVIEWED COMMIT: $AIONE_PREVIEW_COMMIT"
-echo '[AIONE] Reviewed migrations apply to the shared CURRENT database; no business parameters are written by this command.'
+echo '[AIONE] Preview mode skips shared CURRENT database migrations and schema preflight; existing runtime database remains unchanged.'
 echo '[AIONE] Deploy private tagged revision; preserve active traffic and authentication.'
 gcloud builds submit . --project="$AIONE_PROJECT_ID" \
   --config=infra/gcp/cloudbuild/deploy-current.yaml \
