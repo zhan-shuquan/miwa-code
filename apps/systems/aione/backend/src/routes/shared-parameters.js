@@ -4,7 +4,7 @@ import {Router} from "express";
 import {getRequestContext,requireWriteActor} from "../http/context.js";
 import {readSharedParameters,activateSharedParameters,validateSharedParameters} from "../services/shared-parameters-service.js";
 import {readSettingsReferenceUsage} from '../services/settings-reference-usage.js';
-import {readSettingsStores} from "../services/settings-stores.js";
+import {readSettingsStoreState} from "../services/settings-stores.js";
 import pool from '../../db.js';
 const router=Router();
 export function canEditSharedParameters(identity,allowlist=process.env.AIONE_SHARED_PARAMETER_EDITOR_PERSON_IDS){
@@ -16,7 +16,8 @@ function requireSettingsEditor(req,res,next){
  next();
 }
 router.get("/shared-parameters",async(req,res,next)=>{try{
- res.set("Cache-Control","no-store").json({...await readSharedParameters(),usage:await readSettingsReferenceUsage(),stores:await readSettingsStores(),capabilities:{canEdit:canEditSharedParameters(req.aioneIdentity),customSettings:true,fieldManagerV2:true,productCatalogBindings:true,specCatalogBindings:true,storeCatalogBindings:true,deliveryCatalogBindings:true}});
+ const storeCatalog=await readSettingsStoreState();
+ res.set("Cache-Control","no-store").json({...await readSharedParameters(),usage:await readSettingsReferenceUsage(),stores:storeCatalog.stores,storeCatalog:{ready:storeCatalog.ready,message:storeCatalog.message},capabilities:{canEdit:canEditSharedParameters(req.aioneIdentity),customSettings:true,fieldManagerV2:true,productCatalogBindings:true,specCatalogBindings:true,storeCatalogBindings:storeCatalog.ready,deliveryCatalogBindings:true}});
 }catch(error){next(error)}});
 router.patch("/shared-parameters",requireWriteActor,requireSettingsEditor,async(req,res,next)=>{try{
  const actor=getRequestContext(req);

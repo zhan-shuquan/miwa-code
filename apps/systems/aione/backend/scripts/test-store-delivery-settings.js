@@ -4,7 +4,7 @@ import {addStoreCatalogPreset,applyStoreDefaults,storePlatformRate} from '../../
 import {validateSharedParameters} from '../src/services/shared-parameters-service.js';
 import {applyProductCatalogSelections} from '../src/services/product-catalog-selection.js';
 import {normalizeProductEntry} from '../src/services/product-entry-contract.js';
-import {assertStoreProfileReferences,assertProductStoreReference} from '../src/services/settings-stores.js';
+import {assertStoreProfileReferences,assertProductStoreReference,readSettingsStoreState} from '../src/services/settings-stores.js';
 import {setCatalogRow,catalogRows,deliveryOptions,deliveryDefault} from '../../js/config/settings-catalog.js';
 import {calculateProductCosts} from '../../js/config/product-shared-cost-engine.js';
 import {customSettingsWorkbook,parseCustomSettingsWorkbook} from '../src/services/custom-settings-workbook.js';
@@ -32,11 +32,13 @@ applyStoreDefaults(kept,{...kept,pcDescription:''},kept,p);assert.equal(kept.pcD
 const legacy={...source,targetShopRef:'历史店铺',sizeClass:'60cm',rates:{coupon:0}};
 assert.equal(applyProductCatalogSelections(normalizeProductEntry(legacy),legacy,legacy,p).targetShopRef,'历史店铺');
 assert.throws(()=>applyProductCatalogSelections(normalizeProductEntry(legacy),legacy,null,p),/启用/);
-const db={query:async()=>({rows:[store]})};await assertStoreProfileReferences(db,p,{});await assertProductStoreReference(db,product,null,p);
-await assert.rejects(assertStoreProfileReferences({query:async()=>({rows:[]})},p,{}),/不存在/);
-await assert.rejects(assertProductStoreReference({query:async()=>({rows:[]})},product,null,p),/正式店铺/);
+const db={query:async sql=>({rows:sql.includes('information_schema.columns')?[{columns_count:9}]:[store]})};await assertStoreProfileReferences(db,p,{});await assertProductStoreReference(db,product,null,p);
+await assert.rejects(assertStoreProfileReferences({query:async sql=>({rows:sql.includes('information_schema.columns')?[{columns_count:9}]:[]})},p,{}),/不存在/);
+await assert.rejects(assertProductStoreReference({query:async sql=>({rows:sql.includes('information_schema.columns')?[{columns_count:9}]:[]})},product,null,p),/正式店铺/);
+const unavailable=await readSettingsStoreState({query:async()=>({rows:[{columns_count:0}]})});assert.equal(unavailable.ready,false);assert.deepEqual(unavailable.stores,[]);
+await assert.rejects(assertStoreProfileReferences({query:async()=>({rows:[{columns_count:0}]})},p,{}),/尚未就绪/);
 const changed=structuredClone(p);changed.customSettings.categories[0].rows[0].values.store_id='aaaaaaaa-1234-1234-1234-123456789abc';
-await assert.rejects(assertStoreProfileReferences({query:async()=>({rows:[{...store,id:'aaaaaaaa-1234-1234-1234-123456789abc'}]})},changed,p),/不能更换/);
+await assert.rejects(assertStoreProfileReferences({query:async sql=>({rows:sql.includes('information_schema.columns')?[{columns_count:9}]:[{...store,id:'aaaaaaaa-1234-1234-1234-123456789abc'}]})},changed,p),/不能更换/);
 for(const values of [{platform_fee_rate:-1},{coupon_rate:100},{store_id:'made-up'},{delivery_set_id:'bad'}]){const bad=structuredClone(p);Object.assign(bad.customSettings.categories[0].rows[0].values,values);assert.throws(()=>validateSharedParameters(bad));}
 const longRoundtrip=await parseCustomSettingsWorkbook(c,await customSettingsWorkbook(c));assert.deepEqual(longRoundtrip.errors,[]);assert.equal(longRoundtrip.rows[0].values.pc_description,r.values.pc_description);
 // Platform IDs in defaults do not bypass the existing candidate verification.

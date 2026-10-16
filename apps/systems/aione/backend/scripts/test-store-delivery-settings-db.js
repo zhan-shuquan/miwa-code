@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import pool from '../db.js';
 import {readSharedParameters,activateSharedParameters} from '../src/services/shared-parameters-service.js';
 import {saveManualProduct,getManualProduct} from '../src/services/product-manual-entry-service.js';
+import express from 'express';
+import sharedParametersRouter from '../src/routes/shared-parameters.js';
+import {readSettingsStoreState} from '../src/services/settings-stores.js';
 import {readSettingsReferenceUsage} from '../src/services/settings-reference-usage.js';
 import {addStoreCatalogPreset} from '../../js/config/product-store-settings.js';
 import {setCatalogRow,removeCatalogRow} from '../../js/config/settings-catalog.js';
@@ -26,6 +29,13 @@ async function run(){
  await pool.query("UPDATE public.stores SET status='inactive' WHERE id=$1",[stores.rows[0].id]);
  await assert.rejects(saveManualProduct({...input,localCode:'storedb902'},{personId:'ci'},{createOnly:true}),e=>e.code==='invalid_store_setting');
  const edited=await saveManualProduct({...created.product,remarks:'历史正式店铺保留'},{personId:'ci'},{updateOnly:true,expectedVersion:created.product.version});assert.equal(edited.product.targetShopRef,'CI设置店铺');
+ // Reproduce the live CURRENT variant that does not have canonical stores.
+ await pool.query('ALTER TABLE public.stores RENAME TO ci_unavailable_stores');
+ try{
+  assert.equal((await readSettingsStoreState()).ready,false);
+  const app=express();app.use(sharedParametersRouter);const server=await new Promise(resolve=>{const server=app.listen(0,'127.0.0.1',()=>resolve(server));});
+  try{const response=await fetch('http://127.0.0.1:'+server.address().port+'/shared-parameters');assert.equal(response.status,200);const body=await response.json();assert.equal(body.capabilities.storeCatalogBindings,false);assert.equal(body.capabilities.deliveryCatalogBindings,true);assert.ok(body.storeCatalog.message);assert.equal(body.version,state.version);}finally{await new Promise(resolve=>server.close(resolve));}
+ }finally{await pool.query('ALTER TABLE public.ci_unavailable_stores RENAME TO stores');}
  console.log('PASS Postgres: canonical store FK/status checks, persisted defaults, actual product reference counts, SKU tariff deletion rollback and historical store preservation');
 }
 run().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>pool.end());
