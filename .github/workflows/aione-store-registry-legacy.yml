@@ -1,0 +1,81 @@
+name: AIONE Canonical Store Registry Legacy Compatibility
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - data-code/migrations/0112_canonical_store_registry.sql
+      - .github/workflows/aione-store-registry-legacy.yml
+permissions:
+  contents: read
+jobs:
+  isolated-legacy-registry:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aione_ci
+          POSTGRES_PASSWORD: aione_ci
+          POSTGRES_DB: aione_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aione_ci -d aione_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: aione_ci
+      PGPASSWORD: aione_ci
+      PGDATABASE: aione_ci
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create representative old lifecycle tables
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE TABLE public.products(id text PRIMARY KEY, product_code text NOT NULL);
+          INSERT INTO public.products(id,product_code) VALUES('legacy-product','legacy-code');
+          CREATE TABLE public.channel_listings(
+            id text PRIMARY KEY,
+            product_id text NOT NULL REFERENCES public.products(id),
+            channel text NOT NULL,
+            shop_ref text NOT NULL,
+            UNIQUE(product_id,channel,shop_ref)
+          );
+          INSERT INTO public.channel_listings(id,product_id,channel,shop_ref)
+            VALUES('legacy-listing','legacy-product','rakuten','永井GD');
+          SQL
+      - name: Run additive migration twice and verify old data remains unchanged
+        run: |
+          psql -v ON_ERROR_STOP=1 -f data-code/migrations/0112_canonical_store_registry.sql
+          psql -v ON_ERROR_STOP=1 -f data-code/migrations/0112_canonical_store_registry.sql
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          DO $check$
+          BEGIN
+            IF (SELECT count(*) FROM public.products WHERE id='legacy-product') <> 1
+              OR (SELECT count(*) FROM public.channel_listings WHERE id='legacy-listing' AND shop_ref='永井GD') <> 1
+            THEN RAISE EXCEPTION 'Historical product/listing was changed'; END IF;
+            IF to_regclass('public.listings') IS NOT NULL
+            THEN RAISE EXCEPTION 'A second listings table was unexpectedly created'; END IF;
+            IF (SELECT count(*) FROM public.stores) <> 0
+              OR (SELECT count(*) FROM public.platforms) <> 0
+            THEN RAISE EXCEPTION 'Unverified store accounts were invented'; END IF;
+          END $check$;
+          INSERT INTO public.platforms(code,name) VALUES ('RAKUTEN_CI','Rakuten CI');
+          INSERT INTO public.stores(code,name,platform_id)
+            SELECT 'CI_STORE','CI store',id FROM public.platforms WHERE code='RAKUTEN_CI';
+          DO $check$
+          BEGIN
+            IF NOT EXISTS(
+              SELECT 1 FROM public.stores s
+              JOIN public.platforms p ON p.id=s.platform_id
+              WHERE s.code='CI_STORE' AND s.status='active' AND p.status='active'
+            ) THEN RAISE EXCEPTION 'Store FK/read contract failed'; END IF;
+          END $check$;
+          SQL
+      - name: Validate required column contract
+        run: |
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name='stores' AND column_name IN ('id','code','name','status','platform_id')) OR (table_name='platforms' AND column_name IN ('id','code','name','status')))" | grep -Fx 9
+          echo 'PASS: isolated legacy database and canonical store compatibility'
