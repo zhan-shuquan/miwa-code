@@ -187,7 +187,7 @@ steps:
           TRAFFIC_AFTER="$$(gcloud run services describe "$$AIONE_RUN_SERVICE" --region="$$AIONE_REGION" --project="$$AIONE_PROJECT_ID" --format=json | python3 -c 'import json,sys; print(json.dumps(sorted((r.get("revisionName"),r.get("percent",0)) for r in json.load(sys.stdin)["status"]["traffic"] if r.get("percent",0)>0)))')"
           [[ "$$TRAFFIC_BEFORE" == "$$TRAFFIC_AFTER" ]] || { echo '[AIONE][STOP] Active traffic changed during preview'; exit 31; }
           echo "[AIONE] PREVIEW URL: $$CANDIDATE_URL"
-          echo "[AIONE] PREVIEW COMMIT: ${COMMIT_SHA}"
+          echo "[AIONE] PREVIEW IMAGE: $$IMAGE"
           echo '[AIONE] PREVIEW PASS: active traffic unchanged; no cutover'
           exit 0
         fi
