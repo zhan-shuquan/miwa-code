@@ -1,12 +1,14 @@
 steps:
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     id: baseline-gate
+    env: ["AIONE_DEPLOY_MODE=${_AIONE_DEPLOY_MODE}"]
     entrypoint: bash
     args:
       - -ceu
       - |
         source infra/gcp/cloud-shell/CURRENT_BASELINE.sh
         assert_aione_current_baseline
+        case "$$AIONE_DEPLOY_MODE" in release|preview) ;; *) echo '[AIONE][STOP] Invalid deploy mode' >&2; exit 64;; esac
         echo '[AIONE] CURRENT baseline PASS'
 
   - name: gcr.io/cloud-builders/docker
@@ -138,6 +140,7 @@ steps:
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     id: candidate-deploy-health-cutover
+    env: ["AIONE_DEPLOY_MODE=${_AIONE_DEPLOY_MODE}"]
     entrypoint: bash
     args:
       - -ceu
@@ -150,6 +153,8 @@ steps:
         RUNTIME_SA="$${AIONE_RUNTIME_SERVICE_ACCOUNT_NAME}@$${AIONE_PROJECT_ID}.iam.gserviceaccount.com"
         CANDIDATE_TAG="candidate-${SHORT_SHA}"
         PREVIOUS_REVISION="$$(gcloud run services describe "$$AIONE_RUN_SERVICE" --region="$$AIONE_REGION" --project="$$AIONE_PROJECT_ID" --format='value(status.traffic[0].revisionName)')"
+
+        TRAFFIC_BEFORE="$$(gcloud run services describe "$$AIONE_RUN_SERVICE" --region="$$AIONE_REGION" --project="$$AIONE_PROJECT_ID" --format=json | python3 -c 'import json,sys; print(json.dumps(sorted((r.get("revisionName"),r.get("percent",0)) for r in json.load(sys.stdin)["status"]["traffic"] if r.get("percent",0)>0)))')"
 
         echo "[AIONE] Previous traffic revision: $$PREVIOUS_REVISION"
         echo '[AIONE] Deploy candidate with 0 percent traffic'
@@ -178,6 +183,16 @@ steps:
         printf '%s\n' "$$CANDIDATE_HEALTH"
         printf '%s' "$$CANDIDATE_HEALTH" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p.get("ok") is True and p.get("database")=="connected"'
 
+        if [[ "$$AIONE_DEPLOY_MODE" == "preview" ]]; then
+          TRAFFIC_AFTER="$$(gcloud run services describe "$$AIONE_RUN_SERVICE" --region="$$AIONE_REGION" --project="$$AIONE_PROJECT_ID" --format=json | python3 -c 'import json,sys; print(json.dumps(sorted((r.get("revisionName"),r.get("percent",0)) for r in json.load(sys.stdin)["status"]["traffic"] if r.get("percent",0)>0)))')"
+          [[ "$$TRAFFIC_BEFORE" == "$$TRAFFIC_AFTER" ]] || { echo '[AIONE][STOP] Active traffic changed during preview'; exit 31; }
+          echo "[AIONE] PREVIEW URL: $$CANDIDATE_URL"
+          echo "[AIONE] PREVIEW COMMIT: ${COMMIT_SHA}"
+          echo '[AIONE] PREVIEW PASS: active traffic unchanged; no cutover'
+          exit 0
+        fi
+        [[ "$$AIONE_DEPLOY_MODE" == "release" ]] || { echo '[AIONE][STOP] Invalid deploy mode'; exit 64; }
+
         echo '[AIONE] Candidate healthy; switch 100 percent traffic'
         gcloud run services update-traffic "$$AIONE_RUN_SERVICE" \
           --region="$$AIONE_REGION" \
@@ -201,6 +216,9 @@ steps:
         printf '%s' "$$FINAL_HEALTH" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p.get("ok") is True and p.get("database")=="connected"'
 
         echo "[AIONE] AUTO MIGRATE + DEPLOY PASS: $${AIONE_RUN_SERVICE} -> $${AIONE_SQL_INSTANCE} -> $${CANDIDATE_REVISION}"
+
+substitutions:
+  _AIONE_DEPLOY_MODE: release
 
 options:
   logging: CLOUD_LOGGING_ONLY

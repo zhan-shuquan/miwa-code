@@ -1,0 +1,30 @@
+name: AIONE Settings Preview Routing
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/aione-settings-preview.yml
+      - apps/systems/aione/api/aione-bridge.js
+      - apps/systems/aione/js/config/backend-preview-target.js
+      - apps/systems/aione/tests/verify-settings-preview-target.mjs
+      - apps/systems/aione/tests/verify-settings-preview-proxy.mjs
+      - infra/gcp/cloudbuild/deploy-current.yaml
+      - infra/gcp/automation/PREVIEW_CURRENT_SETTINGS_BACKEND.sh
+      - infra/gcp/tests/test-current-preview-mode.py
+permissions:
+  contents: read
+jobs:
+  preview-confinement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: python3 -m pip install PyYAML==6.0.2
+      - run: |
+          node apps/systems/aione/tests/verify-settings-preview-target.mjs
+          node apps/systems/aione/tests/verify-settings-preview-proxy.mjs
+          node apps/systems/aione/tests/verify-dev-preview-topology.mjs
+          python3 infra/gcp/tests/test-current-preview-mode.py
+          bash -n infra/gcp/automation/PREVIEW_CURRENT_SETTINGS_BACKEND.sh
