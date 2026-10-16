@@ -2,7 +2,6 @@
 -- This migration never rewrites products, product_skus or channel_listings.
 -- Store account mapping and seed records must be explicitly verified separately.
 BEGIN;
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS public.platforms (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

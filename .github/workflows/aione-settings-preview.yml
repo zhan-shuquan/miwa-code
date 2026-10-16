@@ -10,6 +10,7 @@ on:
       - apps/systems/aione/tests/verify-settings-preview-proxy.mjs
       - infra/gcp/cloudbuild/deploy-current.yaml
       - infra/gcp/automation/PREVIEW_CURRENT_SETTINGS_BACKEND.sh
+      - infra/gcp/automation/VERIFY_CURRENT_SETTINGS_PREVIEW_READ_ONLY.sh
       - infra/gcp/tests/test-current-preview-mode.py
 permissions:
   contents: read
@@ -28,3 +29,4 @@ jobs:
           node apps/systems/aione/tests/verify-dev-preview-topology.mjs
           python3 infra/gcp/tests/test-current-preview-mode.py
           bash -n infra/gcp/automation/PREVIEW_CURRENT_SETTINGS_BACKEND.sh
+          bash -n infra/gcp/automation/VERIFY_CURRENT_SETTINGS_PREVIEW_READ_ONLY.sh
