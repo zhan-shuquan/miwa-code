@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - data-code/migrations/0112_canonical_store_registry.sql
+      - apps/systems/aione/backend/scripts/check-current-migration-inventory.js
       - .github/workflows/aione-store-registry-legacy.yml
 permissions:
   contents: read
@@ -77,6 +78,40 @@ jobs:
           SQL
       - name: Check migration inventory script syntax (no live DB connection)
         run: node --check apps/systems/aione/backend/scripts/check-current-migration-inventory.js
+      - name: Verify inventory checker against isolated PostgreSQL
+        env:
+          DATABASE_URL: postgresql://aione_ci:aione_ci@localhost:5432/aione_ci
+        run: |
+          set -euo pipefail
+          cd apps/systems/aione/backend
+          npm ci --no-audit --no-fund
+          TEST_DIR="$(mktemp -d)"
+          export AIONE_MIGRATIONS_DIR="$TEST_DIR"
+          printf 'SELECT 1;\\n' > "$TEST_DIR/9001_first.sql"
+          printf 'SELECT 1;\\n' > "$TEST_DIR/9002_second.sql"
+          # Missing migration registry must fail closed without creating it.
+          if node scripts/check-current-migration-inventory.js; then
+            echo 'FAIL: missing migration registry allowed' >&2
+            exit 1
+          fi
+          psql -v ON_ERROR_STOP=1 -c "CREATE TABLE public.schema_migrations(version text PRIMARY KEY, description text NOT NULL)"
+          psql -v ON_ERROR_STOP=1 -c "INSERT INTO public.schema_migrations VALUES ('9001','first')"
+          # One unapplied migration must block release.
+          if node scripts/check-current-migration-inventory.js; then
+            echo 'FAIL: pending migration allowed' >&2
+            exit 1
+          fi
+          psql -v ON_ERROR_STOP=1 -c "INSERT INTO public.schema_migrations VALUES ('9002','second')"
+          node scripts/check-current-migration-inventory.js
+          psql -v ON_ERROR_STOP=1 -c "INSERT INTO public.schema_migrations VALUES ('9999','unknown')"
+          # Unknown database version must block release.
+          if node scripts/check-current-migration-inventory.js; then
+            echo 'FAIL: unknown migration version allowed' >&2
+            exit 1
+          fi
+          # Checker is strictly read-only; test that its temporary registry rows still exist.
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.schema_migrations" | grep -Fx 3
+          echo 'PASS: read-only inventory checker blocks absent, pending and unknown versions'
       - name: Validate required column contract
         run: |
           psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name='stores' AND column_name IN ('id','code','name','status','platform_id')) OR (table_name='platforms' AND column_name IN ('id','code','name','status')))" | grep -Fx 9
