@@ -6,7 +6,7 @@ const modeLabels={direct:'中国直发',warehouse:'日本入仓',kg:'按kg',step
 function definition(kind){if(!Object.hasOwn(SETTINGS_CATALOGS,kind))throw bad('未知设置分类');return SETTINGS_CATALOGS[kind];}
 function columns(kind){
  const d=definition(kind);
- return kind==='logistics'?['固定编号','名称','履约方式','计费方式','每kg费用(CNY)','首重(g)','首重费用(CNY)','续重(g)','续重费用(CNY)','排序','状态','默认项']:['名称',`单套成本(${d.currency})`,'排序','状态','默认项'];
+ return kind==='delivery'?['固定编号','名称','配送费(JPY)','排序','状态','默认项']:kind==='logistics'?['固定编号','名称','履约方式','计费方式','每kg费用(CNY)','首重(g)','首重费用(CNY)','续重(g)','续重费用(CNY)','排序','状态','默认项']:['名称',`单套成本(${d.currency})`,'排序','状态','默认项'];
 }
 function number(value,label,{integer=false,positive=false}={}){
  if(value===null||value===undefined||String(value).trim()===''||!['string','number'].includes(typeof value))throw bad(label+'不能为空且必须为数字');
@@ -20,6 +20,7 @@ function validateRow(kind,row){
  if(typeof row.enabled!=='boolean'||row.isDefault!==undefined&&typeof row.isDefault!=='boolean')throw bad('状态或默认项无效');
  if(row.isDefault&&row.enabled===false)throw bad('默认项必须启用');
  const result={key,enabled:row.enabled,sortOrder:number(row.sortOrder,'排序',{integer:true}),isDefault:row.isDefault===true};
+ if(kind==='delivery'){if(!/^[A-Za-z0-9_-]+$/.test(key)||!row.value||typeof row.value.name!=='string'||!row.value.name.trim()||row.value.name.length>80)throw bad('配送编号或名称无效');result.value={name:row.value.name.trim(),fee:number(row.value.fee,'配送费'),enabled:row.enabled};return result;}
  if(kind!=='logistics'){result.value=number(row.value,'单套成本');return result;}
  const v=row.value;
  if(!/^[a-zA-Z0-9_-]+$/.test(key)||!v||typeof v.name!=='string'||!v.name.trim()||v.name.length>80)throw bad('物流编号或名称无效');
@@ -41,10 +42,10 @@ export async function exportCatalogWorkbook(kind,rows,{template=false}={}){
  const ws=book.addWorksheet('设置资料',{views:[{state:'frozen',ySplit:1}]});
  ws.addRow(columns(kind));
  const checked=validateWorkbookRows(kind,rows);if(checked.errors.length)throw bad('导出资料无效：第'+checked.errors[0].row+'行 '+checked.errors[0].message);
- for(const row of checked.rows){const v=row.value;ws.addRow(kind==='logistics'?[row.key,v.name,modeLabels[v.fulfillment],modeLabels[v.billing],v.billing==='kg'?v.perKgCny:null,v.billing==='step'?v.firstWeightG:null,v.billing==='step'?v.firstFeeCny:null,v.billing==='step'?v.additionalWeightG:null,v.billing==='step'?v.additionalFeeCny:null,row.sortOrder,row.enabled?'启用':'停用',row.isDefault?'是':'否']:[row.key,v,row.sortOrder,row.enabled?'启用':'停用',row.isDefault?'是':'否']);}
+ for(const row of checked.rows){const v=row.value;ws.addRow(kind==='delivery'?[row.key,v.name,v.fee,row.sortOrder,row.enabled?'启用':'停用',row.isDefault?'是':'否']:kind==='logistics'?[row.key,v.name,modeLabels[v.fulfillment],modeLabels[v.billing],v.billing==='kg'?v.perKgCny:null,v.billing==='step'?v.firstWeightG:null,v.billing==='step'?v.firstFeeCny:null,v.billing==='step'?v.additionalWeightG:null,v.billing==='step'?v.additionalFeeCny:null,row.sortOrder,row.enabled?'启用':'停用',row.isDefault?'是':'否']:[row.key,v,row.sortOrder,row.enabled?'启用':'停用',row.isDefault?'是':'否']);}
  ws.getRow(1).height=28;ws.getRow(1).eachCell(c=>{c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF21825C'}};});
  ws.columns.forEach((col,i)=>{col.width=i<2?24:18;});ws.autoFilter={from:{row:1,column:1},to:{row:1,column:columns(kind).length}};
- const stateCol=kind==='logistics'?11:4,defaultCol=stateCol+1;
+ const stateCol=kind==='logistics'?11:kind==='delivery'?5:4,defaultCol=stateCol+1;
  for(let r=2;r<=501;r++){
   for(const [col,values] of [[stateCol,'启用,停用'],[defaultCol,'是,否'],...(kind==='logistics'?[[3,'中国直发,日本入仓'],[4,'按kg,首重续重']]:[])])ws.getCell(r,col).dataValidation={type:'list',allowBlank:col===defaultCol,formulae:['"'+values+'"'],showErrorMessage:true,errorTitle:'选项不正确',error:'请使用下拉选项'};
  }
@@ -65,10 +66,10 @@ export async function parseCatalogWorkbook(kind,bytes){
   const raw=headers.map((_,i)=>ws.getCell(r,i+1).value);if(raw.every(v=>v===null||v===undefined||v===''))continue;
   if(sourceRows.length+parseErrors.length>=MAX_ROWS)throw bad('每次最多500条设置');
   try{
-   const cells=headers.map((_,i)=>value(ws.getCell(r,i+1))),logistics=kind==='logistics',state=cells[logistics?10:3],def=cells[logistics?11:4];
+   const cells=headers.map((_,i)=>value(ws.getCell(r,i+1))),logistics=kind==='logistics',delivery=kind==='delivery',state=cells[logistics?10:delivery?4:3],def=cells[logistics?11:delivery?5:4];
    if(!['启用','停用'].includes(state)||![null,undefined,'','是','否'].includes(def))throw bad('状态使用启用/停用，默认项使用是/否');
-   const row={key:String(cells[0]??'').trim(),enabled:state==='启用',isDefault:def==='是',sortOrder:cells[logistics?9:2]??sourceRows.length+1};
-   row.value=logistics?{name:cells[1],fulfillment:{'中国直发':'direct','日本入仓':'warehouse'}[cells[2]],billing:{'按kg':'kg','首重续重':'step'}[cells[3]],perKgCny:cells[4],firstWeightG:cells[5],firstFeeCny:cells[6],additionalWeightG:cells[7],additionalFeeCny:cells[8]}:cells[1];
+   const row={key:String(cells[0]??'').trim(),enabled:state==='启用',isDefault:def==='是',sortOrder:cells[logistics?9:delivery?3:2]??sourceRows.length+1};
+   row.value=delivery?{name:cells[1],fee:cells[2],enabled:row.enabled}:logistics?{name:cells[1],fulfillment:{'中国直发':'direct','日本入仓':'warehouse'}[cells[2]],billing:{'按kg':'kg','首重续重':'step'}[cells[3]],perKgCny:cells[4],firstWeightG:cells[5],firstFeeCny:cells[6],additionalWeightG:cells[7],additionalFeeCny:cells[8]}:cells[1];
    rows.push(row);sourceRows.push(r);
   }catch(e){parseErrors.push({row:r,message:e.message});}
  }

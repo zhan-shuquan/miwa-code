@@ -1,5 +1,6 @@
 import {allocateProductBusinessCode,allocateBusinessSerial} from "./business-code-numbering.js";
 import {DEFAULT_CODE_RULES,skuBusinessCode} from "../../../js/config/business-code-rules.js";
+import {assertProductStoreReference} from "./settings-stores.js";
 import {applyProductCatalogSelections} from "./product-catalog-selection.js";
 import {readSharedParameters} from "./shared-parameters-service.js";
 import { randomUUID } from "node:crypto";
@@ -172,6 +173,7 @@ export async function saveManualProduct(input, context={}, options={}) {
     const existing=options.productId?(identity.rows[0]||null):await getProductByLocalCode(client,p.localCode,shape,true);
     if(existing && options.productId && !metadataOf(existing))throw error("product_not_in_manual_entry","该商品不是此录入流程所建，禁止修改。",409);
     applyProductCatalogSelections(p,input,metadataOf(existing),settings.rows[0].payload);
+    await assertProductStoreReference(client,p,metadataOf(existing),settings.rows[0].payload);
     const previousCode=existing?metadataOf(existing)?.localCode:null;
     const renamed=Boolean(existing&&previousCode!==p.localCode);
     if(renamed){

@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import pool from '../db.js';
+import {readSharedParameters,activateSharedParameters} from '../src/services/shared-parameters-service.js';
+import {saveManualProduct,getManualProduct} from '../src/services/product-manual-entry-service.js';
+import {readSettingsReferenceUsage} from '../src/services/settings-reference-usage.js';
+import {addStoreCatalogPreset} from '../../js/config/product-store-settings.js';
+import {setCatalogRow,removeCatalogRow} from '../../js/config/settings-catalog.js';
+if(process.env.AIONE_ENV!=='controlled-ci'||!process.env.DATABASE_URL)throw new Error('Requires controlled-ci disposable database');
+async function run(){
+ const platform=await pool.query("INSERT INTO public.platforms(code,name) VALUES('CI_SETTINGS_PLATFORM','CI settings') RETURNING id");
+ const stores=await pool.query("INSERT INTO public.stores(code,name,platform_id) VALUES('CI_SETTINGS_STORE','CI设置店铺',$1) RETURNING id,code,name,status",[platform.rows[0].id]);
+ let state=await readSharedParameters();
+ const activate=parameters=>activateSharedParameters({expectedVersion:state.version,parameters,updatedBy:'ci',changeReason:'canonical store and delivery DB acceptance'});
+ const p=structuredClone(state.parameters);p.customSettings=addStoreCatalogPreset(p,stores.rows);
+ const category=p.customSettings.categories.find(c=>c.productField==='targetShopRef'),row=category.rows[0];row.isDefault=true;row.values.pc_description='CI店铺说明';row.values.coupon_rate=2;
+ for(const [key,fee] of [['CI_SIZE_140',1100],['CI_SIZE_160',1300]])setCatalogRow(p,'delivery',{key,value:{name:key,fee},enabled:true,isDefault:key==='CI_SIZE_140',sortOrder:0});
+ state=await activate(p);
+ const input={localCode:'storedb901',nameZh:'店铺配送真实保存',weightG:100,purchaseUnitCostCny:10,packagingMethod:'原装',packagingMaterial:'A4信封',logisticsMethod:'空运大件（普货）',skuOverrides:[{index:1,sizeClass:'CI_SIZE_160'}]};
+ const created=await saveManualProduct(input,{personId:'ci'},{createOnly:true});
+ assert.equal(created.product.targetShopRef,'CI设置店铺');assert.equal(created.product.pcDescription,'CI店铺说明');assert.equal(created.product.rates.coupon,2);assert.equal(created.product.sizeClass,'CI_SIZE_140');
+ assert.equal((await getManualProduct('storedb901')).product.customSettings[category.id],row.id);
+ const usage=await readSettingsReferenceUsage();assert.equal(usage[category.id][row.id],1);assert.equal(usage.delivery.CI_SIZE_140,1);assert.equal(usage.delivery.CI_SIZE_160,1);
+ const removed=structuredClone(state.parameters);removeCatalogRow(removed,'delivery','CI_SIZE_160');
+ await assert.rejects(activate(removed),e=>e.code==='settings_item_in_use');assert.equal((await readSharedParameters()).version,state.version);
+ const removedStore=structuredClone(state.parameters);removedStore.customSettings.categories=removedStore.customSettings.categories.filter(c=>c.id!==category.id);await assert.rejects(activate(removedStore),e=>e.code==='settings_item_in_use');
+ await pool.query("UPDATE public.stores SET status='inactive' WHERE id=$1",[stores.rows[0].id]);
+ await assert.rejects(saveManualProduct({...input,localCode:'storedb902'},{personId:'ci'},{createOnly:true}),e=>e.code==='invalid_store_setting');
+ const edited=await saveManualProduct({...created.product,remarks:'历史正式店铺保留'},{personId:'ci'},{updateOnly:true,expectedVersion:created.product.version});assert.equal(edited.product.targetShopRef,'CI设置店铺');
+ console.log('PASS Postgres: canonical store FK/status checks, persisted defaults, actual product reference counts, SKU tariff deletion rollback and historical store preservation');
+}
+run().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>pool.end());

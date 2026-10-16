@@ -11,6 +11,10 @@ export async function readSettingsReferenceUsage(db=pool){
  SELECT ref.category,data->>ref.field AS row_id FROM saved
  CROSS JOIN (VALUES ('chinaPackaging','packagingMethod'),('japanPackaging','packagingMaterial'),('logistics','logisticsMethod')) ref(category,field)
  UNION ALL
+ SELECT 'delivery',data->>'sizeClass' FROM saved
+ UNION ALL
+ SELECT 'delivery',size FROM saved CROSS JOIN LATERAL (SELECT DISTINCT sku->>'sizeClass' AS size FROM jsonb_array_elements(CASE WHEN jsonb_typeof(data->'skuOverrides')='array' THEN data->'skuOverrides' ELSE '[]'::jsonb END) sku WHERE sku->>'sizeClass' IS DISTINCT FROM data->>'sizeClass') sizes
+ UNION ALL
  SELECT c->>'id',r->>'id' FROM saved
  CROSS JOIN public.aione_shared_parameters params
  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(params.payload->'customSettings'->'categories','[]'::jsonb)) c

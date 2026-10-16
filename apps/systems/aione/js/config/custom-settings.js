@@ -1,8 +1,8 @@
 import {HOME_REGISTRY} from './home-registry.js';
 // Validated extension namespace in the existing versioned Cloud SQL settings payload.
 // Extension selections store IDs; display labels are never product references.
-export const PRODUCT_CATALOG_FIELDS={category:'商品分类',brand:'所属品牌',material:'主要材质',originCountry:'原产地'};
-export const CUSTOM_FIELD_TYPES=['text','number','select','boolean','date'];
+export const PRODUCT_CATALOG_FIELDS={category:'商品分类',brand:'所属品牌',material:'主要材质',originCountry:'原产地',targetShopRef:'目标店铺'};
+export const CUSTOM_FIELD_TYPES=['text','longtext','number','select','boolean','date'];
 export const SETTINGS_OWNERS=Object.values(HOME_REGISTRY).map(home=>home.label);
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const fail=message=>{throw Object.assign(new Error(message),{code:'invalid_custom_settings',statusCode:400});};
@@ -19,6 +19,7 @@ export function validateCustomRow(category,row){
   if(f.type==='number'&&(typeof v!=='number'||!Number.isFinite(v)))fail(f.label+'必须是数字');
   if(f.type==='boolean'&&typeof v!=='boolean')fail(f.label+'必须是是或否');
   if(['text','select','date'].includes(f.type)&&(typeof v!=='string'||v.length>500))fail(f.label+'格式无效或超过500字');
+  if(f.type==='longtext'&&(typeof v!=='string'||v.length>10000))fail(f.label+'必须为文本且不能超过10000字');
   if(f.type==='select'&&!f.options.includes(v))fail(f.label+'请选择有效选项');
   if(f.type==='date'&&(!/^\d{4}-\d{2}-\d{2}$/.test(v)||!Number.isFinite(Date.parse(v))||new Date(v).toISOString().slice(0,10)!==v))fail(f.label+'日期无效');
  }

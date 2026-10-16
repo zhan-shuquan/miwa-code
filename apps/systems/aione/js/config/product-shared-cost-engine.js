@@ -1,5 +1,7 @@
 // Single deterministic logistics and cost engine. Input must come from active Cloud SQL parameters.
 import {minimumBreakEvenYen,salesBaseCostJpy} from "./product-pricing-math.js";
+import {storePlatformRate} from "./product-store-settings.js";
+import {deliveryKey} from "./settings-catalog.js";
 const valid=x=>typeof x==="number"&&Number.isFinite(x)&&x>=0;
 const money=x=>Math.round(x);
 export function effectiveSizeClass(product,mode){return mode?.fulfillment==="direct"?"直发":product.sizeClass||"";}
@@ -31,15 +33,14 @@ export function calculateProductCosts(product,sku,params){
  const shipping=money(freightCny*fx),duty=money(purchase*c.tariffRatePct/100);
  const warehouse=purchase+domestic+pack+shipping+duty;
  const size=effectiveSizeClass(product,mode);
- const tiers={"3cm厚":"THIN_3CM","60cm":"SIZE_60","80cm":"SIZE_80","100cm":"SIZE_100","120cm":"SIZE_120"};
- const deliveryKey=tiers[sku?.sizeClass||product.sizeClass],tariff=params.delivery?.[deliveryKey];
+ const tariff=params.delivery?.[deliveryKey(sku?.sizeClass||product.sizeClass)];
  const jpack=mode.fulfillment==="direct"?0:c.japanPackagingJpy[product.packagingMaterial];
- const delivery=mode.fulfillment==="direct"?0:(tariff?.enabled!==false?tariff?.fee:null);
+ const delivery=mode.fulfillment==="direct"?0:tariff?.fee;
  if(!valid(delivery)||!valid(jpack))return {status:"unconfigured",reason:"日本配送或包装费用尚未配置"};
  const japan=jpack+delivery;
  const price=Number(sku?.price??product.salePriceJpy??0);
  const rates=product.rates||{};
- const platformRate=Number(shop.platformFeeRate); // Single shared platform fee rate; UI has no per-product override.
+ const platformRate=Number(storePlatformRate(params,product.targetShopRef)); // Store profile, falling back to the shared rate.
  if(!valid(platformRate)||platformRate>=100)return {status:"unconfigured",reason:"平台费率无效"};
  const platform=money(price*platformRate/100);
  const feeRates=["coupon","points","ads","other"].map(k=>Number(rates[k]??0));

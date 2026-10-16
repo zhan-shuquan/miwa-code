@@ -7,6 +7,9 @@ on:
       - apps/systems/aione/backend/src/services/settings-catalog-workbook.js
       - apps/systems/aione/backend/scripts/test-settings-catalog-workbook.js
       - apps/systems/aione/js/config/product-spec-settings.js
+      - apps/systems/aione/js/config/product-store-settings.js
+      - apps/systems/aione/backend/src/services/settings-stores.js
+      - apps/systems/aione/backend/scripts/test-store-delivery-settings*.js
       - apps/systems/aione/js/config/product-setting-catalogs.js
       - apps/systems/aione/backend/scripts/test-product-spec-settings*.js
       - apps/systems/aione/backend/scripts/test-product-setting-catalogs*.js
@@ -327,6 +330,7 @@ jobs:
 
       - name: Verify custom settings schema, product adapter and dynamic Excel
         run: |
+          node apps/systems/aione/backend/scripts/test-store-delivery-settings.js
           node apps/systems/aione/backend/scripts/test-custom-settings.js
           node apps/systems/aione/backend/scripts/test-product-setting-catalogs.js
           node apps/systems/aione/backend/scripts/test-product-spec-settings.js
@@ -336,6 +340,7 @@ jobs:
           AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-settings-foundation-ui.js
           AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-custom-settings-ui.js
           AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-settings-center-ui.js
+          AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-store-delivery-settings-ui.js
 
       - name: Verify settings foundation on disposable Postgres
         run: node apps/systems/aione/backend/scripts/test-settings-foundation-db.js
@@ -345,3 +350,6 @@ jobs:
 
       - name: Verify spec catalogs and preserved SKU identities on disposable Postgres
         run: node apps/systems/aione/backend/scripts/test-product-spec-settings-db.js
+
+      - name: Verify canonical store and delivery settings on disposable Postgres
+        run: node apps/systems/aione/backend/scripts/test-store-delivery-settings-db.js

@@ -73,8 +73,10 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
  const ship=shippingChoices(product,shipping);
  const automaticSet=shippingMapping.deliverySetId&&safeOption(ship.deliverySets,shippingMapping.deliverySetId);
  const automaticDate=shippingMapping.normalDeliveryDateId&&safeOption(ship.deliveryDates,shippingMapping.normalDeliveryDateId);
- if(automaticSet){ship.setId=automaticSet.id;ship.matchedSet=automaticSet}
- if(automaticDate){ship.dateId=automaticDate.id;ship.matchedDate=automaticDate}
+ if(str(product?.extraAttributes?.rakutenDeliverySetId)&&!ship.matchedSet)fail(blocking,"shop_delivery_set_unverified");
+ if(str(product?.extraAttributes?.rakutenNormalDeliveryDateId)&&!ship.matchedDate)fail(blocking,"normal_delivery_date_unverified");
+ if(automaticSet&&!str(product?.extraAttributes?.rakutenDeliverySetId)){ship.setId=automaticSet.id;ship.matchedSet=automaticSet}
+ if(automaticDate&&!str(product?.extraAttributes?.rakutenNormalDeliveryDateId)){ship.dateId=automaticDate.id;ship.matchedDate=automaticDate}
  const deliverySetId=ship.setId;
  if(!ship.matchedSet)fail(blocking,ship.requiresSetSelection?"shop_delivery_set_selection_required":"shop_delivery_set_unverified");
  const dateId=ship.dateId;

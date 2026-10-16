@@ -19,6 +19,7 @@ COPY apps/systems/aione/js/config/shared-parameter-defaults.js /app/apps/systems
 # Catalog selection validation shares the frontend catalog definitions.
 COPY apps/systems/aione/js/config/settings-catalog.js /app/apps/systems/aione/js/config/settings-catalog.js
 COPY apps/systems/aione/js/config/product-spec-settings.js /app/apps/systems/aione/js/config/product-spec-settings.js
+COPY apps/systems/aione/js/config/product-store-settings.js /app/apps/systems/aione/js/config/product-store-settings.js
 COPY apps/systems/aione/js/config/product-setting-catalogs.js /app/apps/systems/aione/js/config/product-setting-catalogs.js
 COPY apps/systems/aione/js/config/custom-settings.js /app/apps/systems/aione/js/config/custom-settings.js
 COPY apps/systems/aione/js/config/home-registry.js /app/apps/systems/aione/js/config/home-registry.js
