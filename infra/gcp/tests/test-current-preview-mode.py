@@ -1,13 +1,20 @@
-"""Exercise the real candidate step with fake gcloud/curl; no cloud operations."""
+"""Exercise candidate and database isolation preview checks without cloud operations."""
 import json,os,pathlib,subprocess,tempfile,yaml
 root=pathlib.Path(__file__).resolve().parents[3]
 config=yaml.safe_load((root/'infra/gcp/cloudbuild/deploy-current.yaml').read_text())
 assert config['substitutions']['_AIONE_DEPLOY_MODE']=='release'
-# Regression: preview must not invoke ANY of the three migration/preflight jobs.
+# Verify guarded shared-database jobs exit before any external command in preview mode.
 for protected_id in ['automatic-current-migration','migration-gate','read-only-db-preflight']:
  protected=next(s for s in config['steps'] if s['id']==protected_id)
  assert 'AIONE_DEPLOY_MODE=${_AIONE_DEPLOY_MODE}' in protected['env']
- protected_script=protected['args'][-1].replace('$','
+ protected_script=protected['args'][-1].replace('$$','$')
+ assert 'if [[ "$AIONE_DEPLOY_MODE" == "preview" ]]; then' in protected_script
+ assert protected_script.index('exit 0') < protected_script.index('source infra/gcp/cloud-shell/CURRENT_BASELINE.sh')
+ with tempfile.TemporaryDirectory() as guard_dir:
+  env={**os.environ,'AIONE_DEPLOY_MODE':'preview','PATH':guard_dir}
+  p=subprocess.run(['/bin/bash','-ceu',protected_script],cwd=root,env=env,text=True,capture_output=True)
+  assert p.returncode==0 and 'skipping shared CURRENT DB migration' in p.stdout,(protected_id,p.stdout,p.stderr)
+step=next(s for s in config['steps'] if s['id']=='candidate-deploy-health-cutover')
 script=step['args'][-1].replace('$$','$').replace('${SHORT_SHA}','abcdef1').replace('${COMMIT_SHA}','a'*40)
 assert '--no-traffic' in script and '--no-allow-unauthenticated' in script
 with tempfile.TemporaryDirectory() as directory:
