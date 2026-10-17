@@ -6,7 +6,7 @@ const auth=new GoogleAuth({scopes:['https://www.googleapis.com/auth/spreadsheets
 const bad=(message,statusCode=503)=>Object.assign(new Error(message),{code:'settings_sheet_unavailable',statusCode});
 export async function fetchMaterialSheetValues({request=async(args)=>{const client=await auth.getClient();return client.request(args);}}={}){
  const tab=SETTINGS_SHEET_TABS.material;
- const range=encodeURIComponent("'"+tab+"'!A1:F501");
+ const range=encodeURIComponent("'"+tab+"'!A1:G501");
  const url='https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(SETTINGS_SHEET_ID)+'/values/'+range+'?valueRenderOption=FORMATTED_VALUE';
  try{
   const response=await request({url,method:'GET',timeout:15000});
