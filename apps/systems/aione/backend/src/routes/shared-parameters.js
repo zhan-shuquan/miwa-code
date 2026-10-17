@@ -5,6 +5,7 @@ import {getRequestContext,requireWriteActor} from "../http/context.js";
 import {readSharedParameters,activateSharedParameters,validateSharedParameters} from "../services/shared-parameters-service.js";
 import {readSettingsReferenceUsage} from '../services/settings-reference-usage.js';
 import {readSettingsStoreState} from "../services/settings-stores.js";
+import {buildMaterialGoogleSheetPreview} from "../services/settings-google-sheets-reader.js";
 import pool from '../../db.js';
 const router=Router();
 export function canEditSharedParameters(identity,allowlist=process.env.AIONE_SHARED_PARAMETER_EDITOR_PERSON_IDS){
@@ -62,6 +63,16 @@ router.post("/shared-parameters/catalogs/:kind/import-preview",requireWriteActor
  const raw=req.body?.base64;
  if(typeof raw!=="string"||raw.length>2796204||!raw||raw.length%4!==0||!/^[a-zA-Z0-9+/]*={0,2}$/.test(raw))return res.status(400).json({error:"invalid_workbook_upload",message:"请上传不超过2MB的Excel .xlsx文件"});
  res.set("Cache-Control","no-store").json(await parseCatalogWorkbook(req.params.kind,Buffer.from(raw,"base64")));
+}catch(e){next(e);}});
+// Google Sheets is a staging source only. Never write Cloud SQL from this endpoint.
+router.post('/shared-parameters/google-material-preview',requireWriteActor,requireSettingsEditor,async(req,res,next)=>{try{
+ const categoryId=String(req.body?.categoryId||'');
+ const current=await readSharedParameters();
+ const category=current.parameters?.customSettings?.categories?.find(c=>c.id===categoryId);
+ if(!category||category.productField!=='material')return res.status(400).json({error:'invalid_material_category'});
+ if(Number(req.body?.expectedVersion)!==current.version)return res.status(409).json({error:'settings_version_conflict',message:'设置已更新，请重新读取后预览 Google 表格'});
+ const result=await buildMaterialGoogleSheetPreview(category);
+ res.set('Cache-Control','no-store').json({...result,expectedVersion:current.version,categoryId});
 }catch(e){next(e);}});
 // Preview endpoints validate the supplied draft schema and never activate settings.
 router.post('/shared-parameters/custom-workbook',async(req,res,next)=>{try{

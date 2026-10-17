@@ -2,7 +2,7 @@ import {addStoreCatalogPreset} from "../config/product-store-settings.js";
 import {aioneApi,aioneDownload} from '../services/aione-api-client.js';
 import {CUSTOM_FIELD_TYPES,SETTINGS_OWNERS,PRODUCT_CATALOG_FIELDS,validateCustomSettings,validateCustomRow,sortedCustomRows} from '../config/custom-settings.js';
 import {addSpecCatalogPresets,SPEC_NAMES_BINDING} from '../config/product-spec-settings.js';
-import {addProductCatalogPresets} from '../config/product-setting-catalogs.js';
+import {addProductCatalogPresets,addMaterialSystemCodeField} from '../config/product-setting-catalogs.js';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=prefix=>prefix+'_'+crypto.randomUUID();
 const types={text:'文本',longtext:'多行文本',number:'数值',select:'单选',boolean:'是/否',date:'日期'};
@@ -19,8 +19,8 @@ export function mountCustomSettingsEditor(host,{parameters,canEdit,onChange,usag
  function render(){
  const c=category();
  host.innerHTML=`<h2>自定义设置</h2><p>新增分类、字段与资料；勾选“商品页引用”后，可在商品资料中选择。商品基础资料可直接供原有字段选择；其他自定义资料仅存档，不自动加入成本公式或平台接口。</p><div class="asc-tools"><button type="button" data-custom="new-category" ${disabled()}>＋ 新增设置分类</button><button type="button" data-custom="product-presets" ${!productCatalogBindings?'disabled title="需要配套后端更新"':disabled()}>添加商品基础资料模板</button><button type="button" data-custom="spec-presets" ${!specCatalogBindings?'disabled title="需要配套后端更新"':disabled()}>添加规格与颜色资料模板</button><button type="button" data-custom="store-presets" ${!storeCatalogBindings?'disabled title="'+esc(storeCatalogMessage||'需要配套后端更新')+'"':disabled()}>引用正式店铺与默认模板</button>${categories().map(x=>'<button type="button" data-category="'+esc(x.id)+'">'+esc(x.name)+(x.enabled?'':'（停用）')+'</button>').join('')}</div>${storeCatalogMessage?'<p role="status">'+esc(storeCatalogMessage)+'</p>':''}${notice?'<div role="status" class="asc-notice '+(isError?'asc-error':'')+'">'+esc(notice)+'</div>':''}
- ${c?`<h3>${esc(c.name)} · ${esc(c.owner)}</h3><p>${c.specBinding?'用于规格'+(c.specBinding===SPEC_NAMES_BINDING?'名称':'值：'+esc(c.specBinding)):c.productField?'直接用于商品资料：'+esc(PRODUCT_CATALOG_FIELDS[c.productField]):c.productBinding?'已绑定商品资料的自定义选项区域':'仅存设置资料'} · ${c.enabled?'启用':'停用'}</p><div class="asc-tools"><button type="button" data-custom="edit-category" ${disabled()}>分类与字段管理</button><button type="button" data-custom="delete-category" ${disabled()}>删除分类</button><button type="button" data-custom="new-row" ${disabled()}>＋ 新增资料</button><button type="button" data-custom="template" ${busy?'disabled':''}>下载Excel模板</button><button type="button" data-custom="export" ${busy?'disabled':''}>导出全部资料</button><button type="button" data-custom="import" ${disabled()}>导入Excel</button><input type="file" accept=".xlsx" data-custom-file hidden></div><div class="asc-tools"><input type="search" data-custom-query placeholder="搜索名称或字段内容" value="${esc(query)}"><select data-custom-status aria-label="状态筛选"><option value="all">全部状态</option><option value="enabled" ${status==='enabled'?'selected':''}>启用</option><option value="disabled" ${status==='disabled'?'selected':''}>停用</option></select><select data-custom-sort aria-label="排序"><option value="usage" ${sort==='usage'?'selected':''}>按引用次数</option><option value="sortOrder" ${sort==='sortOrder'?'selected':''}>按排序值</option><option value="name" ${sort==='name'?'selected':''}>名称升序</option></select><button type="button" data-custom="select-all" ${disabled()}>选择筛选结果</button><button type="button" data-custom="enable" ${disabled()}>批量启用 (${selected.size})</button><button type="button" data-custom="disable" ${disabled()}>批量停用 (${selected.size})</button></div>${rowTable(filtered(),true)}`:'<p>暂无自定义分类，点击“新增设置分类”开始。</p>'}
- <div data-custom-form></div>${preview?'<h3>导入预览（未保存）</h3>'+rowTable(preview.rows)+'<div class="asc-notice">'+esc(preview.errors.map(e=>'第'+e.row+'行：'+e.message).join('\n')||'校验通过')+'</div><button type="button" data-custom="apply-import" '+(preview.errors.length?'disabled':'')+'>应用到草稿</button> <button type="button" data-custom="cancel-import">取消导入</button>':''}`;
+ ${c?`<h3>${esc(c.name)} · ${esc(c.owner)}</h3><p>${c.specBinding?'用于规格'+(c.specBinding===SPEC_NAMES_BINDING?'名称':'值：'+esc(c.specBinding)):c.productField?'直接用于商品资料：'+esc(PRODUCT_CATALOG_FIELDS[c.productField]):c.productBinding?'已绑定商品资料的自定义选项区域':'仅存设置资料'} · ${c.enabled?'启用':'停用'}</p><div class="asc-tools"><button type="button" data-custom="edit-category" ${disabled()}>分类与字段管理</button><button type="button" data-custom="delete-category" ${disabled()}>删除分类</button><button type="button" data-custom="new-row" ${disabled()}>＋ 新增资料</button><button type="button" data-custom="template" ${busy?'disabled':''}>下载Excel模板</button><button type="button" data-custom="export" ${busy?'disabled':''}>导出全部资料</button><button type="button" data-custom="import" ${disabled()}>导入Excel</button>${c.productField==="material"?`${!c.fields.some(f=>f.id==="system_code")?`<button type="button" data-custom="material-code-field" ${disabled()}>补齐系统代码字段</button>`:""}<button type="button" data-custom="google-preview" ${!c.fields.some(f=>f.id==="system_code")?"disabled title=\"请先补齐系统代码字段并保存\"":disabled()}>从 Google 表格预览</button>`:""}<input type="file" accept=".xlsx" data-custom-file hidden></div><div class="asc-tools"><input type="search" data-custom-query placeholder="搜索名称或字段内容" value="${esc(query)}"><select data-custom-status aria-label="状态筛选"><option value="all">全部状态</option><option value="enabled" ${status==='enabled'?'selected':''}>启用</option><option value="disabled" ${status==='disabled'?'selected':''}>停用</option></select><select data-custom-sort aria-label="排序"><option value="usage" ${sort==='usage'?'selected':''}>按引用次数</option><option value="sortOrder" ${sort==='sortOrder'?'selected':''}>按排序值</option><option value="name" ${sort==='name'?'selected':''}>名称升序</option></select><button type="button" data-custom="select-all" ${disabled()}>选择筛选结果</button><button type="button" data-custom="enable" ${disabled()}>批量启用 (${selected.size})</button><button type="button" data-custom="disable" ${disabled()}>批量停用 (${selected.size})</button></div>${rowTable(filtered(),true)}`:'<p>暂无自定义分类，点击“新增设置分类”开始。</p>'}
+ <div data-custom-form></div>${preview?'<h3>导入预览（未保存）</h3>'+rowTable(preview.rows)+'<div class="asc-notice">'+esc(preview.errors.map(e=>(e.row?'第'+e.row+'行：':'')+e.message).join('\n')||'校验通过')+'</div><button type="button" data-custom="apply-import" '+(preview.errors.length?'disabled':'')+'>应用到草稿</button> <button type="button" data-custom="cancel-import">取消导入</button>':''}`;
  host.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{if(form||preview){tell('请先完成或取消当前编辑。',true);return;}current=b.dataset.category;selected.clear();query='';render();});
  host.querySelectorAll('[data-custom]').forEach(b=>b.onclick=()=>void action(b.dataset.custom).catch(e=>tell(e.message,true)));
  host.querySelectorAll('[data-edit-row]').forEach(b=>b.onclick=()=>{if(form||preview){tell('请先完成当前编辑。',true);return;}form={type:'row',value:copy(c.rows.find(r=>r.id===b.dataset.editRow))};render();});
@@ -58,7 +58,8 @@ export function mountCustomSettingsEditor(host,{parameters,canEdit,onChange,usag
  if(form||preview){tell('请先完成或取消当前编辑。',true);return;}
  if(name==='store-presets'){if(!storeCatalogBindings)return;commit(addStoreCatalogPreset(parameters,stores));tell('正式店铺已引用到草稿。可维护默认费率和说明模板；配送和纳期编号仍需平台核验。');return;}
  if(name==='spec-presets'){if(!specCatalogBindings)return;commit(addSpecCatalogPresets(parameters));tell('规格与颜色资料模板已加入草稿，保存后规格页直接引用；已有SKU身份不变。');return;}
- if(name==='product-presets'){if(!productCatalogBindings)return;commit(addProductCatalogPresets(parameters));tell('商品基础资料模板已加入草稿，保存后商品分类、品牌、材质和原产地使用此处资料。');return;}
+ if(name==='material-code-field'){commit(addMaterialSystemCodeField(parameters));tell('材质系统代码字段已加入草稿。保存设置后即可从 Google 表格预览。');return;}
+  if(name==='product-presets'){if(!productCatalogBindings)return;commit(addProductCatalogPresets(parameters));tell('商品基础资料模板已加入草稿，保存后商品分类、品牌、材质和原产地使用此处资料。');return;}
  if(name==='new-category'){form={type:'category',value:{id:uid('c'),name:'',owner:'商品之家',enabled:true,productBinding:true,fields:[],rows:[]}};render();}
  if(name==='edit-category'){form={type:'category',value:copy(category())};render();}
  if(name==='delete-category'&&window.confirm('删除分类及其中资料？已引用资料会在保存时阻止删除。')){const next=copy(parameters.customSettings||{categories:[]});next.categories=next.categories.filter(c=>c.id!==current);commit(next);current=next.categories[0]?.id;render();}
@@ -67,6 +68,26 @@ export function mountCustomSettingsEditor(host,{parameters,canEdit,onChange,usag
  if(name==='enable'||name==='disable'){if(!selected.size)return;if(!window.confirm('将选中的 '+selected.size+' 条资料'+(name==='enable'?'启用':'停用')+'并应用到草稿？'))return;const next=copy(category());next.rows.forEach(r=>{if(selected.has(r.id)){r.enabled=name==='enable';if(!r.enabled)r.isDefault=false;}});updateCategory(next);selected.clear();render();}
  if(name==='export'||name==='template'){busy=true;render();try{await aioneDownload('/api/v1/shared-parameters/custom-workbook',{method:'POST',body:JSON.stringify({category:category(),template:name==='template'})});}finally{busy=false;render();}}
  if(name==='import')host.querySelector('[data-custom-file]').click();
+  if(name==='google-preview'){
+   if(category()?.productField!=='material')return;
+   busy=true;render();
+   try{
+    const categoryId=category().id;
+    const state=await aioneApi('/api/v1/shared-parameters');
+    if(JSON.stringify(state.parameters?.customSettings?.categories?.find(c=>c.id===categoryId))!==JSON.stringify(category()))throw new Error('当前分类含有未保存的本地修改，请先保存或重新读取');
+    const result=await aioneApi('/api/v1/shared-parameters/google-material-preview',{method:'POST',body:JSON.stringify({categoryId,expectedVersion:state.version})});
+    if(category()?.id!==categoryId)throw new Error('分类已改变，请重新预览');
+    const base=category();
+    const rows=(result.rows||[]).map((x,i)=>{
+      const existing=base.rows.find(r=>r.id===x.id||r.businessValue===x.name||r.name===x.name);
+      return {...(existing||{}),id:existing?.id||uid('r'),name:x.name,businessValue:existing?.businessValue||x.name,enabled:x.enabled,isDefault:existing?.isDefault||false,sortOrder:existing?.sortOrder??base.rows.length+i+1,values:x.values};
+    });
+    for(const row of rows)validateCustomRow(base,row);
+    preview={rows,errors:(result.errors||[]).map(message=>({row:0,message})),source:'google',pending:result.pending||[]};
+    notice='Google 表格预览完成：可应用 '+rows.length+' 条，待确认 '+(result.pending?.length||0)+' 条不会导入。';isError=false;
+   }catch(e){notice='Google 表格预览失败：'+e.message;isError=true;}
+   finally{busy=false;render();}
+  }
  }
  async function upload(file){if(!file||!canEdit||busy)return;busy=true;render();try{if(!/\.xlsx$/i.test(file.name)||file.size>2*1024*1024)throw new Error('请选择不超过2MB的xlsx文件');const base64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=()=>reject(new Error('文件读取失败'));reader.readAsDataURL(file);});preview=await aioneApi('/api/v1/shared-parameters/custom-import-preview',{method:'POST',body:JSON.stringify({category:category(),base64})});notice='导入仅预览，尚未写入资料。';isError=false;}catch(e){notice=e.message;isError=true;}finally{busy=false;render();}}
  render();

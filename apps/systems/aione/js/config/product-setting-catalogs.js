@@ -29,13 +29,23 @@ export function categoryBrand(p,value){
 export function addProductCatalogPresets(parameters){
  const next=structuredClone(parameters.customSettings||{categories:[]});
  const text=(id,label)=>({id,label,type:'text',required:false});
- const seeds={category:{name:'商品分类',fields:[text('name_ja','日文名称'),text('name_en','英文名称'),text('parent','上级分类'),text('default_brand','默认品牌引用值'),text('keywords','识别关键词')],names:LEGACY_CATEGORIES},brand:{name:'品牌资料',fields:[text('name_ja','日文名称'),text('name_en','英文名称'),text('logo','标志地址')],names:[...new Set(Object.values(LEGACY_CATEGORY_BRANDS))]},material:{name:'材质资料',fields:[text('name_ja','日文名称'),text('name_en','英文名称')],names:[]},originCountry:{name:'原产地资料',fields:[text('name_ja','日文名称'),text('name_en','英文名称')],names:['中国']}};
+ const seeds={category:{name:'商品分类',fields:[text('name_ja','日文名称'),text('name_en','英文名称'),text('parent','上级分类'),text('default_brand','默认品牌引用值'),text('keywords','识别关键词')],names:LEGACY_CATEGORIES},brand:{name:'品牌资料',fields:[text('name_ja','日文名称'),text('name_en','英文名称'),text('logo','标志地址')],names:[...new Set(Object.values(LEGACY_CATEGORY_BRANDS))]},material:{name:'材质资料',fields:[text('name_ja','日文名称'),text('name_en','英文名称'),text('system_code','系统代码')],names:[]},originCountry:{name:'原产地资料',fields:[text('name_ja','日文名称'),text('name_en','英文名称')],names:['中国']}};
  for(const [field,seed] of Object.entries(seeds)){
   if(next.categories.some(c=>c.productField===field))continue;
   // A collision with a user-owned ID must never overwrite that category.
   const id='product_'+field.toLowerCase();if(next.categories.some(c=>c.id===id||c.name===seed.name))throw new Error('已有同名资料，请先调整名称：'+seed.name);
   next.categories.push({id,name:seed.name,owner:'商品之家',enabled:true,productBinding:true,productField:field,dropdownSort:'usage',fields:seed.fields,rows:seed.names.map((name,i)=>({id:'r_'+i,name,businessValue:name,enabled:true,isDefault:field==='originCountry',sortOrder:i,values:field==='category'?{default_brand:LEGACY_CATEGORY_BRANDS[name]||'',keywords:({'女袜':'女袜,女士袜,レディースソックス','男袜':'男袜,男士袜,メンズソックス','童袜':'童袜,儿童袜,キッズソックス','女帽':'女帽,女士帽','男帽':'男帽,男士帽','鞋靴':'拖鞋,棉拖,クロッグ','宠物用品':'宠物,猫粮,狗粮,猫砂','电子配件':'数据线,充电器,手机壳','家居用品':'水龙头,防冻罩,收纳盒','箱包':'背包,手提包,旅行包','玩具用品':'玩具,玩偶,积木'}[name]||'')}:field==='originCountry'?{name_ja:'中国',name_en:'China'}:{}}))});
  }
+ return next;
+}
+
+export function addMaterialSystemCodeField(parameters){
+ const next=structuredClone(parameters.customSettings||{categories:[]});
+ const c=next.categories.find(x=>x.productField==='material');
+ if(!c)throw new Error('请先安装商品基础资料模板');
+ if(c.fields.some(f=>f.id==='system_code'))return next;
+ if(c.fields.length>=20)throw new Error('材质字段已达上限，请先整理无用字段');
+ c.fields.push({id:'system_code',label:'系统代码',type:'text',required:false});
  return next;
 }
 // Scalar business values keep legacy calculation/platform contracts compatible; stable IDs own references.
