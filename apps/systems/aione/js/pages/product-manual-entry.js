@@ -1,3 +1,4 @@
+import { renderErpGrid } from "../components/erp-data-grid.js";
 import { aioneApi, aioneDownload, aioneImageBlobUrl, aioneImageBlobInfo } from "../services/aione-api-client.js";
 import {assessRakutenReadback} from "../services/rakuten-readback-acceptance.js";
 import { matchPersistedSkuByAttributes } from "../services/product-sku-image-identity.js";
@@ -519,50 +520,63 @@ function importer(host){
  });
  dialog.showModal();
 }
+
+function erpListStyle(){if(document.getElementById("aione-erp-list-layout"))return;const node=document.createElement("style");node.id="aione-erp-list-layout";node.textContent=".pe-erp-layout{display:grid;grid-template-columns:165px minmax(0,1fr);gap:10px}.pe-erp-tree{border:1px solid #e2e9e4;border-radius:7px;padding:10px;background:#fafcfb;min-width:0}.pe-erp-tree strong{display:block;margin-bottom:10px}.pe-erp-tree button{width:100%;text-align:left;border:0;background:transparent;padding:7px;border-radius:5px;color:#345341;cursor:pointer}.pe-erp-tree button.is-active{color:#176b4d;background:#e8f4ed;font-weight:700}.pe-erp-list{min-width:0}.pe-erp-filter{display:flex;gap:8px;margin-bottom:7px}.pe-erp-filter input,.pe-erp-filter select{border:1px solid #dce4df;border-radius:5px;padding:7px;background:#fff;min-width:0}.pe-erp-filter input{width:275px;max-width:65%}@media(max-width:650px){.pe-erp-layout{grid-template-columns:1fr}.pe-erp-tree{max-height:120px;overflow:auto}}";document.head.appendChild(node)}
 export async function showProducts(host,notice=""){
- stopEditor(host);style();
- host.innerHTML='<section class="phc pe-wrap"><div class="pe-toolbar"><div><h2>商品一览</h2><p class="pe-note">真实商品数据 · 单品编辑 · 批量导入与导出</p></div><div><button class="pe-main" data-pe-new>＋ 新建商品</button> <button data-pe-import-open>批量导入</button> <button data-pe-export>批量导出</button> </div></div>'+(notice?'<p>'+esc(notice)+'</p>':"")+'<p><input data-pe-q placeholder="搜索货号/名称" style="padding:10px;border:1px solid #dce4df;border-radius:7px;width:320px"></p><div data-pe-table>读取中…</div><div data-pe-import></div></section>';
+ stopEditor(host);releaseListImages(host);style();erpListStyle();
+ host.innerHTML='<section class="phc pe-wrap pe-erp"><div class="pe-toolbar"><div><h2>商品列表</h2><p class="pe-note">分类筛选 · 统一列设置 · 可双击自动适配列宽</p></div><div><button class="pe-main" data-pe-new>＋ 新建商品</button> <button data-pe-import-open>批量导入</button> <button data-pe-export>导出 Excel</button></div></div>'+(notice?'<p role="status">'+esc(notice)+'</p>':"")+
+ '<div class="pe-erp-layout"><aside class="pe-erp-tree"><strong>商品分类</strong><div data-pe-categories></div></aside><main class="pe-erp-list"><div class="pe-erp-filter"><input data-pe-q placeholder="搜索货号 / 商品名称" aria-label="搜索商品"><select data-pe-category aria-label="商品分类"><option value="">全部分类</option></select></div><div data-pe-table role="region" aria-label="商品列表">读取真实数据中…</div></main></div><div data-pe-import></div></section>';
  host.querySelector("[data-pe-new]").onclick=()=>editor(host,{});
  host.querySelector("[data-pe-import-open]").onclick=()=>importer(host);
  host.querySelector("[data-pe-export]").onclick=async()=>{try{await aioneDownload(BASE+"/export.xlsx");}catch(e){alert("导出失败："+e.message);}};
-
- const load=async()=>{
-   const value=host.querySelector("[data-pe-q]")?.value||"";
-   const area=host.querySelector("[data-pe-table]");if(!area)return;
-   try{
-     const res=await aioneApi(BASE+"?q="+encodeURIComponent(value)+"&limit=200");
-     area.innerHTML='<div class="pe-scroll"><table class="pe-table"><thead><tr><th>图片</th><th>本地货号</th><th>AIONE编码</th><th>商品名称</th><th>售价JPY</th><th>版本</th><th>上架准备状态</th><th>实际上架状态</th><th></th></tr></thead><tbody>'+res.items.map(p=>'<tr><td>'+(p.representativeImageAssetId?'<span data-pe-thumb="'+esc(p.representativeImageAssetId)+'" aria-label="图片加载中"><span class="pe-image-placeholder" aria-hidden="true">▧</span></span>':'—')+'</td><td>'+esc(p.localCode)+'</td><td>'+esc(p.productCode)+'</td><td>'+esc(p.nameZh)+'</td><td>'+esc(p.salePriceJpy??"—")+'</td><td>'+esc(p.version)+'</td><td><span class="pe-derived-status pe-readiness" title="'+esc(p.readiness?.note||"状态尚未核实")+'">'+esc(p.readiness?.label||"待核实")+'</span></td><td><span class="pe-derived-status pe-publication" title="'+esc(p.publication?.note||"平台记录未核实")+'">'+esc(p.publication?.label||"待核实")+'</span></td><td>'+(p.readOnly?'<span class="pe-note">既有商品（只读）</span>':'<button data-pe-edit="'+esc(p.id)+'">编辑</button>')+'</tr>').join("")+(res.items.length?"":'<tr><td colspan="9">暂无商品，请新增或导入。</td></tr>')+'</tbody></table></div>';
-     releaseListImages(host);
-     const listState=new AbortController();ACTIVE_LIST_IMAGES.set(host,listState);
-     const thumbs=Array.from(area.querySelectorAll("[data-pe-thumb]"));
-     let next=0;
-     const loadThumb=async()=>{while(next<thumbs.length){const el=thumbs[next++];if(!el.isConnected)continue;try{const info=await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(el.dataset.peThumb)+"/content?webpSize=64");const src=info.url;if(el.isConnected&&!listState.signal.aborted){const img=document.createElement("img");img.className="sku-img";img.alt="商品代表图";img.loading="lazy";img.decoding="async";img.src=src;const code=el.closest("tr")?.querySelector("td:nth-child(2)")?.textContent?.trim()||"product";const link=document.createElement("a");link.href=src;link.download=code+(info.type==="image/webp"?".webp":info.type==="image/png"?".png":info.type==="image/jpeg"?".jpg":".img");link.title="点击保存 "+link.download;link.setAttribute("aria-label","保存图片 "+link.download);link.append(img);listState.signal.addEventListener("abort",()=>URL.revokeObjectURL(src),{once:true});el.replaceChildren(link)}else URL.revokeObjectURL(src)}catch{if(el.isConnected&&!listState.signal.aborted){el.textContent="图片暂不可用";el.title="图片读取失败，请刷新页面重试";}}}};
-     void Promise.all(Array.from({length:Math.min(4,thumbs.length)},()=>loadThumb()));
-     area.querySelectorAll("[data-pe-edit]").forEach(b=>b.onclick=async()=>{try{const d=await aioneApi(BASE+"/"+encodeURIComponent(b.dataset.peEdit));editor(host,d.product);}catch(e){alert("读取失败："+e.message);}});
-   }catch(err){area.innerHTML='<div class="pe-alert">商品接口未就绪："+esc(err.message)+"。未显示任何模拟数据。</div>';}
+ let all=[],term="",chosenCategory="";
+ const area=host.querySelector("[data-pe-table]");
+ const list=()=>all.filter(p=>(!chosenCategory||p.category===chosenCategory)&&(!term||[p.localCode,p.nameZh,p.brand,p.category].some(v=>String(v||"").toLowerCase().includes(term))));
+ const editProduct=async row=>{if(row.readOnly)return;try{const d=await aioneApi(BASE+"/"+encodeURIComponent(row.id));editor(host,d.product)}catch(e){alert("读取失败："+e.message)}};
+ const draw=()=>{
+   const categories=[...new Set(all.map(p=>String(p.category||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+   host.querySelector("[data-pe-categories]").innerHTML='<button data-pe-cat="" class="'+(!chosenCategory?"is-active":"")+'">全部商品</button>'+categories.map(c=>'<button data-pe-cat="'+esc(c)+'" class="'+(chosenCategory===c?"is-active":"")+'">'+esc(c)+'</button>').join("");
+   host.querySelectorAll("[data-pe-cat]").forEach(b=>b.onclick=()=>{chosenCategory=b.dataset.peCat;host.querySelector("[data-pe-category]").value=chosenCategory;draw()});
+   const sel=host.querySelector("[data-pe-category]");sel.innerHTML='<option value="">全部分类</option>'+categories.map(c=>'<option value="'+esc(c)+'" '+(chosenCategory===c?"selected":"")+'>'+esc(c)+'</option>').join("");
+   const rows=list();
+   const columns=[
+     {key:"localCode",label:"商品货号",minWidth:95,render:r=>'<strong>'+esc(r.localCode||"—")+'</strong>'},
+     {key:"nameZh",label:"商品名称",minWidth:195},
+     {key:"category",label:"分类",minWidth:90},
+     {key:"brand",label:"品牌",minWidth:85},
+     {key:"skuCount",label:"SKU数量",type:"number",minWidth:85},
+     {key:"purchaseUnitCostCny",label:"采购价",type:"number",minWidth:90},
+     {key:"salePriceJpy",label:"售价",type:"number",minWidth:90},
+     {key:"estimatedProfit",label:"单件预计利润",type:"number",minWidth:105,render:r=>r.estimatedProfit==null?'待核算':esc(r.estimatedProfit)},
+     {key:"profitRate",label:"利润率",type:"number",minWidth:80,render:r=>r.profitRate==null?'待核算':esc(r.profitRate)+"%"},
+     {key:"readinessLabel",label:"资料状态",minWidth:110},
+     {key:"publicationLabel",label:"上架状态",minWidth:110},
+     {key:"image",label:"图片",defaultVisible:false,minWidth:66,render:r=>r.representativeImageAssetId?'<span data-pe-thumb="'+esc(r.representativeImageAssetId)+'">▧</span>':"—"},
+     {key:"productCode",label:"内部编码",defaultVisible:false,minWidth:100},
+     {key:"version",label:"版本",defaultVisible:false,type:"number",minWidth:70}
+   ];
+   renderErpGrid(area,{id:"products",columns,rows:rows.map(p=>({...p,skuCount:Array.isArray(p.specs)?skuRows(p).length:0,readinessLabel:p.readiness?.label||"待核实",publicationLabel:p.publication?.label||"待核实",estimatedProfit:null,profitRate:null})),onRowClick:editProduct,empty:"当前筛选没有商品"});
+   area.querySelectorAll("[data-pe-thumb]").forEach(async el=>{try{const info=await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(el.dataset.peThumb)+"/content?webpSize=64");if(!el.isConnected){URL.revokeObjectURL(info.url);return}const img=document.createElement("img");img.alt="商品图片";img.className="sku-img";img.src=info.url;el.replaceChildren(img);const abort=new AbortController();ACTIVE_LIST_IMAGES.set(host,abort);abort.signal.addEventListener("abort",()=>URL.revokeObjectURL(info.url),{once:true})}catch{if(el.isConnected)el.textContent="—"}});
  };
- let task;host.querySelector("[data-pe-q]").oninput=()=>{clearTimeout(task);task=setTimeout(load,250);};
- await load();
+ host.querySelector("[data-pe-q]").oninput=e=>{term=e.target.value.toLowerCase().trim();draw()};
+ host.querySelector("[data-pe-category]").onchange=e=>{chosenCategory=e.target.value;draw()};
+ try{const payload=await aioneApi(BASE+"?limit=200");all=Array.isArray(payload.items)?payload.items:[];draw();if(all.length===200)area.insertAdjacentHTML("beforebegin",'<p class="pe-note">当前仅加载前200条商品；后续需接入服务端分页。</p>');}catch(e){area.innerHTML='<div class="pe-alert">商品读取失败：'+esc(e.message)+'</div>'}
 }
 export function openProductEditor(host){editor(host,{});}
 export async function showSkuList(host){
  stopEditor(host);style();
- host.innerHTML='<section class="phc pe-wrap"><div class="pe-toolbar"><div><h2>SKU一览</h2><p class="pe-note">根据已保存商品的真实规格组合展示；本地SKU不代表平台已上架。</p></div><div><button data-sku-products>返回商品一览</button></div></div><p><input data-sku-search placeholder="搜索货号/名称" style="padding:10px;border:1px solid #dce4df;border-radius:7px;width:320px"></p><div data-sku-table>正在读取SKU数据…</div></section>';
+ host.innerHTML='<section class="phc pe-wrap pe-erp"><div class="pe-toolbar"><div><h2>SKU列表</h2><p class="pe-note">SKU来源于已保存的商品规格；库存尚未核实的记录不得冒充实际仓库库存。</p></div><button data-sku-products>返回商品列表</button></div><p><input data-sku-search placeholder="搜索货号 / SKU / 规格" style="padding:9px;border:1px solid #dce4df;border-radius:7px;max-width:340px;width:100%"></p><div data-sku-table>正在读取SKU…</div></section>';
  host.querySelector("[data-sku-products]").onclick=()=>showProducts(host);
- const load=async()=>{
-   const area=host.querySelector("[data-sku-table]");if(!area)return;
-   try{
-     const q=host.querySelector("[data-sku-search]")?.value||"";
-     const payload=await aioneApi(BASE+"?q="+encodeURIComponent(q)+"&limit=200");
-     const items=Array.isArray(payload.items)?payload.items:[];
-     const entries=items.filter(p=>!p.readOnly&&Array.isArray(p.specs)).flatMap(p=>skuRows(p).map(row=>({...row,productName:p.nameZh||"",productCode:p.productCode||"",localCode:p.localCode||""})));
-     area.innerHTML='<div class="pe-scroll"><table class="pe-table"><thead><tr><th>SKU货号</th><th>商品货号</th><th>商品名称</th><th>规格组合</th><th>售价（JPY）</th><th>库存</th></tr></thead><tbody>'+
-     entries.map(row=>'<tr><td>'+esc(row.number)+'</td><td>'+esc(row.localCode)+'</td><td>'+esc(row.productName)+'</td><td>'+esc(row.label)+'</td><td>'+esc(row.price??"—")+'</td><td>'+esc(row.stock??"—")+'</td></tr>').join("")+
-     (entries.length?"":'<tr><td colspan="6">目前没有已保存的SKU规格记录。</td></tr>')+'</tbody></table></div>';
-   }catch(error){area.innerHTML='<div class="pe-alert">SKU数据读取失败：'+esc(error.message)+'</div>';}
- };
- let task;host.querySelector("[data-sku-search]").oninput=()=>{clearTimeout(task);task=setTimeout(load,250);};
- await load();
+ let entries=[];
+ const draw=()=>{const q=host.querySelector("[data-sku-search]").value.trim().toLowerCase();const rows=entries.filter(x=>!q||[x.number,x.localCode,x.productName,x.label].some(v=>String(v||"").toLowerCase().includes(q)));
+ renderErpGrid(host.querySelector("[data-sku-table]"),{id:"sku",rows,columns:[
+ {key:"number",label:"SKU编号",minWidth:145},{key:"localCode",label:"商品货号",minWidth:100},
+ {key:"productName",label:"商品名称",minWidth:185},{key:"label",label:"销售规格",minWidth:150},
+ {key:"price",label:"售价",type:"number",minWidth:90},{key:"stock",label:"默认库存",type:"number",minWidth:90},
+ {key:"cost",label:"采购价",type:"number",defaultVisible:false},{key:"weight",label:"重量",type:"number",defaultVisible:false}
+ ],empty:"没有已保存的SKU",onRowClick:async r=>{try{const d=await aioneApi(BASE+"/"+encodeURIComponent(r.productId));if(d.product.readOnly){alert("既有商品为只读记录");return}editor(host,d.product)}catch(e){alert("读取商品失败："+e.message)}}});};
+ host.querySelector("[data-sku-search]").oninput=draw;
+ try{const data=await aioneApi(BASE+"?limit=200");entries=(data.items||[]).filter(p=>!p.readOnly&&Array.isArray(p.specs)).flatMap(p=>skuRows(p).map(s=>({...s,productId:p.id,productName:p.nameZh,localCode:p.localCode})));draw()}catch(e){host.querySelector("[data-sku-table]").innerHTML='<div class="pe-alert">SKU读取失败：'+esc(e.message)+'</div>'}
 }
 export async function initProductManualEntry(){
  const host=document.getElementById("app-main-host");if(!host)return false;
