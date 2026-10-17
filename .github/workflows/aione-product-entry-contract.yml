@@ -328,6 +328,8 @@ jobs:
       - name: Verify Excel settings templates and import validation
         run: node apps/systems/aione/backend/scripts/test-settings-catalog-workbook.js
 
+      - name: Verify canonical store dropdown rejects inactive records
+        run: node apps/systems/aione/tests/verify-product-canonical-shop-dropdown.mjs
       - name: Verify custom settings schema, product adapter and dynamic Excel
         run: |
           node apps/systems/aione/backend/scripts/test-store-delivery-settings.js
