@@ -13,6 +13,8 @@ on:
       - infra/gcp/automation/VERIFY_CURRENT_SETTINGS_PREVIEW_READ_ONLY.sh
       - infra/gcp/automation/RUN_PR206_PREVIEW_ONCE.sh
       - infra/gcp/tests/test-pr206-one-command-preview.py
+      - infra/gcp/automation/VERIFY_PR206_STORES_READ_ONLY.sh
+      - infra/gcp/tests/test-pr206-live-store-readback-script.py
       - infra/gcp/tests/test-current-preview-mode.py
       - infra/gcp/tests/test-current-settings-preview-read-only.py
 permissions:
@@ -36,3 +38,5 @@ jobs:
           bash -n infra/gcp/automation/VERIFY_CURRENT_SETTINGS_PREVIEW_READ_ONLY.sh
           bash -n infra/gcp/automation/RUN_PR206_PREVIEW_ONCE.sh
           python3 infra/gcp/tests/test-pr206-one-command-preview.py
+          bash -n infra/gcp/automation/VERIFY_PR206_STORES_READ_ONLY.sh
+          python3 infra/gcp/tests/test-pr206-live-store-readback-script.py
