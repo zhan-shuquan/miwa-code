@@ -121,7 +121,6 @@ jobs:
       - name: Test provisional store seed idempotency and conflict rollback
         run: |
           set -euo pipefail
-          psql -v ON_ERROR_STOP=1 -c "CREATE TABLE public.schema_migrations (version text PRIMARY KEY, description text NOT NULL)"
           psql -v ON_ERROR_STOP=1 -c "INSERT INTO public.schema_migrations VALUES ('0112','canonical store registry')"
           psql -v ON_ERROR_STOP=1 -f data-code/seeds/PR206_PROVISIONAL_STORES_INACTIVE.sql
           psql -v ON_ERROR_STOP=1 -f data-code/seeds/PR206_PROVISIONAL_STORES_INACTIVE.sql
