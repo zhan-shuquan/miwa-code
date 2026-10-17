@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {previewMaterialRows,MATERIAL_HEADERS} from '../../../js/config/settings-google-sheets-mapping.js';
+import {previewMaterialRows,MATERIAL_HEADERS} from '../../js/config/settings-google-sheets-mapping.js';
 const category={id:'product_material',productField:'material',fields:[{id:'name_ja',type:'text'},{id:'name_en',type:'text'}],rows:[]};
 const material=[MATERIAL_HEADERS,['','棉','綿','Cotton','待确认','候选']];
 const untouched=previewMaterialRows(category,material);
@@ -23,7 +23,7 @@ assert.throws(()=>previewMaterialRows(category,[['wrong','columns']]),/表头/);
 assert.throws(()=>previewMaterialRows({...category,productField:'brand'},material),/材质/);
 const reader=readFileSync(new URL('../src/services/settings-google-sheets-reader.js',import.meta.url),'utf8');
 const routes=readFileSync(new URL('../src/routes/shared-parameters.js',import.meta.url),'utf8');
-const ui=readFileSync(new URL('../../../js/pages/custom-settings-editor.js',import.meta.url),'utf8');
+const ui=readFileSync(new URL('../../js/pages/custom-settings-editor.js',import.meta.url),'utf8');
 assert.ok(reader.includes('spreadsheets.readonly'));
 assert.ok(routes.includes("'/shared-parameters/google-material-preview',requireWriteActor,requireSettingsEditor"));
 assert.ok(ui.includes('从 Google 表格预览'));
