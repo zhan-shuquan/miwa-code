@@ -67,12 +67,12 @@ export async function showProductLinks(host){
  };
  host.querySelector("[data-pl-search]").oninput=draw;
  try{
-   const response=await aioneApi(api+"?limit=200");all=response.items||[];
+   const [response,catalog]=await Promise.all([aioneApi(api+"?limit=200"),aioneApi(api+"/store-catalog").catch(()=>({shops:[]}))]);all=response.items||[];
    // Use the existing validated publication.links projection; never fabricate URLs.
    const entries=all.map(p=>({localCode:p.localCode,nameZh:p.nameZh,representativeImageAssetId:p.representativeImageAssetId,links:Object.fromEntries(verifiedLinks(p).map(x=>[x.shopRef,x.url]))}));
-   shops=[...new Set(all.flatMap(p=>verifiedLinks(p).map(x=>x.shopRef)))].sort((a,b)=>a.localeCompare(b,"zh"));
+   shops=[...new Set([...(Array.isArray(catalog.shops)?catalog.shops:[]),...all.flatMap(p=>verifiedLinks(p).map(x=>x.shopRef))])].sort((a,b)=>a.localeCompare(b,"zh"));
    rows=entries;
-   area.insertAdjacentHTML("beforebegin",'<p class="pe-note">仅显示后端已确认的店铺商品链接；当前无已核验记录的店铺不会推测链接；所有已配置店铺列的展示仍需接入店铺注册表。</p>');
+   area.insertAdjacentHTML("beforebegin",'<p class="pe-note">仅显示后端已确认的店铺商品链接；当前无已核验记录的店铺不会推测链接；店铺列读取真实店铺目录，未关联的店铺显示「—」。</p>');
    draw();
  }catch(e){area.innerHTML='<div class="pe-alert">店铺链接读取失败：'+esc(e.message)+'</div>'}
 }
