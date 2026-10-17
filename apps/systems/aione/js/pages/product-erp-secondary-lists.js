@@ -35,11 +35,11 @@ export async function showProductImages(host){
  {key:"nameZh",label:"商品名称",defaultVisible:false,minWidth:180}
  ];
  const cachedThumbnails=new Map();
- const draw=()=>{const term=host.querySelector("[data-pl-search]").value.toLowerCase();renderErpGrid(area,{id:"product-images",columns:cols,rows:rows.filter(r=>[r.localCode,r.nameZh].some(v=>String(v||"").toLowerCase().includes(term))),empty:"没有图片资料"});
- const placeholders=[...area.querySelectorAll("[data-asset]")];let cursor=0;
+ const attachImageHandlers=()=>{const placeholders=[...area.querySelectorAll("[data-asset]")];let cursor=0;
  const loadThumb=async()=>{while(cursor<placeholders.length){const b=placeholders[cursor++];if(!b.isConnected)continue;let src=cachedThumbnails.get(b.dataset.asset);if(!src){try{src=(await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(b.dataset.asset)+"/content?webpSize=64")).url;cachedThumbnails.set(b.dataset.asset,src)}catch{continue}}if(b.isConnected){b.textContent="";const image=document.createElement("img");image.alt=b.title;image.loading="lazy";image.src=src;image.style.cssText="width:36px;height:32px;object-fit:contain";b.append(image)}}};
  void Promise.all(Array.from({length:Math.min(4,placeholders.length)},()=>loadThumb()));
  area.querySelectorAll("[data-asset]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{const info=await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(b.dataset.asset)+"/content?webpSize=640");const win=window.open(info.url,"_blank","noopener,noreferrer");if(!win)alert("浏览器阻止了图片弹出窗口");setTimeout(()=>URL.revokeObjectURL(info.url),120000)}catch(e){alert("图片读取失败："+e.message)}finally{b.disabled=false}})};
+ const draw=()=>{const term=host.querySelector("[data-pl-search]").value.toLowerCase();renderErpGrid(area,{id:"product-images",columns:cols,rows:rows.filter(r=>[r.localCode,r.nameZh].some(v=>String(v||"").toLowerCase().includes(term))),empty:"没有图片资料",onRender:attachImageHandlers});};
  host.querySelector("[data-pl-search]").oninput=draw;
  try{
    const index=await aioneApi(api+"/image-index?limit=200");
@@ -51,7 +51,7 @@ export async function showProductImages(host){
    draw();
  }catch(e){area.innerHTML='<div class="pe-alert">图片资料读取失败：'+esc(e.message)+'</div>'}
 }
-const href=s=>{try{const url=new URL(s);return ["http:","https:"].includes(url.protocol)?url.href:null}catch{return null}};
+const href=s=>{try{const url=new URL(s);return url.protocol==="https:"?url.href:null}catch{return null}};
 /* Do not infer publish success or fabricate URLs from product codes.
    Only explicit stored, validated, shop-scoped records may supply a link. */
 function verifiedLinks(p){
@@ -64,10 +64,10 @@ export async function showProductLinks(host){
  const draw=()=>{
  const term=host.querySelector("[data-pl-search]").value.toLowerCase();
  const cols=[{key:"image",label:"图片",minWidth:68,render:r=>r.representativeImageAssetId?'<span data-link-thumb="'+esc(r.representativeImageAssetId)+'">▧</span>':"—"},{key:"localCode",label:"商品货号",minWidth:110},...shops.map(shop=>({key:"shop_"+shop,label:shop,minWidth:105,render:r=>r.links[shop]?'<a href="'+esc(r.links[shop])+'" target="_blank" rel="noopener noreferrer" title="打开 '+esc(shop)+' 商品页面" style="color:#176b4d">↗ 打开</a>':"—"}))];
- renderErpGrid(area,{id:"product-store-links",columns:cols,rows:rows.filter(r=>[r.localCode,r.nameZh].some(v=>String(v||"").toLowerCase().includes(term))),empty:"尚无已核验的上架链接"});
- const th=[...area.querySelectorAll("[data-link-thumb]")];let cursor=0;
+ const attachLinkImages=()=>{const th=[...area.querySelectorAll("[data-link-thumb]")];let cursor=0;
  const load=async()=>{while(cursor<th.length){const el=th[cursor++];let url=imageCache.get(el.dataset.linkThumb);if(!url){try{url=(await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(el.dataset.linkThumb)+"/content?webpSize=64")).url;imageCache.set(el.dataset.linkThumb,url)}catch{continue}}if(!el.isConnected)continue;el.textContent="";const img=document.createElement("img");img.src=url;img.alt="商品缩略图";img.style.cssText="width:36px;height:32px;object-fit:contain";el.append(img)}};
- void Promise.all(Array.from({length:Math.min(3,th.length)},()=>load()));
+ void Promise.all(Array.from({length:Math.min(3,th.length)},()=>load()));};
+ renderErpGrid(area,{id:"product-store-links",columns:cols,rows:rows.filter(r=>[r.localCode,r.nameZh].some(v=>String(v||"").toLowerCase().includes(term))),empty:"尚无已核验的上架链接",onRender:attachLinkImages});
  };
  host.querySelector("[data-pl-search]").oninput=draw;
  try{
