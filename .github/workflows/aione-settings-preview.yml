@@ -11,6 +11,8 @@ on:
       - infra/gcp/cloudbuild/deploy-current.yaml
       - infra/gcp/automation/PREVIEW_CURRENT_SETTINGS_BACKEND.sh
       - infra/gcp/automation/VERIFY_CURRENT_SETTINGS_PREVIEW_READ_ONLY.sh
+      - infra/gcp/automation/RUN_PR206_PREVIEW_ONCE.sh
+      - infra/gcp/tests/test-pr206-one-command-preview.py
       - infra/gcp/tests/test-current-preview-mode.py
       - infra/gcp/tests/test-current-settings-preview-read-only.py
 permissions:
@@ -32,3 +34,5 @@ jobs:
           python3 infra/gcp/tests/test-current-settings-preview-read-only.py
           bash -n infra/gcp/automation/PREVIEW_CURRENT_SETTINGS_BACKEND.sh
           bash -n infra/gcp/automation/VERIFY_CURRENT_SETTINGS_PREVIEW_READ_ONLY.sh
+          bash -n infra/gcp/automation/RUN_PR206_PREVIEW_ONCE.sh
+          python3 infra/gcp/tests/test-pr206-one-command-preview.py
