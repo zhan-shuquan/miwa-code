@@ -5,6 +5,7 @@ on:
     paths:
       - data-code/migrations/0112_canonical_store_registry.sql
       - data-code/audits/PR206_CURRENT_MIGRATION_READONLY.sql
+      - data-code/seeds/PR206_PROVISIONAL_STORES_INACTIVE.sql
       - apps/systems/aione/backend/scripts/check-current-migration-inventory.js
       - .github/workflows/aione-store-registry-legacy.yml
 permissions:
@@ -81,6 +82,23 @@ jobs:
             ) THEN RAISE EXCEPTION 'Store FK/read contract failed'; END IF;
           END $check$;
           SQL
+      - name: Test provisional store seed idempotency and conflict rollback
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -c "CREATE TABLE public.schema_migrations (version text PRIMARY KEY, description text NOT NULL)"
+          psql -v ON_ERROR_STOP=1 -c "INSERT INTO public.schema_migrations VALUES ('0112','canonical store registry')"
+          psql -v ON_ERROR_STOP=1 -f data-code/seeds/PR206_PROVISIONAL_STORES_INACTIVE.sql
+          psql -v ON_ERROR_STOP=1 -f data-code/seeds/PR206_PROVISIONAL_STORES_INACTIVE.sql
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.stores s JOIN public.platforms p ON p.id=s.platform_id WHERE s.code IN ('NAGAI_GD','SHIAWASEYA','PRIMELIFE') AND s.status='inactive' AND p.code='RAKUTEN' AND p.status='inactive' AND s.external_store_id IS NULL" | grep -Fx 3
+          psql -v ON_ERROR_STOP=1 -c "UPDATE public.stores SET name='mismatched' WHERE code='NAGAI_GD'"
+          if psql -v ON_ERROR_STOP=1 -f data-code/seeds/PR206_PROVISIONAL_STORES_INACTIVE.sql; then
+            echo 'FAIL: seed ignored an existing stable-code conflict' >&2
+            exit 1
+          fi
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.stores WHERE code IN ('NAGAI_GD','SHIAWASEYA','PRIMELIFE')" | grep -Fx 3
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.products WHERE id='legacy-product'" | grep -Fx 1
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.channel_listings WHERE id='legacy-listing'" | grep -Fx 1
+          echo 'PASS: provisional seed repeat-safe, fails closed on name conflict, legacy rows preserved'
       - name: Check migration inventory script syntax (no live DB connection)
         run: node --check apps/systems/aione/backend/scripts/check-current-migration-inventory.js
       - name: Verify inventory checker against isolated PostgreSQL
