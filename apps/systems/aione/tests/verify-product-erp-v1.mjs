@@ -30,5 +30,7 @@ assert.ok(entry.includes("productAttributes()"),"Product Attributes tab must be 
 assert.ok(entry.includes("independentSkuPricing"),"SKU independent pricing must preserve overrides");
 assert.ok(entry.includes("estimatedProfit:Math.round"),"list profit must use the cost engine");
 assert.ok(read("backend/src/routes/product-manual-entry.js").includes('router.get("/image-index"'),"image list index API missing");
+assert.ok(read("backend/src/routes/product-manual-entry.js").includes('router.get("/store-catalog"'),"store catalog read-only API missing");
+assert.ok(secondary.includes('api+"/store-catalog"'),"shop columns must use canonical store catalog");
 for(const term of ["data-eg-sort","data-eg-resize","data-eg-columns","data-eg-pagesize","data-eg-fit"])assert.ok(grid.includes(term),"missing grid function "+term);
 console.log("AIONE ERP V1 source/syntax contract OK (not runtime acceptance)");
