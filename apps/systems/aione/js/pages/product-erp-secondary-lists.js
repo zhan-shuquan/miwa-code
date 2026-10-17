@@ -41,16 +41,12 @@ export async function showProductImages(host){
  area.querySelectorAll("[data-asset]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{const info=await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(b.dataset.asset)+"/content?webpSize=640");const win=window.open(info.url,"_blank","noopener,noreferrer");if(!win)alert("浏览器阻止了图片弹出窗口");setTimeout(()=>URL.revokeObjectURL(info.url),120000)}catch(e){alert("图片读取失败："+e.message)}finally{b.disabled=false}})};
  host.querySelector("[data-pl-search]").oninput=draw;
  try{
-   const payload=await aioneApi(api+"?limit=200"),products=payload.items||[];
-   const first=products.slice(0,20);
-   const loaded=await Promise.all(first.map(async p=>{
-     let assets=[];try{const r=await aioneApi("/api/v1/product-assets/products/"+encodeURIComponent(p.id)+"/assets");assets=(r.assets||[]).filter(a=>!a.archived_at)}catch(error){return {...p,error:error.message,groups:Object.fromEntries(["white","main","detail","sku","optimized","other"].map(k=>[k,[]])),count:0}};
-     const groups=Object.fromEntries(["white","main","detail","sku","optimized","other"].map(k=>[k,[]]));
-     for(const a of assets)groups[kind(a.original_name||a.file_name,a.asset_role)].push(a);
-     return {...p,groups,count:assets.length};
-   }));
-   rows=loaded;
-   if(products.length>20)area.insertAdjacentHTML("beforebegin",'<p class="pe-note">目前只加载前20件商品的图片清单；全部商品需进一步接入分页查询。</p>');
+   const index=await aioneApi(api+"/image-index?limit=200");
+   const grouped=new Map(index.products.map(p=>[String(p.id),{...p,groups:Object.fromEntries(["white","main","detail","sku","optimized","other"].map(k=>[k,[]])),count:0}]));
+   for(const a of index.assets||[]){const entry=grouped.get(String(a.product_id));if(!entry)continue;entry.groups[kind(a.original_name||a.canonical_name,a.asset_role)].push(a);entry.count++}
+   rows=[...grouped.values()];
+   if(index.truncated)area.insertAdjacentHTML("beforebegin",'<p class="pe-note">图片超过单次读取上限，请缩小条件以保证数量准确。</p>');
+   if(rows.length===200)area.insertAdjacentHTML("beforebegin",'<p class="pe-note">当前显示前200件商品；完整范围需接入下一页。</p>');
    draw();
  }catch(e){area.innerHTML='<div class="pe-alert">图片资料读取失败：'+esc(e.message)+'</div>'}
 }
