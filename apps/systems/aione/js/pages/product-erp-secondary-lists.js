@@ -7,7 +7,7 @@ function kind(name,role){
  if(suffix==="ma")return "white";
  if(/^sku\d+$/.test(suffix)||role==="source_sku_image")return "sku";
  if(/^m\d+$/.test(suffix))return "optimized";
- if(suffix==="01")return "main";
+ if(suffix==="01"||role==="source_main_image")return "main";
  if(/^\d{2}$/.test(suffix)&&Number(suffix)>=2)return "detail";
  return "other";
 }
@@ -21,7 +21,7 @@ function marker(assets){
  return '<span style="display:flex;gap:3px;align-items:center">'+view+(assets.length>3?'<small>+'+(assets.length-3)+'</small>':"")+'</span>';
 }
 export async function showProductImages(host){
- const area=panel(host,"图片列表","每个商品货号一行 · 白底 / 主图 / 详情 / SKU / 优化主图");
+ const area=panel(host,"图片列表","每个商品货号一行 · 主图1张 + 详情图最多19张 · SKU/白底/优化图独立管理");
  let rows=[];
  const cols=[
  {key:"localCode",label:"商品货号",minWidth:105},
@@ -30,6 +30,7 @@ export async function showProductImages(host){
  {key:"detail",label:"详情图",minWidth:130,render:r=>marker(r.groups.detail)},
  {key:"sku",label:"SKU图",minWidth:100,render:r=>marker(r.groups.sku)},
  {key:"optimized",label:"优化主图",minWidth:110,render:r=>marker(r.groups.optimized)},
+ {key:"rakutenImageCount",label:"乐天图片",minWidth:115,render:r=>{const count=r.groups.main.length+r.groups.detail.length;return count>20||r.groups.detail.length>19?'<strong style="color:#aa3c34" title="主图1张+详情图最多19张，超过时不可提交乐天">超限 '+count+'/20</strong>':'<span title="当前分类图片数量；不代表实际发布已选择的图片">候选 '+count+'/20</span>'}},
  {key:"count",label:"素材数量",type:"number",minWidth:90},
  {key:"nameZh",label:"商品名称",defaultVisible:false,minWidth:180}
  ];
