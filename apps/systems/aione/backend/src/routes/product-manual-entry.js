@@ -36,6 +36,27 @@ router.get("/export.xlsx",async(req,res,next)=>{
 });
 // Compact read-only image index for the unified ERP Image List.
 // Uses the existing Product and ProductAsset sources. No new image table.
+// Store columns are derived from registered store facts, never from front-end constants.
+router.get("/store-catalog",async(req,res,next)=>{
+ try{
+   let shops=[];
+   // Current-baseline schema, when canonical stores exist.
+   try{
+     const r=await pool.query("SELECT name FROM public.stores WHERE name IS NOT NULL ORDER BY name LIMIT 250");
+     shops=r.rows.map(x=>String(x.name||"").trim()).filter(Boolean);
+   }catch(error){
+     if(error.code!=="42P01"&&error.code!=="42703")throw error;
+   }
+   // Existing lifecycle schema: discover actually associated stores only.
+   if(!shops.length){
+     try{
+       const r=await pool.query("SELECT DISTINCT shop_ref AS name FROM public.channel_listings WHERE shop_ref IS NOT NULL ORDER BY name LIMIT 250");
+       shops=r.rows.map(x=>String(x.name||"").trim()).filter(Boolean);
+     }catch(error){if(error.code!=="42P01"&&error.code!=="42703")throw error;}
+   }
+   res.set("Cache-Control","no-store").json({ok:true,shops:[...new Set(shops)]});
+ }catch(error){next(error)}
+});
 router.get("/image-index",async(req,res,next)=>{
  try{
    const limit=Math.min(200,Math.max(1,Number(req.query.limit)||100));
