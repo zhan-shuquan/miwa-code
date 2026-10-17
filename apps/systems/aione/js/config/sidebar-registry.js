@@ -195,6 +195,6 @@ export function resolveSidebarContext(routeId) {
     items: buildPlatformItems(rootId),
     activeWorkbenchId: null,
     primaryAction: null,
-    quickActions: publicationActions
+    quickActions: [...publicationActions, ...(homeDefinition ? [{id:"home-settings",label:"设置",icon:"settings",route:`shared-settings?home=${rootId}`}] : [])]
   };
 }

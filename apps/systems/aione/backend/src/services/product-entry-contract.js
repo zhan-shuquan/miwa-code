@@ -63,7 +63,7 @@ function get(sheet, cell) { return sheet ? cellText(sheet.getCell(cell)) : ""; }
 export function normalizeProductEntry(input = {}) {
   const p = {};
   p.localCode = str(input.localCode).toLowerCase();
-  if (!/^[a-z]{2,8}[0-9]{2,6}$/.test(p.localCode)) throw bad("invalid_local_code", "商品货号必须类似zjl238、zsq081。");
+  if (!/^[a-z][a-z0-9-]{2,63}$/.test(p.localCode)) throw bad("invalid_local_code", "商品货号须为3至64位英文、数字或短横线，以字母开头。");
   for (const key of TEXTS) p[key] = str(input[key]);
   for (const key of NUMBERS) p[key] = num(input[key], key);
   if (!p.sourcePlatform && p.purchaseUrl) {
@@ -77,7 +77,8 @@ export function normalizeProductEntry(input = {}) {
   }
   p.logisticsMethod ||= "空运大件（普货）";
   p.packagingMethod ||= "原装";
-  if(!["原装","真空包装","重新包装","定制包装"].includes(p.packagingMethod))throw bad("invalid_packaging_method","包装方式必须采用新的四种类型");
+  // Catalog membership is checked against active shared settings inside the save transaction.
+  if(p.packagingMethod.length>80)throw bad("invalid_packaging_method","包装方式名称过长");
   if(p.packagingMethod==="定制包装"&&(p.customPackagingCostCny===null||p.customPackagingCostCny<0))throw bad("custom_packaging_cost_required","定制包装需要实际中国包装成本");
   p.packagingMaterial ||= "A4信封";
   p.originCountry ||= "中国";

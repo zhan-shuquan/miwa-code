@@ -1,6 +1,11 @@
 // Cloud SQL single source of active shared parameters, with versioned audit.
+import {validateStoreProfiles} from "../../../js/config/product-store-settings.js";
+import {assertStoreProfileReferences} from "./settings-stores.js";
+import {deliveryValue} from "../../../js/config/settings-catalog.js";
+import {validateCodeRules} from "../../../js/config/business-code-rules.js";
 import pool,{withTransaction} from "../../db.js";
 import {INITIAL_PARAMETERS} from "../../../js/config/shared-parameter-defaults.js";
+import {validateCustomSettings,assertCustomSchemaTransition,customCategories} from "../../../js/config/custom-settings.js";
 
 const fail=(code,message,statusCode=400)=>Object.assign(new Error(message),{code,statusCode});
 const clone=x=>JSON.parse(JSON.stringify(x));
@@ -19,16 +24,33 @@ export function validateSharedParameters(p){
  }
  if(!Number.isSafeInteger(c.priceRoundUnitJpy)||c.priceRoundUnitJpy<=0||!nonneg(c.priceTailJpy)||c.priceTailJpy>=c.priceRoundUnitJpy)
   throw fail("invalid_price_tail","售价取整参数无效");
- const rules=Object.values(c.logistics||{});
- if(rules.length!==8||new Set(rules.map(x=>x.name)).size!==8)throw fail("invalid_logistics_modes","物流方式必须有八种且不能重复");
+ if(!c.logistics||Array.isArray(c.logistics)||Object.keys(c.logistics).some(k=>["__proto__","constructor","prototype"].includes(k)))throw fail("invalid_logistics_modes","物流目录无效");
+ const rules=Object.values(c.logistics);
+ if(!rules.length||rules.length>500||new Set(rules.map(x=>x?.name)).size!==rules.length)throw fail("invalid_logistics_modes","物流方式不能为空、重复或超过500项");
  for(const rule of rules){
+  if(!rule||typeof rule.name!=="string"||!rule.name.trim()||rule.name.length>80)throw fail("invalid_logistics_name","物流名称无效");
   if(!["direct","warehouse"].includes(rule.fulfillment)||!["step","kg"].includes(rule.billing))throw fail("invalid_logistics_mode","物流履约或计费模式无效");
   if(rule.billing==="step" && (![rule.firstWeightG,rule.additionalWeightG].every(v=>Number.isSafeInteger(v)&&v>0)||![rule.firstFeeCny,rule.additionalFeeCny].every(nonneg)))throw fail("invalid_step_rate","首重续重参数无效");
   if(rule.billing==="kg"&&!nonneg(rule.perKgCny))throw fail("invalid_kg_rate","每kg费率无效");
  }
- for(const key of ["原装","真空包装","重新包装"]){if(!nonneg(c.chinaPackagingCny?.[key]))throw fail("missing_china_packaging","中国包装费率缺失");}
- for(const key of ["无","A4信封","A4缓冲信封","小缓冲信封","小信封","3cm纸盒","60cm纸箱","80cm纸箱","100cm纸箱","120cm纸箱"]){if(!nonneg(c.japanPackagingJpy?.[key]))throw fail("missing_japan_packaging","日本包装费率缺失");}
- for(const key of ["THIN_3CM","SIZE_60","SIZE_80","SIZE_100","SIZE_120"]){if(!nonneg(delivery[key]?.fee))throw fail("missing_japan_delivery","日本配送费率缺失");}
+ const deliverySelections=Object.keys(delivery).map(deliveryValue);
+ if(new Set(deliverySelections).size!==deliverySelections.length)throw fail("invalid_japan_delivery","配送尺寸引用值重复");
+ if(typeof delivery!=="object"||Array.isArray(delivery)||!Object.keys(delivery).length||Object.keys(delivery).length>500)throw fail("invalid_japan_delivery","日本配送目录无效");
+ for(const [key,rule] of Object.entries(delivery))if(!/^[A-Za-z0-9_-]{1,80}$/.test(key)||["__proto__","constructor","prototype"].includes(key)||!rule||typeof rule.name!=="string"||!rule.name.trim()||rule.name.length>80||!nonneg(rule.fee)||rule.enabled!==undefined&&typeof rule.enabled!=="boolean")throw fail("invalid_japan_delivery","日本配送编号、名称或费用无效");
+ for(const map of [c.chinaPackagingCny,c.japanPackagingJpy]){
+  if(!map||Array.isArray(map)||!Object.keys(map).length||Object.keys(map).length>500)throw fail("invalid_packaging_catalog","包装目录无效");
+  for(const [name,cost] of Object.entries(map))if(!name.trim()||name.length>80||["__proto__","constructor","prototype","定制包装"].includes(name)||!nonneg(cost))throw fail("invalid_packaging_cost","包装名称或成本无效");
+ }
+ for(const [kind,items] of Object.entries(p.settingsCatalogMeta||{})){
+  const values={chinaPackaging:c.chinaPackagingCny,japanPackaging:c.japanPackagingJpy,logistics:c.logistics,delivery}[kind];
+  if(!["chinaPackaging","japanPackaging","logistics","delivery"].includes(kind)||!values||!items||Array.isArray(items))throw fail("invalid_catalog_metadata","设置目录无效");
+  if(Object.values(items).filter(item=>item?.isDefault===true).length>1)throw fail("invalid_catalog_default","每个目录只能有一个默认选项");
+  for(const [key,item] of Object.entries(items))if(Object.keys(item||{}).some(k=>!["enabled","sortOrder","isDefault","pinned"].includes(k))||(item?.pinned!==undefined&&typeof item.pinned!=="boolean")||(item?.isDefault!==undefined&&typeof item.isDefault!=="boolean")||(item?.isDefault===true&&item.enabled===false)||!Object.hasOwn(values,key)||!item||typeof item.enabled!=="boolean"||!Number.isSafeInteger(item.sortOrder)||item.sortOrder<0)throw fail("invalid_catalog_metadata","设置状态或排序无效");
+ }
+ if(p.settingsCatalogSort!==undefined&&(!p.settingsCatalogSort||Array.isArray(p.settingsCatalogSort)||Object.entries(p.settingsCatalogSort).some(([k,v])=>!['chinaPackaging','japanPackaging','logistics','delivery'].includes(k)||!['usage','manual','name'].includes(v))))throw fail('invalid_settings_sort','选项排序方式无效');
+ validateCodeRules(p.codeRules);
+ validateCustomSettings(p.customSettings);
+ try{validateStoreProfiles(p);}catch(e){throw fail("invalid_store_setting",e.message);}
  return clone(p);
 }
 export async function readSharedParameters(db=pool){
@@ -44,9 +66,65 @@ export async function activateSharedParameters({expectedVersion,parameters,updat
  const candidate=validateSharedParameters(parameters);
  return withTransaction(async db=>{
   await readSharedParameters(db);
-  const locked=await db.query("SELECT version FROM public.aione_shared_parameters WHERE scope='global' FOR UPDATE");
+  const locked=await db.query("SELECT version,payload FROM public.aione_shared_parameters WHERE scope='global' FOR UPDATE");
   const current=Number(locked.rows[0]?.version);
   if(current!==expectedVersion)throw fail("shared_parameters_version_conflict","共享参数版本已变化，请刷新再修改",409);
+  const oldCustom=locked.rows[0].payload?.customSettings;
+  assertCustomSchemaTransition(oldCustom,candidate.customSettings);
+  await assertStoreProfileReferences(db,candidate,locked.rows[0].payload);
+  const removedCustom=[];
+  for(const c of oldCustom?.categories||[]){const next=customCategories(candidate).find(x=>x.id===c.id);
+   for(const row of c.rows)if(!next?.rows.some(x=>x.id===row.id))removedCustom.push([c.id,row.id,c.productField,row.businessValue,c.specBinding,row.referenceNames||[row.businessValue]]);
+  }
+  if(removedCustom.length){
+   await db.query("LOCK TABLE public.products IN SHARE MODE");
+   for(const [category,row,field,value,specBinding,referenceNames] of removedCustom){
+    const used=await db.query("SELECT product_code FROM public.products WHERE metadata->'manualEntry'->'customSettings'->>$1=$2 OR metadata->'customSettings'->>$1=$2 OR ($3::text IS NOT NULL AND (metadata->'manualEntry'->>$3=$4 OR metadata->>$3=$4)) LIMIT 1",[category,row,field||null,value||null]);
+    if(used.rows.length)throw fail('settings_item_in_use','资料被商品 '+used.rows[0].product_code+' 引用，请停用而非删除',409);
+    if(specBinding){
+     const dimension=oldCustom.categories.find(c=>c.specBinding==='$dimensions')?.rows.find(r=>r.businessValue===specBinding);
+     const dimensionNames=dimension?.referenceNames||[specBinding];
+     const specUsed=await db.query(`SELECT product_code FROM public.products WHERE EXISTS (
+      SELECT 1 FROM jsonb_array_elements(CASE
+       WHEN jsonb_typeof(metadata->'manualEntry'->'specs')='array' THEN metadata->'manualEntry'->'specs'
+       WHEN jsonb_typeof(metadata->'specs')='array' THEN metadata->'specs' ELSE '[]'::jsonb END) spec
+      WHERE ($3::boolean AND $1::jsonb ? (spec->>'name')) OR
+      (NOT $3::boolean AND $2::jsonb ? (spec->>'name') AND EXISTS (
+       SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(spec->'values')='array' THEN spec->'values' ELSE '[]'::jsonb END) value
+       WHERE $1::jsonb ? value))) LIMIT 1`,[JSON.stringify(referenceNames),JSON.stringify(dimensionNames),specBinding==='$dimensions']);
+     if(specUsed.rows.length)throw fail('settings_item_in_use','规格资料被商品 '+specUsed.rows[0].product_code+' 引用，请停用而非删除',409);
+    }
+   }
+  }
+  const previous=locked.rows[0].payload?.commerce;
+  if(previous){
+   const fields={chinaPackagingCny:"packagingMethod",japanPackagingJpy:"packagingMaterial",logistics:"logisticsMethod"};
+   const removed=[];
+   for(const [field,productField] of Object.entries(fields)){
+    for(const [key,value] of Object.entries(previous[field]||{})){
+     if(Object.hasOwn(candidate.commerce[field],key)){
+      if(field==="logistics"&&candidate.commerce.logistics[key].name!==value.name)throw fail("referenced_catalog_change","已有物流名称不能直接改名，请新增方式");
+     }else removed.push({productField,name:field==="logistics"?value.name:key});
+    }
+   }
+   if(removed.length){
+    // Product writers acquire the parameter row in SHARE mode before product locks.
+    // The table lock additionally excludes older writers during reference checking.
+    await db.query("LOCK TABLE public.products IN SHARE MODE");
+    for(const {productField,name} of removed){
+     const used=await db.query("SELECT product_code FROM public.products WHERE metadata->'manualEntry'->>$1=$2 OR metadata->>$1=$2 LIMIT 1",[productField,name]);
+     if(used.rows.length)throw fail("settings_item_in_use",name+" 已被商品 "+used.rows[0].product_code+" 引用，请恢复该项并停用",409);
+    }
+   }
+  }
+  const removedDelivery=Object.keys(locked.rows[0].payload?.delivery||{}).filter(key=>!Object.hasOwn(candidate.delivery,key));
+  if(removedDelivery.length){
+   await db.query("LOCK TABLE public.products IN SHARE MODE");
+   for(const key of removedDelivery){
+    const used=await db.query(`SELECT product_code FROM public.products WHERE metadata->'manualEntry'->>'sizeClass'=$1 OR metadata->>'sizeClass'=$1 OR EXISTS (SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(metadata->'manualEntry'->'skuOverrides')='array' THEN metadata->'manualEntry'->'skuOverrides' WHEN jsonb_typeof(metadata->'skuOverrides')='array' THEN metadata->'skuOverrides' ELSE '[]'::jsonb END) sku WHERE sku->>'sizeClass'=$1) LIMIT 1`,[deliveryValue(key)]);
+    if(used.rows.length)throw fail("settings_item_in_use","配送尺寸被商品 "+used.rows[0].product_code+" 引用，请停用而非删除",409);
+   }
+  }
   const version=current+1;
   await db.query("UPDATE public.aione_shared_parameters SET version=$1,payload=$2::jsonb,updated_at=now(),updated_by=$3 WHERE scope='global'",[version,JSON.stringify(candidate),updatedBy]);
   await db.query("INSERT INTO public.aione_shared_parameter_history(scope,version,payload,updated_by,change_reason) VALUES('global',$1,$2::jsonb,$3,$4)",[version,JSON.stringify(candidate),updatedBy,String(changeReason).trim().slice(0,500)]);
