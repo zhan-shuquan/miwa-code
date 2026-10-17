@@ -32,5 +32,8 @@ assert.ok(entry.includes("estimatedProfit:Math.round"),"list profit must use the
 assert.ok(read("backend/src/routes/product-manual-entry.js").includes('router.get("/image-index"'),"image list index API missing");
 assert.ok(read("backend/src/routes/product-manual-entry.js").includes('router.get("/store-catalog"'),"store catalog read-only API missing");
 assert.ok(secondary.includes('api+"/store-catalog"'),"shop columns must use canonical store catalog");
-for(const term of ["data-eg-sort","data-eg-resize","data-eg-columns","data-eg-pagesize","data-eg-fit"])assert.ok(grid.includes(term),"missing grid function "+term);
+assert.ok(secondary.includes("onRender:attachImageHandlers"),"image handlers must survive pagination and sorting");
+assert.ok(secondary.includes("onRender:attachLinkImages"),"listing image thumbs must survive pagination and sorting");
+assert.ok(secondary.includes("r.groups.detail.length>19"),"detail image cap indicator missing");
+for(const term of ["data-eg-sort","data-eg-resize","data-eg-columns","data-eg-pagesize","data-eg-fit","onRender?."])assert.ok(grid.includes(term),"missing grid function "+term);
 console.log("AIONE ERP V1 source/syntax contract OK (not runtime acceptance)");
