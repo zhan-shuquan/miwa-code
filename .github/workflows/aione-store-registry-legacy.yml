@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - data-code/migrations/0112_canonical_store_registry.sql
+      - data-code/audits/PR206_CURRENT_MIGRATION_READONLY.sql
       - apps/systems/aione/backend/scripts/check-current-migration-inventory.js
       - .github/workflows/aione-store-registry-legacy.yml
 permissions:
@@ -48,6 +49,10 @@ jobs:
           INSERT INTO public.channel_listings(id,product_id,channel,shop_ref)
             VALUES('legacy-listing','legacy-product','rakuten','永井GD');
           SQL
+      - name: Verify read-only CURRENT audit tolerates missing migration registry
+        run: |
+          psql -v ON_ERROR_STOP=1 -f data-code/audits/PR206_CURRENT_MIGRATION_READONLY.sql
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT CASE WHEN to_regclass('public.schema_migrations') IS NULL THEN 'PASS' ELSE 'FAIL' END" | grep -Fx PASS
       - name: Run additive migration twice and verify old data remains unchanged
         run: |
           psql -v ON_ERROR_STOP=1 -f data-code/migrations/0112_canonical_store_registry.sql
