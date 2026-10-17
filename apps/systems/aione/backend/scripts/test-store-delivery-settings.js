@@ -55,4 +55,35 @@ assert.equal(calculateProductCosts(shippingProduct,null,p).deliveryQuote.amountJ
 assert.throws(()=>applyProductCatalogSelections({...shippingProduct},shippingProduct,null,p),/配送尺寸/);
 assert.equal(applyProductCatalogSelections({...shippingProduct},shippingProduct,shippingProduct,p).sizeClass,'SIZE_140');
 const collision=structuredClone(p);collision.delivery['60cm']={name:'重叠',fee:1};assert.throws(()=>validateSharedParameters(collision),/引用值重复/);
+
+/* PR #206: three provisional CURRENT store records are readable but NEVER selectable. */
+const provisional=[
+ {id:'213fcda7-5a18-4cec-b7af-226f0c57b826',code:'NAGAI_GD',name:'永井GD',status:'inactive',platform_status:'inactive',platform_code:'RAKUTEN',platform_name:'楽天市場'},
+ {id:'66946b22-7cc0-4a95-92a4-66da000dbae8',code:'SHIAWASEYA',name:'幸せ屋',status:'inactive',platform_status:'inactive',platform_code:'RAKUTEN',platform_name:'楽天市場'},
+ {id:'401ae081-6d0c-4a01-ab4f-7db950e08c24',code:'PRIMELIFE',name:'PrimeLife',status:'inactive',platform_status:'inactive',platform_code:'RAKUTEN',platform_name:'楽天市場'}
+];
+const readOnlyDb={query:async sql=>{
+ if(sql.includes('information_schema.columns'))return {rows:[{columns_count:9}]};
+ if(sql.includes('SELECT s.id,s.code,s.name,s.status'))return {rows:provisional};
+ if(sql.includes('FOR SHARE'))return {rows:[]};
+ throw new Error('unexpected query in read-only store contract test');
+}};
+const registry=await readSettingsStoreState(readOnlyDb);
+assert.equal(registry.ready,true);
+assert.deepEqual(registry.stores.map(s=>s.name).sort(),['PrimeLife','幸せ屋','永井GD'].sort());
+assert.ok(registry.stores.every(s=>s.status==='inactive'&&s.platform_status==='inactive'));
+const seededParams=structuredClone(INITIAL_PARAMETERS);
+seededParams.customSettings=addStoreCatalogPreset(seededParams,registry.stores);
+const seededRows=seededParams.customSettings.categories.find(c=>c.productField==='targetShopRef').rows;
+assert.equal(seededRows.length,3);
+assert.ok(seededRows.every(row=>row.enabled===false),'provisional stores must not become editable product choices');
+const disabledRow=seededRows.find(row=>row.businessValue==='永井GD');
+disabledRow.enabled=true;
+await assert.rejects(assertStoreProfileReferences({
+ query:async sql=>sql.includes('information_schema.columns')?{rows:[{columns_count:9}]}:{rows:[provisional[0]]}
+},seededParams,{}),/已停用/);
+const dormantParams=structuredClone(INITIAL_PARAMETERS);
+dormantParams.customSettings=addStoreCatalogPreset(dormantParams,registry.stores);
+await assert.rejects(assertProductStoreReference(readOnlyDb,{targetShopRef:'永井GD'},null,dormantParams),/请选择有效的正式店铺/);
+
 await pool.end();console.log('PASS canonical store identity, blank-only defaults, rates, multiline XLSX, platform ID blockers, configurable delivery and historic preservation');
