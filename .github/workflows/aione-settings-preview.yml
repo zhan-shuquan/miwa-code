@@ -12,6 +12,7 @@ on:
       - infra/gcp/automation/PREVIEW_CURRENT_SETTINGS_BACKEND.sh
       - infra/gcp/automation/VERIFY_CURRENT_SETTINGS_PREVIEW_READ_ONLY.sh
       - infra/gcp/tests/test-current-preview-mode.py
+      - infra/gcp/tests/test-current-settings-preview-read-only.py
 permissions:
   contents: read
 jobs:
@@ -28,5 +29,6 @@ jobs:
           node apps/systems/aione/tests/verify-settings-preview-proxy.mjs
           node apps/systems/aione/tests/verify-dev-preview-topology.mjs
           python3 infra/gcp/tests/test-current-preview-mode.py
+          python3 infra/gcp/tests/test-current-settings-preview-read-only.py
           bash -n infra/gcp/automation/PREVIEW_CURRENT_SETTINGS_BACKEND.sh
           bash -n infra/gcp/automation/VERIFY_CURRENT_SETTINGS_PREVIEW_READ_ONLY.sh
