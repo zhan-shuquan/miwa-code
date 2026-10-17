@@ -552,6 +552,15 @@ export async function showProducts(host,notice=""){
    host.querySelectorAll("[data-pe-cat]").forEach(b=>b.onclick=()=>{chosenCategory=b.dataset.peCat;host.querySelector("[data-pe-category]").value=chosenCategory;draw()});
    const sel=host.querySelector("[data-pe-category]");sel.innerHTML='<option value="">全部分类</option>'+categories.map(c=>'<option value="'+esc(c)+'" '+(chosenCategory===c?"selected":"")+'>'+esc(c)+'</option>').join("");
    const rows=list();
+   const summaries=new Map(rows.map(p=>{
+     try{
+       const calculation=calculateProductCosts(p,null,LIVE_PARAMETERS);
+       if(calculation.status==="priced"&&calculation.deliveryQuote?.status==="priced"&&Number.isFinite(calculation.net)&&calculation.price>0){
+         return [p.id,{estimatedProfit:Math.round(calculation.net),profitRate:Math.round(calculation.net/calculation.price*1000)/10}];
+       }
+     }catch{/* Missing inputs must never fabricate a margin. */}
+     return [p.id,{estimatedProfit:null,profitRate:null}];
+   }));
    const columns=[
      {key:"localCode",label:"商品货号",minWidth:95,render:r=>'<strong>'+esc(r.localCode||"—")+'</strong>'},
      {key:"nameZh",label:"商品名称",minWidth:195},
@@ -568,12 +577,12 @@ export async function showProducts(host,notice=""){
      {key:"productCode",label:"内部编码",defaultVisible:false,minWidth:100},
      {key:"version",label:"版本",defaultVisible:false,type:"number",minWidth:70}
    ];
-   renderErpGrid(area,{id:"products",columns,rows:rows.map(p=>({...p,skuCount:Array.isArray(p.specs)?skuRows(p).length:0,readinessLabel:p.readiness?.label||"待核实",publicationLabel:p.publication?.label||"待核实",estimatedProfit:null,profitRate:null})),onRowClick:editProduct,empty:"当前筛选没有商品"});
+   renderErpGrid(area,{id:"products",columns,rows:rows.map(p=>({...p,skuCount:Array.isArray(p.specs)?skuRows(p).length:0,readinessLabel:p.readiness?.label||"待核实",publicationLabel:p.publication?.label||"待核实",...summaries.get(p.id)})),onRowClick:editProduct,empty:"当前筛选没有商品"});
    area.querySelectorAll("[data-pe-thumb]").forEach(async el=>{try{const info=await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(el.dataset.peThumb)+"/content?webpSize=64");if(!el.isConnected){URL.revokeObjectURL(info.url);return}const img=document.createElement("img");img.alt="商品图片";img.className="sku-img";img.src=info.url;el.replaceChildren(img);const abort=new AbortController();ACTIVE_LIST_IMAGES.set(host,abort);abort.signal.addEventListener("abort",()=>URL.revokeObjectURL(info.url),{once:true})}catch{if(el.isConnected)el.textContent="—"}});
  };
  host.querySelector("[data-pe-q]").oninput=e=>{term=e.target.value.toLowerCase().trim();draw()};
  host.querySelector("[data-pe-category]").onchange=e=>{chosenCategory=e.target.value;draw()};
- try{const payload=await aioneApi(BASE+"?limit=200");all=Array.isArray(payload.items)?payload.items:[];draw();if(all.length===200)area.insertAdjacentHTML("beforebegin",'<p class="pe-note">当前仅加载前200条商品；后续需接入服务端分页。</p>');}catch(e){area.innerHTML='<div class="pe-alert">商品读取失败：'+esc(e.message)+'</div>'}
+ try{const payload=await aioneApi(BASE+"?limit=200");all=Array.isArray(payload.items)?payload.items:[];await refreshLiveParameters();draw();if(all.length===200)area.insertAdjacentHTML("beforebegin",'<p class="pe-note">当前仅加载前200条商品；后续需接入服务端分页。</p>');}catch(e){area.innerHTML='<div class="pe-alert">商品读取失败：'+esc(e.message)+'</div>'}
 }
 export function openProductEditor(host){editor(host,{});}
 export async function showSkuList(host){
