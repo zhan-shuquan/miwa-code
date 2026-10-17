@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireWriteActor } from "../http/context.js";
+import pool from "../../db.js";
 import {
   getManualProduct, listManualProducts, saveManualProduct,
   previewImportProducts, importManualProducts, applyApprovedZjl238RakutenDraft
@@ -32,6 +33,25 @@ router.get("/export.xlsx",async(req,res,next)=>{
     res.set("Cache-Control","private, no-store");
     res.send(bytes);
   } catch(e){next(e);}
+});
+// Compact read-only image index for the unified ERP Image List.
+// Uses the existing Product and ProductAsset sources. No new image table.
+router.get("/image-index",async(req,res,next)=>{
+ try{
+   const limit=Math.min(200,Math.max(1,Number(req.query.limit)||100));
+   const offset=Math.max(0,Number(req.query.offset)||0);
+   if(!Number.isInteger(limit)||!Number.isInteger(offset))invalid("invalid_pagination","分页参数无效");
+   const products=await listManualProducts({query:req.query.q,limit,offset});
+   const ids=products.map(p=>String(p.id));
+   if(!ids.length)return res.set("Cache-Control","no-store").json({ok:true,products:[],assets:[],truncated:false});
+   const maxAssets=10001;
+   const result=await pool.query(
+    "SELECT id::text AS id,product_id::text AS product_id,original_name,canonical_name,asset_role,sku_id::text AS sku_id,asset_no FROM public.product_assets WHERE product_id::text=ANY($1::text[]) AND archived_at IS NULL AND asset_type='image' ORDER BY product_id,asset_no LIMIT $2",
+    [ids,maxAssets]
+   );
+   const truncated=result.rows.length===maxAssets;
+   return res.set("Cache-Control","no-store").json({ok:true,products:products.map(p=>({id:p.id,localCode:p.localCode,nameZh:p.nameZh})),assets:result.rows.slice(0,maxAssets-1),truncated});
+ }catch(error){next(error)}
 });
 router.get("/:ref",async(req,res,next)=>{
   try{res.json({ok:true,...await getManualProduct(req.params.ref)});}
