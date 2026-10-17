@@ -1,0 +1,25 @@
+name: AIONE Product ERP V1 Smoke
+on:
+  pull_request:
+    paths:
+      - 'apps/systems/aione/js/components/erp-data-grid.js'
+      - 'apps/systems/aione/js/pages/product-erp-secondary-lists.js'
+      - 'apps/systems/aione/js/pages/product-manual-entry.js'
+      - 'apps/systems/aione/js/pages/product-home-current.js'
+      - 'apps/systems/aione/js/config/home-registry.js'
+      - 'apps/systems/aione/js/config/sidebar-registry.js'
+      - 'apps/systems/aione/tests/verify-product-erp-v1.mjs'
+      - '.github/workflows/aione-product-erp-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check ERP V1 source and syntax
+        run: node apps/systems/aione/tests/verify-product-erp-v1.mjs
