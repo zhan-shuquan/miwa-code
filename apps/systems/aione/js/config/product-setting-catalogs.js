@@ -38,6 +38,16 @@ export function addProductCatalogPresets(parameters){
  }
  return next;
 }
+
+export function addMaterialSystemCodeField(parameters){
+ const next=structuredClone(parameters.customSettings||{categories:[]});
+ const c=next.categories.find(x=>x.productField==='material');
+ if(!c)throw new Error('请先安装商品基础资料模板');
+ if(c.fields.some(f=>f.id==='system_code'))return next;
+ if(c.fields.length>=20)throw new Error('材质字段已达上限，请先整理无用字段');
+ c.fields.push({id:'system_code',label:'系统代码',type:'text',required:false});
+ return next;
+}
 // Scalar business values keep legacy calculation/platform contracts compatible; stable IDs own references.
 export function applyBoundProductSelections(product,input,previous,parameters){
  for(const c of customCategories(parameters).filter(c=>c.productField)){
