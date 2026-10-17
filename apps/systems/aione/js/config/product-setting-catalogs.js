@@ -29,7 +29,7 @@ export function categoryBrand(p,value){
 export function addProductCatalogPresets(parameters){
  const next=structuredClone(parameters.customSettings||{categories:[]});
  const text=(id,label)=>({id,label,type:'text',required:false});
- const seeds={category:{name:'商品分类',fields:[text('name_ja','日文名称'),text('name_en','英文名称'),text('parent','上级分类'),text('default_brand','默认品牌引用值'),text('keywords','识别关键词')],names:LEGACY_CATEGORIES},brand:{name:'品牌资料',fields:[text('name_ja','日文名称'),text('name_en','英文名称'),text('logo','标志地址')],names:[...new Set(Object.values(LEGACY_CATEGORY_BRANDS))]},material:{name:'材质资料',fields:[text('name_ja','日文名称'),text('name_en','英文名称')],names:[]},originCountry:{name:'原产地资料',fields:[text('name_ja','日文名称'),text('name_en','英文名称')],names:['中国']}};
+ const seeds={category:{name:'商品分类',fields:[text('name_ja','日文名称'),text('name_en','英文名称'),text('parent','上级分类'),text('default_brand','默认品牌引用值'),text('keywords','识别关键词')],names:LEGACY_CATEGORIES},brand:{name:'品牌资料',fields:[text('name_ja','日文名称'),text('name_en','英文名称'),text('logo','标志地址')],names:[...new Set(Object.values(LEGACY_CATEGORY_BRANDS))]},material:{name:'材质资料',fields:[text('name_ja','日文名称'),text('name_en','英文名称'),text('system_code','系统代码')],names:[]},originCountry:{name:'原产地资料',fields:[text('name_ja','日文名称'),text('name_en','英文名称')],names:['中国']}};
  for(const [field,seed] of Object.entries(seeds)){
   if(next.categories.some(c=>c.productField===field))continue;
   // A collision with a user-owned ID must never overwrite that category.
