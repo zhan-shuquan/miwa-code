@@ -33,7 +33,12 @@ export async function showProductImages(host){
  {key:"count",label:"素材数量",type:"number",minWidth:90},
  {key:"nameZh",label:"商品名称",defaultVisible:false,minWidth:180}
  ];
- const draw=()=>{const term=host.querySelector("[data-pl-search]").value.toLowerCase();renderErpGrid(area,{id:"product-images",columns:cols,rows:rows.filter(r=>[r.localCode,r.nameZh].some(v=>String(v||"").toLowerCase().includes(term))),empty:"没有图片资料"});area.querySelectorAll("[data-asset]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{const info=await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(b.dataset.asset)+"/content?webpSize=640");const win=window.open(info.url,"_blank","noopener,noreferrer");if(!win)alert("浏览器阻止了图片弹出窗口");setTimeout(()=>URL.revokeObjectURL(info.url),120000)}catch(e){alert("图片读取失败："+e.message)}finally{b.disabled=false}})};
+ const cachedThumbnails=new Map();
+ const draw=()=>{const term=host.querySelector("[data-pl-search]").value.toLowerCase();renderErpGrid(area,{id:"product-images",columns:cols,rows:rows.filter(r=>[r.localCode,r.nameZh].some(v=>String(v||"").toLowerCase().includes(term))),empty:"没有图片资料"});
+ const placeholders=[...area.querySelectorAll("[data-asset]")];let cursor=0;
+ const loadThumb=async()=>{while(cursor<placeholders.length){const b=placeholders[cursor++];if(!b.isConnected)continue;let src=cachedThumbnails.get(b.dataset.asset);if(!src){try{src=(await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(b.dataset.asset)+"/content?webpSize=64")).url;cachedThumbnails.set(b.dataset.asset,src)}catch{continue}}if(b.isConnected){b.textContent="";const image=document.createElement("img");image.alt=b.title;image.loading="lazy";image.src=src;image.style.cssText="width:36px;height:32px;object-fit:contain";b.append(image)}}};
+ void Promise.all(Array.from({length:Math.min(4,placeholders.length)},()=>loadThumb()));
+ area.querySelectorAll("[data-asset]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{const info=await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(b.dataset.asset)+"/content?webpSize=640");const win=window.open(info.url,"_blank","noopener,noreferrer");if(!win)alert("浏览器阻止了图片弹出窗口");setTimeout(()=>URL.revokeObjectURL(info.url),120000)}catch(e){alert("图片读取失败："+e.message)}finally{b.disabled=false}})};
  host.querySelector("[data-pl-search]").oninput=draw;
  try{
    const payload=await aioneApi(api+"?limit=200"),products=payload.items||[];
@@ -53,8 +58,8 @@ const href=s=>{try{const url=new URL(s);return ["http:","https:"].includes(url.p
 /* Do not infer publish success or fabricate URLs from product codes.
    Only explicit stored, validated, shop-scoped records may supply a link. */
 function verifiedLinks(p){
- const list=Array.isArray(p.shopListings)?p.shopListings:Array.isArray(p.platformListings)?p.platformListings:[];
- return list.filter(x=>x&&x.shopRef&&x.verified===true&&href(x.url)&&x.status==="published");
+ const list=Array.isArray(p.publication?.links)?p.publication.links:[];
+ return list.filter(x=>x&&x.shopRef&&href(x.url));
 }
 export async function showProductLinks(host){
  const area=panel(host,"上架链接","一行一个货号 · 按店铺快速打开已核验的平台商品页面");
@@ -67,13 +72,11 @@ export async function showProductLinks(host){
  host.querySelector("[data-pl-search]").oninput=draw;
  try{
    const response=await aioneApi(api+"?limit=200");all=response.items||[];
-   // Existing Product Entry listing API does not expose validated shop links.
-   // Show empty cells rather than guessing a URL. Store columns will be populated
-   // after a verified store registry and listing query are connected.
+   // Use the existing validated publication.links projection; never fabricate URLs.
    const entries=all.map(p=>({localCode:p.localCode,nameZh:p.nameZh,representativeImageAssetId:p.representativeImageAssetId,links:Object.fromEntries(verifiedLinks(p).map(x=>[x.shopRef,x.url]))}));
    shops=[...new Set(all.flatMap(p=>verifiedLinks(p).map(x=>x.shopRef)))].sort((a,b)=>a.localeCompare(b,"zh"));
    rows=entries;
-   area.insertAdjacentHTML("beforebegin",'<p class="pe-note">仅显示后端已确认的店铺商品链接；当前接口未返回核验记录时不会推测链接。店铺注册表与正式Listing API仍需接入。</p>');
+   area.insertAdjacentHTML("beforebegin",'<p class="pe-note">仅显示后端已确认的店铺商品链接；当前无已核验记录的店铺不会推测链接；所有已配置店铺列的展示仍需接入店铺注册表。</p>');
    draw();
  }catch(e){area.innerHTML='<div class="pe-alert">店铺链接读取失败：'+esc(e.message)+'</div>'}
 }
