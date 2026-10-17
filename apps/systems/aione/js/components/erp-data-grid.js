@@ -4,7 +4,7 @@ const configKey = id => "aione:grid:v1:" + id;
 function readConfig(id){try {const c=JSON.parse(localStorage.getItem(configKey(id))||"null");return c&&typeof c==="object"?c:{};}catch{return {};}}
 function storeConfig(id,config){try{localStorage.setItem(configKey(id),JSON.stringify(config));}catch{}}
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
-export function renderErpGrid(host,{id,columns,rows,onRowClick,empty="暂无记录",pageSize=20}){
+export function renderErpGrid(host,{id,columns,rows,onRowClick,onRender,empty="暂无记录",pageSize=20}){
   if(!host)return ()=>{};
   let config=readConfig(id), order=Array.isArray(config.order)?config.order:columns.map(c=>c.key),
       visible=Array.isArray(config.visible)?config.visible:columns.filter(c=>c.defaultVisible!==false).map(c=>c.key),
@@ -24,6 +24,8 @@ export function renderErpGrid(host,{id,columns,rows,onRowClick,empty="暂无记�
     return rows.map((row,i)=>({row,i})).sort((a,b)=>{
       const av=typeof col.sortValue==="function"?col.sortValue(a.row):a.row[col.key],bv=typeof col.sortValue==="function"?col.sortValue(b.row):b.row[col.key];
       const an=col.type==="number"?Number(av):NaN,bn=col.type==="number"?Number(bv):NaN;
+      const missingA=av===undefined||av===null||av==="",missingB=bv===undefined||bv===null||bv==="";
+      if(missingA!==missingB)return missingA?1:-1;
       let result=col.type==="number"&&Number.isFinite(an)&&Number.isFinite(bn)?an-bn:String(av??"").localeCompare(String(bv??""),"zh",{numeric:true});
       return result?(sort.direction==="desc"?-result:result):a.i-b.i;
     }).map(x=>x.row);
@@ -44,6 +46,7 @@ export function renderErpGrid(host,{id,columns,rows,onRowClick,empty="暂无记�
       handle.ondblclick=e=>{e.stopPropagation();const c=byKey.get(handle.dataset.egResize);widths[c.key]=clamp(Math.max(c.label.length*13,...list.slice(0,100).map(r=>String(r[c.key]??"").length*8))+22,75,280);save();draw()};
       handle.onpointerdown=e=>{e.preventDefault();e.stopPropagation();const key=handle.dataset.egResize,start=e.clientX,base=th.getBoundingClientRect().width;const move=ev=>{widths[key]=clamp(base+ev.clientX-start,65,420);th.style.width=widths[key]+"px";th.style.minWidth=widths[key]+"px"};const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);save();draw()};window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true})};
     });
+    onRender?.({page,size,visibleColumns:cols.map(c=>c.key),rowCount:list.length});
   }
   draw();
   return ()=>{};
