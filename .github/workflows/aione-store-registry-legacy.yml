@@ -6,6 +6,7 @@ on:
       - data-code/migrations/0112_canonical_store_registry.sql
       - data-code/audits/PR206_CURRENT_MIGRATION_READONLY.sql
       - data-code/seeds/PR206_PROVISIONAL_STORES_INACTIVE.sql
+      - data-code/seeds/PR206_ACTIVATE_NAGAI_ONLY_APPROVED.sql
       - apps/systems/aione/backend/scripts/check-current-migration-inventory.js
       - .github/workflows/aione-store-registry-legacy.yml
 permissions:
@@ -134,6 +135,17 @@ jobs:
           psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.products WHERE id='legacy-product'" | grep -Fx 1
           psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.channel_listings WHERE id='legacy-listing'" | grep -Fx 1
           echo 'PASS: provisional seed repeat-safe, fails closed on name conflict, legacy rows preserved'
+      - name: Test approved Nagai-only activation and safe repeat
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -c "UPDATE public.stores SET name='永井GD' WHERE code='NAGAI_GD'"
+          psql -v ON_ERROR_STOP=1 -f data-code/seeds/PR206_ACTIVATE_NAGAI_ONLY_APPROVED.sql
+          psql -v ON_ERROR_STOP=1 -f data-code/seeds/PR206_ACTIVATE_NAGAI_ONLY_APPROVED.sql
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.stores WHERE code='NAGAI_GD' AND status='active'" | grep -Fx 1
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.stores WHERE code IN ('SHIAWASEYA','PRIMELIFE') AND status='inactive'" | grep -Fx 2
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.stores WHERE external_store_id IS NOT NULL" | grep -Fx 0
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.products WHERE id='legacy-product'" | grep -Fx 1
+          echo 'PASS: only Nagai GD enabled, repeat safe; other two and products untouched'
       - name: Validate required column contract
         run: |
           psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name='stores' AND column_name IN ('id','code','name','status','platform_id')) OR (table_name='platforms' AND column_name IN ('id','code','name','status')))" | grep -Fx 9
