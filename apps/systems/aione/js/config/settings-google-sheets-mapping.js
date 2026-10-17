@@ -8,7 +8,7 @@ const clean=v=>String(v??'').trim();
 export function previewMaterialRows(category,values){
  if(category?.productField!=='material')throw invalid('当前只支持商品主要材质资料，请选择材质资料分类');
  if(!Array.isArray(values)||values.length<1||MATERIAL_HEADERS.some((v,i)=>clean(values[0]?.[i])!==v))throw invalid('Google 表格材质资料表头与已确认模板不一致');
- const required=['name_ja','name_en'];
+ const required=['name_ja','name_en','system_code'];
  if(required.some(id=>!category.fields?.some(f=>f.id===id&&f.type==='text')))throw invalid('AIONE材质字段定义发生变化，请先核对绑定');
  const rows=[],errors=[],pending=[],seen=new Set(),codes=new Set();
  for(let i=1;i<values.length;i++){
