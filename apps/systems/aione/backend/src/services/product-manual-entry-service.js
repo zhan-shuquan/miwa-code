@@ -318,7 +318,7 @@ export async function listManualSkus({query="",limit=100,offset=0}={}){
  const rows=await pool.query(
   "SELECT s.id::text AS id,s.sku_code AS sku_code,s.name AS sku_name,s."+shape.skuDataCol+" AS sku_attributes,p.id::text AS product_id,p.product_code AS product_code,p."+shape.nameCol+" AS name_zh,p.metadata AS product_metadata"+
   " FROM public.product_skus s JOIN public.products p ON p.id=s.product_id"+
-  " WHERE ($1='' OR s.sku_code ILIKE $2 OR s.name ILIKE $2 OR p.product_code ILIKE $2 OR p."+shape.nameCol+" ILIKE $2 OR p.metadata->'manualEntry'->>'localCode' ILIKE $2)"+
+  " WHERE ($1='' OR s.sku_code ILIKE $2 OR s.name ILIKE $2 OR p.product_code ILIKE $2 OR p."+shape.nameCol+" ILIKE $2 OR p.metadata->'manualEntry'->>'localCode' ILIKE $2 OR s."+shape.skuDataCol+"::text ILIKE $2)"+
   " ORDER BY s.sku_code,s.id LIMIT $3 OFFSET $4",
   [q,"%"+q+"%",size+1,skip]
  );
