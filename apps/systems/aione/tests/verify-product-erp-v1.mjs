@@ -10,7 +10,8 @@ const paths=[
  "js/pages/product-home-current.js",
  "js/config/home-registry.js",
  "js/config/sidebar-registry.js",
- "backend/src/routes/product-manual-entry.js"
+ "backend/src/routes/product-manual-entry.js",
+ "backend/src/services/product-manual-entry-service.js"
 ];
 for(const rel of paths){
  const filepath=path.join(root,rel);
@@ -25,13 +26,19 @@ const secondary=read("js/pages/product-erp-secondary-lists.js");
 const grid=read("js/components/erp-data-grid.js");
 for(const name of ["商品列表","SKU列表","图片列表","上架链接"])assert.ok(nav.includes(name),"missing nav "+name);
 for(const term of ["showProducts","showSkuList","renderErpGrid"])assert.ok(entry.includes(term),"missing list implementation "+term);
-for(const term of ["showProductImages","showProductLinks","publication?.links","/image-index?limit=200"])assert.ok(secondary.includes(term),"missing safe list "+term);
+for(const term of ["showProductImages","showProductLinks","publication?.links","/image-index?limit=100&offset="])assert.ok(secondary.includes(term),"missing safe list "+term);
 assert.ok(entry.includes("productAttributes()"),"Product Attributes tab must be present");
 assert.ok(entry.includes("independentSkuPricing"),"SKU independent pricing must preserve overrides");
 assert.ok(entry.includes("estimatedProfit:Math.round"),"list profit must use the cost engine");
 assert.ok(read("backend/src/routes/product-manual-entry.js").includes('router.get("/image-index"'),"image list index API missing");
 assert.ok(read("backend/src/routes/product-manual-entry.js").includes('router.get("/store-catalog"'),"store catalog read-only API missing");
 assert.ok(secondary.includes('api+"/store-catalog"'),"shop columns must use canonical store catalog");
+assert.ok(secondary.includes("await loadLinks()"),"shop-link server pagination required");
+assert.ok(secondary.includes("await loadImages()"),"image server pagination required");
+assert.ok(entry.includes('BASE+"/categories"'),"category tree must query complete database category directory");
+assert.ok(entry.includes("hasMore=(response.items||[]).length>100"),"product server pagination required");
+assert.ok(read("backend/src/routes/product-manual-entry.js").includes('router.get("/categories"'),"category directory API missing");
+assert.ok(read("backend/src/services/product-manual-entry-service.js").includes("category=\"\""),"product service category filter missing");
 assert.ok(secondary.includes("onRender:attachImageHandlers"),"image handlers must survive pagination and sorting");
 assert.ok(secondary.includes("onRender:attachLinkImages"),"listing image thumbs must survive pagination and sorting");
 assert.ok(secondary.includes("r.groups.detail.length>19"),"detail image cap indicator missing");
