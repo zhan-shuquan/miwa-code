@@ -309,6 +309,39 @@ export async function listManualProducts({query="",limit=100,offset=0,category="
   const r=await pool.query("SELECT "+productFields(shape)+" FROM public.products WHERE ($1='' OR product_code ILIKE $2 OR "+shape.nameCol+" ILIKE $2 OR metadata->'manualEntry'->>'localCode' ILIKE $2) AND ($5='' OR metadata->'manualEntry'->>'category'=$5) ORDER BY updated_at DESC LIMIT $3 OFFSET $4",[q,"%"+q+"%",lim,skip,String(category||"").trim()]);
   return attachDerivedStatuses(r.rows.map(unwrap),shape);
 }
+// Read-only real SKU index. Reads canonical Product/SKU identities and the existing
+// manual-entry price overrides; does not claim default stock is warehouse stock.
+export async function listManualSkus({query="",limit=100,offset=0}={}){
+ const shape=await assertCurrentProductEntrySchema(pool);
+ const q=String(query||"").trim().slice(0,160),size=Math.min(100,Math.max(1,Number(limit)||100));
+ const skip=Math.min(100000,Math.max(0,Number(offset)||0));
+ const rows=await pool.query(
+  "SELECT s.id::text AS id,s.sku_code AS sku_code,s.name AS sku_name,s."+shape.skuDataCol+" AS sku_attributes,p.id::text AS product_id,p.product_code AS product_code,p."+shape.nameCol+" AS name_zh,p.metadata AS product_metadata"+
+  " FROM public.product_skus s JOIN public.products p ON p.id=s.product_id"+
+  " WHERE ($1='' OR s.sku_code ILIKE $2 OR s.name ILIKE $2 OR p.product_code ILIKE $2 OR p."+shape.nameCol+" ILIKE $2 OR p.metadata->'manualEntry'->>'localCode' ILIKE $2)"+
+  " ORDER BY s.sku_code,s.id LIMIT $3 OFFSET $4",
+  [q,"%"+q+"%",size+1,skip]
+ );
+ const hasMore=rows.rows.length>size;
+ const items=rows.rows.slice(0,size).map(r=>{
+  const source=r.product_metadata?.manualEntry,own=Boolean(source&&typeof source==="object");
+  const attributes=Object.fromEntries(Object.entries(r.sku_attributes||{}).filter(([key])=>!key.startsWith("__aione")));
+  const identity=Object.entries(attributes).map(([k,v])=>k+"="+v).join("|")||"default";
+  const selected=Array.isArray(source?.skuOverrides)?source.skuOverrides.find(x=>x.identity===identity):null;
+  const independent=source?.extraAttributes?.independentSkuPricing==="true";
+  const price=own?(independent?(selected?.priceJpy??source.salePriceJpy??null):(source.salePriceJpy??null)):null;
+  return {
+   id:r.id,productId:r.product_id,number:r.sku_code,localCode:own?source.localCode:r.product_code,
+   productName:r.name_zh||"",label:Object.values(attributes).map(String).join(" / ")||r.sku_name||"默认规格",
+   price,stock:own?(selected?.stock??source.defaultStock??null):null,
+   stockKind:own?"draft_default_not_warehouse":"unverified",
+   cost:own?(selected?.purchaseCostCny??source.purchaseUnitCostCny??null):null,
+   weight:own?(selected?.weightG??source.weightG??null):null,
+   readOnly:!own
+  };
+ });
+ return {items,hasMore};
+}
 export async function getManualProduct(ref) {
   const shape=await assertCurrentProductEntrySchema(pool);
   const result=await pool.query("SELECT "+productFields(shape)+" FROM public.products WHERE id::text=$1 OR product_code=$1 OR metadata->'manualEntry'->>'localCode'=$1",[String(ref)]);
