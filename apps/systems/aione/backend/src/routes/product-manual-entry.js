@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireWriteActor } from "../http/context.js";
 import pool from "../../db.js";
 import {
-  getManualProduct, listManualProducts, saveManualProduct,
+  getManualProduct, listManualProducts, listManualSkus, saveManualProduct,
   previewImportProducts, importManualProducts, applyApprovedZjl238RakutenDraft
 } from "../services/product-manual-entry-service.js";
 import {
@@ -38,6 +38,12 @@ router.get("/export.xlsx",async(req,res,next)=>{
 // Uses the existing Product and ProductAsset sources. No new image table.
 // Store columns are derived from registered store facts, never from front-end constants.
 // Product category filter uses canonical product metadata; empty legacy values stay unclassified.
+router.get("/skus",async(req,res,next)=>{
+ try{
+  const result=await listManualSkus({query:req.query.q,limit:req.query.limit,offset:req.query.offset});
+  res.set("Cache-Control","no-store").json({ok:true,...result});
+ }catch(error){next(error)}
+});
 router.get("/categories",async(req,res,next)=>{
  try{
   const rows=await pool.query("SELECT DISTINCT metadata->'manualEntry'->>'category' AS category FROM public.products WHERE metadata->'manualEntry'->>'category' IS NOT NULL AND BTRIM(metadata->'manualEntry'->>'category')<>'' ORDER BY category LIMIT 500");
