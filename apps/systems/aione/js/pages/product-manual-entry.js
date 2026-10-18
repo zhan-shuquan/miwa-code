@@ -616,19 +616,39 @@ export async function showProducts(host,notice=""){
 }
 export function openProductEditor(host){editor(host,{});}
 export async function showSkuList(host){
- stopEditor(host);style();
- host.innerHTML='<section class="phc pe-wrap pe-erp"><div class="pe-toolbar"><div><h2>SKU列表</h2><p class="pe-note">SKU来源于已保存的商品规格；库存尚未核实的记录不得冒充实际仓库库存。</p></div><button data-sku-products>返回商品列表</button></div><p><input data-sku-search placeholder="搜索货号 / SKU / 规格" style="padding:9px;border:1px solid #dce4df;border-radius:7px;max-width:340px;width:100%"></p><div data-sku-table>正在读取SKU…</div></section>';
+ stopEditor(host);style();erpListStyle();
+ host.innerHTML='<section class="phc pe-wrap pe-erp"><div class="pe-toolbar"><div><h2>SKU列表</h2><p class="pe-note">读取数据库真实SKU · 统一列设置 · 独立价格只读投影 · 默认库存不是实际仓库库存</p></div><button data-sku-products>返回商品列表</button></div><p><input data-sku-search placeholder="全局搜索SKU编号 / 商品货号 / 名称 / 规格" style="padding:9px;border:1px solid #dce4df;border-radius:7px;max-width:410px;width:100%"></p><div data-sku-table>正在读取SKU…</div><div data-sku-pager class="pe-server-pages"></div></section>';
  host.querySelector("[data-sku-products]").onclick=()=>showProducts(host);
- let entries=[];
- const draw=()=>{const q=host.querySelector("[data-sku-search]").value.trim().toLowerCase();const rows=entries.filter(x=>!q||[x.number,x.localCode,x.productName,x.label].some(v=>String(v||"").toLowerCase().includes(q)));
- renderErpGrid(host.querySelector("[data-sku-table]"),{id:"sku",rows,columns:[
- {key:"number",label:"SKU编号",minWidth:145},{key:"localCode",label:"商品货号",minWidth:100},
- {key:"productName",label:"商品名称",minWidth:185},{key:"label",label:"销售规格",minWidth:150},
- {key:"price",label:"售价",type:"number",minWidth:90},{key:"stock",label:"默认库存",type:"number",minWidth:90},
- {key:"cost",label:"采购价",type:"number",defaultVisible:false},{key:"weight",label:"重量",type:"number",defaultVisible:false}
- ],empty:"没有已保存的SKU",onRowClick:async r=>{try{const d=await aioneApi(BASE+"/"+encodeURIComponent(r.productId));if(d.product.readOnly){alert("既有商品为只读记录");return}editor(host,d.product)}catch(e){alert("读取商品失败："+e.message)}}});};
- host.querySelector("[data-sku-search]").oninput=draw;
- try{const data=await aioneApi(BASE+"?limit=200");entries=(data.items||[]).filter(p=>!p.readOnly&&Array.isArray(p.specs)).flatMap(p=>skuRows(p).map(s=>({...s,productId:p.id,productName:p.nameZh,localCode:p.localCode})));draw()}catch(e){host.querySelector("[data-sku-table]").innerHTML='<div class="pe-alert">SKU读取失败：'+esc(e.message)+'</div>'}
+ const area=host.querySelector("[data-sku-table]");
+ let offset=0,query="",sequence=0,loading=false,hasMore=false;
+ const columns=[
+ {key:"number",label:"SKU编号",minWidth:145},{key:"localCode",label:"商品货号",minWidth:105},
+ {key:"productName",label:"商品名称",minWidth:195},{key:"label",label:"销售规格",minWidth:155},
+ {key:"price",label:"售价",type:"number",minWidth:90,render:r=>r.price==null?"待确认":esc(r.price)},
+ {key:"stock",label:"默认库存",type:"number",minWidth:90,render:r=>r.stock==null?"待核实":esc(r.stock)},
+ {key:"cost",label:"采购价",type:"number",defaultVisible:false},{key:"weight",label:"重量",type:"number",defaultVisible:false},
+ {key:"stockKind",label:"库存来源",defaultVisible:false,minWidth:150,render:r=>r.stockKind==="draft_default_not_warehouse"?"商品草稿默认值":"未核实"}
+ ];
+ const load=async()=>{
+   const current=++sequence;loading=true;
+   try{
+     const result=await aioneApi(BASE+"/skus?q="+encodeURIComponent(query)+"&limit=100&offset="+offset);
+     if(current!==sequence||!host.isConnected)return;
+     hasMore=result.hasMore===true;
+     renderErpGrid(area,{id:"sku",rows:result.items||[],columns,empty:"当前条件没有SKU",onRowClick:async row=>{
+       if(row.readOnly){alert("该SKU所属商品暂为既有业务只读记录");return}
+       try{const detail=await aioneApi(BASE+"/"+encodeURIComponent(row.productId));editor(host,detail.product)}catch(e){alert("读取商品失败："+e.message)}
+     }});
+     const pager=host.querySelector("[data-sku-pager]");pager.replaceChildren();
+     const previous=document.createElement("button");previous.textContent="上一组";previous.disabled=offset===0;previous.onclick=()=>{offset=Math.max(0,offset-100);void load()};
+     const next=document.createElement("button");next.textContent="下一组";next.disabled=!hasMore;next.onclick=()=>{offset+=100;void load()};
+     const label=document.createElement("span");label.textContent="第 "+(Math.floor(offset/100)+1)+" 组 · 每组最多100个SKU";pager.append(previous,label,next);
+   }catch(e){if(current===sequence)area.innerHTML='<div class="pe-alert">SKU读取失败：'+esc(e.message)+'</div>'}
+   finally{if(current===sequence)loading=false}
+ };
+ let debounce;
+ host.querySelector("[data-sku-search]").oninput=e=>{query=e.target.value.trim();offset=0;clearTimeout(debounce);debounce=setTimeout(()=>{void load()},250)};
+ await load();
 }
 export async function initProductManualEntry(){
  const host=document.getElementById("app-main-host");if(!host)return false;
