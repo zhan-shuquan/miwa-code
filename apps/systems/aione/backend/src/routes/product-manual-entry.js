@@ -62,16 +62,18 @@ router.get("/image-index",async(req,res,next)=>{
    const limit=Math.min(200,Math.max(1,Number(req.query.limit)||100));
    const offset=Math.max(0,Number(req.query.offset)||0);
    if(!Number.isInteger(limit)||!Number.isInteger(offset))invalid("invalid_pagination","分页参数无效");
-   const products=await listManualProducts({query:req.query.q,limit,offset});
+   const batch=await listManualProducts({query:req.query.q,limit:limit+1,offset});
+   const hasMore=batch.length>limit;
+   const products=batch.slice(0,limit);
    const ids=products.map(p=>String(p.id));
-   if(!ids.length)return res.set("Cache-Control","no-store").json({ok:true,products:[],assets:[],truncated:false});
+   if(!ids.length)return res.set("Cache-Control","no-store").json({ok:true,products:[],assets:[],truncated:false,hasMore:false});
    const maxAssets=10001;
    const result=await pool.query(
     "SELECT id::text AS id,product_id::text AS product_id,original_name,canonical_name,asset_role,sku_id::text AS sku_id,asset_no FROM public.product_assets WHERE product_id::text=ANY($1::text[]) AND archived_at IS NULL AND asset_type='image' ORDER BY product_id,asset_no LIMIT $2",
     [ids,maxAssets]
    );
    const truncated=result.rows.length===maxAssets;
-   return res.set("Cache-Control","no-store").json({ok:true,products:products.map(p=>({id:p.id,localCode:p.localCode,nameZh:p.nameZh})),assets:result.rows.slice(0,maxAssets-1),truncated});
+   return res.set("Cache-Control","no-store").json({ok:true,products:products.map(p=>({id:p.id,localCode:p.localCode,nameZh:p.nameZh})),assets:result.rows.slice(0,maxAssets-1),truncated,hasMore});
  }catch(error){next(error)}
 });
 router.get("/:ref",async(req,res,next)=>{
