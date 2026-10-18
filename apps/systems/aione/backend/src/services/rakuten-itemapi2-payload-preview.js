@@ -60,8 +60,7 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
  const general=[...main,...published.filter(x=>x.asset_role!=="source_sku_image"&&x.asset_role!=="source_main_image")];
  const images=general.map(normalizeLocation).filter(Boolean);
  if(images.length>20)fail(blocking,"rakuten_item_images_over_limit");
- const price=Number(product?.salePriceJpy);
- if(!Number.isSafeInteger(price)||price<=0)fail(blocking,"tax_included_price_invalid");
+ if(selections.some(entry=>!Number.isSafeInteger(entry.priceJpy)||entry.priceJpy<=0))fail(blocking,"tax_included_price_invalid");
  const shopPolicy=product?.rakutenVerifiedShopPolicy||{};
  const shippingMapping=autoMapShipping({product,shipping,shopPolicy});
  const ship=shippingChoices(product,shipping);
@@ -115,7 +114,7 @@ export function previewRakutenItemV2({product,skus=[],assets=[],genre=null,shipp
    variants[sku.sku_code]={
      merchantDefinedSkuId:sku.sku_code,
      selectorValues:{[key]:str(value)},
-     standardPrice:String(price),
+     standardPrice:String(selections[i].priceJpy),
      ...(skuImage?{images:[skuImage]}:{}),
      ...(ship.matchedDate?{normalDeliveryDateId:Number(dateId)}:{}),
      ...(articleNumber?{articleNumber}:{}),

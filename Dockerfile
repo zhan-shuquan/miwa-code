@@ -15,6 +15,7 @@ COPY apps/systems/aione/backend/ ./
 # matcher also used by the frontend. Preserve its real relative module path.
 COPY apps/systems/aione/js/services/product-sku-image-identity.js /app/apps/systems/aione/js/services/product-sku-image-identity.js
 # Shared parameter bootstrap module required by the backend's Cloud SQL service.
+COPY apps/systems/aione/js/config/product-effective-sku.js /app/apps/systems/aione/js/config/product-effective-sku.js
 COPY apps/systems/aione/js/config/shared-parameter-defaults.js /app/apps/systems/aione/js/config/shared-parameter-defaults.js
 COPY data-code/migrations/ /app/data-code/migrations/
 COPY data-code/current/ /app/data-code/current/

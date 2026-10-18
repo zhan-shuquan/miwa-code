@@ -2,6 +2,10 @@ name: AIONE Product ERP V1 Smoke
 on:
   pull_request:
     paths:
+      - 'apps/systems/aione/backend/src/**'
+      - 'apps/systems/aione/backend/scripts/test-product-effective-sku.js'
+      - 'apps/systems/aione/js/config/product-effective-sku.js'
+      - 'apps/systems/aione/js/config/product-shared-cost-engine.js'
       - 'apps/systems/aione/js/components/erp-data-grid.js'
       - 'apps/systems/aione/js/pages/product-erp-secondary-lists.js'
       - 'apps/systems/aione/js/pages/product-manual-entry.js'
@@ -23,3 +27,11 @@ jobs:
           node-version: '22'
       - name: Check ERP V1 source and syntax
         run: node apps/systems/aione/tests/verify-product-erp-v1.mjs
+      - name: Install contract dependencies
+        working-directory: apps/systems/aione/backend
+        run: npm install --package-lock=false --no-audit --no-fund
+      - name: Verify effective SKU costs and price contracts
+        run: |
+          node apps/systems/aione/backend/scripts/test-product-effective-sku.js
+          node apps/systems/aione/backend/scripts/test-rakuten-itemapi2-payload-preview.js
+          node apps/systems/aione/js/config/product-shared-cost-engine.test.js

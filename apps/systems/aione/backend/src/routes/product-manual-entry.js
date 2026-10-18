@@ -19,6 +19,8 @@ function readBytes(body){
 }
 function filename(body){return String(body?.filename||"upload.xlsx").replace(/[\\/:*?"<>|]/g,"").slice(0,180);}
 
+router.get("/sku-contract",(req,res)=>res.set("Cache-Control","no-store").json({ok:true,version:"effective-sku-v1"}));
+
 router.get("/",async(req,res,next)=>{
   try{res.json({ok:true,items:await listManualProducts({query:req.query.q,limit:req.query.limit,offset:req.query.offset,category:req.query.category})});}
   catch(e){next(e);}

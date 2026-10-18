@@ -49,6 +49,8 @@ on:
       - apps/systems/aione/backend/scripts/test-shared-parameters-contract.js
       - apps/systems/aione/js/shell/system-settings.js
       - apps/systems/aione/components/shell/settings/global-settings.html
+      - apps/systems/aione/js/config/product-effective-sku.js
+      - apps/systems/aione/backend/scripts/test-product-effective-sku-db.js
       - apps/systems/aione/backend/src/services/product-entry-contract.js
       - apps/systems/aione/backend/src/services/product-manual-entry-service.js
       - apps/systems/aione/backend/src/routes/product-manual-entry.js
@@ -290,4 +292,6 @@ jobs:
         run: node apps/systems/aione/js/config/product-pricing-math.test.js
       - name: Test Excel/WPS and CURRENT database roundtrip (no Rakuten)
         working-directory: apps/systems/aione/backend
-        run: node scripts/test-product-entry-current.js
+        run: |
+          node scripts/test-product-entry-current.js
+          node scripts/test-product-effective-sku-db.js
