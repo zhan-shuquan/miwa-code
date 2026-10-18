@@ -302,11 +302,11 @@ async function attachDerivedStatuses(products, shape) {
   }));
 }
 
-export async function listManualProducts({query="",limit=100,offset=0}={}) {
+export async function listManualProducts({query="",limit=100,offset=0,category=""}={}) {
   const shape=await assertCurrentProductEntrySchema(pool);
   const q=String(query||"").trim();
   const lim=Math.min(201,Math.max(1,Number(limit)||100)),skip=Math.max(0,Number(offset)||0);
-  const r=await pool.query("SELECT "+productFields(shape)+" FROM public.products WHERE ($1='' OR product_code ILIKE $2 OR "+shape.nameCol+" ILIKE $2 OR metadata->'manualEntry'->>'localCode' ILIKE $2) ORDER BY updated_at DESC LIMIT $3 OFFSET $4",[q,"%"+q+"%",lim,skip]);
+  const r=await pool.query("SELECT "+productFields(shape)+" FROM public.products WHERE ($1='' OR product_code ILIKE $2 OR "+shape.nameCol+" ILIKE $2 OR metadata->'manualEntry'->>'localCode' ILIKE $2) AND ($5='' OR metadata->'manualEntry'->>'category'=$5) ORDER BY updated_at DESC LIMIT $3 OFFSET $4",[q,"%"+q+"%",lim,skip,String(category||"").trim()]);
   return attachDerivedStatuses(r.rows.map(unwrap),shape);
 }
 export async function getManualProduct(ref) {
