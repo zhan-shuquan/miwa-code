@@ -534,7 +534,7 @@ function importer(host){
  dialog.showModal();
 }
 
-function erpListStyle(){if(document.getElementById("aione-erp-list-layout"))return;const node=document.createElement("style");node.id="aione-erp-list-layout";node.textContent=".pe-erp-layout{display:grid;grid-template-columns:165px minmax(0,1fr);gap:10px}.pe-erp-tree{border:1px solid #e2e9e4;border-radius:7px;padding:10px;background:#fafcfb;min-width:0}.pe-erp-tree strong{display:block;margin-bottom:10px}.pe-erp-tree button{width:100%;text-align:left;border:0;background:transparent;padding:7px;border-radius:5px;color:#345341;cursor:pointer}.pe-erp-tree button.is-active{color:#176b4d;background:#e8f4ed;font-weight:700}.pe-erp-list{min-width:0}.pe-erp-filter{display:flex;gap:8px;margin-bottom:7px}.pe-erp-filter input,.pe-erp-filter select{border:1px solid #dce4df;border-radius:5px;padding:7px;background:#fff;min-width:0}.pe-erp-filter input{width:275px;max-width:65%}@media(max-width:650px){.pe-erp-layout{grid-template-columns:1fr}.pe-erp-tree{max-height:120px;overflow:auto}}";document.head.appendChild(node)}
+function erpListStyle(){if(document.getElementById("aione-erp-list-layout"))return;const node=document.createElement("style");node.id="aione-erp-list-layout";node.textContent=".pe-server-pages{display:flex;gap:10px;align-items:center;padding:8px 0}.pe-server-pages button{padding:5px 10px;border:1px solid #dce4df;border-radius:5px;background:#fff;cursor:pointer}.pe-erp-layout{display:grid;grid-template-columns:165px minmax(0,1fr);gap:10px}.pe-erp-tree{border:1px solid #e2e9e4;border-radius:7px;padding:10px;background:#fafcfb;min-width:0}.pe-erp-tree strong{display:block;margin-bottom:10px}.pe-erp-tree button{width:100%;text-align:left;border:0;background:transparent;padding:7px;border-radius:5px;color:#345341;cursor:pointer}.pe-erp-tree button.is-active{color:#176b4d;background:#e8f4ed;font-weight:700}.pe-erp-list{min-width:0}.pe-erp-filter{display:flex;gap:8px;margin-bottom:7px}.pe-erp-filter input,.pe-erp-filter select{border:1px solid #dce4df;border-radius:5px;padding:7px;background:#fff;min-width:0}.pe-erp-filter input{width:275px;max-width:65%}@media(max-width:650px){.pe-erp-layout{grid-template-columns:1fr}.pe-erp-tree{max-height:120px;overflow:auto}}";document.head.appendChild(node)}
 export async function showProducts(host,notice=""){
  stopEditor(host);releaseListImages(host);style();erpListStyle();
  host.innerHTML='<section class="phc pe-wrap pe-erp"><div class="pe-toolbar"><div><h2>商品列表</h2><p class="pe-note">分类筛选 · 统一列设置 · 可双击自动适配列宽</p></div><div><button class="pe-main" data-pe-new>＋ 新建商品</button> <button data-pe-import-open>批量导入</button> <button data-pe-export>导出 Excel</button></div></div>'+(notice?'<p role="status">'+esc(notice)+'</p>':"")+
@@ -542,14 +542,14 @@ export async function showProducts(host,notice=""){
  host.querySelector("[data-pe-new]").onclick=()=>editor(host,{});
  host.querySelector("[data-pe-import-open]").onclick=()=>importer(host);
  host.querySelector("[data-pe-export]").onclick=async()=>{try{await aioneDownload(BASE+"/export.xlsx");}catch(e){alert("导出失败："+e.message);}};
- let all=[],term="",chosenCategory="";
+ let all=[],term="",chosenCategory="",loadedCategories=[],offset=0,hasMore=false,lastRequest=0;
  const area=host.querySelector("[data-pe-table]");
  const list=()=>all.filter(p=>(!chosenCategory||p.category===chosenCategory)&&(!term||[p.localCode,p.nameZh,p.brand,p.category].some(v=>String(v||"").toLowerCase().includes(term))));
  const editProduct=async row=>{if(row.readOnly)return;try{const d=await aioneApi(BASE+"/"+encodeURIComponent(row.id));editor(host,d.product)}catch(e){alert("读取失败："+e.message)}};
  const draw=()=>{
-   const categories=[...new Set(all.map(p=>String(p.category||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+   const categories=loadedCategories.length?loadedCategories:[...new Set(all.map(p=>String(p.category||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
    host.querySelector("[data-pe-categories]").innerHTML='<button data-pe-cat="" class="'+(!chosenCategory?"is-active":"")+'">全部商品</button>'+categories.map(c=>'<button data-pe-cat="'+esc(c)+'" class="'+(chosenCategory===c?"is-active":"")+'">'+esc(c)+'</button>').join("");
-   host.querySelectorAll("[data-pe-cat]").forEach(b=>b.onclick=()=>{chosenCategory=b.dataset.peCat;host.querySelector("[data-pe-category]").value=chosenCategory;draw()});
+   host.querySelectorAll("[data-pe-cat]").forEach(b=>b.onclick=()=>{chosenCategory=b.dataset.peCat;host.querySelector("[data-pe-category]").value=chosenCategory;offset=0;void load()});
    const sel=host.querySelector("[data-pe-category]");sel.innerHTML='<option value="">全部分类</option>'+categories.map(c=>'<option value="'+esc(c)+'" '+(chosenCategory===c?"selected":"")+'>'+esc(c)+'</option>').join("");
    const rows=list();
    const summaries=new Map(rows.map(p=>{
@@ -580,9 +580,31 @@ export async function showProducts(host,notice=""){
    renderErpGrid(area,{id:"products",columns,rows:rows.map(p=>({...p,skuCount:Array.isArray(p.specs)?skuRows(p).length:0,readinessLabel:p.readiness?.label||"待核实",publicationLabel:p.publication?.label||"待核实",...summaries.get(p.id)})),onRowClick:editProduct,empty:"当前筛选没有商品"});
    area.querySelectorAll("[data-pe-thumb]").forEach(async el=>{try{const info=await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(el.dataset.peThumb)+"/content?webpSize=64");if(!el.isConnected){URL.revokeObjectURL(info.url);return}const img=document.createElement("img");img.alt="商品图片";img.className="sku-img";img.src=info.url;el.replaceChildren(img);const abort=new AbortController();ACTIVE_LIST_IMAGES.set(host,abort);abort.signal.addEventListener("abort",()=>URL.revokeObjectURL(info.url),{once:true})}catch{if(el.isConnected)el.textContent="—"}});
  };
- host.querySelector("[data-pe-q]").oninput=e=>{term=e.target.value.toLowerCase().trim();draw()};
- host.querySelector("[data-pe-category]").onchange=e=>{chosenCategory=e.target.value;draw()};
- try{const payload=await aioneApi(BASE+"?limit=200");all=Array.isArray(payload.items)?payload.items:[];await refreshLiveParameters();draw();if(all.length===200)area.insertAdjacentHTML("beforebegin",'<p class="pe-note">当前仅加载前200条商品；后续需接入服务端分页。</p>');}catch(e){area.innerHTML='<div class="pe-alert">商品读取失败：'+esc(e.message)+'</div>'}
+ const load=async()=>{
+   const seq=++lastRequest;
+   const url=BASE+"?limit=101&offset="+offset+"&q="+encodeURIComponent(term)+"&category="+encodeURIComponent(chosenCategory);
+   try{
+     const response=await aioneApi(url);
+     if(seq!==lastRequest)return;
+     hasMore=(response.items||[]).length>100;all=(response.items||[]).slice(0,100);
+     draw();
+     let pager=host.querySelector("[data-product-server-pages]");
+     if(!pager){pager=document.createElement("div");pager.dataset.productServerPages="";pager.className="pe-server-pages";area.after(pager)}
+     pager.replaceChildren();
+     const previous=document.createElement("button");previous.textContent="上一组";previous.disabled=offset===0;previous.onclick=()=>{offset=Math.max(0,offset-100);void load()};
+     const next=document.createElement("button");next.textContent="下一组";next.disabled=!hasMore;next.onclick=()=>{offset+=100;void load()};
+     const indicator=document.createElement("span");indicator.textContent="第 "+(Math.floor(offset/100)+1)+" 组 · 每组最多100件商品";
+     pager.append(previous,indicator,next);
+   }catch(e){if(seq===lastRequest)area.innerHTML='<div class="pe-alert">商品读取失败：'+esc(e.message)+'</div>'}
+ };
+ let typing;
+ host.querySelector("[data-pe-q]").oninput=e=>{term=e.target.value.toLowerCase().trim();offset=0;clearTimeout(typing);typing=setTimeout(()=>{void load()},250)};
+ host.querySelector("[data-pe-category]").onchange=e=>{chosenCategory=e.target.value;offset=0;void load()};
+ try{
+   const [catalog]=await Promise.all([aioneApi(BASE+"/categories").catch(()=>({categories:[]})),refreshLiveParameters()]);
+   loadedCategories=Array.isArray(catalog.categories)?catalog.categories:[];
+   await load();
+ }catch(e){area.innerHTML='<div class="pe-alert">商品读取失败：'+esc(e.message)+'</div>'}
 }
 export function openProductEditor(host){editor(host,{});}
 export async function showSkuList(host){
