@@ -74,7 +74,7 @@ function verifiedLinks(p){
 }
 export async function showProductLinks(host){
  const area=panel(host,"上架链接","一行一个货号 · 按店铺快速打开已核验的平台商品页面");
- let all=[],shops=[],rows=[];const imageCache=new Map();
+ let all=[],shops=[],rows=[],offset=0,hasMore=false,loading=false;const imageCache=new Map();
  const draw=()=>{
  const term=host.querySelector("[data-pl-search]").value.toLowerCase();
  const cols=[{key:"image",label:"图片",minWidth:68,render:r=>r.representativeImageAssetId?'<span data-link-thumb="'+esc(r.representativeImageAssetId)+'">▧</span>':"—"},{key:"localCode",label:"商品货号",minWidth:110},...shops.map(shop=>({key:"shop_"+shop,label:shop,minWidth:105,render:r=>r.links[shop]?'<a href="'+esc(r.links[shop])+'" target="_blank" rel="noopener noreferrer" title="打开 '+esc(shop)+' 商品页面" style="color:#176b4d">↗ 打开</a>':"—"}))];
@@ -83,14 +83,26 @@ export async function showProductLinks(host){
  void Promise.all(Array.from({length:Math.min(3,th.length)},()=>load()));};
  renderErpGrid(area,{id:"product-store-links",columns:cols,rows:rows.filter(r=>[r.localCode,r.nameZh].some(v=>String(v||"").toLowerCase().includes(term))),empty:"尚无已核验的上架链接",onRender:attachLinkImages});
  };
- host.querySelector("[data-pl-search]").oninput=draw;
+ host.querySelector("[data-pl-search]").oninput=()=>{offset=0;void loadLinks()};
+ const loadLinks=async()=>{if(loading)return;loading=true;
  try{
-   const [response,catalog]=await Promise.all([aioneApi(api+"?limit=200"),aioneApi(api+"/store-catalog").catch(()=>({shops:[]}))]);all=response.items||[];
+   const search=host.querySelector("[data-pl-search]").value.trim();
+   const [response,catalog]=await Promise.all([aioneApi(api+"?limit=101&offset="+offset+"&q="+encodeURIComponent(search)),aioneApi(api+"/store-catalog").catch(()=>({shops:[]}))]);
+   hasMore=(response.items||[]).length>100;all=(response.items||[]).slice(0,100);
    // Use the existing validated publication.links projection; never fabricate URLs.
    const entries=all.map(p=>({localCode:p.localCode,nameZh:p.nameZh,representativeImageAssetId:p.representativeImageAssetId,links:Object.fromEntries(verifiedLinks(p).map(x=>[x.shopRef,x.url]))}));
    shops=[...new Set([...(Array.isArray(catalog.shops)?catalog.shops:[]),...all.flatMap(p=>verifiedLinks(p).map(x=>x.shopRef))])].sort((a,b)=>a.localeCompare(b,"zh"));
    rows=entries;
    area.insertAdjacentHTML("beforebegin",'<p class="pe-note">仅显示后端已确认的店铺商品链接；当前无已核验记录的店铺不会推测链接；店铺列读取真实店铺目录，未关联的店铺显示「—」。</p>');
    draw();
+   let pager=host.querySelector("[data-links-server-pages]");
+   if(!pager){pager=document.createElement("div");pager.dataset.linksServerPages="";pager.style.cssText="padding:8px;display:flex;gap:8px;align-items:center";area.after(pager)}
+   pager.replaceChildren();
+   const prev=document.createElement("button");prev.textContent="上一组";prev.disabled=offset===0;prev.onclick=()=>{offset=Math.max(0,offset-100);void loadLinks()};
+   const next=document.createElement("button");next.textContent="下一组";next.disabled=!hasMore;next.onclick=()=>{offset+=100;void loadLinks()};
+   const label=document.createElement("span");label.textContent="第 "+(Math.floor(offset/100)+1)+" 组 · 每组最多100件商品";pager.append(prev,label,next);
  }catch(e){area.innerHTML='<div class="pe-alert">店铺链接读取失败：'+esc(e.message)+'</div>'}
+ finally{loading=false}
+ };
+ await loadLinks();
 }
