@@ -165,10 +165,8 @@ function sku(){
 }
 function profit(){
  const rows=skuRows(p),row=selected?rows[selected-1]:null,m=finance(p,row),target=p.profitTargets,rate=p.rates;
- if(m.status!=="priced")return '<div class="pw-v7-block"><h3>利润分析 · 待核算</h3><p class="message">'+esc(m.reason||LIVE_PARAMETERS_ERROR||"共享参数未就绪")+'; 禁止使用旧成本定价。</p></div>';
- const hasActual=Number(p.actualShipmentWeightG)>0;
- const hasEstimated=Number(row?.weight??p.weightG)>0&&Number(p.setQuantity)>0;
- if(!hasActual&&!hasEstimated)return '<div class="pw-v7-block"><h3>利润分析 · 待核算</h3><p class="pw-helper">请先录入实际发货重量，或至少填写单个净重与套装数量。重量缺失时不可将运费显示为0。</p></div>';
+ const chooser='<label class="pw-finance-chooser"><span>计算对象</span><select data-finance><option value="0" '+(selected===0?'selected':'')+'>商品默认</option>'+rows.map(x=>'<option value="'+x.index+'" '+(x.index===selected?'selected':'')+'>'+esc(x.label)+'</option>').join("")+'</select></label>';
+ if(m.status!=="priced")return '<div class="pw-v7-block"><h3>利润分析 · 待核算</h3>'+chooser+'<p class="message">'+esc(m.reason||LIVE_PARAMETERS_ERROR||"共享参数未就绪")+'; 请补全当前计算对象的成本资料。</p></div>';
  const fixed=m.fixed,platformRate=m.platformRate/100;
  const salesBaseCost=m.baseCost;
  const operatingRate=(Number(rate.coupon||0)+Number(rate.points||0)+Number(rate.ads||0)+Number(rate.other||0))/100;
@@ -189,7 +187,7 @@ function profit(){
  return (m.deliveryQuote.status!=="priced"?'<p class="message">日本配送费率尚未匹配；利润、保本价与建议售价显示待核算，请先确认发货尺寸档位。</p>':"")+'<div class="head pw-finance-head"><h3>智能定价与利润</h3><div class="pw-finance-controls">'+
  percentageControl("goal-productMargin","公司目标毛利率",target.productMargin)+
  percentageControl("goal-operationMargin","公司运营目标毛利率",target.operationMargin)+
- '<label class="pw-finance-chooser"><span>计算对象</span><select data-finance><option value="0" '+(selected===0?'selected':'')+'>商品默认</option>'+rows.map(x=>'<option value="'+x.index+'" '+(x.index===selected?'selected':'')+'>'+esc(x.label)+'</option>').join("")+'</select></label></div></div>'+
+ chooser+'</div></div>'+
  '<div class="pw-decision-grid"><div class="stat focus pw-decision-card pw-price-stat"><div class="pw-card-label">实际售价</div>'+
  (row&&p.extraAttributes?.independentSkuPricing==="true"?'<label class="field"><span>SKU实际售价（JPY / 套）</span><input type="number" min="0" step="1" data-sku="'+row.index+'" data-sku-field="price" value="'+esc(row.override.priceJpy??"")+'" placeholder="继承商品售价"></label>':input("salePriceJpy","实际售价（JPY / 套）",p.salePriceJpy,null,"number"))+
  '<div class="pw-metric-list">'+line("实际毛利润",'<span class="pw-profit-value">'+MONEY(m.gross)+'</span>')+line("实际毛利率",percentage(m.gross))+line("目标状态",status(m.gross,target.productMargin))+'</div></div>'+
