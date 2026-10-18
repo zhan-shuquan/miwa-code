@@ -38,6 +38,12 @@ assert.ok(secondary.includes("await loadImages()"),"image server pagination requ
 assert.ok(entry.includes('BASE+"/categories"'),"category tree must query complete database category directory");
 assert.ok(entry.includes("hasMore=(response.items||[]).length>100"),"product server pagination required");
 assert.ok(entry.includes("onRender:attachProductImages"),"product thumbnails must survive grid rerenders");
+assert.ok(entry.includes('BASE+"/skus?q="'),"SKU list must query canonical SKU rows");
+assert.ok(read("backend/src/routes/product-manual-entry.js").includes('router.get("/skus"'),"SKU endpoint must exist");
+assert.ok(read("backend/src/services/product-manual-entry-service.js").includes('export async function listManualSkus'),"SKU query service missing");
+assert.ok(read("backend/src/services/product-manual-entry-service.js").includes('s."+shape.skuDataCol+"::text ILIKE $2'),"SKU search must cover persisted specification values");
+assert.ok(entry.includes('hasMore=result.hasMore===true'),"SKU pagination continuation required");
+
 assert.ok(secondary.includes("hasMore=(response.items||[]).length>100"),"store link page continuation required");
 assert.ok(read("backend/src/routes/product-manual-entry.js").includes("hasMore=batch.length>limit"),"image index must return authoritative page continuation");
 assert.ok(read("backend/src/routes/product-manual-entry.js").includes('router.get("/categories"'),"category directory API missing");
