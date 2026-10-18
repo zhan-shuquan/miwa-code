@@ -22,7 +22,7 @@ function marker(assets){
 }
 export async function showProductImages(host){
  const area=panel(host,"图片列表","每个商品货号一行 · 主图1张 + 详情图最多19张 · SKU/白底/优化图独立管理");
- let rows=[];
+ let rows=[],offset=0,hasMore=false,loading=false;
  const cols=[
  {key:"localCode",label:"商品货号",minWidth:105},
  {key:"white",label:"白底",minWidth:90,render:r=>marker(r.groups.white)},
@@ -40,16 +40,30 @@ export async function showProductImages(host){
  void Promise.all(Array.from({length:Math.min(4,placeholders.length)},()=>loadThumb()));
  area.querySelectorAll("[data-asset]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{const info=await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(b.dataset.asset)+"/content?webpSize=640");const win=window.open(info.url,"_blank","noopener,noreferrer");if(!win)alert("浏览器阻止了图片弹出窗口");setTimeout(()=>URL.revokeObjectURL(info.url),120000)}catch(e){alert("图片读取失败："+e.message)}finally{b.disabled=false}})};
  const draw=()=>{const term=host.querySelector("[data-pl-search]").value.toLowerCase();renderErpGrid(area,{id:"product-images",columns:cols,rows:rows.filter(r=>[r.localCode,r.nameZh].some(v=>String(v||"").toLowerCase().includes(term))),empty:"没有图片资料",onRender:attachImageHandlers});};
- host.querySelector("[data-pl-search]").oninput=draw;
+ host.querySelector("[data-pl-search]").oninput=()=>{offset=0;void loadImages()};
+ const loadImages=async()=>{if(loading)return;loading=true;
  try{
-   const index=await aioneApi(api+"/image-index?limit=200");
+   const search=host.querySelector("[data-pl-search]").value.trim();
+   const index=await aioneApi(api+"/image-index?limit=100&offset="+offset+"&q="+encodeURIComponent(search));
    const grouped=new Map(index.products.map(p=>[String(p.id),{...p,groups:Object.fromEntries(["white","main","detail","sku","optimized","other"].map(k=>[k,[]])),count:0}]));
    for(const a of index.assets||[]){const entry=grouped.get(String(a.product_id));if(!entry)continue;entry.groups[kind(a.original_name||a.canonical_name,a.asset_role)].push(a);entry.count++}
    rows=[...grouped.values()];
    if(index.truncated)area.insertAdjacentHTML("beforebegin",'<p class="pe-note">图片超过单次读取上限，请缩小条件以保证数量准确。</p>');
-   if(rows.length===200)area.insertAdjacentHTML("beforebegin",'<p class="pe-note">当前显示前200件商品；完整范围需接入下一页。</p>');
+   hasMore=index.hasMore===true;
    draw();
+   let footer=host.querySelector("[data-image-server-pages]");
+   if(!footer){footer=document.createElement("div");footer.dataset.imageServerPages="";footer.style.cssText="padding:8px;display:flex;gap:8px;align-items:center";area.after(footer)}
+   footer.replaceChildren();
+   const prev=document.createElement("button");prev.textContent="上一组";prev.disabled=offset===0;
+   prev.onclick=()=>{offset=Math.max(0,offset-100);void loadImages()};
+   const next=document.createElement("button");next.textContent="下一组";next.disabled=!hasMore;
+   next.onclick=()=>{offset+=100;void loadImages()};
+   const label=document.createElement("span");label.textContent="第 "+(Math.floor(offset/100)+1)+" 组 · 每组最多100件商品";
+   footer.append(prev,label,next);
  }catch(e){area.innerHTML='<div class="pe-alert">图片资料读取失败：'+esc(e.message)+'</div>'}
+ finally{loading=false}
+ };
+ await loadImages();
 }
 const href=s=>{try{const url=new URL(s);return url.protocol==="https:"?url.href:null}catch{return null}};
 /* Do not infer publish success or fabricate URLs from product codes.
