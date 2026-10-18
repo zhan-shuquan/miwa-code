@@ -37,6 +37,9 @@ assert.ok(secondary.includes("await loadLinks()"),"shop-link server pagination r
 assert.ok(secondary.includes("await loadImages()"),"image server pagination required");
 assert.ok(entry.includes('BASE+"/categories"'),"category tree must query complete database category directory");
 assert.ok(entry.includes("hasMore=(response.items||[]).length>100"),"product server pagination required");
+assert.ok(entry.includes("onRender:attachProductImages"),"product thumbnails must survive grid rerenders");
+assert.ok(secondary.includes("hasMore=(response.items||[]).length>100"),"store link page continuation required");
+assert.ok(read("backend/src/routes/product-manual-entry.js").includes("hasMore=batch.length>limit"),"image index must return authoritative page continuation");
 assert.ok(read("backend/src/routes/product-manual-entry.js").includes('router.get("/categories"'),"category directory API missing");
 assert.ok(read("backend/src/services/product-manual-entry-service.js").includes("category=\"\""),"product service category filter missing");
 assert.ok(secondary.includes("onRender:attachImageHandlers"),"image handlers must survive pagination and sorting");
