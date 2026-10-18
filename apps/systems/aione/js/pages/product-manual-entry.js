@@ -544,6 +544,15 @@ export async function showProducts(host,notice=""){
  host.querySelector("[data-pe-export]").onclick=async()=>{try{await aioneDownload(BASE+"/export.xlsx");}catch(e){alert("导出失败："+e.message);}};
  let all=[],term="",chosenCategory="",loadedCategories=[],offset=0,hasMore=false,lastRequest=0;
  const area=host.querySelector("[data-pe-table]");
+ const thumbnails=new Map(),thumbsAbort=new AbortController();ACTIVE_LIST_IMAGES.set(host,thumbsAbort);
+ const attachProductImages=()=>{const elements=[...area.querySelectorAll("[data-pe-thumb]")];let cursor=0;
+   const load=async()=>{while(cursor<elements.length&&!thumbsAbort.signal.aborted){const el=elements[cursor++],id=el.dataset.peThumb;if(!el.isConnected||!id)continue;
+     let url=thumbnails.get(id);if(!url){try{url=(await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(id)+"/content?webpSize=64")).url;thumbnails.set(id,url);thumbsAbort.signal.addEventListener("abort",()=>URL.revokeObjectURL(url),{once:true})}catch{if(el.isConnected)el.textContent="—";continue}}
+     if(!el.isConnected)continue;const img=document.createElement("img");img.alt="商品缩略图";img.className="sku-img";img.loading="lazy";img.src=url;el.replaceChildren(img)
+   }};
+   void Promise.all(Array.from({length:Math.min(4,elements.length)},()=>load()));
+ };
+
  const list=()=>all.filter(p=>(!chosenCategory||p.category===chosenCategory)&&(!term||[p.localCode,p.nameZh,p.brand,p.category].some(v=>String(v||"").toLowerCase().includes(term))));
  const editProduct=async row=>{if(row.readOnly)return;try{const d=await aioneApi(BASE+"/"+encodeURIComponent(row.id));editor(host,d.product)}catch(e){alert("读取失败："+e.message)}};
  const draw=()=>{
@@ -577,8 +586,7 @@ export async function showProducts(host,notice=""){
      {key:"productCode",label:"内部编码",defaultVisible:false,minWidth:100},
      {key:"version",label:"版本",defaultVisible:false,type:"number",minWidth:70}
    ];
-   renderErpGrid(area,{id:"products",columns,rows:rows.map(p=>({...p,skuCount:Array.isArray(p.specs)?skuRows(p).length:0,readinessLabel:p.readiness?.label||"待核实",publicationLabel:p.publication?.label||"待核实",...summaries.get(p.id)})),onRowClick:editProduct,empty:"当前筛选没有商品"});
-   area.querySelectorAll("[data-pe-thumb]").forEach(async el=>{try{const info=await aioneImageBlobInfo("/api/v1/product-assets/"+encodeURIComponent(el.dataset.peThumb)+"/content?webpSize=64");if(!el.isConnected){URL.revokeObjectURL(info.url);return}const img=document.createElement("img");img.alt="商品图片";img.className="sku-img";img.src=info.url;el.replaceChildren(img);const abort=new AbortController();ACTIVE_LIST_IMAGES.set(host,abort);abort.signal.addEventListener("abort",()=>URL.revokeObjectURL(info.url),{once:true})}catch{if(el.isConnected)el.textContent="—"}});
+   renderErpGrid(area,{id:"products",columns,rows:rows.map(p=>({...p,skuCount:Array.isArray(p.specs)?skuRows(p).length:0,readinessLabel:p.readiness?.label||"待核实",publicationLabel:p.publication?.label||"待核实",...summaries.get(p.id)})),onRowClick:editProduct,empty:"当前筛选没有商品",onRender:attachProductImages});
  };
  const load=async()=>{
    const seq=++lastRequest;
