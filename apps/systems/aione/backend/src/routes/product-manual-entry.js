@@ -20,7 +20,7 @@ function readBytes(body){
 function filename(body){return String(body?.filename||"upload.xlsx").replace(/[\\/:*?"<>|]/g,"").slice(0,180);}
 
 router.get("/",async(req,res,next)=>{
-  try{res.json({ok:true,items:await listManualProducts({query:req.query.q,limit:req.query.limit,offset:req.query.offset})});}
+  try{res.json({ok:true,items:await listManualProducts({query:req.query.q,limit:req.query.limit,offset:req.query.offset,category:req.query.category})});}
   catch(e){next(e);}
 });
 router.get("/export.xlsx",async(req,res,next)=>{
@@ -37,6 +37,13 @@ router.get("/export.xlsx",async(req,res,next)=>{
 // Compact read-only image index for the unified ERP Image List.
 // Uses the existing Product and ProductAsset sources. No new image table.
 // Store columns are derived from registered store facts, never from front-end constants.
+// Product category filter uses canonical product metadata; empty legacy values stay unclassified.
+router.get("/categories",async(req,res,next)=>{
+ try{
+  const rows=await pool.query("SELECT DISTINCT metadata->'manualEntry'->>'category' AS category FROM public.products WHERE metadata->'manualEntry'->>'category' IS NOT NULL AND BTRIM(metadata->'manualEntry'->>'category')<>'' ORDER BY category LIMIT 500");
+  res.set("Cache-Control","no-store").json({ok:true,categories:rows.rows.map(x=>x.category)});
+ }catch(error){next(error)}
+});
 router.get("/store-catalog",async(req,res,next)=>{
  try{
    let shops=[];
