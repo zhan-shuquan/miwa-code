@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+const {JSDOM}=await import(process.env.AIONE_JSDOM_MODULE||'jsdom');
+import {INITIAL_PARAMETERS} from '../../js/config/shared-parameter-defaults.js';
+import {addSpecCatalogPresets} from '../../js/config/product-spec-settings.js';
+const parameters=structuredClone(INITIAL_PARAMETERS);parameters.customSettings=addSpecCatalogPresets(parameters);
+parameters.customSettings.categories.push({id:'care',name:'洗护资料',enabled:true,productBinding:true,fields:[{id:'note',label:'说明',type:'text'}],rows:[{id:'gentle',name:'轻柔洗',enabled:true,sortOrder:1,values:{note:'手洗'}}]});
+parameters.delivery.SIZE_140={name:'140サイズ',fee:1100,enabled:true};
+let product={id:'joint-ui',localCode:'joint209',nameZh:'联合DOM验收',salePriceJpy:980,purchaseUnitCostCny:12,weightG:60,setQuantity:3,
+ customSettings:{care:'gentle'},specs:[{name:'颜色',values:['黑色','白色']}],skuOverrides:[{index:2,identity:'颜色=白色',priceJpy:1580,purchaseCostCny:20,purchaseCostBasis:'set'}],extraAttributes:{independentSkuCosts:'true',independentSkuPricing:'true'}};
+const dom=new JSDOM('<!doctype html><div id="host"></div>',{url:'http://localhost/'});
+for(const key of ['window','document','location','localStorage','sessionStorage','CustomEvent','Event','HTMLElement','AbortController'])globalThis[key]=dom.window[key];
+window.confirm=()=>true;
+let saved,numberingReady=true;
+globalThis.fetch=async(url,options={})=>{
+ let data={items:[],assets:[],categories:[]};
+ if(url.endsWith('/shared-parameters'))data={parameters,capabilities:{customSettings:true,productCatalogBindings:true,specCatalogBindings:true,deliveryCatalogBindings:true},usage:{}};
+ if(url.endsWith('/sku-contract'))data={version:'effective-sku-v1',businessNumberCountersReady:numberingReady};
+ if(url.endsWith('/joint-ui'))data={product,skus:[{sku_code:'legacy-black-001',sku_data:{颜色:'黑色'}},{sku_code:'legacy-white-009',sku_data:{颜色:'白色'}}]};
+ if(options.method==='PATCH'){saved=JSON.parse(options.body);data={product:{...saved,id:'joint-ui'}};}
+ return {ok:true,json:async()=>structuredClone(data)};
+};
+const {openProductEditor,showProducts}=await import('../../js/pages/product-manual-entry.js');
+const host=document.querySelector('#host'),tick=()=>new Promise(r=>setTimeout(r,25));
+const click=s=>{assert.ok(host.querySelector(s),s);host.querySelector(s).click();};
+const change=async(s,v)=>{const el=host.querySelector(s);assert.ok(el,s);el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));await tick();};
+openProductEditor(host,product);await tick();
+assert.equal(host.querySelector('[data-custom-category=care]').value,'gentle');
+click('[data-tab=sku]');assert.ok(host.textContent.includes('legacy-white-009'));
+assert.ok(host.textContent.includes('ホワイト'));
+assert.equal(host.querySelector('[data-sku="2"][data-sku-field=sizeClass] option[value="SIZE_140"]').textContent,'140サイズ');
+await change('[data-sku="2"][data-sku-field=sizeClass]','SIZE_140');
+click('[data-tab=profit]');await change('[data-f=salePriceJpy]','1100');
+click('[data-tab=sku]');assert.equal(host.querySelector('[data-sku="2"][data-sku-field=price]').value,'1580','default price change cannot clear explicit SKU price');
+click('[data-sku-costs]');click('[data-sku-independent]');click('[data-save]');await tick();
+assert.equal(saved.customSettings.care,'gentle');assert.equal(saved.skuOverrides[0].sizeClass,'SIZE_140');assert.equal(saved.skuOverrides[0].priceJpy,1580);
+assert.equal(saved.extraAttributes.independentSkuCosts,'false');
+product={...saved,id:'joint-ui'};openProductEditor(host,product);await tick();click('[data-tab=sku]');click('[data-sku-independent]');click('[data-sku-costs]');
+assert.equal(host.querySelector('[data-sku="2"][data-sku-field=price]').value,'1580');
+assert.equal(host.querySelector('[data-sku="2"][data-sku-field=sizeClass]').value,'SIZE_140');
+await showProducts(host);click('[data-eg-columns]');assert.ok(host.textContent.includes('洗护资料 · 说明'));
+const previousSaved=saved;numberingReady=false;openProductEditor(host);await tick();click('[data-save]');await tick();
+assert.equal(saved,previousSaved);assert.ok(host.textContent.includes('编号配置尚未就绪'));
+console.log('PASS joint editor DOM: configured spec choices, object delivery options, custom references, stable historical codes, price edits, mode persistence and configurable product columns');
+dom.window.close();

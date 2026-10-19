@@ -1,9 +1,12 @@
 // Single deterministic logistics and cost engine. Input must come from active Cloud SQL parameters.
 import {minimumBreakEvenYen,salesBaseCostJpy} from "./product-pricing-math.js";
+import {storePlatformRate} from "./product-store-settings.js";
+import {deliveryKey} from "./settings-catalog.js";
 const valid=x=>typeof x==="number"&&Number.isFinite(x)&&x>=0;
 const money=x=>Math.round(x);
 export function effectiveSizeClass(product,mode){return mode?.fulfillment==="direct"?"直发":product.sizeClass||"";}
 export function calculateProductCosts(product,sku,params){
+ if (sku?.effectiveProduct) product = sku.effectiveProduct;
  const c=params?.commerce,shop=params?.shop,common=params?.common;
  if(!c||!shop||!common)return {status:"unconfigured",reason:"共享参数尚未加载"};
  const mode=Object.values(c.logistics||{}).find(x=>x.name===product.logisticsMethod);
@@ -15,7 +18,7 @@ export function calculateProductCosts(product,sku,params){
  const productWeight=Number(product.weightG);
  const skuWeight=Number(sku?.weight);
  const skuHasDistinctWeight=Boolean(sku)&&Number.isFinite(skuWeight)&&skuWeight>0&&skuWeight!==productWeight;
- const actual=skuHasDistinctWeight?0:Number(product.actualShipmentWeightG);
+ const actual=skuHasDistinctWeight&&!sku?.effectiveProduct?0:Number(product.actualShipmentWeightG);
  const estimate=(skuHasDistinctWeight?skuWeight:Number(sku?.weight??product.weightG))*qty;
  const weight=actual>0?actual:estimate;
  if(!valid(weight)||weight<=0)return {status:"unconfigured",reason:"请录入实际发货重量，或者填写净重以预估"};
@@ -24,22 +27,22 @@ export function calculateProductCosts(product,sku,params){
  const packName=product.packagingMethod;
  const packCny=packName==="定制包装"?(product.customPackagingCostCny===null||product.customPackagingCostCny===undefined||product.customPackagingCostCny===""?null:Number(product.customPackagingCostCny)):c.chinaPackagingCny[packName];
  if(packCny===null||!valid(packCny))return {status:"unconfigured",reason:"中国包装成本尚未配置"};
- const purchase=money(cost*qty*fx),domestic=money(Number(product.domesticFreightCny||0)*fx),pack=money(packCny*fx);
+ if (!["unit", "set"].includes(product.purchaseCostBasis || "unit")) return {status:"unconfigured",reason:"采购计价单位无效"};
+ const purchase=money(cost*(product.purchaseCostBasis==="set"?1:qty)*fx),domestic=money(Number(product.domesticFreightCny||0)*fx),pack=money(packCny*fx);
  const freightCny=mode.billing==="step"?
  mode.firstFeeCny+Math.max(0,Math.ceil((weight-mode.firstWeightG)/mode.additionalWeightG))*mode.additionalFeeCny:
  weight/1000*mode.perKgCny;
  const shipping=money(freightCny*fx),duty=money(purchase*c.tariffRatePct/100);
  const warehouse=purchase+domestic+pack+shipping+duty;
  const size=effectiveSizeClass(product,mode);
- const tiers={"3cm厚":"THIN_3CM","60cm":"SIZE_60","80cm":"SIZE_80","100cm":"SIZE_100","120cm":"SIZE_120"};
- const deliveryKey=tiers[sku?.sizeClass||product.sizeClass],tariff=params.delivery?.[deliveryKey];
+ const tariff=params.delivery?.[deliveryKey(sku?.sizeClass||product.sizeClass)];
  const jpack=mode.fulfillment==="direct"?0:c.japanPackagingJpy[product.packagingMaterial];
- const delivery=mode.fulfillment==="direct"?0:(tariff?.enabled!==false?tariff?.fee:null);
+ const delivery=mode.fulfillment==="direct"?0:tariff?.fee;
  if(!valid(delivery)||!valid(jpack))return {status:"unconfigured",reason:"日本配送或包装费用尚未配置"};
  const japan=jpack+delivery;
  const price=Number(sku?.price??product.salePriceJpy??0);
  const rates=product.rates||{};
- const platformRate=Number(shop.platformFeeRate); // Single shared platform fee rate; UI has no per-product override.
+ const platformRate=Number(storePlatformRate(params,product.targetShopRef)); // Store profile, falling back to the shared rate.
  if(!valid(platformRate)||platformRate>=100)return {status:"unconfigured",reason:"平台费率无效"};
  const platform=money(price*platformRate/100);
  const feeRates=["coupon","points","ads","other"].map(k=>Number(rates[k]??0));

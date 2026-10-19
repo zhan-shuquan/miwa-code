@@ -1,0 +1,152 @@
+name: AIONE Canonical Store Registry Legacy Compatibility
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - data-code/migrations/0112_canonical_store_registry.sql
+      - data-code/audits/PR206_CURRENT_MIGRATION_READONLY.sql
+      - data-code/seeds/PR206_PROVISIONAL_STORES_INACTIVE.sql
+      - data-code/seeds/PR206_ACTIVATE_NAGAI_ONLY_APPROVED.sql
+      - apps/systems/aione/backend/scripts/check-current-migration-inventory.js
+      - .github/workflows/aione-store-registry-legacy.yml
+permissions:
+  contents: read
+jobs:
+  isolated-legacy-registry:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aione_ci
+          POSTGRES_PASSWORD: aione_ci
+          POSTGRES_DB: aione_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aione_ci -d aione_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: aione_ci
+      PGPASSWORD: aione_ci
+      PGDATABASE: aione_ci
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create representative old lifecycle tables
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE TABLE public.products(id text PRIMARY KEY, product_code text NOT NULL);
+          INSERT INTO public.products(id,product_code) VALUES('legacy-product','legacy-code');
+          CREATE TABLE public.channel_listings(
+            id text PRIMARY KEY,
+            product_id text NOT NULL REFERENCES public.products(id),
+            channel text NOT NULL,
+            shop_ref text NOT NULL,
+            UNIQUE(product_id,channel,shop_ref)
+          );
+          INSERT INTO public.channel_listings(id,product_id,channel,shop_ref)
+            VALUES('legacy-listing','legacy-product','rakuten','永井GD');
+          SQL
+      - name: Verify read-only CURRENT audit tolerates missing migration registry
+        run: |
+          psql -v ON_ERROR_STOP=1 -f data-code/audits/PR206_CURRENT_MIGRATION_READONLY.sql
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT CASE WHEN to_regclass('public.schema_migrations') IS NULL THEN 'PASS' ELSE 'FAIL' END" | grep -Fx PASS
+      - name: Run additive migration twice and verify old data remains unchanged
+        run: |
+          psql -v ON_ERROR_STOP=1 -f data-code/migrations/0112_canonical_store_registry.sql
+          psql -v ON_ERROR_STOP=1 -f data-code/migrations/0112_canonical_store_registry.sql
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          DO $check$
+          BEGIN
+            IF (SELECT count(*) FROM public.products WHERE id='legacy-product') <> 1
+              OR (SELECT count(*) FROM public.channel_listings WHERE id='legacy-listing' AND shop_ref='永井GD') <> 1
+            THEN RAISE EXCEPTION 'Historical product/listing was changed'; END IF;
+            IF to_regclass('public.listings') IS NOT NULL
+            THEN RAISE EXCEPTION 'A second listings table was unexpectedly created'; END IF;
+            IF (SELECT count(*) FROM public.stores) <> 0
+              OR (SELECT count(*) FROM public.platforms) <> 0
+            THEN RAISE EXCEPTION 'Unverified store accounts were invented'; END IF;
+          END $check$;
+          INSERT INTO public.platforms(code,name) VALUES ('RAKUTEN_CI','Rakuten CI');
+          INSERT INTO public.stores(code,name,platform_id)
+            SELECT 'CI_STORE','CI store',id FROM public.platforms WHERE code='RAKUTEN_CI';
+          DO $check$
+          BEGIN
+            IF NOT EXISTS(
+              SELECT 1 FROM public.stores s
+              JOIN public.platforms p ON p.id=s.platform_id
+              WHERE s.code='CI_STORE' AND s.status='active' AND p.status='active'
+            ) THEN RAISE EXCEPTION 'Store FK/read contract failed'; END IF;
+          END $check$;
+          SQL
+      - name: Check migration inventory script syntax (no live DB connection)
+        run: node --check apps/systems/aione/backend/scripts/check-current-migration-inventory.js
+      - name: Verify inventory checker against isolated PostgreSQL
+        env:
+          DATABASE_URL: postgresql://aione_ci:aione_ci@localhost:5432/aione_ci
+        run: |
+          set -euo pipefail
+          cd apps/systems/aione/backend
+          npm install --package-lock=false --no-audit --no-fund
+          TEST_DIR="$(mktemp -d)"
+          export AIONE_MIGRATIONS_DIR="$TEST_DIR"
+          printf 'SELECT 1;\\n' > "$TEST_DIR/9001_first.sql"
+          printf 'SELECT 1;\\n' > "$TEST_DIR/9002_second.sql"
+          # Missing migration registry must fail closed without creating it.
+          if node scripts/check-current-migration-inventory.js; then
+            echo 'FAIL: missing migration registry allowed' >&2
+            exit 1
+          fi
+          psql -v ON_ERROR_STOP=1 -c "CREATE TABLE public.schema_migrations(version text PRIMARY KEY, description text NOT NULL)"
+          psql -v ON_ERROR_STOP=1 -c "INSERT INTO public.schema_migrations VALUES ('9001','first')"
+          # One unapplied migration must block release.
+          if node scripts/check-current-migration-inventory.js; then
+            echo 'FAIL: pending migration allowed' >&2
+            exit 1
+          fi
+          psql -v ON_ERROR_STOP=1 -c "INSERT INTO public.schema_migrations VALUES ('9002','second')"
+          node scripts/check-current-migration-inventory.js
+          psql -v ON_ERROR_STOP=1 -c "INSERT INTO public.schema_migrations VALUES ('9999','unknown')"
+          # Unknown database version must block release.
+          if node scripts/check-current-migration-inventory.js; then
+            echo 'FAIL: unknown migration version allowed' >&2
+            exit 1
+          fi
+          # Checker is strictly read-only; test that its temporary registry rows still exist.
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.schema_migrations" | grep -Fx 3
+          echo 'PASS: read-only inventory checker blocks absent, pending and unknown versions'
+      - name: Test provisional store seed idempotency and conflict rollback
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -c "INSERT INTO public.schema_migrations VALUES ('0112','canonical store registry')"
+          psql -v ON_ERROR_STOP=1 -f data-code/seeds/PR206_PROVISIONAL_STORES_INACTIVE.sql
+          psql -v ON_ERROR_STOP=1 -f data-code/seeds/PR206_PROVISIONAL_STORES_INACTIVE.sql
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.stores s JOIN public.platforms p ON p.id=s.platform_id WHERE s.code IN ('NAGAI_GD','SHIAWASEYA','PRIMELIFE') AND s.status='inactive' AND p.code='RAKUTEN' AND p.status='inactive' AND s.external_store_id IS NULL" | grep -Fx 3
+          psql -v ON_ERROR_STOP=1 -c "UPDATE public.stores SET name='mismatched' WHERE code='NAGAI_GD'"
+          if psql -v ON_ERROR_STOP=1 -f data-code/seeds/PR206_PROVISIONAL_STORES_INACTIVE.sql; then
+            echo 'FAIL: seed ignored an existing stable-code conflict' >&2
+            exit 1
+          fi
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.stores WHERE code IN ('NAGAI_GD','SHIAWASEYA','PRIMELIFE')" | grep -Fx 3
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.products WHERE id='legacy-product'" | grep -Fx 1
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.channel_listings WHERE id='legacy-listing'" | grep -Fx 1
+          echo 'PASS: provisional seed repeat-safe, fails closed on name conflict, legacy rows preserved'
+      - name: Test approved Nagai-only activation and safe repeat
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -c "UPDATE public.stores SET name='永井GD' WHERE code='NAGAI_GD'"
+          psql -v ON_ERROR_STOP=1 -f data-code/seeds/PR206_ACTIVATE_NAGAI_ONLY_APPROVED.sql
+          psql -v ON_ERROR_STOP=1 -f data-code/seeds/PR206_ACTIVATE_NAGAI_ONLY_APPROVED.sql
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.stores WHERE code='NAGAI_GD' AND status='active'" | grep -Fx 1
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.stores WHERE code IN ('SHIAWASEYA','PRIMELIFE') AND status='inactive'" | grep -Fx 2
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.stores WHERE external_store_id IS NOT NULL" | grep -Fx 0
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.products WHERE id='legacy-product'" | grep -Fx 1
+          echo 'PASS: only Nagai GD enabled, repeat safe; other two and products untouched'
+      - name: Validate required column contract
+        run: |
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name='stores' AND column_name IN ('id','code','name','status','platform_id')) OR (table_name='platforms' AND column_name IN ('id','code','name','status')))" | grep -Fx 9
+          echo 'PASS: isolated legacy database and canonical store compatibility'

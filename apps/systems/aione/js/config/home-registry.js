@@ -51,7 +51,7 @@ export const HOME_PAGE_MODEL = Object.freeze({
  */
 export const PRODUCT_HOME_CENTERS = Object.freeze([
   center("selection-center", "选品中心", { route: "product-home?center=selection-center", icon: "search", tabs: ["概览", "选品一览", "选品方法"], status: "active" }),
-  center("product-center", "商品中心", { route: "product-home?center=product-center&view=1", icon: "product", tabs: ["商品一览", "SKU一览"], status: "active" }),
+  center("product-center", "商品中心", { route: "product-home?center=product-center&view=1", icon: "product", tabs: ["商品列表", "SKU列表", "图片列表", "上架链接"], status: "active" }),
   center("profit-center", "利润中心", { route: "product-home?center=profit-center", icon: "analysis", tabs: ["利润一览", "利润分析"], status: "active" }),
   center("design-center", "设计中心", { route: "product-home?center=design-center", icon: "file", tabs: ["概览", "设计一览", "AI批量出图", "图片管理", "设计模板", "模板映射"], status: "validating" }),
   center("publish-center", "发布中心", { route: "product-home?center=publish-center", icon: "publishing", tabs: ["概览", "发布一览", "商品发布", "分类发布", "图片发布", "商品删除", "导入任务", "发布批次", "发布任务", "错误追踪", "发布模板", "发布映射"], status: "validating" }),
@@ -69,6 +69,7 @@ export const PRODUCT_HOME_CENTERS = Object.freeze([
 ]);
 
 export const SHARED_HOME_CENTERS = Object.freeze([
+  center("settings-center", "设置中心", {route:"shared-settings",icon:"settings",status:"active"}),
   center("shared-file-center", "文件中心", { tabs: ["全部", "文档", "PDF", "演示文稿", "压缩文件", "其他文件"], defaultView: "list" }),
   center("shared-image-center", "图片中心", { tabs: ["全部", "商品图片", "场景图片", "模特图片", "品牌图片", "企业图片", "宣传图片", "素材图片"], defaultView: "grid" }),
   center("shared-icon-center", "图标中心", { tabs: ["全部", "系统图标", "业务图标", "状态图标", "品牌图标", "商品图标"], defaultView: "grid" }),

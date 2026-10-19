@@ -1,6 +1,7 @@
 import { PRODUCT_HOME_CENTERS } from "../config/home-registry.js?v=20261011-product-center-v7";
 import { aioneApi } from "../services/aione-api-client.js";
-import { showProducts, showSkuList, openProductEditor } from "./product-manual-entry.js?v=20261012-local-image-sync";
+import { showProducts, showSkuList, openProductEditor } from "./product-manual-entry.js?v=20261018-erp-v1";
+import { showProductImages, showProductLinks } from "./product-erp-secondary-lists.js";
 
 const PRODUCT_REF="MH0000002";
 const SELECTION_REF="SEL-20260907-000001";
@@ -117,6 +118,8 @@ async function renderCenter(host,center,index){
   // 保留现有 view=1 商品一览、view=2 SKU一览深链。
   if(center.id==="product-center"){
     if(index===2)return showSkuList(host);
+    if(index===3)return showProductImages(host);
+    if(index===4)return showProductLinks(host);
     return showProducts(host);
   }
   const label=center.tabs[index]||center.tabs[0],type=(VIEW_TYPES[center.id]||[])[index]||"overview";

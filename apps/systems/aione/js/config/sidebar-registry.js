@@ -129,8 +129,10 @@ function buildRegistryHomeItems(rootId) {
       route: item.route || `${rootId}?center=${encodeURIComponent(item.id)}`,
       icon: item.icon || "",
       children: rootId === "product-home" && item.id === "product-center" ? [
-        { id: "product-list", label: "商品一览", route: "product-home?center=product-center&view=1", icon: "list" },
-        { id: "sku-list", label: "SKU一览", route: "product-home?center=product-center&view=2", icon: "layers" }
+        { id: "product-list", label: "商品列表", route: "product-home?center=product-center&view=1", icon: "list" },
+        { id: "sku-list", label: "SKU列表", route: "product-home?center=product-center&view=2", icon: "layers" },
+        { id: "image-list", label: "图片列表", route: "product-home?center=product-center&view=3", icon: "file" },
+        { id: "store-links", label: "上架链接", route: "product-home?center=product-center&view=4", icon: "store" }
       ] : [],
       sectionGapBefore: Boolean(item.sectionGapBefore)
     });
@@ -195,6 +197,6 @@ export function resolveSidebarContext(routeId) {
     items: buildPlatformItems(rootId),
     activeWorkbenchId: null,
     primaryAction: null,
-    quickActions: publicationActions
+    quickActions: [...publicationActions, ...(homeDefinition ? [{id:"home-settings",label:"设置",icon:"settings",route:`shared-settings?home=${rootId}`}] : [])]
   };
 }

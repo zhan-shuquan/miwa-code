@@ -36,3 +36,11 @@ for(const [overrides,reason] of [
 const missingCatalog=previewRakutenItemV2({product:{...product,extraAttributes:{}},skus,assets,genre,shipping});
 assert.ok(missingCatalog.blocking.includes("sku_catalog_id_or_exemption_unverified"));
 console.log("PASS ItemAPI 2.0 read-only payload + guarded SKU / image / genre contract");
+
+const skuPricing=previewRakutenItemV2({product:{...product,extraAttributes:{...product.extraAttributes,independentSkuPricing:"true"},skuOverrides:[{index:2,identity:"セット数=2個",priceJpy:1580}]},skus,assets,genre,shipping});
+assert.equal(skuPricing.readyForLiveCreate,true);
+assert.equal(skuPricing.item.variants["zjl238-01"].standardPrice,"980");
+assert.equal(skuPricing.item.variants["zjl238-02"].standardPrice,"1580","ItemAPI preview consumes effective SKU prices");
+const zeroPrice=previewRakutenItemV2({product:{...product,extraAttributes:{...product.extraAttributes,independentSkuPricing:"true"},skuOverrides:[{index:2,priceJpy:0}]},skus,assets,genre,shipping});
+assert.equal(zeroPrice.readyForLiveCreate,false);
+assert.ok(zeroPrice.blocking.includes("tax_included_price_invalid"));

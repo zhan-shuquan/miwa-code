@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {resolveBackendTarget} from '../js/config/backend-preview-target.js';
+const current='https://aione-backend-current-jjlnxogxta-an.a.run.app';
+const target='https://candidate-abcdef1---aione-backend-current-jjlnxogxta-an.a.run.app';
+const env={VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feat/product-center-erp-unified-20261017',VERCEL_GIT_COMMIT_SHA:'abcdef1'+'0'.repeat(33),AIONE_PRODUCT_PREVIEW_BACKEND_URL:target};
+assert.deepEqual(resolveBackendTarget(env,current),{backendUrl:target,tokenAudience:current});
+for(const patch of [{VERCEL_ENV:'production'},{VERCEL_ENV:'development'},{VERCEL_GIT_COMMIT_REF:'unreviewed'},{AIONE_PRODUCT_PREVIEW_BACKEND_URL:''}])assert.equal(resolveBackendTarget({...env,...patch},current).backendUrl,current);
+for(const value of ['https://example.com',target+'/api',target+'?x=1',target+'#x',target.replace('https:','http:'),target.replace('current','other'),target.replace('https://','https://user:pass@')])assert.throws(()=>resolveBackendTarget({...env,AIONE_PRODUCT_PREVIEW_BACKEND_URL:value},current));
+assert.equal(resolveBackendTarget({...env,AIONE_PRODUCT_PREVIEW_BACKEND_URL:'',AIONE_SETTINGS_PREVIEW_BACKEND_URL:target},current).backendUrl,current,'settings preview cannot redirect the product branch');
+assert.throws(()=>resolveBackendTarget({...env,VERCEL_GIT_COMMIT_SHA:'0'.repeat(40)},current),/product_preview_commit_mismatch/);
+assert.throws(()=>resolveBackendTarget({...env,VERCEL_GIT_COMMIT_SHA:''},current),/product_preview_commit_mismatch/);
+console.log('PASS product preview: branch-specific target, private CURRENT tag only, unchanged IAM audience and production route');

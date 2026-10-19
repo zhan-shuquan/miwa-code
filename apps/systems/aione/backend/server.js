@@ -1,5 +1,6 @@
 import express from "express";
 import pool from "./db.js";
+import {businessNumberCountersReady} from "./src/services/business-code-numbering.js";
 import coreRouter from "./src/routes/core.js";
 import currentUserRouter from "./src/routes/me.js";
 import aiSecretaryRouter from "./src/routes/ai-secretary.js";
@@ -42,15 +43,17 @@ app.use((req, res, next) => {
 
 app.get("/health", async (req, res) => {
   try {
-    const [dbResult, migrationResult] = await Promise.all([
+    const [dbResult, migrationResult, numbering] = await Promise.all([
       pool.query("SELECT NOW() AS database_time"),
-      pool.query("SELECT version, applied_at FROM public.schema_migrations ORDER BY applied_at DESC LIMIT 1").catch(() => ({ rows: [] }))
+      pool.query("SELECT version, applied_at FROM public.schema_migrations ORDER BY applied_at DESC LIMIT 1").catch(() => ({ rows: [] })),
+      businessNumberCountersReady(pool)
     ]);
     res.json({
       ok: true,
       service: "aione-backend",
       apiVersion: "v1",
       database: "connected",
+      businessNumberCountersReady: numbering,
       databaseTime: dbResult.rows[0].database_time,
       latestMigration: migrationResult.rows[0] || null
     });
