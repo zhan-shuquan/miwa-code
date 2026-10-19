@@ -69,6 +69,7 @@ export const PRODUCT_HOME_CENTERS = Object.freeze([
 ]);
 
 export const SHARED_HOME_CENTERS = Object.freeze([
+  center("settings-center", "设置中心", {route:"shared-settings",icon:"settings",status:"active"}),
   center("shared-file-center", "文件中心", { tabs: ["全部", "文档", "PDF", "演示文稿", "压缩文件", "其他文件"], defaultView: "list" }),
   center("shared-image-center", "图片中心", { tabs: ["全部", "商品图片", "场景图片", "模特图片", "品牌图片", "企业图片", "宣传图片", "素材图片"], defaultView: "grid" }),
   center("shared-icon-center", "图标中心", { tabs: ["全部", "系统图标", "业务图标", "状态图标", "品牌图标", "商品图标"], defaultView: "grid" }),

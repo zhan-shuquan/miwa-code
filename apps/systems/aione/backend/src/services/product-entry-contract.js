@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import {productCustomColumns} from "../../../js/config/product-custom-columns.js";
 import {SKU_COST_FIELDS, findSkuOverride, resolveEffectiveSku} from "../../../js/config/product-effective-sku.js";
 
 // Stable business-field contract. Cell addresses belong only in the V7 WPS adapter.
@@ -64,7 +65,7 @@ function get(sheet, cell) { return sheet ? cellText(sheet.getCell(cell)) : ""; }
 export function normalizeProductEntry(input = {}) {
   const p = {};
   p.localCode = str(input.localCode).toLowerCase();
-  if (!/^[a-z]{2,8}[0-9]{2,6}$/.test(p.localCode)) throw bad("invalid_local_code", "商品货号必须类似zjl238、zsq081。");
+  if (!/^[a-z][a-z0-9-]{2,63}$/.test(p.localCode)) throw bad("invalid_local_code", "商品货号须为3至64位英文、数字或短横线，以字母开头。");
   for (const key of TEXTS) p[key] = str(input[key]);
   for (const key of NUMBERS) p[key] = num(input[key], key);
   if (!p.sourcePlatform && p.purchaseUrl) {
@@ -78,7 +79,8 @@ export function normalizeProductEntry(input = {}) {
   }
   p.logisticsMethod ||= "空运大件（普货）";
   p.packagingMethod ||= "原装";
-  if(!["原装","真空包装","重新包装","定制包装"].includes(p.packagingMethod))throw bad("invalid_packaging_method","包装方式必须采用新的四种类型");
+  // Catalog membership is checked against active shared settings inside the save transaction.
+  if(p.packagingMethod.length>80)throw bad("invalid_packaging_method","包装方式名称过长");
   if(p.packagingMethod==="定制包装"&&(p.customPackagingCostCny===null||p.customPackagingCostCny<0))throw bad("custom_packaging_cost_required","定制包装需要实际中国包装成本");
   p.packagingMaterial ||= "A4信封";
   p.originCountry ||= "中国";
@@ -86,6 +88,13 @@ export function normalizeProductEntry(input = {}) {
   p.domesticFreightCny ??= 0;
   if (p.actualShipmentWeightG !== null && p.actualShipmentWeightG <= 0) throw bad("invalid_shipment_weight", "实际发货重量必须大于0，未称重请留空。");
   p.extraAttributes = {};
+  p.customSettings = {};
+  if(input.customSettings!==undefined){
+    if(!input.customSettings||typeof input.customSettings!=="object"||Array.isArray(input.customSettings))throw bad("invalid_custom_settings","自定义资料引用必须是对象。");
+    const refs=Object.entries(input.customSettings);
+    if(refs.length>80||refs.some(([key,value])=>["__proto__","constructor","prototype"].includes(key)||key.length>80||typeof value!=="string"||value.length>80))throw bad("invalid_custom_settings","自定义资料引用无效。");
+    p.customSettings=Object.fromEntries(refs);
+  }
   if (input.extraAttributes && typeof input.extraAttributes === "object" && !Array.isArray(input.extraAttributes)) {
     for (const [key, value] of Object.entries(input.extraAttributes).slice(0, 80)) {
       const name = str(key).slice(0, 80);
@@ -264,14 +273,20 @@ function fromBatch(workbook, filename) {
     raw.skuOverrides = overrideRows.get(str(raw.localCode).toLowerCase()) || [];
     const extended = {
       purchaseCostBasis:"采购计价单位", extraAttributes:"其他属性JSON", defaultStock:"SKU默认库存", sourcePlatform:"来源", originCountry:"原产国",
-      rakutenStoreCategory:"乐天店铺分类", rates:"运营费率JSON", profitTargets:"利润目标JSON", specs:"完整规格JSON"
+      rakutenStoreCategory:"乐天店铺分类", rates:"运营费率JSON", profitTargets:"利润目标JSON", specs:"完整规格JSON",customSettings:"自定义资料引用JSON"
     };
     for (const [key,header] of Object.entries(extended)) {
       const col=columns.get(header); if(!col)continue;
       const rawCell=cellText(row.getCell(col));
-      if(["rates","profitTargets","specs","extraAttributes"].includes(key) && str(rawCell)) {
+      if(["rates","profitTargets","specs","extraAttributes","customSettings"].includes(key) && str(rawCell)) {
         try {raw[key]=JSON.parse(rawCell);}catch {throw bad("invalid_json_field","第"+rowNo+"行"+header+"不是有效JSON。");}
       }else if(str(rawCell))raw[key]=rawCell;
+    }
+    for(const [header,col] of columns){
+      if(!header.startsWith("资料ID:"))continue;
+      const category=header.slice(5);raw.customSettings??={};
+      const value=str(cellText(row.getCell(col)));
+      if(value)raw.customSettings[category]=value;else delete raw.customSettings[category];
     }
     try { items.push(normalizeProductEntry(raw)); }
     catch (e) { throw bad("batch_row_invalid", "批量导入第" + rowNo + "行：" + e.message); }
@@ -290,12 +305,13 @@ export async function parseProductEntryWorkbook(bytes, filename = "") {
   return book.getWorksheet("商品信息") ? fromWps(book, filename) : fromBatch(book, filename);
 }
 
-export async function exportProductEntries(items) {
+export async function exportProductEntries(items,parameters=null) {
   const book = new ExcelJS.Workbook();
   book.creator = "AIONE";
   const main = book.addWorksheet("商品一览");
-  const extras = [["purchaseCostBasis","采购计价单位"],["extraAttributes","其他属性JSON"],["defaultStock","SKU默认库存"],["sourcePlatform","来源"],["originCountry","原产国"],["rakutenStoreCategory","乐天店铺分类"],["rates","运营费率JSON"],["profitTargets","利润目标JSON"],["specs","完整规格JSON"]];
-  main.addRow([...FIELD_KEYS.map(pair => pair[1]),...extras.map(pair=>pair[1])]);
+  const customColumns=productCustomColumns(parameters,items);
+  const extras = [["customSettings","自定义资料引用JSON"],["purchaseCostBasis","采购计价单位"],["extraAttributes","其他属性JSON"],["defaultStock","SKU默认库存"],["sourcePlatform","来源"],["originCountry","原产国"],["rakutenStoreCategory","乐天店铺分类"],["rates","运营费率JSON"],["profitTargets","利润目标JSON"],["specs","完整规格JSON"]];
+  main.addRow([...FIELD_KEYS.map(pair => pair[1]),...extras.map(pair=>pair[1]),...customColumns.map(c=>c.selection?"资料ID:"+c.categoryId:c.label+"（只读）")]);
   const sku = book.addWorksheet("SKU明细");
   sku.addRow(SKU_EXPORT_HEADERS);
   for (const p of items) {
@@ -307,7 +323,7 @@ export async function exportProductEntries(items) {
         row[key] = match[2] === "Name" ? (spec.name || "") : (spec.values || []).join("|");
       } else row[key] = p[key] ?? "";
     }
-    main.addRow([...FIELD_KEYS.map(pair => row[pair[0]]),...extras.map(([key])=>["rates","profitTargets","specs","extraAttributes"].includes(key)?JSON.stringify(p[key]||{}):(p[key]??""))]);
+    main.addRow([...FIELD_KEYS.map(pair => row[pair[0]]),...extras.map(([key])=>["rates","profitTargets","specs","extraAttributes","customSettings"].includes(key)?JSON.stringify(p[key]||{}):(p[key]??"")),...customColumns.map(c=>c.selection?p.customSettings?.[c.categoryId]||"":c.value(p))]);
     for (const o of p.skuOverrides || []) sku.addRow([p.localCode, o.index, o.priceJpy ?? "", o.stock ?? "", o.purchaseCostCny ?? "", o.weightG ?? "", o.sizeClass || "", o.imageFile || "", o.identity || "", JSON.stringify(Object.fromEntries(SKU_COST_FIELDS.filter(key => o[key] !== undefined).map(key => [key, o[key]])))]);
   }
   for (const ws of [main, sku]) {

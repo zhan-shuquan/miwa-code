@@ -15,6 +15,7 @@ const route = (id, label, kind, options = {}) => Object.freeze({
 });
 
 export const ROUTE_REGISTRY = Object.freeze({
+  "shared-settings": route("shared-settings", "设置中心", "platform", {status:"active",parent:"shared-home"}),
   company: route("company", "美和之家", "platform", { status: "active", page: "./pages/company-home/template.html" }),
 
   /* 美和之家：两级树形目录。目录按长期格局设计，内容按当前事实逐步补充。 */

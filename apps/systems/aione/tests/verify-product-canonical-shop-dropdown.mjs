@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const src=readFileSync(new URL('../js/pages/product-manual-entry.js',import.meta.url),'utf8');
+assert.ok(src.includes("function canonicalShopOptions(current)"));
+assert.ok(src.includes("LIVE_STORES.filter(s=>s.status==='active'&&s.platform_status==='active')"));
+assert.ok(src.includes("disabled:true"));
+assert.ok(src.includes("canonicalShopOptions(p.targetShopRef)"));
+assert.ok(src.includes('targetShopRef:""'));
+assert.ok(!src.includes('const SHOP=['));
+const functionBody=src.match(/function canonicalShopOptions\(current\)\{([^\n]+)\}/)?.[1];
+assert.ok(functionBody);
+const allowed=new Function('LIVE_STORE_CATALOG_READY','LIVE_STORES','current','return (function canonicalShopOptions(current){'+functionBody+'})(current)');
+const records=[{name:'永井GD',status:'inactive',platform_status:'inactive'}, {name:'幸せ屋',status:'active',platform_status:'inactive'}, {name:'PrimeLife',status:'active',platform_status:'active'}];
+assert.deepEqual(allowed(true,records,''),[{value:'PrimeLife',label:'PrimeLife'}]);
+assert.deepEqual(allowed(true,records,'永井GD'),[{value:'永井GD',label:'永井GD（历史值／当前不可新选）',disabled:true},{value:'PrimeLife',label:'PrimeLife'}]);
+assert.deepEqual(allowed(false,records,''),[]);
+assert.deepEqual(allowed(false,records,'永井GD'),[{value:'永井GD',label:'永井GD（历史值／当前不可新选）',disabled:true}]);
+console.log('PASS: only active canonical stores selectable, historical inactive preserved disabled, missing registry fails closed');

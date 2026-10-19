@@ -4,6 +4,8 @@ on:
     paths:
       - 'apps/systems/aione/backend/src/**'
       - 'apps/systems/aione/backend/scripts/test-product-effective-sku*.js'
+      - 'apps/systems/aione/backend/scripts/test-product-settings-sku*.js'
+      - 'apps/systems/aione/js/config/product-custom-columns.js'
       - 'apps/systems/aione/js/config/product-effective-sku.js'
       - 'apps/systems/aione/js/config/product-shared-cost-engine.js'
       - 'apps/systems/aione/js/components/erp-data-grid.js'
@@ -33,9 +35,11 @@ jobs:
       - name: Verify effective SKU costs and price contracts
         run: |
           node apps/systems/aione/backend/scripts/test-product-effective-sku.js
+          node apps/systems/aione/backend/scripts/test-product-settings-sku-integration.js
           node apps/systems/aione/backend/scripts/test-rakuten-itemapi2-payload-preview.js
           node apps/systems/aione/js/config/product-shared-cost-engine.test.js
       - name: Verify SKU editor interactions
         run: |
           npm install --prefix /tmp/aione-ui-tests --no-package-lock --ignore-scripts --no-audit --no-fund jsdom@30.1.3
           AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-product-effective-sku-ui.js
+          AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-product-settings-sku-ui.js

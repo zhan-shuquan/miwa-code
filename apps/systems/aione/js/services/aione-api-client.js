@@ -116,7 +116,8 @@ function filenameFromDisposition(value, fallback = "download") {
 export async function aioneDownload(path, options = {}) {
   const base = getAioneApiBaseUrl();
   const response = await fetch(`${base}${path}`, {
-    method: "GET",
+    method: options.method || "GET",
+    ...(options.body!==undefined?{body:options.body}:{}),
     headers: { ...actorHeaders(), Accept: options.accept || "application/octet-stream", ...(options.headers || {}) },
     cache: "no-store"
   });

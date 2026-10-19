@@ -4,6 +4,24 @@ on:
     branches:
       - main
     paths:
+      - apps/systems/aione/backend/src/services/settings-catalog-workbook.js
+      - apps/systems/aione/backend/scripts/test-settings-catalog-workbook.js
+      - apps/systems/aione/js/config/product-spec-settings.js
+      - apps/systems/aione/js/config/product-store-settings.js
+      - apps/systems/aione/backend/src/services/settings-stores.js
+      - apps/systems/aione/backend/scripts/test-store-delivery-settings*.js
+      - apps/systems/aione/js/config/product-setting-catalogs.js
+      - apps/systems/aione/backend/scripts/test-product-spec-settings*.js
+      - apps/systems/aione/backend/scripts/test-product-setting-catalogs*.js
+      - apps/systems/aione/js/config/custom-settings.js
+      - apps/systems/aione/js/pages/custom-settings-editor.js
+      - apps/systems/aione/js/pages/product-custom-settings.js
+      - apps/systems/aione/backend/src/services/custom-settings-workbook.js
+      - apps/systems/aione/backend/scripts/test-custom-settings*.js
+      - apps/systems/aione/js/config/settings-catalog.js
+      - apps/systems/aione/js/pages/settings-center.js
+      - apps/systems/aione/backend/src/services/product-catalog-selection.js
+      - apps/systems/aione/backend/scripts/test-settings-center*.js
       - data-code/migrations/0103_product_asset_sku_identity_link.sql
       - apps/systems/aione/backend/tools/windows/SYNC_AIONE_PRODUCT_IMAGES.ps1
       - apps/systems/aione/backend/src/services/product-local-image-sync-contract.js
@@ -41,6 +59,12 @@ on:
       - apps/systems/aione/backend/src/routes/product-image-sync.js
       - apps/systems/aione/backend/scripts/test-product-image-name-current.js
       - data-code/migrations/0110_p0_unified_shared_parameters.sql
+      - data-code/migrations/0111_business_number_counters.sql
+      - apps/systems/aione/js/config/business-code-rules.js
+      - apps/systems/aione/js/pages/settings-*.js
+      - apps/systems/aione/backend/src/services/settings-reference-usage.js
+      - apps/systems/aione/backend/src/services/business-code-numbering.js
+      - apps/systems/aione/backend/scripts/test-settings-foundation*.js
       - apps/systems/aione/js/config/shared-parameter-defaults.js
       - apps/systems/aione/js/config/product-shared-cost-engine.js
       - apps/systems/aione/js/config/product-shared-cost-engine.test.js
@@ -179,6 +203,10 @@ jobs:
         env:
           PGPASSWORD: aione_ci
         run: psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -f data-code/current/0001_aione_current_baseline.sql
+      - name: Initialize configurable business number counters
+        env:
+          PGPASSWORD: aione_ci
+        run: psql -h localhost -U aione_ci -d aione_ci -v ON_ERROR_STOP=1 -f data-code/migrations/0111_business_number_counters.sql
       - name: Validate SKU asset FK on disposable CURRENT baseline
         env:
           PGPASSWORD: aione_ci
@@ -295,3 +323,48 @@ jobs:
         run: |
           node scripts/test-product-entry-current.js
           node scripts/test-product-effective-sku-db.js
+      - name: Validate settings center schema and permissions
+        run: node apps/systems/aione/backend/scripts/test-settings-center.js
+      - name: Verify settings center persistence and concurrent deletion on disposable Postgres
+        run: node apps/systems/aione/backend/scripts/test-settings-center-db.js
+
+      - name: Verify Excel settings templates and import validation
+        run: node apps/systems/aione/backend/scripts/test-settings-catalog-workbook.js
+
+      - name: Verify canonical store dropdown rejects inactive records
+        run: node apps/systems/aione/tests/verify-product-canonical-shop-dropdown.mjs
+      - name: Verify custom settings schema, product adapter and dynamic Excel
+        run: |
+          node apps/systems/aione/backend/scripts/test-product-settings-sku-integration.js
+          node apps/systems/aione/backend/scripts/test-store-delivery-settings.js
+          node apps/systems/aione/backend/scripts/test-custom-settings.js
+          node apps/systems/aione/backend/scripts/test-product-setting-catalogs.js
+          node apps/systems/aione/backend/scripts/test-product-spec-settings.js
+      - name: Verify custom settings and product editor interactions
+        run: |
+          npm install --prefix /tmp/aione-ui-tests --no-package-lock --ignore-scripts jsdom@30.1.3
+          AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-settings-foundation-ui.js
+          AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-custom-settings-ui.js
+          AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-settings-center-ui.js
+          AIONE_JSDOM_MODULE=/tmp/aione-ui-tests/node_modules/jsdom/lib/api.js node apps/systems/aione/backend/scripts/test-store-delivery-settings-ui.js
+
+      - name: Verify settings foundation on disposable Postgres
+        run: node apps/systems/aione/backend/scripts/test-settings-foundation-db.js
+
+      - name: Verify bound product catalogs on disposable Postgres
+        run: node apps/systems/aione/backend/scripts/test-product-setting-catalogs-db.js
+
+      - name: Verify spec catalogs and preserved SKU identities on disposable Postgres
+        run: node apps/systems/aione/backend/scripts/test-product-spec-settings-db.js
+
+      - name: Verify canonical store and delivery settings on disposable Postgres
+        run: node apps/systems/aione/backend/scripts/test-store-delivery-settings-db.js
+      - name: Verify combined settings and SKU persistence and deletion protection
+        env:
+          PGPASSWORD: aione_ci
+        run: |
+          createdb -h localhost -U aione_ci aione_joint_sku
+          psql -h localhost -U aione_ci -d aione_joint_sku -v ON_ERROR_STOP=1 -f data-code/current/0001_aione_current_baseline.sql
+          psql -h localhost -U aione_ci -d aione_joint_sku -v ON_ERROR_STOP=1 -f data-code/migrations/0110_p0_unified_shared_parameters.sql
+          psql -h localhost -U aione_ci -d aione_joint_sku -v ON_ERROR_STOP=1 -f data-code/migrations/0111_business_number_counters.sql
+          DATABASE_URL=postgresql://aione_ci:aione_ci@localhost:5432/aione_joint_sku node apps/systems/aione/backend/scripts/test-product-settings-sku-db.js
