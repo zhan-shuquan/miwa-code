@@ -10,11 +10,11 @@ let product={id:'joint-ui',localCode:'joint209',nameZh:'联合DOM验收',salePri
 const dom=new JSDOM('<!doctype html><div id="host"></div>',{url:'http://localhost/'});
 for(const key of ['window','document','location','localStorage','sessionStorage','CustomEvent','Event','HTMLElement','AbortController'])globalThis[key]=dom.window[key];
 window.confirm=()=>true;
-let saved;
+let saved,numberingReady=true;
 globalThis.fetch=async(url,options={})=>{
  let data={items:[],assets:[],categories:[]};
  if(url.endsWith('/shared-parameters'))data={parameters,capabilities:{customSettings:true,productCatalogBindings:true,specCatalogBindings:true,deliveryCatalogBindings:true},usage:{}};
- if(url.endsWith('/sku-contract'))data={version:'effective-sku-v1'};
+ if(url.endsWith('/sku-contract'))data={version:'effective-sku-v1',businessNumberCountersReady:numberingReady};
  if(url.endsWith('/joint-ui'))data={product,skus:[{sku_code:'legacy-black-001',sku_data:{颜色:'黑色'}},{sku_code:'legacy-white-009',sku_data:{颜色:'白色'}}]};
  if(options.method==='PATCH'){saved=JSON.parse(options.body);data={product:{...saved,id:'joint-ui'}};}
  return {ok:true,json:async()=>structuredClone(data)};
@@ -38,5 +38,7 @@ product={...saved,id:'joint-ui'};openProductEditor(host,product);await tick();cl
 assert.equal(host.querySelector('[data-sku="2"][data-sku-field=price]').value,'1580');
 assert.equal(host.querySelector('[data-sku="2"][data-sku-field=sizeClass]').value,'SIZE_140');
 await showProducts(host);click('[data-eg-columns]');assert.ok(host.textContent.includes('洗护资料 · 说明'));
+const previousSaved=saved;numberingReady=false;openProductEditor(host);await tick();click('[data-save]');await tick();
+assert.equal(saved,previousSaved);assert.ok(host.textContent.includes('编号配置尚未就绪'));
 console.log('PASS joint editor DOM: configured spec choices, object delivery options, custom references, stable historical codes, price edits, mode persistence and configurable product columns');
 dom.window.close();

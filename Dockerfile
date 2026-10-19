@@ -20,6 +20,7 @@ COPY apps/systems/aione/js/config/product-effective-sku.js /app/apps/systems/aio
 COPY apps/systems/aione/js/config/shared-parameter-defaults.js /app/apps/systems/aione/js/config/shared-parameter-defaults.js
 # Catalog selection validation shares the frontend catalog definitions.
 COPY apps/systems/aione/js/config/settings-catalog.js /app/apps/systems/aione/js/config/settings-catalog.js
+COPY apps/systems/aione/js/config/settings-google-sheets-mapping.js /app/apps/systems/aione/js/config/settings-google-sheets-mapping.js
 COPY apps/systems/aione/js/config/product-spec-settings.js /app/apps/systems/aione/js/config/product-spec-settings.js
 COPY apps/systems/aione/js/config/product-store-settings.js /app/apps/systems/aione/js/config/product-store-settings.js
 COPY apps/systems/aione/js/config/product-setting-catalogs.js /app/apps/systems/aione/js/config/product-setting-catalogs.js

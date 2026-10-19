@@ -66,6 +66,10 @@ print(os.environ["MOCK_HEALTH"])
     assert result.returncode==0,(result.stdout,result.stderr)
     assert "read-only PASS" in result.stdout and "0 percent traffic" in result.stdout
     assert len(calls)==3,calls
+    for ready,expected in [(True,"counters schema read-only PASS"),(False,"[BLOCK] New product/SKU numbering requires reviewed 0111 migration")]:
+        result,calls=run(service(),{**good,"businessNumberCountersReady":ready})
+        assert result.returncode==0 and expected in result.stdout,(result.stdout,result.stderr)
+        assert len(calls)==3,calls
 
     for bad_service,bad_health,label in [
         (service(candidate_percent=1),good,"candidate has live traffic"),

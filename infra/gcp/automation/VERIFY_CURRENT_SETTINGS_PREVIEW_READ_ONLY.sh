@@ -26,6 +26,12 @@ printf '%s' "$health" | python3 -c 'import json,sys
 p=json.load(sys.stdin)
 if p.get("ok") is not True or p.get("database")!="connected":raise SystemExit("[STOP] Candidate health/database contract failed")
 print("[AIONE] Candidate /health read-only PASS")'
+printf '%s' "$health" | python3 -c 'import json,sys
+p=json.load(sys.stdin)
+ready=p.get("businessNumberCountersReady")
+if ready is True:print("[AIONE] Business number counters schema read-only PASS")
+elif ready is False:print("[AIONE][BLOCK] New product/SKU numbering requires reviewed 0111 migration; no migration was performed.")
+else:print("[AIONE] Numbering schema readiness not reported by this candidate; new SKU write acceptance remains unverified.")'
 printf '[AIONE] Candidate revision: %s\n' "$candidate_revision"
 echo '[AIONE] Candidate tag has 0 percent traffic; this check made no database change.'
 echo '[AIONE] Store-setting write acceptance remains BLOCKED until approved migration.'
