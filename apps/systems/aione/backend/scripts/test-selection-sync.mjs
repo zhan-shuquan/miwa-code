@@ -42,7 +42,7 @@ try {
   );
   assert.equal((await api("/bootstrap")).connection.online, false);
   const data = {
-    item_code: "sync" + Date.now(),
+    item_code: "sync" + Date.now().toString(36),
     item_name: "断线恢复隔离测试",
     custom_库存类型: "直发",
     custom_单个采购价: 4.7,

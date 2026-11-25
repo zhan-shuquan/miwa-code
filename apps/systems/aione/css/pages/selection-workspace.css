@@ -261,6 +261,219 @@
 .sw [data-skus] {
   overflow: auto;
 }
+/* V3.5 compact entry; group placement and field spans come from saved layout. */
+.sw-entry {
+  padding: 12px 20px;
+}
+.sw-entry .sw-heading h1 {
+  font-size: 21px;
+}
+.sw-entry .sw-status {
+  margin: 4px 0;
+}
+.sw-entry > .sw-warning {
+  padding: 4px 10px;
+  margin: 4px 0;
+  font-size: 12px;
+}
+.sw-entry .sw-actions {
+  margin: 6px 0;
+  padding: 6px 10px;
+}
+.sw-entry .sw-card {
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+}
+.sw-entry .sw-grid {
+  gap: 8px 12px;
+}
+.sw-entry .sw-card summary {
+  margin-bottom: 8px;
+}
+.sw-entry .sw-split {
+  grid-template-columns: minmax(0, var(--sw-left)) minmax(280px, 1fr);
+  gap: 14px;
+}
+.sw-entry input,
+.sw-entry select,
+.sw-entry textarea {
+  padding: 6px 8px;
+}
+.sw-entry textarea {
+  resize: vertical;
+  min-height: 64px;
+  width: 100%;
+}
+.sw-entry .sw-drop {
+  padding: 8px;
+  font-size: 12px;
+}
+.sw-entry .sw-drop label {
+  margin: 4px auto 0;
+  max-width: 100%;
+}
+.sw-entry .sw-drop input {
+  max-width: 100%;
+  font-size: 11px;
+}
+.sw-media-field {
+  min-width: 0;
+  align-self: start;
+}
+.sw-entry .sw-images {
+  margin: 4px 0;
+  gap: 4px;
+  max-height: 250px;
+  overflow: auto;
+}
+.sw-entry .sw-images:empty {
+  aspect-ratio: 1;
+  max-height: 140px;
+  background: #f5f7f4;
+  border: 1px dashed var(--sw-border);
+  border-radius: 6px;
+}
+.sw-entry .sw-images > div {
+  width: 100%;
+}
+.sw-entry .sw-images > div:not(:first-child) {
+  width: 80px;
+}
+.sw-entry .sw-images img {
+  width: 100%;
+  height: auto;
+  max-height: 140px;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+.sw-entry .sw-image-open {
+  width: 100%;
+}
+.sw-entry .sw-images > div:not(:first-child) img {
+  height: 60px;
+}
+.sw-url-actions,
+.sw-reference {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.sw-field:has([data-field="sourceUrl"]) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+.sw-field:has([data-field="sourceUrl"]) .sw-url-actions {
+  margin: 0;
+}
+.sw-cell-detail {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 900px) {
+  .sw-field:has([data-field="sourceUrl"]) {
+    grid-template-columns: 1fr;
+  }
+}
+.sw-reference input {
+  flex: 1;
+  min-width: 0;
+}
+.sw-url-actions a[aria-disabled="true"],
+.sw-reference a:not([href]) {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.sw-market-assets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sw-market-asset {
+  width: 130px;
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.sw-market-asset small {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sw-market-asset img {
+  width: 105px;
+  height: 65px;
+  object-fit: contain;
+}
+.sw-market-asset button {
+  padding: 3px 6px;
+  font-size: 12px;
+}
+.sw-entry .sw-profit {
+  max-height: calc(
+    100vh - var(--desktop-header-main, 68px) -
+      var(--desktop-header-info, 36px) - 90px
+  );
+  overflow: auto;
+  padding: 10px;
+}
+.sw-entry .sw-profit .sw-card {
+  border: 0;
+  border-bottom: 1px solid var(--sw-border);
+  padding: 6px 0;
+}
+.sw-entry .sw-cost-row {
+  margin: 1px 0;
+  align-items: center;
+  font-size: 13px;
+}
+.sw-entry .sw-highlight b {
+  font-size: 21px;
+  color: var(--sw-green);
+}
+.sw-entry .sw-loss,
+.sw-entry .sw-highlight b.sw-loss {
+  color: #b3261e;
+  font-weight: 600;
+}
+.sw-calculation-status {
+  font-size: 12px;
+  margin: 6px 0;
+}
+.sw-ai-result:empty {
+  display: none;
+}
+.sw-ai-result {
+  padding: 8px;
+  background: #f5f7f4;
+}
+.sw-layout-list input[type="number"] {
+  width: 58px;
+}
+@media (max-width: 900px) {
+  .sw-entry .sw-split {
+    grid-template-columns: 1fr;
+  }
+  .sw-entry .sw-profit {
+    max-height: none;
+    grid-row: auto;
+    position: static;
+  }
+  .sw-entry .sw-grid > * {
+    grid-column: span 12 !important;
+    grid-row: auto !important;
+  }
+  .sw-media-field {
+    max-width: 200px;
+  }
+}
 @media (max-width: 900px) {
   .sw {
     padding: 12px;

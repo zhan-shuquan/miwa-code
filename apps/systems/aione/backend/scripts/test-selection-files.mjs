@@ -42,7 +42,7 @@ const data = {
       .map((f) => [f.id, f.default]),
   ),
   ...preview.items[0].data,
-  item_code: "file" + Date.now(),
+  item_code: "file" + Date.now().toString(36),
   item_name: "快速模板隔离测试",
   custom_库存类型: "直发",
   custom_实际售价: 1980,

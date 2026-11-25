@@ -2,6 +2,7 @@ import { Router } from "express";
 import { randomUUID, createHash, timingSafeEqual } from "node:crypto";
 import ExcelJS from "exceljs";
 import JSZip from "jszip";
+import { isDeepStrictEqual } from "node:util";
 import {
   readQuickWorkbook,
   quickWorkbook,
@@ -104,7 +105,11 @@ export function createSelectionWorkspaceRouter(
       "INSERT INTO selection_workspace_events(selection_id,actor_id,action,version,detail) VALUES($1,$2,$3,$4,$5)",
       [r.id, actor(req), action, r.record_version, JSON.stringify(detail)],
     );
+  const researchIds = (r) => r.selection_workspace.researchAssetIds || [];
+  const productAssets = (r, assets) =>
+    assets.filter((a) => !researchIds(r).includes(a.id));
   const view = (r) => ({
+    erpStatus: r.erp_job_status || "not_submitted",
     id: r.id,
     owner: r.owner_person_id,
     version: r.record_version,
@@ -226,6 +231,8 @@ export function createSelectionWorkspaceRouter(
       );
       for (const f of defaults.fields)
         if (!layout.fields.some((x) => x.id === f.id)) layout.fields.push(f);
+      for (const g of defaults.groups)
+        if (!layout.groups.some((x) => x.id === g.id)) layout.groups.push(g);
       res.json({
         identity: {
           id: actor(req),
@@ -266,11 +273,53 @@ export function createSelectionWorkspaceRouter(
     "/preferences",
     run(async (req, res) => {
       if (JSON.stringify(req.body).length > 20000) fail("配置过大");
-      const allowed = new Set(['image','item_code','item_name','item_group','custom_库存类型','cost','suggestion','price','profit','margin','owner','createdAt','status']);
-      const {columns, widths = {}} = req.body;
-      if (columns !== undefined && (!Array.isArray(columns) || !columns.length || new Set(columns).size !== columns.length || columns.some(key => !allowed.has(key)))) fail('显示列配置无效');
-      if (!widths || typeof widths !== 'object' || Array.isArray(widths) || Object.entries(widths).some(([key,value]) => !allowed.has(key) || !Number.isFinite(value) || value < 50 || value > 2000)) fail('列宽配置无效');
-      await putConfig("preferences:" + actor(req), { ...(columns ? {columns} : {}), widths });
+      const allowed = new Set([
+        "image",
+        "item_code",
+        "item_name",
+        "item_group",
+        "custom_库存类型",
+        "cost",
+        "suggestion",
+        "price",
+        "profit",
+        "margin",
+        "owner",
+        "createdAt",
+        "status",
+        "sourceUrl",
+        "totalCost",
+        "operationRate",
+        "selectionRationale",
+        "operatingStrategy",
+        "erpStatus",
+      ]);
+      const { columns, widths = {} } = req.body;
+      if (
+        columns !== undefined &&
+        (!Array.isArray(columns) ||
+          !columns.length ||
+          new Set(columns).size !== columns.length ||
+          columns.some((key) => !allowed.has(key)))
+      )
+        fail("显示列配置无效");
+      if (
+        !widths ||
+        typeof widths !== "object" ||
+        Array.isArray(widths) ||
+        Object.entries(widths).some(
+          ([key, value]) =>
+            !allowed.has(key) ||
+            !Number.isFinite(value) ||
+            value < 50 ||
+            value > 2000,
+        )
+      )
+        fail("列宽配置无效");
+      await putConfig("preferences:" + actor(req), {
+        ...(columns ? { columns } : {}),
+        widths,
+      });
       res.json({ ok: true });
     }),
   );
@@ -285,6 +334,70 @@ export function createSelectionWorkspaceRouter(
             "SELECT id,selection_id,status,attempts,result,updated_at FROM selection_erp_jobs ORDER BY updated_at DESC LIMIT 100",
           )
         ).rows,
+      });
+    }),
+  );
+  router.post(
+    "/source-check",
+    run(async (req, res) => {
+      const data = validateData(
+        { sourceUrl: req.body.sourceUrl },
+        await snapshot(),
+      );
+      if (!data.sourceUrl) fail("请先粘贴采购URL");
+      const matches = (
+        await pool.query(
+          "SELECT * FROM product_opportunities WHERE selection_workspace IS NOT NULL AND ($1::boolean OR owner_person_id=$2) AND (source_url=$3 OR selection_workspace->'data'->>'sourceUrl'=$3) AND id<>$4 AND archived_at IS NULL LIMIT 10",
+          [
+            admin(req.aioneIdentity),
+            person(req) || "",
+            data.sourceUrl,
+            String(req.body.excludeId || ""),
+          ],
+        )
+      ).rows;
+      res.json({
+        valid: true,
+        duplicates: matches.map(view),
+        reading: {
+          enabled: false,
+          message:
+            "当前开发环境未启用供应商授权读取；可导入现有快速录入表或人工粘贴原标题，ERP简称/分类识别已接入。",
+        },
+      });
+    }),
+  );
+  router.post(
+    "/assist-context",
+    run(async (req, res) => {
+      const data = validateData(req.body.data || {}, await snapshot());
+      const record = req.body.id ? await row(req, req.body.id) : null;
+      const attachments = record
+        ? (
+            await pool.query(
+              "SELECT id FROM selection_workspace_assets WHERE selection_id=$1",
+              [record.id],
+            )
+          ).rows
+        : [];
+      res.json({
+        enabled: false,
+        status: "not_enabled",
+        message:
+          "将复用美和AI统一服务。当前开发环境未启用AI分析，未发起模型调用，也未产生费用。",
+        context: {
+          schemaVersion: "selection-v3.5",
+          objective: String(req.body.objective || ""),
+          data,
+          recordId: record?.id,
+          marketAttachmentIds: record ? researchIds(record) : [],
+          productAttachmentIds: record
+            ? productAssets(record, attachments).map((a) => a.id)
+            : [],
+          savedPricing: record?.selection_workspace.pricing || null,
+          parametersVerified: false,
+        },
+        proposal: null,
       });
     }),
   );
@@ -426,7 +539,7 @@ export function createSelectionWorkspaceRouter(
     values.push(limit, offset);
     const rows = (
       await pool.query(
-        `SELECT * FROM product_opportunities WHERE ${where} ORDER BY ${sorts[q.sort] || sorts.createdAt} ${q.direction === "asc" ? "ASC" : "DESC"} NULLS LAST,id LIMIT $${values.length - 1} OFFSET $${values.length}`,
+        `SELECT *, (SELECT status FROM selection_erp_jobs WHERE selection_id=product_opportunities.id ORDER BY created_at DESC LIMIT 1) AS erp_job_status FROM product_opportunities WHERE ${where} ORDER BY ${sorts[q.sort] || sorts.createdAt} ${q.direction === "asc" ? "ASC" : "DESC"} NULLS LAST,id LIMIT $${values.length - 1} OFFSET $${values.length}`,
         values,
       )
     ).rows;
@@ -452,7 +565,7 @@ export function createSelectionWorkspaceRouter(
           [r.id],
         )
       ).rows;
-      assets.forEach((a, i) =>
+      productAssets(r, assets).forEach((a, i) =>
         folder.file(
           "images/" +
             String(i + 1).padStart(3, "0") +
@@ -477,7 +590,7 @@ export function createSelectionWorkspaceRouter(
             allowPublish: false,
             allowPaidAI: false,
             testOnly: true,
-            assets: assets.map((a) => ({
+            assets: productAssets(r, assets).map((a) => ({
               id: a.id,
               sha256: a.sha256,
               position: a.position,
@@ -504,8 +617,31 @@ export function createSelectionWorkspaceRouter(
         previous.selection_workspace.status === "submitted")
     )
       fail("已归档或已提交ERP的记录不能直接覆盖；请复制为新草稿", 409);
+    const decisionKeys = [
+      ...Object.keys(BINDINGS).filter(
+        (k) => !["brand", "custom_主要材质1"].includes(k),
+      ),
+      "sourceUrl",
+      "referenceLinks",
+      "selectionRationale",
+      "operatingStrategy",
+    ];
+    const decisionFacts = (value) =>
+      Object.fromEntries(decisionKeys.map((k) => [k, value?.[k]]));
+    const keepConfirmation =
+      previous?.selection_workspace.status === "confirmed" &&
+      previous.selection_workspace.pricing?.parameterVersion === s.version &&
+      isDeepStrictEqual(
+        decisionFacts(data),
+        decisionFacts(previous.selection_workspace.data),
+      );
     const pricing = await calculate(data, s),
-      workspace = { data, pricing, status: "draft" };
+      workspace = {
+        ...previous?.selection_workspace,
+        data,
+        pricing,
+        status: keepConfirmation ? "confirmed" : "draft",
+      };
     let r;
     if (previous)
       r = (
@@ -543,14 +679,24 @@ export function createSelectionWorkspaceRouter(
     "/records/:id",
     run(async (req, res) => {
       const r = await row(req, req.params.id);
+      const allAssets = (
+        await pool.query(
+          "SELECT id,filename,content_type,position FROM selection_workspace_assets WHERE selection_id=$1 ORDER BY position,created_at",
+          [r.id],
+        )
+      ).rows;
       res.json({
         ...view(r),
-        assets: (
-          await pool.query(
-            "SELECT id,filename,content_type,position FROM selection_workspace_assets WHERE selection_id=$1 ORDER BY position,created_at",
-            [r.id],
-          )
-        ).rows,
+        marketAssets: allAssets.filter((a) => researchIds(r).includes(a.id)),
+        assets: productAssets(
+          r,
+          (
+            await pool.query(
+              "SELECT id,filename,content_type,position FROM selection_workspace_assets WHERE selection_id=$1 ORDER BY position,created_at",
+              [r.id],
+            )
+          ).rows,
+        ),
         events: (
           await pool.query(
             "SELECT actor_id,action,version,created_at FROM selection_workspace_events WHERE selection_id=$1 ORDER BY id DESC LIMIT 50",
@@ -619,11 +765,14 @@ export function createSelectionWorkspaceRouter(
                 [r.id],
               )
             ).rows;
-            for (const a of assets)
+            const copiedResearch = [];
+            for (const a of assets) {
+              const assetId = randomUUID();
+              if (researchIds(r).includes(a.id)) copiedResearch.push(assetId);
               await c.query(
                 "INSERT INTO selection_workspace_assets(id,selection_id,filename,content_type,bytes,sha256,position) VALUES($1,$2,$3,$4,$5,$6,$7)",
                 [
-                  randomUUID(),
+                  assetId,
                   saved.id,
                   a.filename,
                   a.content_type,
@@ -632,7 +781,42 @@ export function createSelectionWorkspaceRouter(
                   a.position,
                 ],
               );
+            }
+            await c.query(
+              "UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{researchAssetIds}',$2::jsonb) WHERE id=$1",
+              [saved.id, JSON.stringify(copiedResearch)],
+            );
             out.push(saved);
+            continue;
+          }
+          if (action === "confirm") {
+            if (r.archived_at || r.selection_workspace.status === "submitted")
+              fail("此状态不能确认选品", 409);
+            const data = validateData(r.selection_workspace.data, s);
+            for (const key of ["item_code", "item_name", "custom_库存类型"])
+              if (!data[key]) fail("确认选品前请完善货号、简称和库存类型");
+            const pricing = await calculate(data, s);
+            if (
+              pricing.status !== "estimated" ||
+              !(Number(data.custom_实际售价) > 0)
+            )
+              fail("确认选品前请完成成本试算并填写实际售价");
+            const updated = (
+              await c.query(
+                "UPDATE product_opportunities SET selection_workspace=selection_workspace || $2::jsonb,record_version=record_version+1,updated_at=now() WHERE id=$1 RETURNING *",
+                [
+                  r.id,
+                  JSON.stringify({
+                    status: "confirmed",
+                    pricing,
+                    confirmedAt: new Date().toISOString(),
+                    confirmedBy: actor(req),
+                  }),
+                ],
+              )
+            ).rows[0];
+            await event(c, req, updated, "confirm-selection");
+            out.push(view(updated));
             continue;
           }
           if (action === "submit") {
@@ -640,12 +824,13 @@ export function createSelectionWorkspaceRouter(
             const data = validateData(r.selection_workspace.data, s, {
               submit: true,
             });
-            const assets = (
+            const allAssets = (
               await c.query(
                 "SELECT id,filename,sha256,position FROM selection_workspace_assets WHERE selection_id=$1 ORDER BY position",
                 [r.id],
               )
             ).rows;
+            const assets = productAssets(r, allAssets);
             if (!assets.length) fail("提交前请上传商品主图");
             const pricing = await calculate(data, s);
             if (pricing.status === "incomplete") fail(pricing.message);
@@ -665,6 +850,9 @@ export function createSelectionWorkspaceRouter(
                     data,
                     pricing,
                     assets,
+                    researchMaterials: allAssets.filter((a) =>
+                      researchIds(r).includes(a.id),
+                    ),
                     parameterVersion: s.version,
                     testOnly: true,
                     allowPublish: false,
@@ -727,8 +915,32 @@ export function createSelectionWorkspaceRouter(
         webp =
           bytes.toString("ascii", 0, 4) === "RIFF" &&
           bytes.toString("ascii", 8, 12) === "WEBP";
-      if (!bytes.length || bytes.length > 2000000 || (!png && !jpg && !webp))
-        fail("请上传2MB以内的PNG、JPEG或WebP图片");
+      const market = b.kind === "market";
+      const extension = String(b.filename || "")
+        .split(".")
+        .pop()
+        .toLowerCase();
+      const documentType =
+        market &&
+        extension === "pdf" &&
+        bytes.toString("ascii", 0, 5) === "%PDF-"
+          ? "application/pdf"
+          : market &&
+              ["xlsx", "docx"].includes(extension) &&
+              bytes[0] === 80 &&
+              bytes[1] === 75
+            ? "application/octet-stream"
+            : market && ["txt", "csv"].includes(extension) && !bytes.includes(0)
+              ? "text/plain"
+              : null;
+      if (
+        !bytes.length ||
+        bytes.length > 2000000 ||
+        (!png && !jpg && !webp && !documentType)
+      )
+        fail(
+          "附件限2MB以内图片、PDF、XLSX、DOCX、TXT或CSV；商品素材仅支持图片",
+        );
       const r = await tx(async (c) => {
         const record = await row(req, req.params.id, c, true);
         if (
@@ -736,6 +948,14 @@ export function createSelectionWorkspaceRouter(
           record.archived_at
         )
           fail("此记录不能修改附件", 409);
+        const existing = (
+          await c.query(
+            "SELECT id FROM selection_workspace_assets WHERE selection_id=$1 AND sha256=$2",
+            [record.id, digest(bytes)],
+          )
+        ).rows[0];
+        if (existing && researchIds(record).includes(existing.id) !== market)
+          fail("同一文件不能同时作为市场附件和商品原始素材", 409);
         const asset = (
           await c.query(
             "INSERT INTO selection_workspace_assets(id,selection_id,filename,content_type,bytes,sha256,position) VALUES($1,$2,$3,$4,$5,$6,(SELECT count(*) FROM selection_workspace_assets WHERE selection_id=$2)) ON CONFLICT(selection_id,sha256) DO UPDATE SET sha256=EXCLUDED.sha256 RETURNING id",
@@ -745,13 +965,30 @@ export function createSelectionWorkspaceRouter(
               String(b.filename || "image")
                 .replace(/[\\/]/g, "_")
                 .slice(0, 200),
-              png ? "image/png" : jpg ? "image/jpeg" : "image/webp",
+              png
+                ? "image/png"
+                : jpg
+                  ? "image/jpeg"
+                  : webp
+                    ? "image/webp"
+                    : documentType,
               bytes,
               digest(bytes),
             ],
           )
         ).rows[0];
-        await event(c, req, record, "upload", { assetId: asset.id });
+        if (market)
+          await c.query(
+            "UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{researchAssetIds}',$2::jsonb) WHERE id=$1",
+            [
+              record.id,
+              JSON.stringify([...new Set([...researchIds(record), asset.id])]),
+            ],
+          );
+        await event(c, req, record, "upload", {
+          assetId: asset.id,
+          kind: market ? "market" : "product",
+        });
         return asset;
       });
       res.json(r);
@@ -768,6 +1005,7 @@ export function createSelectionWorkspaceRouter(
         )
       ).rows[0];
       if (!a) fail("附件不存在", 404);
+      if (!a.content_type.startsWith("image/")) res.attachment(a.filename);
       res
         .set("Cache-Control", "private,no-store")
         .set("X-Content-Type-Options", "nosniff")
@@ -790,19 +1028,31 @@ export function createSelectionWorkspaceRouter(
             "SELECT id FROM selection_workspace_assets WHERE selection_id=$1",
             [r.id],
           )
-        ).rows.map((a) => a.id);
+        ).rows
+          .map((a) => a.id)
+          .filter(
+            (id) =>
+              researchIds(r).includes(id) === (req.body.kind === "market"),
+          );
         if (ids.some((id) => !current.includes(id)))
           fail("图片不属于当前记录", 403);
         await c.query(
-          "DELETE FROM selection_workspace_assets WHERE selection_id=$1 AND NOT(id=ANY($2::uuid[]))",
-          [r.id, ids],
+          "DELETE FROM selection_workspace_assets WHERE selection_id=$1 AND id=ANY($2::uuid[]) AND NOT(id=ANY($3::uuid[]))",
+          [r.id, current, ids],
         );
         for (let i = 0; i < ids.length; i++)
           await c.query(
             "UPDATE selection_workspace_assets SET position=$3 WHERE selection_id=$1 AND id=$2",
             [r.id, ids[i], i],
           );
-        await event(c, req, r, "reorder-images");
+        if (req.body.kind === "market")
+          await c.query(
+            "UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{researchAssetIds}',$2::jsonb) WHERE id=$1",
+            [r.id, JSON.stringify(ids)],
+          );
+        await event(c, req, r, "reorder-images", {
+          kind: req.body.kind || "product",
+        });
       });
       res.json({ ok: true });
     }),
@@ -833,6 +1083,9 @@ export function createSelectionWorkspaceRouter(
       "版本",
       ...Object.keys(BINDINGS),
       "sourceUrl",
+      "selectionRationale",
+      "operatingStrategy",
+      "referenceLinks_JSON",
       "supplier",
       "SKU_JSON",
     ]);
@@ -842,6 +1095,9 @@ export function createSelectionWorkspaceRouter(
         r.version,
         ...Object.keys(BINDINGS).map((k) => r.data[k] ?? ""),
         r.data.sourceUrl,
+        r.data.selectionRationale || "",
+        r.data.operatingStrategy || "",
+        JSON.stringify(r.data.referenceLinks || []),
         r.data.supplier,
         JSON.stringify(r.data.skus || []),
       ]);
@@ -913,6 +1169,7 @@ export function createSelectionWorkspaceRouter(
           if (Object.keys(data).length === 0) continue;
           if (data["选品ID"]) fail("已有记录请使用批量编辑，不通过导入覆盖");
           data.skus = JSON.parse(data.SKU_JSON || "[]");
+          data.referenceLinks = JSON.parse(data.referenceLinks_JSON || "[]");
           items.push({ line: n, data: validateData(data, s) });
         } catch (e) {
           errors.push({ line: n, error: e.message });

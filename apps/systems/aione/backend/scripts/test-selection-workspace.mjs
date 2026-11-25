@@ -29,11 +29,11 @@ async function call(cookie, path, method = "GET", body, status = 200) {
 }
 await call(null, "/records", "GET", undefined, 401);
 const boot = await call(employee, "/bootstrap");
-await call(employee, '/preferences', 'PUT', {columns:['<script>']}, 400);
-await call(employee, '/preferences', 'PUT', {widths:{item_name:-1}}, 400);
+await call(employee, "/preferences", "PUT", { columns: ["<script>"] }, 400);
+await call(employee, "/preferences", "PUT", { widths: { item_name: -1 } }, 400);
 assert.equal(boot.parameters.verified, false);
 const data = {
-  item_code: "qa" + Date.now(),
+  item_code: "qa" + Date.now().toString(36),
   item_name: "隔离测试商品",
   custom_库存类型: "直发",
   custom_单个采购价: 4.7,

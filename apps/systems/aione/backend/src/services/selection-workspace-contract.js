@@ -23,11 +23,22 @@ export const BINDINGS = {
   custom_aione_other: ["operations", "number"],
 };
 export const GROUPS = [
-  { id: "basic", label: "选品基本信息" },
-  { id: "purchase", label: "采购信息" },
-  { id: "logistics", label: "物流与包装" },
-  { id: "pricing", label: "售价" },
-  { id: "operations", label: "运营设置", collapsed: true },
+  { id: "source", label: "01 采购来源", region: "top" },
+  { id: "market", label: "02 市场参考与选品依据", region: "top" },
+  { id: "basic", label: "03 商品信息与选品决策", region: "main" },
+  { id: "purchase", label: "选品决策", region: "main" },
+  { id: "logistics", label: "物流与包装", region: "main" },
+  { id: "operations", label: "运营设置", region: "main" },
+  { id: "strategy", label: "运营策略", region: "main" },
+  { id: "cost", label: "成本自动核算", region: "aside" },
+  { id: "pricing", label: "智能定价", region: "aside" },
+  { id: "profit", label: "利润分析", region: "aside" },
+  {
+    id: "details",
+    label: "其他商品属性（第二阶段）",
+    region: "main",
+    collapsed: true,
+  },
 ];
 export function fail(message, status = 400) {
   const e = new Error(message);
@@ -83,18 +94,149 @@ export function fieldsFor(snapshot) {
         default: id.startsWith("custom_aione_") ? 0 : f.default,
       };
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    .concat([
+      {
+        id: "sourceUrl",
+        label: "采购URL",
+        type: "url",
+        group: "source",
+        options: [],
+      },
+      {
+        id: "images",
+        label: "商品图片",
+        type: "images",
+        group: "basic",
+        options: [],
+        presentationOnly: true,
+      },
+      {
+        id: "referenceLinks",
+        label: "选品参考链接",
+        type: "links",
+        group: "market",
+        options: [],
+      },
+      {
+        id: "marketAttachments",
+        label: "市场头部数据与分析附件",
+        type: "market",
+        group: "market",
+        options: [],
+        presentationOnly: true,
+      },
+      {
+        id: "selectionRationale",
+        label: "选品依据",
+        type: "textarea",
+        group: "market",
+        options: [],
+      },
+      {
+        id: "operatingStrategy",
+        label: "运营策略",
+        type: "textarea",
+        group: "strategy",
+        options: [],
+      },
+      ...[
+        ["到日本仓成本", "到日本仓成本", "cost"],
+        ["日本配送日本", "日本配送成本", "cost"],
+        ["平台交易成本", "平台交易成本", "cost"],
+        ["销售运营成本", "销售运营成本", "cost"],
+        ["totalCost", "预计销售总成本", "cost"],
+        ["目标毛利率达标售价", "目标毛利率达标售价", "pricing"],
+        ["未运营保本售价", "未运营保本售价", "pricing"],
+        ["运营后保本售价", "运营后保本售价", "pricing"],
+        ["未运营毛利润", "未运营毛利润", "profit"],
+        ["未运营毛利率", "未运营毛利率", "profit"],
+        ["运营后毛利润", "运营后预计毛利润", "profit"],
+        ["运营后毛利率", "运营后预计毛利率", "profit"],
+      ].map(([key, label, group]) => ({
+        id: "result:" + key,
+        label,
+        type: "computed",
+        group,
+        options: [],
+        presentationOnly: true,
+      })),
+    ]);
 }
 export function defaultLayout(fields) {
+  const order = [
+    "sourceUrl",
+    "custom_商品长标题中文",
+    "referenceLinks",
+    "marketAttachments",
+    "selectionRationale",
+    "images",
+    "item_code",
+    "item_name",
+    "item_group",
+    "custom_库存类型",
+    "custom_单个采购价",
+    "custom_单个净重g",
+    "custom_国际物流方式",
+    "custom_中国包装方式",
+    "custom_日本包装物",
+    "custom_日本发货尺寸",
+    "custom_aione_coupon",
+    "custom_aione_points",
+    "custom_aione_ads",
+    "custom_aione_other",
+    "operatingStrategy",
+    "custom_实际售价",
+  ];
+  const groupFor = (f) =>
+    f.id === "custom_商品长标题中文"
+      ? "source"
+      : [
+            "brand",
+            "custom_主要材质1",
+            "custom_套装数量",
+            "stock_uom",
+            "custom_中国国内运费",
+          ].includes(f.id)
+        ? "details"
+        : f.id === "custom_库存类型"
+          ? "purchase"
+          : f.group;
   return {
     ratio: 60,
-    groups: GROUPS,
-    fields: fields.map((f) => ({
-      id: f.id,
-      group: f.group,
-      width: 6,
-      hidden: false,
-    })),
+    version: 35,
+    groups: structuredClone(GROUPS),
+    fields: [...fields]
+      .sort(
+        (a, b) =>
+          (order.indexOf(a.id) < 0 ? 999 : order.indexOf(a.id)) -
+          (order.indexOf(b.id) < 0 ? 999 : order.indexOf(b.id)),
+      )
+      .map((f) => {
+        const group = groupFor(f);
+        return {
+          id: f.id,
+          group,
+          width: [
+            "source",
+            "market",
+            "strategy",
+            "pricing",
+            "cost",
+            "profit",
+          ].includes(group)
+            ? 12
+            : group === "basic"
+              ? f.id === "images"
+                ? 4
+                : 8
+              : group === "purchase"
+                ? 4
+                : 6,
+          rowSpan: f.id === "images" ? 3 : 1,
+          hidden: false,
+        };
+      }),
   };
 }
 export function validateLayout(layout, fields) {
@@ -107,15 +249,21 @@ export function validateLayout(layout, fields) {
     fail("左右布局比例应为40至75");
   if (
     !Array.isArray(layout.groups) ||
+    layout.groups.length !== GROUPS.length ||
     new Set(layout.groups.map((g) => g.id)).size !== GROUPS.length ||
     GROUPS.some((g) => !layout.groups.some((v) => v.id === g.id))
   )
     fail("布局分组不完整");
   if (!Array.isArray(layout.fields) || layout.fields.length !== fields.length)
     fail("布局字段不完整");
+  for (const g of layout.groups)
+    if (g.region && !["top", "main", "aside"].includes(g.region))
+      fail("布局区域无效");
   const ids = new Set();
   for (const f of layout.fields) {
     if (
+      (f.rowSpan !== undefined &&
+        (!Number.isInteger(f.rowSpan) || f.rowSpan < 1 || f.rowSpan > 6)) ||
       ids.has(f.id) ||
       !fields.some((x) => x.id === f.id) ||
       !GROUPS.some((g) => g.id === f.group) ||
@@ -130,6 +278,7 @@ export function validateData(input, snapshot, { submit = false } = {}) {
   const fields = fieldsFor(snapshot),
     data = {};
   for (const f of fields) {
+    if (f.presentationOnly || f.id === "referenceLinks") continue;
     const value = input[f.id];
     if (value == null || value === "") continue;
     if (f.type === "number") {
@@ -141,7 +290,9 @@ export function validateData(input, snapshot, { submit = false } = {}) {
         fail(f.label + "应为非负数");
       data[f.id] = Number(value);
     } else {
-      data[f.id] = String(value).trim().slice(0, 2000);
+      data[f.id] = String(value)
+        .trim()
+        .slice(0, f.type === "textarea" ? 20000 : 2000);
       if (f.type === "select" && !f.options.includes(data[f.id]))
         fail(f.label + "不属于ERP有效选项");
     }
@@ -157,9 +308,12 @@ export function validateData(input, snapshot, { submit = false } = {}) {
     (!Number.isInteger(data.custom_套装数量) || data.custom_套装数量 < 1)
   )
     fail("套装数量必须为正整数");
-  if (data.item_code && !/^[a-zA-Z0-9_-]{1,80}$/.test(data.item_code))
-    fail("货号含不支持的字符");
-  data.sourceUrl = String(input.sourceUrl || "").slice(0, 2000);
+  // Exact rule verified in the running ERP miwa_ai.autodesign.core.code.
+  if (data.item_code && !/^[A-Za-z0-9_-]{1,12}$/.test(data.item_code))
+    fail("货号请使用1–12位英文、数字、下划线或横线（ERP现有规则）");
+  data.sourceUrl = String(input.sourceUrl || "")
+    .trim()
+    .slice(0, 2000);
   if (data.sourceUrl) {
     let url;
     try {
@@ -170,6 +324,24 @@ export function validateData(input, snapshot, { submit = false } = {}) {
     if (!["https:", "http:"].includes(url.protocol))
       fail("商品链接必须是HTTP地址");
   }
+  if (
+    input.referenceLinks !== undefined &&
+    !Array.isArray(input.referenceLinks)
+  )
+    fail("参考链接格式无效");
+  if ((input.referenceLinks || []).length > 30) fail("参考链接最多30条");
+  data.referenceLinks = (input.referenceLinks || []).map((v) => {
+    const value = String(v).trim();
+    let u;
+    try {
+      u = new URL(value);
+    } catch {
+      fail("参考链接无效");
+    }
+    if (!["https:", "http:"].includes(u.protocol))
+      fail("参考链接必须使用HTTP或HTTPS");
+    return u.href;
+  });
   data.supplier = String(input.supplier || "").slice(0, 1000);
   data.skus = Array.isArray(input.skus)
     ? input.skus.slice(0, 500).map((s) => {

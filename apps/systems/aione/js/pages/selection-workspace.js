@@ -68,7 +68,7 @@ export async function initSelectionWorkspace(host, forcedView) {
   if (signal.aborted) return;
   const query = new URLSearchParams(location.hash.split("?")[1] || ""),
     view = forcedView || query.get("view") || "entry";
-  host.innerHTML = `<section class="sw"><header class="sw-heading"><div><small>商品之家 · 美和跨境选品</small><h1>${view === "list" ? "选品一览" : view === "layout" ? "表单布局设置" : view === "sync" ? "ERP同步状态" : "选品录入"}</h1></div><nav><button data-nav="entry">选品录入</button><button data-nav="list">选品一览</button>${boot.identity.admin ? '<button data-nav="layout">布局设置</button><button data-nav="sync">同步状态</button>' : ""}${window.AIONE_SELECTION_PREVIEW ? '<a href="/preview">切换测试身份</a>' : ""}</nav></header><div class="sw-status"><span>${esc(boot.identity.name)}</span><span>${boot.connection.online ? "ERP已连接" : "ERP离线 / 使用最近同步参数"}</span><span>参数时间 ${esc(boot.parameters.capturedAt?.slice(0, 19))}</span></div><p class="sw-warning">历史试算参数 · 待业务验证。以下均为选品预计利润，不作为正式经营利润依据。</p><p data-message role="status" hidden></p><div data-content></div></section>`;
+  host.innerHTML = `<section class="sw ${view === "entry" ? "sw-entry" : ""}"><header class="sw-heading"><div><small>商品之家 · 美和跨境选品</small><h1>${view === "list" ? "选品一览" : view === "layout" ? "表单布局设置" : view === "sync" ? "ERP同步状态" : "选品录入"}</h1></div><nav><button data-nav="entry">选品录入</button><button data-nav="list">选品一览</button>${boot.identity.admin ? '<button data-nav="layout">布局设置</button><button data-nav="sync">同步状态</button>' : ""}${window.AIONE_SELECTION_PREVIEW ? '<a href="/preview">切换测试身份</a>' : ""}</nav></header><div class="sw-status"><span>${esc(boot.identity.name)}</span><span>${boot.connection.online ? "ERP已连接" : "ERP离线 / 使用最近同步参数"}</span><span>参数时间 ${esc(boot.parameters.capturedAt?.slice(0, 19))}</span></div><p class="sw-warning">历史参数待验证 · 预计利润仅供选品参考</p><p data-message role="status" hidden></p><div data-content></div></section>`;
   host.querySelectorAll("[data-nav]").forEach((b) =>
     on(b, "click", () => {
       if (["layout", "sync"].includes(b.dataset.nav))
@@ -126,9 +126,19 @@ export async function initSelectionWorkspace(host, forcedView) {
   function fieldInput(f, value, attribute = "data-field") {
     const id = esc(f.id),
       val = value ?? "";
+    if (f.type === "textarea")
+      return (
+        "<textarea " +
+        attribute +
+        '="' +
+        id +
+        '" rows="3">' +
+        esc(val) +
+        "</textarea>"
+      );
     if (f.type === "select")
       return `<select ${attribute}="${id}"><option value="">请选择</option>${f.options.map((v) => `<option ${v === val ? "selected" : ""} value="${esc(v)}">${esc(v)}</option>`).join("")}</select>`;
-    return `<input ${attribute}="${id}" type="${f.type === "number" ? "number" : "text"}" ${f.type === "number" ? 'min="0" step="any"' : ""} value="${esc(val)}">`;
+    return `<input ${attribute}="${id}" type="${f.type === "number" ? "number" : f.type === "url" ? "url" : "text"}" ${f.type === "number" ? 'min="0" step="any"' : ""} value="${esc(val)}">`;
   }
   async function layoutEditor() {
     if (!boot.identity.admin) throw Error("布局设置需要管理员权限");
@@ -138,11 +148,46 @@ export async function initSelectionWorkspace(host, forcedView) {
       content.innerHTML = `<p>拖动字段行调整顺序。位置与宽度不会改变ERP字段、计算规则或必填校验。</p><div class="sw-toolbar"><label>左侧比例 <input data-ratio type="number" min="40" max="75" value="${layout.ratio}"> %</label><button data-layout-save>保存默认布局</button><button data-layout-reset>恢复默认</button><button data-layout-preview>预览布局</button></div><div class="sw-layout-list">${layout.fields
         .map((l, i) => {
           const f = boot.fields.find((f) => f.id === l.id);
-          return `<div draggable="true" data-layout-row="${i}"><span>☰ ${esc(f.label)}</span><select data-group="${i}">${layout.groups.map((g) => `<option value="${g.id}" ${g.id === l.group ? "selected" : ""}>${esc(g.label)}</option>`).join("")}</select><select data-width="${i}">${[3, 4, 6, 8, 12].map((w) => `<option ${w === l.width ? "selected" : ""}>${w}</option>`).join("")}</select><label><input type="checkbox" data-hidden="${i}" ${l.hidden ? "checked" : ""}>隐藏</label><button data-up="${i}" aria-label="上移">↑</button><button data-down="${i}" aria-label="下移">↓</button></div>`;
+          return `<div draggable="true" data-layout-row="${i}"><span>☰ ${esc(f.label)}</span><select data-group="${i}">${layout.groups.map((g) => `<option value="${g.id}" ${g.id === l.group ? "selected" : ""}>${esc(g.label)}</option>`).join("")}</select><select data-width="${i}">${[3, 4, 6, 8, 12].map((w) => `<option ${w === l.width ? "selected" : ""}>${w}</option>`).join("")}</select><label>跨行<input type="number" min="1" max="6" data-row-span="${i}" value="${l.rowSpan || 1}"></label><label><input type="checkbox" data-hidden="${i}" ${l.hidden ? "checked" : ""}>隐藏</label><button data-up="${i}" aria-label="上移">↑</button><button data-down="${i}" aria-label="下移">↓</button></div>`;
         })
-        .join(
-          "",
-        )}</div><h3>区块顺序与折叠</h3>${layout.groups.map((g, i) => `<div class="sw-toolbar"><span>${esc(g.label)}</span><label><input type="checkbox" data-collapse="${i}" ${g.collapsed ? "checked" : ""}>默认折叠</label><button data-group-up="${i}">上移</button></div>`).join("")}<div data-layout-preview-area></div>`;
+        .join("")}</div><h3>区块顺序与折叠</h3>${layout.groups
+        .map(
+          (g, i) =>
+            `<div class="sw-toolbar"><span>${esc(g.label)}</span><select data-region="${i}">${[
+              ["top", "首行"],
+              ["main", "资料区"],
+              ["aside", "右侧"],
+            ]
+              .map(
+                ([v, t]) =>
+                  `<option value="${v}" ${(g.region || "main") === v ? "selected" : ""}>${t}</option>`,
+              )
+              .join(
+                "",
+              )}</select><label><input type="checkbox" data-collapse="${i}" ${g.collapsed ? "checked" : ""}>默认折叠</label><button data-group-up="${i}">上移</button></div>`,
+        )
+        .join("")}<div data-layout-preview-area></div>`;
+      content
+        .querySelectorAll("[data-region]")
+        .forEach((e) =>
+          on(
+            e,
+            "change",
+            () => (layout.groups[Number(e.dataset.region)].region = e.value),
+          ),
+        );
+      content
+        .querySelectorAll("[data-row-span]")
+        .forEach((e) =>
+          on(
+            e,
+            "input",
+            () =>
+              (layout.fields[Number(e.dataset.rowSpan)].rowSpan = Number(
+                e.value,
+              )),
+          ),
+        );
       on(
         content.querySelector("[data-ratio]"),
         "input",
@@ -236,23 +281,113 @@ export async function initSelectionWorkspace(host, forcedView) {
       });
       on(content.querySelector("[data-layout-preview]"), "click", () => {
         content.querySelector("[data-layout-preview-area]").innerHTML =
-          formMarkup(layout, {});
+          formMarkup(layout, {}, "top") +
+          '<div class="sw-split" style="--sw-left:' +
+          layout.ratio +
+          '%"><div>' +
+          formMarkup(layout, {}) +
+          "</div><aside>" +
+          formMarkup(layout, {}, "aside") +
+          "</aside></div>";
       });
     };
     render();
   }
-  function formMarkup(layout, data) {
+  function formMarkup(layout, data, region = "main") {
     return layout.groups
-      .map(
-        (g) =>
-          `<details class="sw-card" ${g.collapsed ? "" : "open"}><summary>${esc(g.label)}</summary><div class="sw-grid">${layout.fields
-            .filter((l) => l.group === g.id && !l.hidden)
+      .filter((g) => (g.region || "main") === region)
+      .map((g) => {
+        const fields = layout.fields.filter(
+          (l) => l.group === g.id && !l.hidden,
+        );
+        if (!fields.length) return "";
+        return (
+          '<details data-layout-group="' +
+          esc(g.id) +
+          '" class="sw-card" ' +
+          (g.collapsed ? "" : "open") +
+          "><summary>" +
+          esc(g.label) +
+          '</summary><div class="sw-grid">' +
+          fields
             .map((l) => {
               const f = boot.fields.find((f) => f.id === l.id);
-              return `<label style="grid-column:span ${l.width}"><span>${esc(f.label)}</span>${fieldInput(f, data[f.id])}</label>`;
+              const style =
+                "grid-column:span " +
+                l.width +
+                ";grid-row:span " +
+                (l.rowSpan || 1);
+              if (f.type === "computed")
+                return (
+                  '<div class="sw-cost-row ' +
+                  ([
+                    "result:目标毛利率达标售价",
+                    "result:运营后毛利润",
+                    "result:运营后毛利率",
+                  ].includes(f.id)
+                    ? "sw-highlight"
+                    : "") +
+                  '" style="' +
+                  style +
+                  '"><span>' +
+                  esc(f.label) +
+                  '</span><b data-cost="' +
+                  esc(f.id.slice(7)) +
+                  '">待计算</b></div>'
+                );
+              if (f.type === "links")
+                return (
+                  '<section class="sw-field" style="' +
+                  style +
+                  '"><strong>' +
+                  esc(f.label) +
+                  '</strong><div data-reference-links></div><button type="button" data-add-reference>添加参考链接</button></section>'
+                );
+              if (f.type === "market")
+                return (
+                  '<section class="sw-market-field" style="' +
+                  style +
+                  '"><strong>' +
+                  esc(f.label) +
+                  '</strong><div class="sw-drop" data-market-drop tabindex="0">拖拽 / 粘贴市场截图 · 与商品素材分开保存<label>添加市场附件<input type="file" data-market-upload multiple accept="image/png,image/jpeg,image/webp,.pdf,.xlsx,.docx,.txt,.csv"></label></div><div class="sw-market-assets" data-market-assets></div></section>'
+                );
+              if (f.type === "images")
+                return (
+                  '<section class="sw-media-field" style="' +
+                  style +
+                  '"><strong>商品图片</strong><div class="sw-images" data-images></div><div class="sw-drop" tabindex="0">拖拽 / 粘贴图片<label>添加图片<input data-upload type="file" accept="image/png,image/jpeg,image/webp" multiple></label></div></section>'
+                );
+              return (
+                '<div class="sw-field" style="' +
+                style +
+                '"><label><span>' +
+                esc(f.label) +
+                "</span>" +
+                fieldInput(f, data[f.id]) +
+                "</label>" +
+                (f.id === "sourceUrl"
+                  ? '<div class="sw-url-actions"><a data-purchase-open target="_blank" rel="noopener noreferrer">打开采购页面 ↗</a><button type="button" data-read-source>读取资料</button></div>'
+                  : "") +
+                "</div>"
+              );
             })
-            .join("")}</div></details>`,
-      )
+            .join("") +
+          "</div>" +
+          (g.id === "operations"
+            ? '<div class="sw-toolbar"><span data-operation-rate>综合运营费率 0%</span><button data-reset-rates>恢复0%</button><button data-ai="运营建议">AI运营建议 · 未启用</button></div>'
+            : "") +
+          (g.id === "market"
+            ? '<div class="sw-toolbar"><button data-ai="市场分析">AI市场分析 · 未启用</button><button data-ai="选品依据">AI选品依据 · 未启用</button></div>'
+            : "") +
+          (g.id === "strategy"
+            ? '<button data-ai="运营策略">AI运营策略 · 未启用</button>'
+            : "") +
+          (g.id === "source"
+            ? '<div class="sw-toolbar"><button data-identify-source>按ERP规则识别简称与分类</button><button data-import-source>导入现有资料表</button><input data-source-file type="file" accept=".xlsx" hidden><span data-source-status role="status"></span></div>'
+            : "") +
+          "</details>"
+        );
+      })
       .join("");
   }
   async function entry() {
@@ -275,37 +410,130 @@ export async function initSelectionWorkspace(host, forcedView) {
     let pricing = record?.pricing,
       timer,
       sequence = 0;
-    content.innerHTML = `<div class="sw-actions"><span data-save-state>${record ? "版本 " + record.version : "新草稿"}</span><button data-save class="sw-primary">保存草稿</button><button data-submit>确认并提交ERP</button></div><div class="sw-split" style="--sw-left:${boot.layout.ratio}%"><div><section class="sw-card"><h2>商品图片</h2><div class="sw-drop" tabindex="0">拖拽图片到此处，或点击此区域后粘贴图片<label>选择图片<input data-upload type="file" accept="image/png,image/jpeg,image/webp" multiple></label></div><div class="sw-images" data-images></div></section>${formMarkup(boot.layout, data)}<details class="sw-card"><summary>来源与供应商</summary><label>1688 / 商品链接<input data-extra="sourceUrl" value="${esc(data.sourceUrl)}" type="url"></label><label>供应商资料<input data-extra="supplier" value="${esc(data.supplier)}"></label></details><details class="sw-card"><summary>SKU明细与其他资料</summary><p>每行填写：SKU编号、规格、独立采购价、售价、重量。空白价格继承商品。</p><div data-skus></div><button data-add-sku>新增SKU</button></details><details class="sw-card"><summary>修改记录 / ERP处理状态</summary><div data-history>${(record?.events || []).map((e) => `<p>${esc(e.created_at)} · ${esc(e.actor_id)} · ${esc(e.action)}</p>`).join("") || "尚无修改记录"}${(record?.jobs || []).map((j) => `<p>ERP任务：${esc(j.status)} ${esc(j.result?.message || "")} ${j.status === "failed" ? `<button data-retry="${j.id}">重试</button>` : ""}</p>`).join("")}</div></details></div><aside class="sw-profit sw-card"><h2>成本与预计利润</h2><div data-profit></div><small>同源ERP规则 · 人工确认库存类型 · 未验证参数不作正式利润依据</small></aside></div>`;
+    content.innerHTML = `<div class="sw-actions"><span data-save-state>${record ? "版本 " + record.version : "新草稿"}</span><button data-save class="sw-primary">保存草稿</button><button data-confirm-selection>确认选品</button><button data-back-list>返回选品一览</button></div>${formMarkup(boot.layout, data, "top")}<div class="sw-split" style="--sw-left:${boot.layout.ratio}%"><div>${formMarkup(boot.layout, data)}<details class="sw-card"><summary>来源与供应商</summary><label>供应商资料<input data-extra="supplier" value="${esc(data.supplier)}"></label></details><details class="sw-card"><summary>第二阶段 · SKU与ERP资料完善</summary><div class="sw-toolbar" data-stage-two-actions><button data-submit>提交ERP（资料完整后）</button></div><p>每行填写：SKU编号、规格、独立采购价、售价、重量。空白价格继承商品。</p><div data-skus></div><button data-add-sku>新增SKU</button></details><details class="sw-card"><summary>修改记录 / ERP处理状态</summary><div data-history>${(record?.events || []).map((e) => `<p>${esc(e.created_at)} · ${esc(e.actor_id)} · ${esc(e.action)}</p>`).join("") || "尚无修改记录"}${(record?.jobs || []).map((j) => `<p>ERP任务：${esc(j.status)} ${esc(j.result?.message || "")} ${j.status === "failed" ? `<button data-retry="${j.id}">重试</button>` : ""}</p>`).join("")}</div></details></div><aside class="sw-profit sw-card"><h2>成本与预计利润</h2>${formMarkup(boot.layout, data, "aside")}<div data-profit></div><small>同源ERP规则 · 人工确认库存类型 · 未验证参数不作正式利润依据</small></aside></div>`;
+    const conclusion = document.createElement("section");
+    conclusion.className = "sw-card sw-conclusion";
+    conclusion.innerHTML =
+      '<h2>04 选品结论</h2><p data-conclusion-status>保存草稿或确认选品，确认后继续第二阶段资料完善。</p><div class="sw-toolbar"><button data-conclusion-save class="sw-primary">保存草稿</button><button data-conclusion-confirm>确认选品</button><button data-conclusion-list>返回选品一览</button><button data-ai="综合选品分析">AI综合分析 · 未启用</button></div>';
+    content.append(conclusion);
+    if (record?.status === "confirmed")
+      conclusion.querySelector("[data-conclusion-status]").textContent =
+        "已确认选品 · 待第二阶段资料完善；未提交ERP";
+    if (record?.status === "submitted")
+      conclusion.querySelector("[data-conclusion-status]").textContent =
+        "已提交ERP，请查看处理记录；不代表已正式上架。";
+    on(conclusion.querySelector("[data-conclusion-save]"), "click", () =>
+      content.querySelector("[data-save]").click(),
+    );
+    on(conclusion.querySelector("[data-conclusion-confirm]"), "click", () =>
+      content.querySelector("[data-confirm-selection]").click(),
+    );
+    on(conclusion.querySelector("[data-conclusion-list]"), "click", () =>
+      navigate("list"),
+    );
+    const priceDependent = new Set([
+      "平台交易成本",
+      "销售运营成本",
+      "totalCost",
+      "未运营毛利润",
+      "未运营毛利率",
+      "运营后毛利润",
+      "运营后毛利率",
+    ]);
+    let calculationError = "",
+      composing = false;
+    const operationKeys = [
+      "custom_aione_coupon",
+      "custom_aione_points",
+      "custom_aione_ads",
+      "custom_aione_other",
+    ];
     const drawProfit = () => {
-      const p = content.querySelector("[data-profit]");
-      if (!pricing) {
-        p.innerHTML = "<p>填写采购价、重量与物流后试算。</p>";
-        return;
-      }
-      if (pricing.status === "incomplete") {
-        p.innerHTML = '<p class="sw-warning">' + esc(pricing.message) + "</p>";
-        return;
-      }
-      const r = pricing.results;
-      p.innerHTML = `<p class="sw-warning">预计值 · 待验证</p><div class="sw-metric"><span>建议售价</span><strong>${yen(r.custom_目标毛利率达标售价)}</strong></div><div class="sw-metric"><span>实际售价</span><strong>${yen(data.custom_实际售价)}</strong></div><div class="sw-metric"><span>运营后预计利润</span><strong>${Number(data.custom_实际售价) > 0 ? yen(r.custom_运营后毛利润) : "待填写售价"}</strong><span>${Number(data.custom_实际售价) > 0 ? Number(r.custom_运营后毛利率 || 0).toFixed(2) + "%" : ""}</span></div>${["到日本仓成本", "日本配送日本", "平台交易成本", "销售运营成本", "未运营保本售价", "运营后保本售价", "未运营毛利润"].map((k) => `<div class="sw-cost-row"><span>${k === "日本配送日本" ? "日本配送成本" : k}</span><b>${yen(r["custom_" + k])}</b></div>`).join("")}<div class="sw-cost-row"><span>预计销售总成本</span><b>${Number(data.custom_实际售价) > 0 ? yen(Number(r.custom_到日本仓成本) + Number(r.custom_日本配送日本) + Number(r.custom_平台交易成本) + Number(r.custom_销售运营成本)) : "待填写售价"}</b></div><small>${esc(pricing.message)}</small>`;
+      const ready = pricing?.status === "estimated" && !calculationError,
+        r = ready ? pricing.results : {};
+      content.querySelectorAll("[data-cost]").forEach((el) => {
+        const key = el.dataset.cost;
+        const parts = [
+          "custom_到日本仓成本",
+          "custom_日本配送日本",
+          "custom_平台交易成本",
+          "custom_销售运营成本",
+        ];
+        const value =
+          key === "totalCost"
+            ? parts.every((k) => r[k] != null)
+              ? parts.reduce((n, k) => n + Number(r[k]), 0)
+              : null
+            : r["custom_" + key];
+        const available =
+          ready &&
+          value != null &&
+          (!priceDependent.has(key) || Number(data.custom_实际售价) > 0);
+        el.textContent = !available
+          ? "待计算"
+          : key.endsWith("率")
+            ? Number(value).toFixed(2) + "%"
+            : yen(value);
+        el.classList.toggle("sw-loss", available && Number(value) < 0);
+      });
+      const loss =
+        ready &&
+        Number(data.custom_实际售价) > 0 &&
+        Number(r.custom_运营后毛利润) < 0;
+      content.querySelector("[data-profit]").innerHTML =
+        '<p class="sw-calculation-status ' +
+        (loss ? "sw-loss" : "") +
+        '" role="status">' +
+        esc(
+          (loss ? "预计亏损，请检查售价和经营方案。 " : "") +
+            (calculationError ||
+              pricing?.message ||
+              "请填写采购价、重量及物流参数"),
+        ) +
+        "</p>";
+      const rate = content.querySelector("[data-operation-rate]");
+      if (rate)
+        rate.textContent =
+          "综合运营费率 " +
+          operationKeys
+            .reduce((sum, k) => sum + Number(data[k] || 0), 0)
+            .toFixed(2) +
+          "%";
     };
     const recalc = () => {
       clearTimeout(timer);
       const seq = ++sequence;
-      timer = setTimeout(
-        guarded(async () => {
+      if (composing) return;
+      timer = setTimeout(async () => {
+        try {
           const result = await api("/calculate", "POST", data);
-          if (seq === sequence && !signal.aborted) {
-            pricing = result;
-            drawProfit();
-          }
-        }),
-        350,
-      );
+          if (seq !== sequence || signal.aborted) return;
+          pricing = result;
+          calculationError = "";
+          drawProfit();
+        } catch (e) {
+          if (seq !== sequence || signal.aborted) return;
+          calculationError = e.message;
+          drawProfit();
+        }
+      }, 350);
     };
     on(signal, "abort", () => clearTimeout(timer));
-    content.querySelectorAll("[data-field],[data-extra]").forEach((input) =>
-      on(input, "input", () => {
+    const purchaseLink = content.querySelector("[data-purchase-open]");
+    const updatePurchaseLink = () => {
+      if (!purchaseLink) return;
+      try {
+        const u = new URL(String(data.sourceUrl || "").trim());
+        if (!["https:", "http:"].includes(u.protocol)) throw Error();
+        purchaseLink.href = u.href;
+        purchaseLink.removeAttribute("aria-disabled");
+      } catch {
+        purchaseLink.removeAttribute("href");
+        purchaseLink.setAttribute("aria-disabled", "true");
+      }
+    };
+    content.querySelectorAll("[data-field],[data-extra]").forEach((input) => {
+      const update = () => {
         const key = input.dataset.field || input.dataset.extra;
         data[key] =
           input.type === "number"
@@ -313,9 +541,22 @@ export async function initSelectionWorkspace(host, forcedView) {
               ? ""
               : Number(input.value)
             : input.value;
+        updatePurchaseLink();
+        drawProfit();
         recalc();
-      }),
-    );
+      };
+      on(input, "compositionstart", () => {
+        composing = true;
+        clearTimeout(timer);
+        sequence++;
+      });
+      on(input, "compositionend", () => {
+        composing = false;
+        update();
+      });
+      on(input, "input", update);
+    });
+    updatePurchaseLink();
     function skuRows() {
       const box = content.querySelector("[data-skus]");
       box.innerHTML = data.skus
@@ -381,6 +622,9 @@ export async function initSelectionWorkspace(host, forcedView) {
       }),
     );
     const save = async () => {
+      data.referenceLinks = (data.referenceLinks || []).filter((v) =>
+        String(v).trim(),
+      );
       record = await api(
         record ? "/records/" + encodeURIComponent(record.id) : "/records",
         record ? "PATCH" : "POST",
@@ -388,6 +632,16 @@ export async function initSelectionWorkspace(host, forcedView) {
       );
       data = structuredClone(record.data);
       pricing = record.pricing;
+      calculationError = "";
+      report(
+        record.status === "confirmed"
+          ? "资料已保存，选品确认状态保留。"
+          : "草稿已保存。",
+      );
+      conclusion.querySelector("[data-conclusion-status]").textContent =
+        record.status === "confirmed"
+          ? "已确认选品 · 待第二阶段资料完善"
+          : "草稿 · 确认选品不等于提交ERP";
       content.querySelector("[data-save-state]").textContent =
         "已保存 · 版本 " + record.version;
       history.replaceState(
@@ -398,16 +652,162 @@ export async function initSelectionWorkspace(host, forcedView) {
       drawProfit();
       return record;
     };
+    on(content.querySelector("[data-back-list]"), "click", () =>
+      navigate("list"),
+    );
+    on(
+      content.querySelector("[data-confirm-selection]"),
+      "click",
+      guarded(async () => {
+        await save();
+        const result = await api("/batch", "POST", {
+          action: "confirm",
+          items: [{ id: record.id, version: record.version }],
+        });
+        record = { ...record, ...result.items[0] };
+        content.querySelector("[data-save-state]").textContent =
+          "已确认选品 · 待第二阶段资料完善";
+        conclusion.querySelector("[data-conclusion-status]").textContent =
+          "已确认选品 · 待第二阶段资料完善；未提交ERP";
+        report("已确认选品；未提交ERP、未上架。可以继续完善第二阶段资料。");
+      }),
+    );
+    on(content.querySelector("[data-reset-rates]"), "click", () => {
+      for (const key of operationKeys) {
+        data[key] = 0;
+        const f = content.querySelector('[data-field="' + key + '"]');
+        if (f) f.value = 0;
+      }
+      drawProfit();
+      recalc();
+    });
+    data.referenceLinks ||= [];
+    function renderReferences() {
+      const box = content.querySelector("[data-reference-links]");
+      if (!box) return;
+      box.innerHTML = data.referenceLinks
+        .map(
+          (url, i) =>
+            '<div class="sw-reference"><input type="url" aria-label="参考链接 ' +
+            (i + 1) +
+            '" data-reference="' +
+            i +
+            '" value="' +
+            esc(url) +
+            '"><a data-reference-open="' +
+            i +
+            '" target="_blank" rel="noopener noreferrer">打开 ↗</a><button data-reference-remove="' +
+            i +
+            '">删除</button></div>',
+        )
+        .join("");
+      box.querySelectorAll("[data-reference]").forEach((input) => {
+        const update = () => {
+          data.referenceLinks[Number(input.dataset.reference)] = input.value;
+          const a = box.querySelector(
+            '[data-reference-open="' + input.dataset.reference + '"]',
+          );
+          try {
+            const u = new URL(input.value);
+            if (!["https:", "http:"].includes(u.protocol)) throw Error();
+            a.href = u.href;
+          } catch {
+            a.removeAttribute("href");
+          }
+        };
+        on(input, "input", update);
+        update();
+      });
+      box.querySelectorAll("[data-reference-remove]").forEach((b) =>
+        on(b, "click", () => {
+          data.referenceLinks.splice(Number(b.dataset.referenceRemove), 1);
+          renderReferences();
+        }),
+      );
+    }
+    renderReferences();
+    on(content.querySelector("[data-add-reference]"), "click", () => {
+      data.referenceLinks.push("");
+      renderReferences();
+    });
+    on(
+      content.querySelector("[data-read-source]"),
+      "click",
+      guarded(async () => {
+        const result = await api("/source-check", "POST", {
+          sourceUrl: data.sourceUrl,
+          excludeId: record?.id,
+        });
+        const box = content.querySelector("[data-source-status]");
+        box.textContent =
+          (result.duplicates.length
+            ? "已有 " + result.duplicates.length + " 条本人可见重复选品。 "
+            : "链接有效；当前可见范围未发现重复。 ") + result.reading.message;
+      }),
+    );
+    on(content.querySelector("[data-import-source]"), "click", () =>
+      content.querySelector("[data-source-file]").click(),
+    );
+    on(
+      content.querySelector("[data-source-file]"),
+      "change",
+      guarded(async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const result = await api("/import", "POST", {
+          filename: file.name,
+          base64: await file64(file),
+        });
+        if (result.errors.length || result.items.length !== 1)
+          throw Error("请导入一份有效的商品快速录入资料表");
+        const source = result.items[0].data;
+        for (const [key, value] of Object.entries(source)) {
+          if (data[key] == null || data[key] === "") {
+            data[key] = value;
+            const input = content.querySelector('[data-field="' + key + '"]');
+            if (input) input.value = value;
+          }
+        }
+        updatePurchaseLink();
+        recalc();
+        report("已读取现有资料表并补充空白字段，人工值未覆盖，请核对后保存。");
+      }),
+    );
+    const aiResult = document.createElement("div");
+    aiResult.className = "sw-ai-result";
+    aiResult.setAttribute("role", "status");
+    content.append(aiResult);
+    content.querySelectorAll("[data-ai]").forEach((b) =>
+      on(
+        b,
+        "click",
+        guarded(async () => {
+          aiResult.textContent = "正在检查统一AI能力…";
+          const result = await api("/assist-context", "POST", {
+            id: record?.id,
+            data,
+            objective: b.dataset.ai,
+          });
+          aiResult.textContent = result.message;
+          aiResult.scrollIntoView({ block: "nearest" });
+        }),
+      ),
+    );
     on(content.querySelector("[data-save]"), "click", guarded(save));
     const identifyButton = document.createElement("button");
     identifyButton.textContent = "按ERP规则识别分类与简称";
-    content.querySelector(".sw-actions").append(identifyButton);
+    const sourceIdentify = content.querySelector("[data-identify-source]");
+    if (!sourceIdentify)
+      content.querySelector(".sw-actions").append(identifyButton);
     on(
-      identifyButton,
+      sourceIdentify || identifyButton,
       "click",
       guarded(async () => {
         const title = data.custom_商品长标题中文;
-        if (!title) throw Error("请先填写商品长标题");
+        if (!title)
+          throw Error(
+            "现有ERP识别依据商品标题，不会自动抓取采购网页。请粘贴商品长标题或导入现有资料后再识别。",
+          );
         const suggestion = await api("/identify", "POST", { title });
         if (!data.item_group && suggestion.category) {
           data.item_group = suggestion.category;
@@ -428,12 +828,12 @@ export async function initSelectionWorkspace(host, forcedView) {
     );
     const packageButton = document.createElement("button");
     packageButton.textContent = "下载ERP资料包";
-    content.querySelector(".sw-actions").append(packageButton);
+    content.querySelector("[data-stage-two-actions]").append(packageButton);
     on(
       packageButton,
       "click",
       guarded(async () => {
-        if (!record || (record.status === "draft" && !record.archived))
+        if (!record || (record.status !== "submitted" && !record.archived))
           await save();
         await download(
           "/records/" + encodeURIComponent(record.id) + "/package",
@@ -468,6 +868,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       const fresh = await api("/records/" + encodeURIComponent(record.id));
       record.assets = fresh.assets;
       const box = content.querySelector("[data-images]");
+      if (!box) return;
       box.innerHTML = "";
       for (const [i, a] of record.assets.entries()) {
         const url = await imageUrl(record.id, a.id);
@@ -529,7 +930,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       "change",
       guarded((e) => upload(e.target.files)),
     );
-    const drop = content.querySelector(".sw-drop");
+    const drop = content.querySelector(".sw-media-field .sw-drop");
     on(drop, "dragover", (e) => e.preventDefault());
     on(
       drop,
@@ -552,6 +953,113 @@ export async function initSelectionWorkspace(host, forcedView) {
         }
       }),
     );
+    async function marketAssets() {
+      const box = content.querySelector("[data-market-assets]");
+      if (!record || !box) return;
+      const fresh = await api("/records/" + encodeURIComponent(record.id));
+      box.innerHTML = "";
+      for (const [i, a] of (fresh.marketAssets || []).entries()) {
+        const card = document.createElement("div");
+        card.className = "sw-market-asset";
+        const isImage = a.content_type.startsWith("image/");
+        const url = isImage ? await imageUrl(record.id, a.id) : null;
+        card.innerHTML =
+          (isImage
+            ? '<button data-preview><img src="' +
+              url +
+              '" alt="' +
+              esc(a.filename) +
+              '"></button>'
+            : "<button data-download>下载附件</button>") +
+          "<small>" +
+          esc(a.filename) +
+          "</small><button data-up>↑</button><button data-down>↓</button><button data-remove>删除</button>";
+        box.append(card);
+        on(card.querySelector("[data-preview]"), "click", () => {
+          const d = document.createElement("dialog");
+          d.className = "sw-image-dialog";
+          d.innerHTML =
+            '<button>关闭</button><img src="' + url + '" alt="市场参考预览">';
+          host.append(d);
+          d.querySelector("button").onclick = () => d.remove();
+          d.showModal();
+        });
+        on(
+          card.querySelector("[data-download]"),
+          "click",
+          guarded(() =>
+            download(
+              "/records/" + encodeURIComponent(record.id) + "/assets/" + a.id,
+              a.filename,
+            ),
+          ),
+        );
+        for (const action of ["up", "down", "remove"])
+          on(
+            card.querySelector("[data-" + action + "]"),
+            "click",
+            guarded(async () => {
+              const ids = fresh.marketAssets.map((x) => x.id);
+              ids.splice(i, 1);
+              if (action !== "remove")
+                ids.splice(
+                  action === "up"
+                    ? Math.max(0, i - 1)
+                    : Math.min(ids.length, i + 1),
+                  0,
+                  a.id,
+                );
+              await api(
+                "/records/" + encodeURIComponent(record.id) + "/assets",
+                "PUT",
+                { ids, kind: "market" },
+              );
+              await marketAssets();
+            }),
+          );
+      }
+    }
+    const uploadMarket = async (files) => {
+      if (!record) await save();
+      for (const file of files) {
+        if (file.size > 2000000) throw Error("单个市场附件限2MB");
+        await api(
+          "/records/" + encodeURIComponent(record.id) + "/assets",
+          "POST",
+          { kind: "market", filename: file.name, base64: await file64(file) },
+        );
+      }
+      await marketAssets();
+    };
+    on(
+      content.querySelector("[data-market-upload]"),
+      "change",
+      guarded((e) => uploadMarket(e.target.files)),
+    );
+    const marketDrop = content.querySelector("[data-market-drop]");
+    on(marketDrop, "dragover", (e) => e.preventDefault());
+    on(
+      marketDrop,
+      "drop",
+      guarded(async (e) => {
+        e.preventDefault();
+        await uploadMarket(e.dataTransfer.files);
+      }),
+    );
+    on(
+      marketDrop,
+      "paste",
+      guarded(async (e) => {
+        const files = [...e.clipboardData.items]
+          .filter((i) => i.kind === "file")
+          .map((i) => i.getAsFile());
+        if (files.length) {
+          e.preventDefault();
+          await uploadMarket(files);
+        }
+      }),
+    );
+    await marketAssets();
     drawProfit();
     recalc();
     await images();
@@ -575,6 +1083,12 @@ export async function initSelectionWorkspace(host, forcedView) {
         "owner",
         "createdAt",
         "status",
+        "sourceUrl",
+        "totalCost",
+        "operationRate",
+        "selectionRationale",
+        "operatingStrategy",
+        "erpStatus",
       ];
     const names = {
       image: "商品图片",
@@ -589,9 +1103,15 @@ export async function initSelectionWorkspace(host, forcedView) {
       margin: "预计毛利率",
       owner: "负责人",
       createdAt: "选品时间",
-      status: "ERP状态",
+      status: "选品状态",
+      sourceUrl: "采购URL",
+      totalCost: "预计销售总成本",
+      operationRate: "运营费率",
+      selectionRationale: "选品依据",
+      operatingStrategy: "运营策略",
+      erpStatus: "ERP处理状态",
     };
-    content.innerHTML = `<div class="sw-toolbar"><input data-search placeholder="搜索货号、商品名称"><select data-filter-status><option value="">全部状态</option><option value="draft">草稿</option><option value="submitted">已提交ERP</option></select><select data-category><option value="">全部分类</option>${boot.fields
+    content.innerHTML = `<div class="sw-toolbar"><input data-search placeholder="搜索货号、商品名称"><select data-filter-status><option value="">全部状态</option><option value="draft">草稿</option><option value="confirmed">已确认选品</option><option value="submitted">已提交ERP</option></select><select data-category><option value="">全部分类</option>${boot.fields
       .find((f) => f.id === "item_group")
       .options.map((x) => `<option>${esc(x)}</option>`)
       .join(
@@ -624,6 +1144,38 @@ export async function initSelectionWorkspace(host, forcedView) {
                 : r.pricing?.results || {},
             v = {
               ...d,
+              sourceUrl: d.sourceUrl,
+              selectionRationale: d.selectionRationale,
+              operatingStrategy: d.operatingStrategy,
+              operationRate:
+                [
+                  "custom_aione_coupon",
+                  "custom_aione_points",
+                  "custom_aione_ads",
+                  "custom_aione_other",
+                ]
+                  .reduce((n, k) => n + Number(d[k] || 0), 0)
+                  .toFixed(2) + "%",
+              totalCost:
+                r.pricing?.status === "estimated" &&
+                Number(d.custom_实际售价) > 0
+                  ? yen(
+                      [
+                        "custom_到日本仓成本",
+                        "custom_日本配送日本",
+                        "custom_平台交易成本",
+                        "custom_销售运营成本",
+                      ].reduce((n, k) => n + Number(p[k] || 0), 0),
+                    )
+                  : "待计算",
+              erpStatus:
+                {
+                  queued: "等待同步",
+                  processing: "处理中",
+                  succeeded: "已接收",
+                  failed: "失败",
+                  conflict: "参数冲突",
+                }[r.erpStatus] || "未提交",
               image: `<span data-thumb="${esc(r.id)}">—</span>`,
               cost: d.custom_单个采购价 ?? "—",
               suggestion: yen(p.custom_目标毛利率达标售价),
@@ -639,9 +1191,13 @@ export async function initSelectionWorkspace(host, forcedView) {
               owner: r.owner,
               createdAt: r.createdAt.slice(0, 10),
               status:
-                r.status === "submitted" ? "已提交（查看处理详情）" : "草稿",
+                r.status === "submitted"
+                  ? "已提交ERP"
+                  : r.status === "confirmed"
+                    ? "已确认选品"
+                    : "草稿",
             };
-          return `<tr><td><input data-select="${esc(r.id)}" type="checkbox"></td>${columns.map((k) => `<td>${k === "image" ? v[k] : esc(v[k] ?? "—")}</td>`).join("")}<td><button data-open="${esc(r.id)}">打开</button></td></tr>`;
+          return `<tr><td><input data-select="${esc(r.id)}" type="checkbox"></td>${columns.map((k) => `<td>${k === "image" ? v[k] : ["sourceUrl", "selectionRationale", "operatingStrategy"].includes(k) ? `<button class="sw-cell-detail" title="${esc(v[k] || "")}" data-open="${esc(r.id)}">${esc(String(v[k] || "—").slice(0, 35))}</button>` : esc(String(v[k] ?? "—").slice(0, 60))}</td>`).join("")}<td><button data-open="${esc(r.id)}">打开</button></td></tr>`;
         })
         .join("");
       on(content.querySelector("[data-all]"), "change", (e) => {
