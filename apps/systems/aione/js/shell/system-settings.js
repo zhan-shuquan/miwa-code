@@ -85,7 +85,18 @@ async function saveDraft(activate){
 
 function openSettings(){ const overlay=document.getElementById('miwa-global-settings');if(!overlay)return;overlay.hidden=false;document.body.classList.add('miwa-settings-open');renderMeta();syncInputs();renderHistory();renderNotice();requestAnimationFrame(()=>overlay.querySelector('[data-settings-close]')?.focus()); }
 function closeSettings(){ const overlay=document.getElementById('miwa-global-settings');if(!overlay)return;overlay.hidden=true;document.body.classList.remove('miwa-settings-open');if(window.location.hash.startsWith('#/settings')){history.replaceState(null,'',returnHash||'#/selection');window.dispatchEvent(new HashChangeEvent('hashchange'));}}
-function routeSettings(){ const isSettings=window.location.hash.startsWith('#/settings');if(isSettings)openSettings();else{const overlay=document.getElementById('miwa-global-settings');if(overlay&&!overlay.hidden){overlay.hidden=true;document.body.classList.remove('miwa-settings-open');}if(window.location.hash)returnHash=window.location.hash;}}
+function routeSettings(){
+ const selectionEnabled=window.AIONE_SELECTION_PREVIEW===true||window.AIONE_SELECTION_WORKSPACE_ENABLED===true;
+ const section=new URLSearchParams(window.location.hash.split('?')[1]||'').get('section');
+ const workspaceSettings=selectionEnabled&&['selection-layout','selection-sync'].includes(section);
+ const isSettings=window.location.hash.startsWith('#/settings')&&!workspaceSettings;
+ if(isSettings)openSettings();
+ else{
+  const overlay=document.getElementById('miwa-global-settings');
+  if(overlay&&!overlay.hidden){overlay.hidden=true;document.body.classList.remove('miwa-settings-open');}
+  if(window.location.hash)returnHash=window.location.hash;
+ }
+}
 
 export function initSystemSettings(){ const overlay=document.getElementById('miwa-global-settings');if(!overlay||overlay.dataset.initialized==='true')return;overlay.dataset.initialized='true';attachCommerceControls();void loadState();renderMeta();syncInputs();renderHistory();renderNotice();document.querySelectorAll('[data-global-param]').forEach((input)=>{const event=input.tagName==='SELECT'?'change':'input';input.addEventListener(event,()=>{setByPath(draftParameters,input.dataset.globalParam,readInput(input));renderNotice();});});document.querySelectorAll('[data-global-settings-tab]').forEach((button)=>button.addEventListener('click',()=>{document.querySelectorAll('[data-global-settings-tab]').forEach((item)=>item.classList.toggle('is-active',item===button));document.querySelectorAll('[data-global-settings-section]').forEach((section)=>{section.hidden=section.dataset.globalSettingsSection!==button.dataset.globalSettingsTab;});}));overlay.querySelectorAll('[data-settings-close]').forEach((button)=>button.addEventListener('click',closeSettings));overlay.addEventListener('click',(event)=>{if(event.target===overlay)closeSettings();});document.addEventListener('keydown',(event)=>{if(event.key==='Escape'&&!overlay.hidden)closeSettings();});document.getElementById('global-settings-reset')?.addEventListener('click',()=>{draftParameters=clone(INITIAL_PARAMETERS);syncInputs();renderNotice('已恢复系统建议值到草稿，尚未保存。');});document.getElementById('global-settings-save')?.addEventListener('click',()=>saveDraft(false));document.getElementById('global-settings-activate')?.addEventListener('click',()=>saveDraft(true));document.getElementById('global-settings-history-toggle')?.addEventListener('click',()=>{const history=document.getElementById('global-settings-history');if(history)history.hidden=!history.hidden;});window.addEventListener('hashchange',routeSettings);routeSettings();}
 

@@ -16,6 +16,7 @@ function clearLegacyApiOverride() {
 }
 
 export function getAioneApiBaseUrl() {
+  if(window.AIONE_SELECTION_PREVIEW && isLocalDevelopmentHost())return window.location.origin;
   if (isLocalDevelopmentHost()) {
     if (window.AIONE_API_BASE_URL) return normalizeBase(window.AIONE_API_BASE_URL);
     try {

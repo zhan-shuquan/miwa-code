@@ -147,6 +147,21 @@ function renderReservedRoute(route) {
 }
 
 async function renderCurrentRoute() {
+  const {selectionWorkspaceEnabled}=await import('./config/selection-navigation.js');
+  if(selectionWorkspaceEnabled()){
+    const id=getRouteId();
+    if(id==='work'){
+      const {initSelectionWorkHome}=await import('./pages/selection-work-home.js');
+      await initSelectionWorkHome(document.getElementById('app-main-host'));return;
+    }
+    if(id==='settings'&&new URLSearchParams(location.hash.split('?')[1]).get('section')?.startsWith('selection-')){
+      const {initSelectionWorkspace}=await import('./pages/selection-workspace.js');
+      const section=new URLSearchParams(location.hash.split('?')[1]).get('section');
+      await initSelectionWorkspace(document.getElementById('app-main-host'),section==='selection-layout'?'layout':'sync');return;
+    }
+    const allowed=['work','calendar','talent-home','ai-home','ai-office','product-home','notifications','notification-detail','settings','employee-profile'];
+    if(!allowed.includes(id)&&!location.hash.includes('帮助中心')){location.hash='#/work';return;}
+  }
   const route = getRouteDefinition();
   const routeId = getRouteId();
   window.dispatchEvent(new CustomEvent("aione:page-aside-context", { detail: { state: "light", kicker: "当前上下文", title: route.title, text: "当前页面暂无必须展开的辅助信息；如出现关键状态、风险或关联信息，右侧将按需更新。" } }));
@@ -286,7 +301,10 @@ async function startMiwaSystem() {
       summary: () => getPreviewActivitySummary(previewIdentity.subjectId)
     });
 
-    if (!window.location.hash) history.replaceState(null, "", "#/selection");
+    if (!window.location.hash) {
+      const { selectionWorkspaceEnabled } = await import('./config/selection-navigation.js');
+      history.replaceState(null, "", selectionWorkspaceEnabled() ? "#/work" : "#/selection");
+    }
     initPlatformContext();
 
     const shellComponents = systemConfig.components.filter(([hostId]) => hostId !== "app-main-host");
@@ -306,6 +324,8 @@ async function startMiwaSystem() {
       user: { ...systemConfig.header.user, ...previewHeaderConfig.user }
     }));
     initShellModule("Primary Navigation", () => initPrimaryNavigation());
+    const {configureSelectionNavigation}=await import('./config/selection-navigation.js');
+    configureSelectionNavigation();
     initShellModule("Aside", () => initAside(systemConfig.aside));
     initShellModule("美和AI", () => initMiwaAILayer());
     initShellModule("Footer", () => initFooter(systemConfig.footer));

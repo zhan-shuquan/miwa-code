@@ -137,6 +137,12 @@ function renderRoot(host,view){
   host.querySelector("[data-open-product]")?.addEventListener("click",()=>navigate({center:"product-center",product:PRODUCT_REF}));host.querySelectorAll("[data-root-view]").forEach(button=>button.addEventListener("click",()=>navigate({view:button.dataset.rootView})));
 }
 export async function initProductHomeCurrent(){
+  const {selectionWorkspaceEnabled}=await import('../config/selection-navigation.js');
+  if(selectionWorkspaceEnabled()){
+    const {initSelectionWorkspace}=await import('./selection-workspace.js');
+    await initSelectionWorkspace(document.getElementById('app-main-host'));
+    window.dispatchEvent(new CustomEvent('aione:page-aside-context',{detail:{state:'hidden'}}));return true;
+  }
   const host=document.getElementById("app-main-host");if(!host)return false;document.body.dataset.productHome="current";
   const query=params(),centerId=query.get("center");
   if(centerId==="product-center"&&query.get("new")==="1"){openProductEditor(host);}else if(query.get("product"))await renderProductWorkspace(host);else if(centerId&&centerById(centerId))await renderCenter(host,centerById(centerId),Math.max(0,Number(query.get("view")||0)));else renderRoot(host,query.get("view")||"overview");

@@ -242,6 +242,13 @@ async function initGoogleSignIn(host, onAuthenticated) {
 }
 
 export async function resolvePreviewIdentity() {
+  if (window.AIONE_SELECTION_PREVIEW && ['127.0.0.1','localhost'].includes(location.hostname)) {
+    const response=await fetch('/__preview/identity');
+    if(!response.ok){location.href='/preview';throw new Error('测试身份未登录');}
+    const identity=await response.json();
+    identity.name=identity.displayName;identity.canonicalIdentitySource='isolated_test';
+    window.AIONEPreviewIdentity=identity;return identity;
+  }
   const existing = readStoredSession();
   if (existing) {
     try {

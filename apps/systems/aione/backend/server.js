@@ -19,6 +19,7 @@ import rakutenItemApiPreflightRouter from "./src/routes/rakuten-itemapi-prefligh
 import designRouter from "./src/routes/design.js";
 import designCenterRouter from "./src/routes/design-center.js";
 import { resolveAioneGoogleIdentity } from "./src/http/google-auth.js";
+import { createSelectionWorkspaceRouter } from './src/routes/selection-workspace.js';
 
 const app = express();
 
@@ -100,7 +101,18 @@ if (designCenterPreviewEnabled) {
 
 // Production API requests must resolve a real Google identity server-side.
 // Cloud Run IAM remains a separate service-to-service boundary in front of this middleware.
-app.use(resolveAioneGoogleIdentity);
+app.use((req,res,next)=>{
+  if(process.env.AIONE_SELECTION_WORKSPACE_ENABLED==='true'&&req.path.startsWith('/api/v1/selection-workspace/connector/'))return next(); // Dedicated connector token is verified by the mounted router.
+  return resolveAioneGoogleIdentity(req,res,next);
+});
+
+if(process.env.AIONE_SELECTION_WORKSPACE_ENABLED==='true') {
+  app.use('/api/v1/selection-workspace',createSelectionWorkspaceRouter(pool,{
+    costUrl:process.env.ERP_COST_URL,connectorToken:process.env.AIONE_CONNECTOR_TOKEN,
+    reviewedRuleHash:process.env.ERP_REVIEWED_RULE_SHA256,reviewedIdentificationHash:process.env.ERP_REVIEWED_IDENTIFICATION_SHA256
+  }));
+  app.use(['/api/v1/product-lifecycle','/api/v1/design','/api/v1/design-center','/api/v1/rakuten-canonical','/api/v1/product-entry'],(_req,res)=>res.status(403).json({error:'此选品模式由ERP承接正式商品与自动化任务；旧入口未开放'}));
+}
 
 app.use("/api/v1/me", currentUserRouter);
 app.use("/api/v1/ai-secretary", aiSecretaryRouter);

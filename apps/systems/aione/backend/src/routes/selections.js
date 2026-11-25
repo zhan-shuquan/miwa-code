@@ -1,5 +1,6 @@
 import { Router } from "express";
 import pool from "../../db.js";
+import { selectionReadScope } from '../http/selection-owner-policy.js';
 
 const router = Router();
 
@@ -56,7 +57,8 @@ function addEqualsFilter(clauses, values, rawValue, column) {
 
 router.get("/", async (req, res, next) => {
   try {
-    const context = req.aioneContext || {};
+    const access = selectionReadScope(req);
+    const context = {personId:access.ownerId};
     const limit = normalizeLimit(req.query.limit);
     const offset = normalizeOffset(req.query.offset);
     const clauses = ["o.archived_at IS NULL"];
@@ -69,8 +71,8 @@ router.get("/", async (req, res, next) => {
     addEqualsFilter(clauses, values, req.query.categoryId, "o.category_id");
     addEqualsFilter(clauses, values, req.query.businessId, "o.business_id");
 
-    const requestedOwner = cleanText(req.query.ownerPersonId, 240);
-    const scope = cleanText(req.query.scope, 40).toLowerCase();
+    const requestedOwner = access.ownerId || '';
+    const scope = access.scope;
     if (scope === "mine") {
       if (!context.personId) return res.status(401).json({ error: "authenticated_actor_required" });
       values.push(context.personId);
@@ -138,6 +140,7 @@ router.get("/", async (req, res, next) => {
 
 router.get("/:id", async (req, res, next) => {
   try {
+    const access=selectionReadScope(req);
     const id = cleanText(req.params.id, 240);
     const result = await pool.query(
       `SELECT
@@ -148,9 +151,9 @@ router.get("/:id", async (req, res, next) => {
        FROM public.product_opportunities o
        LEFT JOIN public.products p
          ON p.source_opportunity_id = o.id AND p.archived_at IS NULL
-       WHERE o.id = $1 AND o.archived_at IS NULL
+       WHERE o.id = $1 AND o.archived_at IS NULL AND ($2::text IS NULL OR o.owner_person_id=$2)
        LIMIT 1`,
-      [id]
+      [id,access.ownerId]
     );
     if (!result.rowCount) return res.status(404).json({ error: "selection_not_found" });
 
