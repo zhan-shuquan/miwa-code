@@ -95,7 +95,7 @@ await call(admin, "/layout", "PUT", layout);
 assert.equal((await call(employee, "/bootstrap")).layout.ratio, 55);
 await call(admin, "/layout", "PUT", boot.layout);
 const png =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=";
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADklEQVQImWP4DwYMEAoAU7oL9W/sIDEAAAAASUVORK5CYII=";
 const image = await call(
   employee,
   "/records/" + encodeURIComponent(saved.id) + "/assets",

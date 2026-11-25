@@ -160,7 +160,7 @@ try {
   assert.equal(draft.pricing.reconciliation.checks[0].difference, -7);
   checks += 2;
   const png =
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=";
+    "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADklEQVQImWP4DwYMEAoAU7oL9W/sIDEAAAAASUVORK5CYII=";
   await api("/records/" + encodeURIComponent(draft.id) + "/assets", "POST", {
     filename: "v36-test.png",
     mimeType: "image/png",

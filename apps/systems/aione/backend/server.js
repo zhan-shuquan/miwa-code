@@ -1,3 +1,4 @@
+import { uploadJsonLimit } from "./src/services/selection-upload-policy.js";
 import express from "express";
 import pool from "./db.js";
 import coreRouter from "./src/routes/core.js";
@@ -24,7 +25,7 @@ import { createSelectionWorkspaceRouter } from './src/routes/selection-workspace
 const app = express();
 
 app.disable("x-powered-by");
-app.use(express.json({ limit: "4mb" })); // Excel base64 import is capped separately at 2MB raw payload
+app.use(express.json({ limit: uploadJsonLimit })); // Asset cap includes base64 overhead; workbook limits remain separately validated.
 
 // Local Preview may run the static frontend on :5500 and Backend on :8080.
 const corsOrigins = new Set(String(process.env.AIONE_CORS_ORIGINS || "http://127.0.0.1:5500,http://localhost:5500").split(",").map((item) => item.trim()).filter(Boolean));

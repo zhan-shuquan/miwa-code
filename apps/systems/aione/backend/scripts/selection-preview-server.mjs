@@ -1,3 +1,4 @@
+import { uploadJsonLimit } from "../src/services/selection-upload-policy.js";
 import express from "express";
 import pg from "pg";
 import { readFile } from "node:fs/promises";
@@ -40,7 +41,7 @@ await pool.query(
 const app = express(),
   sessions = new Map();
 app.disable("x-powered-by");
-app.use(express.json({ limit: "4mb" }));
+app.use(express.json({ limit: uploadJsonLimit }));
 const accounts = {
   employee: {
     personId: "test-employee",

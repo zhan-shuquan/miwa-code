@@ -1,3 +1,5 @@
+import { uploadPolicy } from "../services/selection-upload-policy.js";
+import { imageDerivative } from "../services/selection-image-preview.js";
 import {
   reconcileCosts,
   assertReconciled,
@@ -230,6 +232,29 @@ export function createSelectionWorkspaceRouter(
         connection = await config("connection");
       const defaults = defaultLayout(fields),
         layout = (await config("layout")) || defaults;
+      if ((layout.version || 0) < 38) {
+        // One-time upgrade of structural requirements; keep administrator widths/order.
+        for (const group of layout.groups) {
+          const current = defaults.groups.find((g) => g.id === group.id);
+          if (current)
+            Object.assign(group, { label: current.label, icon: current.icon });
+          if (group.id === "source") group.hidden = true;
+        }
+        for (const field of layout.fields) {
+          if (field.group === "source") field.group = "basic";
+          if (field.id === "marketReferencePrice") field.hidden = true;
+          if (field.id === "selectionRationale" && field.rows === 6)
+            field.rows = 9;
+        }
+        const mainOrder = ["basic", "market", "logistics", "operations"];
+        layout.groups.sort((a, b) => {
+          const rank = (g) =>
+            mainOrder.includes(g.id) ? mainOrder.indexOf(g.id) : 10;
+          return rank(a) - rank(b);
+        });
+        layout.version = 38;
+        await putConfig("layout", layout);
+      }
       layout.fields = layout.fields.filter((f) =>
         fields.some((x) => x.id === f.id),
       );
@@ -243,6 +268,7 @@ export function createSelectionWorkspaceRouter(
           name: req.aioneIdentity.displayName || actor(req),
           admin: admin(req.aioneIdentity),
         },
+        uploadPolicy,
         fields,
         layout,
         defaults,
@@ -531,13 +557,24 @@ export function createSelectionWorkspaceRouter(
         values.push(q[key]);
         where += ` AND created_at::date ${op} $${values.length}::date`;
       }
+    const numeric = (key, calculated = false) => {
+      const path = calculated ? "'pricing'->'results'" : "'data'";
+      const value = `selection_workspace->${path}->>'${key}'`;
+      const ready = calculated
+        ? "selection_workspace->'pricing'->>'status'='estimated' AND COALESCE(NULLIF(selection_workspace->'data'->>'custom_实际售价',''),'0')::numeric>0 AND "
+        : "";
+      return `CASE WHEN ${ready}(${value}) ~ '^-?[0-9]+(\\.[0-9]+)?$' THEN (${value})::numeric END`;
+    };
     const sorts = {
       createdAt: "created_at",
       updatedAt: "updated_at",
-      profit:
-        "(selection_workspace->'pricing'->'results'->>'custom_运营后毛利润')::numeric",
-      margin:
-        "(selection_workspace->'pricing'->'results'->>'custom_运营后毛利率')::numeric",
+      item_code: "selection_workspace->'data'->>'item_code'",
+      item_name: "selection_workspace->'data'->>'item_name'",
+      cost: numeric("custom_单个采购价"),
+      price: numeric("custom_实际售价"),
+      suggestion: numeric("custom_目标毛利率达标售价", true),
+      profit: numeric("custom_运营后毛利润", true),
+      margin: numeric("custom_运营后毛利率", true),
     };
     if (q.minMargin !== undefined) {
       if (!Number.isFinite(Number(q.minMargin))) fail("利润率无效");
@@ -657,6 +694,7 @@ export function createSelectionWorkspaceRouter(
       ),
       "sourceUrl",
       "referenceLinks",
+      "referencePrices",
       "salesPlatform",
       "marketReferencePrice",
       "selectionRationale",
@@ -983,12 +1021,19 @@ export function createSelectionWorkspaceRouter(
               : null;
       if (
         !bytes.length ||
-        bytes.length > 2000000 ||
+        bytes.length > uploadPolicy.maxBytes ||
         (!png && !jpg && !webp && !documentType)
       )
-        fail(
-          "附件限2MB以内图片、PDF、XLSX、DOCX、TXT或CSV；商品素材仅支持图片",
-        );
+        fail(`附件不能超过${uploadPolicy.maxMB}MB；商品素材支持JPG、PNG、WebP`);
+      if (png || jpg || webp) {
+        try {
+          const original = { bytes, sha256: digest(bytes) };
+          await imageDerivative(original, "preview");
+          await imageDerivative(original, "thumbnail");
+        } catch {
+          fail("图片无法解码或像素过大，请选择有效图片");
+        }
+      }
       const r = await tx(async (c) => {
         const record = await row(req, req.params.id, c, true);
         if (
@@ -1053,6 +1098,15 @@ export function createSelectionWorkspaceRouter(
         )
       ).rows[0];
       if (!a) fail("附件不存在", 404);
+      if (
+        a.content_type.startsWith("image/") &&
+        ["preview", "thumbnail"].includes(req.query.size)
+      ) {
+        return res
+          .set("Cache-Control", "private,no-store")
+          .type("image/webp")
+          .send(await imageDerivative(a, req.query.size));
+      }
       if (!a.content_type.startsWith("image/")) res.attachment(a.filename);
       res
         .set("Cache-Control", "private,no-store")
@@ -1134,6 +1188,7 @@ export function createSelectionWorkspaceRouter(
       "selectionRationale",
       "operatingStrategy",
       "referenceLinks_JSON",
+      "referencePrices_JSON",
       "supplier",
       "SKU_JSON",
       "salesPlatform",
@@ -1148,6 +1203,7 @@ export function createSelectionWorkspaceRouter(
         r.data.selectionRationale || "",
         r.data.operatingStrategy || "",
         JSON.stringify(r.data.referenceLinks || []),
+        JSON.stringify(r.data.referencePrices || []),
         r.data.supplier,
         JSON.stringify(r.data.skus || []),
         r.data.salesPlatform || "",
@@ -1222,6 +1278,7 @@ export function createSelectionWorkspaceRouter(
           if (data["选品ID"]) fail("已有记录请使用批量编辑，不通过导入覆盖");
           data.skus = JSON.parse(data.SKU_JSON || "[]");
           data.referenceLinks = JSON.parse(data.referenceLinks_JSON || "[]");
+          data.referencePrices = JSON.parse(data.referencePrices_JSON || "[]");
           items.push({ line: n, data: validateData(data, s) });
         } catch (e) {
           errors.push({ line: n, error: e.message });

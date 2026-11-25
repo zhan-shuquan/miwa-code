@@ -23,17 +23,17 @@ export const BINDINGS = {
   custom_aione_other: ["operations", "number"],
 };
 export const GROUPS = [
-  { id: "sales", label: "销售方案", region: "aside" },
-  { id: "source", label: "01 采购来源", region: "main" },
-  { id: "market", label: "02 市场调研与选品依据", region: "main" },
-  { id: "basic", label: "03 商品基本信息", region: "main" },
+  { id: "sales", label: "销售方案", icon: "store", region: "aside" },
+  { id: "source", label: "采购来源", region: "main", hidden: true },
+  { id: "basic", label: "商品基本信息", icon: "product", region: "main" },
+  { id: "market", label: "市场调研与选品依据", icon: "search", region: "main" },
   { id: "purchase", label: "选品决策", region: "main" },
-  { id: "logistics", label: "04 物流与包装", region: "main" },
-  { id: "operations", label: "05 运营设置", region: "main" },
+  { id: "logistics", label: "物流与包装", icon: "supplier", region: "main" },
+  { id: "operations", label: "运营设置", icon: "settings", region: "main" },
   { id: "strategy", label: "运营策略", region: "main" },
-  { id: "cost", label: "成本自动核算", region: "aside" },
-  { id: "pricing", label: "智能定价", region: "aside" },
-  { id: "profit", label: "利润分析", region: "aside" },
+  { id: "cost", label: "成本自动核算", icon: "calculator", region: "aside" },
+  { id: "pricing", label: "智能定价", icon: "tag", region: "aside" },
+  { id: "profit", label: "利润分析", icon: "profit", region: "aside" },
   {
     id: "details",
     label: "其他商品属性（第二阶段）",
@@ -105,7 +105,7 @@ export function fieldsFor(snapshot) {
         group,
         options,
         readOnly: ["item_name", "item_group", "brand"].includes(id),
-        display: id === "custom_库存类型" ? "radio" : undefined,
+        display: undefined,
         costKey: {
           custom_aione_coupon: "operation:0",
           custom_aione_points: "operation:1",
@@ -178,6 +178,8 @@ export function fieldsFor(snapshot) {
         id: "selectionRationale",
         label: "选品依据",
         type: "textarea",
+        placeholder:
+          "市场需求：\n\n竞争优势：\n\n目标消费人群：\n\n商品差异化：\n\n选择这款商品的理由：",
         group: "market",
         options: [],
       },
@@ -253,8 +255,8 @@ export function defaultLayout(fields) {
     "custom_实际售价",
   ];
   const groupFor = (f) =>
-    f.id === "custom_商品长标题中文"
-      ? "source"
+    ["sourceUrl", "custom_商品长标题中文"].includes(f.id)
+      ? "basic"
       : f.id === "custom_中国国内运费" || f.group === "purchase"
         ? "basic"
         : f.id === "operatingStrategy"
@@ -272,7 +274,7 @@ export function defaultLayout(fields) {
     custom_中国国内运费: [3, 10, 1],
   };
   return {
-    version: 37,
+    version: 38,
     ratio: 65,
     groups: structuredClone(GROUPS),
     fields: [...fields]
@@ -291,6 +293,7 @@ export function defaultLayout(fields) {
           id: f.id,
           group,
           width:
+            (["sourceUrl", "custom_商品长标题中文"].includes(f.id) ? 12 : 0) ||
             placement?.[0] ||
             (paired
               ? 6
@@ -304,12 +307,14 @@ export function defaultLayout(fields) {
           rowSpan: placement?.[2] || 1,
           rows:
             f.id === "selectionRationale"
-              ? 6
+              ? 9
               : f.id === "operatingStrategy"
                 ? 4
                 : undefined,
-          display: group === "source" ? "inline" : "stacked",
-          hidden: false,
+          display: ["sourceUrl", "custom_商品长标题中文"].includes(f.id)
+            ? "inline"
+            : "stacked",
+          hidden: f.id === "marketReferencePrice",
         };
       }),
   };
@@ -420,20 +425,42 @@ export function validateData(input, snapshot, { submit = false } = {}) {
   )
     fail("参考链接格式无效");
   if ((input.referenceLinks || []).length > 30) fail("参考链接最多30条");
-  data.referenceLinks = (input.referenceLinks || [])
-    .filter((v) => String(v).trim())
-    .map((v) => {
-      const value = String(v).trim();
-      let u;
-      try {
-        u = new URL(value);
-      } catch {
-        fail("参考链接无效");
-      }
-      if (!["https:", "http:"].includes(u.protocol))
-        fail("参考链接必须使用HTTP或HTTPS");
-      return u.href;
-    });
+  if (input.referencePrices != null && !Array.isArray(input.referencePrices))
+    fail("参考售价格式无效");
+  const legacyLinks = input.referenceLinks?.length
+    ? input.referenceLinks
+    : input.marketReferencePrice != null
+      ? [""]
+      : [];
+  const references = legacyLinks
+    .map((value, index) => ({
+      url: String(value).trim(),
+      price: Array.isArray(input.referencePrices)
+        ? input.referencePrices[index]
+        : index === 0
+          ? input.marketReferencePrice
+          : null,
+    }))
+    .filter((r) => r.url || (r.price != null && r.price !== ""));
+  data.referenceLinks = references.map(({ url }) => {
+    if (!url) return "";
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch {
+      fail("参考链接无效");
+    }
+    if (!["https:", "http:"].includes(parsed.protocol))
+      fail("参考链接必须使用HTTP或HTTPS");
+    return parsed.href;
+  });
+  data.referencePrices = references.map(({ price }) => {
+    if (price == null || price === "") return null;
+    if (!Number.isFinite(Number(price)) || Number(price) < 0)
+      fail("市场参考售价无效");
+    return Number(price);
+  });
+  data.marketReferencePrice = data.referencePrices[0] ?? null;
   data.supplier = String(input.supplier || "").slice(0, 1000);
   data.skus = Array.isArray(input.skus)
     ? input.skus.slice(0, 500).map((s) => {

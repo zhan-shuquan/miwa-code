@@ -105,7 +105,7 @@ assert.equal(
 );
 await api("/source-check", "POST", { sourceUrl: "javascript:alert(1)" }, 400);
 const png =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=";
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADklEQVQImWP4DwYMEAoAU7oL9W/sIDEAAAAASUVORK5CYII=";
 const product = await api("/records/" + id + "/assets", "POST", {
   filename: "product.png",
   base64: png,

@@ -627,7 +627,7 @@
   cursor: pointer;
 }
 .sw-entry .sw-profit .sw-card > summary::before {
-  content: "◇ ";
+  content: none;
   color: var(--sw-green);
 }
 .sw-context,
@@ -791,4 +791,174 @@
   .sw-layout-list > div {
     flex-wrap: wrap;
   }
+}
+
+/* V3.8: common field and icon treatment; positions remain layout configuration. */
+.sw-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  vertical-align: middle;
+  color: var(--sw-green);
+  margin-right: 6px;
+}
+.sw-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sw-card > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+}
+.sw-card > summary::-webkit-details-marker {
+  display: none;
+}
+.sw input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.sw select {
+  height: 36px;
+  font: inherit;
+  border: 1px solid var(--sw-border);
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+.sw .sw-sale-price input {
+  height: 48px;
+  font-size: 26px;
+}
+.sw-lock .sw-icon {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  color: inherit;
+}
+.sw-entry .sw-links-field {
+  display: block;
+}
+.sw-reference {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sw-reference input[type="url"] {
+  flex: 1;
+  min-width: 0;
+}
+.sw-reference input.sw-reference-price {
+  flex: 0 0 110px;
+  width: 110px;
+  min-width: 0;
+}
+.sw-field-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+  gap: 8px;
+}
+.sw-field-heading span {
+  display: flex;
+  gap: 6px;
+}
+.sw-market-field > strong {
+  display: inline-block;
+  margin-bottom: 6px;
+}
+.sw-market-field > [data-ai] {
+  float: right;
+}
+.sw button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.sw-table-wrap {
+  max-height: 65vh;
+  overflow: auto;
+}
+.sw-table-wrap table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.sw-table-wrap th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--surface, #fff);
+}
+.sw-table-wrap [data-column="image"] {
+  position: sticky;
+  left: 0;
+  min-width: 110px;
+  width: 110px;
+  z-index: 2;
+  background: var(--surface, #fff);
+}
+.sw-table-wrap [data-column="item_code"] {
+  position: sticky;
+  left: var(--sw-image-column, 110px);
+  min-width: 150px;
+  z-index: 2;
+  background: var(--surface, #fff);
+  box-shadow: 2px 0 2px #0000000a;
+}
+.sw-table-wrap th[data-column] {
+  z-index: 4;
+}
+.sw-code-link {
+  color: var(--sw-green);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sw-col button {
+  display: flex;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  white-space: nowrap;
+}
+.sw-col button .sw-icon {
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+}
+.sw [hidden] {
+  display: none !important;
+}
+
+.sw-context-help {
+  font-size: 12px;
+  color: var(--sw-green);
+  margin-bottom: 6px;
+}
+.sw-context-help summary {
+  cursor: pointer;
+}
+
+.sw .sw-sale-price input[type="number"][data-field] {
+  height: 48px;
+  font-size: 26px;
+  border-color: var(--sw-green);
+  color: var(--sw-green);
+}
+.sw input[type="checkbox"],
+.sw input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin: 0;
+}
+.sw .sw-toolbar label:has(input[type="checkbox"]) {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  white-space: nowrap;
+  gap: 6px;
 }

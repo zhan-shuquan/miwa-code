@@ -59,7 +59,7 @@ try {
   const saved = await api("/records", { data }, 201);
   assert.equal(saved.pricing.status, "estimated");
   const png =
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=";
+    "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADklEQVQImWP4DwYMEAoAU7oL9W/sIDEAAAAASUVORK5CYII=";
   await api("/records/" + encodeURIComponent(saved.id) + "/assets", {
     filename: "sync.png",
     base64: png,
