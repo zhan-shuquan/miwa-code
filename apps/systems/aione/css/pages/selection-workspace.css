@@ -962,3 +962,40 @@
   white-space: nowrap;
   gap: 6px;
 }
+
+.sw-workspace-tabs {
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid var(--sw-border);
+  margin-bottom: 12px;
+}
+.sw-workspace-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 10px 16px;
+}
+.sw-workspace-tabs button[aria-pressed="true"] {
+  color: var(--sw-green);
+  border-bottom: 3px solid currentColor;
+  font-weight: 600;
+}
+.sw-selector {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary, #68766e);
+}
+.sw [hidden] {
+  display: none !important;
+}
+.sw th[aria-sort="none"] .sw-icon {
+  color: var(--text-tertiary, #a1aaa6);
+}
+.sw th[aria-sort="ascending"] button,
+.sw th[aria-sort="descending"] button {
+  color: var(--sw-green);
+}

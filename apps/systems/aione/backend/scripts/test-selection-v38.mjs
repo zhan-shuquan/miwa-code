@@ -28,7 +28,7 @@ function check(value) {
 }
 const boot = await api("/bootstrap");
 check(boot.uploadPolicy.maxBytes === 20 * 1024 * 1024);
-check(boot.defaults.version === 38);
+check(boot.defaults.version >= 38);
 const main = boot.defaults.groups.filter(
   (g) =>
     g.region === "main" &&

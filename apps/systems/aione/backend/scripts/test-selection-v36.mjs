@@ -77,7 +77,7 @@ async function api(path, method = "GET", body, status = 200) {
 }
 try {
   const boot = await api("/bootstrap");
-  for (const id of ["item_name", "item_group", "brand"])
+  for (const id of ["custom_库存类型", "item_group", "brand"])
     assert.equal(boot.fields.find((f) => f.id === id).readOnly, true);
   assert.equal(boot.defaults.ratio, 65);
   assert(boot.defaults.version >= 36);
@@ -207,7 +207,7 @@ try {
     mismatchSubmitBlocked: true,
     noERPJobCreated: true,
     offlineSimulation: true,
-    recognitionReadOnly: true,
+    erpClassificationReadOnly: true,
   };
   await writeFile(
     new URL("../../../../../.local/v36-test-result.json", import.meta.url),

@@ -27,6 +27,12 @@ await pool.query(
     "utf8",
   ),
 );
+await pool.query(
+  "CREATE TABLE IF NOT EXISTS people(id TEXT PRIMARY KEY, display_name TEXT)",
+);
+await pool.query(
+  "INSERT INTO people(id,display_name) VALUES('test-employee','测试员工'),('test-partner','测试合伙人'),('test-admin','测试管理员') ON CONFLICT(id) DO NOTHING",
+);
 const snapshot = JSON.parse(
   await readFile(resolve(root, ".local/erp-snapshot.json"), "utf8"),
 );
@@ -136,11 +142,9 @@ for (const dir of [
   app.use("/" + dir, express.static(resolve(appRoot, dir)));
 app.use((err, req, res, next) => {
   console.error(err.message);
-  res
-    .status(err.statusCode || 500)
-    .json({
-      error: err.code === "23505" ? "货号已存在，未重复创建" : err.message,
-    });
+  res.status(err.statusCode || 500).json({
+    error: err.code === "23505" ? "货号已存在，未重复创建" : err.message,
+  });
 });
 app.listen(8765, "127.0.0.1", () =>
   console.log("AIONE isolated preview: http://127.0.0.1:8765/preview"),

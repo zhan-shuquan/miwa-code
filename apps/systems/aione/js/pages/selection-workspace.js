@@ -1,3 +1,8 @@
+import {
+  sortableKeys,
+  nextTableSort,
+  tableSortState,
+} from "../components/table-sort.js";
 import { renderSemanticIcons } from "../config/semantic-icons.js";
 import { aioneApi, getAioneApiBaseUrl } from "../services/aione-api-client.js";
 const icon = (name) =>
@@ -141,7 +146,7 @@ export async function initSelectionWorkspace(host, forcedView) {
     const id = esc(f.id),
       val = value ?? "";
     if (f.readOnly)
-      return `<input ${attribute}="${id}" value="${esc(val)}" readonly aria-readonly="true" placeholder="待ERP回传" title="ERP自动识别 · 只读">`;
+      return `<input ${attribute}="${id}" value="${esc(val)}" readonly aria-readonly="true" placeholder="${f.id === "custom_库存类型" ? "待判定" : "待ERP回传"}" title="系统自动关联 · 只读">`;
     if (f.display === "radio")
       return (
         '<span class="sw-radio">' +
@@ -481,7 +486,7 @@ export async function initSelectionWorkspace(host, forcedView) {
                     '"><span>'
                   : "<label><span>") +
                 esc(f.label) +
-                (f.id === "custom_实际售价"
+                (f.required
                   ? ' <span class="sw-required" aria-label="确认销售方案前必填">*</span>'
                   : "") +
                 (f.readOnly
@@ -503,7 +508,9 @@ export async function initSelectionWorkspace(host, forcedView) {
                     '">—</b></small>'
                   : "") +
                 (f.id === "sourceUrl"
-                  ? '<div class="sw-url-actions"><a data-purchase-open target="_blank" rel="noopener noreferrer">打开采购页面</a><button type="button" data-read-source>读取资料</button></div>'
+                  ? '<div class="sw-url-actions"><a data-purchase-open target="_blank" rel="noopener noreferrer" title="打开采购页面" aria-label="打开采购页面">' +
+                    icon("external") +
+                    '</a><button type="button" data-read-source>读取资料</button></div>'
                   : "") +
                 "</div>"
               );
@@ -546,10 +553,63 @@ export async function initSelectionWorkspace(host, forcedView) {
             .map((f) => [f.id, f.default]),
         );
     data.skus ||= [];
+    data.shortNameManual ??= !!data.item_name;
     let pricing = record?.pricing,
       timer,
       sequence = 0;
-    content.innerHTML = `<div class="sw-actions"><span data-save-state>${record ? "版本 " + record.version : "新草稿"}</span><button data-save class="sw-primary">保存草稿</button><button data-confirm-selection>确认选品</button><button data-back-list>返回选品一览</button></div>${formMarkup(boot.layout, data, "top")}<div class="sw-split" style="--sw-left:${boot.layout.ratio}%"><div>${formMarkup(boot.layout, data)}<details class="sw-card" hidden><summary>第二阶段 · SKU与ERP资料完善</summary><div class="sw-toolbar" data-stage-two-actions><button data-submit>提交ERP（资料完整后）</button></div><p>每行填写：SKU编号、规格、独立采购价、售价、重量。空白价格继承商品。</p><div data-skus></div><button data-add-sku>新增SKU</button></details><details class="sw-card" hidden><summary>修改记录 / ERP处理状态</summary><div data-history>${(record?.events || []).map((e) => `<p>${esc(e.created_at)} · ${esc(e.actor_id)} · ${esc(e.action)}</p>`).join("") || "尚无修改记录"}${(record?.jobs || []).map((j) => `<p>ERP任务：${esc(j.status)} ${esc(j.result?.message || "")} ${j.status === "failed" ? `<button data-retry="${j.id}">重试</button>` : ""}</p>`).join("")}</div></details></div><aside class="sw-profit sw-card"><details class="sw-context-help"><summary>计算依据</summary><div data-calculation-context class="sw-context"></div></details><div data-reconciliation role="status"></div><div data-profit></div>${formMarkup(boot.layout, data, "aside")}</aside></div>`;
+    content.innerHTML = `<div class="sw-actions"><span data-save-state>${record ? "版本 " + record.version : "新草稿"}</span><button data-save class="sw-primary">保存草稿</button><button data-confirm-selection>确认选品</button><button data-back-list>返回选品一览</button></div><nav class="sw-workspace-tabs" aria-label="选品工作区"><button data-workspace-tab="entry" aria-pressed="true">${icon("product")}商品录入</button><button data-workspace-tab="market" aria-pressed="false">${icon("search")}市场调研</button></nav>${formMarkup(boot.layout, data, "top")}<div class="sw-split" style="--sw-left:${boot.layout.ratio}%"><div>${formMarkup(boot.layout, data)}<details class="sw-card" hidden><summary>第二阶段 · SKU与ERP资料完善</summary><div class="sw-toolbar" data-stage-two-actions><button data-submit>提交ERP（资料完整后）</button></div><p>每行填写：SKU编号、规格、独立采购价、售价、重量。空白价格继承商品。</p><div data-skus></div><button data-add-sku>新增SKU</button></details><details class="sw-card" hidden><summary>修改记录 / ERP处理状态</summary><div data-history>${(record?.events || []).map((e) => `<p>${esc(e.created_at)} · ${esc(e.actor_id)} · ${esc(e.action)}</p>`).join("") || "尚无修改记录"}${(record?.jobs || []).map((j) => `<p>ERP任务：${esc(j.status)} ${esc(j.result?.message || "")} ${j.status === "failed" ? `<button data-retry="${j.id}">重试</button>` : ""}</p>`).join("")}</div></details></div><aside class="sw-profit sw-card"><details class="sw-context-help"><summary>计算依据</summary><div data-calculation-context class="sw-context"></div></details><div data-reconciliation role="status"></div><div data-profit></div>${formMarkup(boot.layout, data, "aside")}</aside></div>`;
+    const switchWorkspace = (tab) => {
+      content.querySelectorAll("[data-layout-group]").forEach((group) => {
+        const config = boot.layout.groups.find(
+          (g) => g.id === group.dataset.layoutGroup,
+        );
+        if ((config?.region || "main") === "main")
+          group.hidden = (config.id === "market") !== (tab === "market");
+      });
+      content
+        .querySelectorAll("[data-workspace-tab]")
+        .forEach((button) =>
+          button.setAttribute(
+            "aria-pressed",
+            String(button.dataset.workspaceTab === tab),
+          ),
+        );
+      if (tab === "market")
+        content
+          .querySelectorAll('[data-layout-group="market"] textarea')
+          .forEach((el) => {
+            el.style.height =
+              Math.max(el.scrollHeight, Number(el.rows) * 22 + 14) + "px";
+          });
+    };
+    content
+      .querySelectorAll("[data-workspace-tab]")
+      .forEach((button) =>
+        on(button, "click", () => switchWorkspace(button.dataset.workspaceTab)),
+      );
+    switchWorkspace("entry");
+    const selectorLabel = document.createElement("span");
+    selectorLabel.className = "sw-selector";
+    selectorLabel.textContent =
+      "选品人：" +
+      (record ? record.selectorName || "人员档案待关联" : boot.identity.name);
+    content
+      .querySelector('[data-layout-group="basic"] > summary')
+      ?.append(selectorLabel);
+    const deriveStock = () => {
+      const values = [
+        ...new Set(
+          boot.logisticsRelations
+            .filter((r) => r.method === data.custom_国际物流方式)
+            .map((r) => r.fulfillment)
+            .filter(Boolean),
+        ),
+      ];
+      data.custom_库存类型 = values.length === 1 ? values[0] : "";
+      const input = content.querySelector('[data-field="custom_库存类型"]');
+      if (input) input.value = data.custom_库存类型;
+    };
+    deriveStock();
     const conclusion = document.createElement("section");
     conclusion.className = "sw-card sw-conclusion";
     conclusion.innerHTML =
@@ -719,6 +779,8 @@ export async function initSelectionWorkspace(host, forcedView) {
               ? ""
               : Number(input.value)
             : input.value;
+        if (key === "item_name") data.shortNameManual = true;
+        if (key === "custom_国际物流方式") deriveStock();
         updatePurchaseLink();
         drawProfit();
         recalc();
@@ -882,6 +944,20 @@ export async function initSelectionWorkspace(host, forcedView) {
       content.querySelector("[data-confirm-selection]"),
       "click",
       guarded(async () => {
+        const validation = await api("/confirmation-check", "POST", data);
+        if (validation.issues.length) {
+          const issue = validation.issues[0];
+          switchWorkspace("entry");
+          const field = content.querySelector(
+            '[data-field="' + issue.field + '"]',
+          );
+          if (field) {
+            field.closest("details").open = true;
+            field.focus();
+            field.scrollIntoView({ block: "center" });
+          }
+          throw Error(validation.issues.map((i) => i.message).join("；"));
+        }
         await save();
         const result = await api("/batch", "POST", {
           action: "confirm",
@@ -931,11 +1007,14 @@ export async function initSelectionWorkspace(host, forcedView) {
             esc(data.referencePrices[i] ?? "") +
             '"><a data-reference-open="' +
             i +
-            '" target="_blank" rel="noopener noreferrer">打开</a><button data-reference-remove="' +
+            '" target="_blank" rel="noopener noreferrer" title="打开参考页面" aria-label="打开参考页面">' +
+            icon("external") +
+            '</a><button data-reference-remove="' +
             i +
             '">删除</button></div>',
         )
         .join("");
+      renderSemanticIcons(box);
       box.querySelectorAll("[data-reference]").forEach((input) => {
         const update = () => {
           data.referenceLinks[Number(input.dataset.reference)] = input.value;
@@ -1057,6 +1136,7 @@ export async function initSelectionWorkspace(host, forcedView) {
           item_group: suggestion.category || "",
           brand: data.brand || suggestion.brand || "",
         })) {
+          if (key === "item_name" && data.shortNameManual) continue;
           data[key] = value;
           const field = content.querySelector('[data-field="' + key + '"]');
           if (field) field.value = value;
@@ -1075,6 +1155,10 @@ export async function initSelectionWorkspace(host, forcedView) {
       "input",
       () => {
         identifySequence++;
+        if (!data.shortNameManual) {
+          data.item_name = "";
+          content.querySelector('[data-field="item_name"]').value = "";
+        }
         clearTimeout(identifyTimer);
         identifyTimer = setTimeout(recognize, 500);
       },
@@ -1362,7 +1446,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       content.querySelectorAll("button").forEach((el) => {
         if (
           !el.matches(
-            "[data-back-list],[data-conclusion-list],.sw-image-open,[data-preview],[data-download]",
+            "[data-workspace-tab],[data-back-list],[data-conclusion-list],.sw-image-open,[data-preview],[data-download]",
           )
         )
           el.disabled = true;
@@ -1390,6 +1474,8 @@ export async function initSelectionWorkspace(host, forcedView) {
         "price",
         "profit",
         "margin",
+        "selector",
+        "brand",
         "owner",
         "createdAt",
         "status",
@@ -1403,14 +1489,16 @@ export async function initSelectionWorkspace(host, forcedView) {
     const names = {
       image: "商品图片",
       item_code: "商品货号",
-      item_name: "商品名称",
-      item_group: "分类",
+      item_name: "商品简称",
+      item_group: "商品分类",
       custom_库存类型: "库存类型",
       cost: "采购价(CNY)",
       suggestion: "建议售价",
       price: "实际售价",
       profit: "预计利润",
       margin: "预计毛利率",
+      selector: "选品人",
+      brand: "品牌",
       owner: "负责人",
       createdAt: "选品时间",
       status: "选品状态",
@@ -1421,27 +1509,27 @@ export async function initSelectionWorkspace(host, forcedView) {
       operatingStrategy: "运营策略",
       erpStatus: "ERP处理状态",
     };
-    content.innerHTML = `<div class="sw-toolbar"><input data-search placeholder="搜索货号、商品名称"><select data-filter-status><option value="">全部状态</option><option value="draft">草稿</option><option value="confirmed">已确认选品</option><option value="submitted">已提交ERP</option></select><select data-category><option value="">全部分类</option>${boot.fields
+    content.innerHTML = `<div class="sw-toolbar"><input data-search placeholder="搜索货号、商品简称"><select data-filter-status><option value="">全部状态</option><option value="draft">草稿</option><option value="confirmed">已确认选品</option><option value="submitted">已提交ERP</option></select><select data-category><option value="">全部分类</option>${boot.fields
       .find((f) => f.id === "item_group")
       .options.map((x) => `<option>${esc(x)}</option>`)
       .join(
         "",
-      )}</select><input data-from type="date" aria-label="开始日期"><input data-to type="date" aria-label="结束日期"><input data-margin type="number" placeholder="最低利润率"><select data-sort aria-label="排序字段"><option value="createdAt">创建时间</option><option value="item_code">货号</option><option value="item_name">商品名称</option><option value="cost">采购价</option><option value="suggestion">建议售价</option><option value="price">实际售价</option><option value="profit">利润</option><option value="margin">利润率</option></select><label><input data-archived type="checkbox">已归档</label><button data-query>查询</button></div><div class="sw-toolbar"><button data-new>新增</button>${["copy", "edit", "submit", "archive", "restore", ...(boot.identity.admin ? ["delete"] : [])].map((a, i) => `<button data-action="${a}">${{ copy: "复制", edit: "批量编辑", submit: "提交ERP", archive: "归档", restore: "恢复", delete: "删除" }[a]}</button>`).join("")}<button data-import>导入</button><button data-export="xlsx">导出Excel</button><button data-export="csv">导出CSV</button><button data-columns>显示配置</button><span data-count></span></div><div class="sw-table-wrap"><table><thead></thead><tbody></tbody></table></div><div class="sw-toolbar"><button data-prev>上一页</button><span data-page></span><button data-next>下一页</button></div><input data-import-file type="file" accept=".xlsx,.csv" hidden>`;
+      )}</select><input data-from type="date" aria-label="开始日期"><input data-to type="date" aria-label="结束日期"><input data-margin type="number" placeholder="最低利润率"><select data-sort aria-label="排序字段"><option value="createdAt">创建时间</option><option value="item_code">货号</option><option value="item_name">商品简称</option><option value="cost">采购价</option><option value="suggestion">建议售价</option><option value="price">实际售价</option><option value="profit">利润</option><option value="margin">利润率</option></select><label><input data-archived type="checkbox">已归档</label><button data-query>查询</button></div><div class="sw-toolbar"><button data-new>新增</button>${["copy", "edit", "submit", "archive", "restore", ...(boot.identity.admin ? ["delete"] : [])].map((a, i) => `<button data-action="${a}">${{ copy: "复制", edit: "批量编辑", submit: "提交ERP", archive: "归档", restore: "恢复", delete: "删除" }[a]}</button>`).join("")}<button data-import>导入</button><button data-export="xlsx">导出Excel</button><button data-export="csv">导出CSV</button><button data-columns>显示配置</button><span data-count></span></div><div class="sw-table-wrap"><table><thead></thead><tbody></tbody></table></div><div class="sw-toolbar"><button data-prev>上一页</button><span data-page></span><button data-next>下一页</button></div><input data-import-file type="file" accept=".xlsx,.csv" hidden>`;
     columns = [
       "image",
       "item_code",
       ...columns.filter((k) => !["image", "item_code"].includes(k)),
     ];
-    const sortable = new Set([
-      "item_code",
-      "item_name",
-      "cost",
-      "price",
-      "suggestion",
-      "profit",
-      "margin",
-      "createdAt",
-    ]);
+    const sortable = new Set(
+      sortableKeys(
+        Object.fromEntries(
+          Object.keys(names).map((k) => [k, { sortable: k !== "image" }]),
+        ),
+      ),
+    );
+    content.querySelector("[data-sort]").innerHTML = [...sortable]
+      .map((k) => `<option value="${k}">${names[k]}</option>`)
+      .join("");
     for (const [selector, key] of [
       ["data-search", "q"],
       ["data-filter-status", "status"],
@@ -1475,7 +1563,7 @@ export async function initSelectionWorkspace(host, forcedView) {
         columns
           .map(
             (k) =>
-              `<th data-column="${k}" aria-sort="${filters.sort === k ? (filters.direction === "asc" ? "ascending" : "descending") : "none"}" style="width:${Number(boot.preferences.widths?.[k]) || 140}px"><div class="sw-col" data-col="${k}">${sortable.has(k) ? `<button data-sort-column="${k}" title="排序">${names[k]}${filters.sort === k ? icon(filters.direction === "asc" ? "arrowUp" : "arrowDown") : ""}</button>` : names[k]}</div></th>`,
+              `<th data-column="${k}" aria-sort="${tableSortState(filters, k).ariaSort}" style="width:${Number(boot.preferences.widths?.[k]) || 140}px"><div class="sw-col" data-col="${k}">${sortable.has(k) ? `<button data-sort-column="${k}" title="排序">${names[k]}${icon(tableSortState(filters, k).icon)}</button>` : names[k]}</div></th>`,
           )
           .join("") +
         "<th>操作</th></tr>";
@@ -1532,7 +1620,8 @@ export async function initSelectionWorkspace(host, forcedView) {
                 Number(d.custom_实际售价) > 0 && p.custom_运营后毛利率 != null
                   ? Number(p.custom_运营后毛利率).toFixed(2) + "%"
                   : "待核算",
-              owner: r.owner,
+              selector: r.selectorName || "人员档案待关联",
+              owner: r.ownerName || "人员档案待关联",
               createdAt: r.createdAt.slice(0, 10),
               status:
                 r.status === "submitted"
@@ -1559,11 +1648,7 @@ export async function initSelectionWorkspace(host, forcedView) {
           "click",
           guarded(async () => {
             const sort = button.dataset.sortColumn;
-            filters.direction =
-              filters.sort === sort && filters.direction === "asc"
-                ? "desc"
-                : "asc";
-            filters.sort = sort;
+            Object.assign(filters, nextTableSort(filters, sort));
             content.querySelector("[data-sort]").value = sort;
             offset = 0;
             await load();

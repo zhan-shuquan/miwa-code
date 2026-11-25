@@ -100,30 +100,28 @@ export function fieldsFor(snapshot) {
       }
       return {
         id,
-        label: f.label,
+        label: id === "item_name" ? "商品简称（中文）" : f.label,
         type,
         group,
         options,
-        readOnly: ["item_name", "item_group", "brand"].includes(id),
+        readOnly: ["custom_库存类型", "item_group", "brand"].includes(id),
+        required: CONFIRM_FIELDS.includes(id),
         display: undefined,
         costKey: {
           custom_aione_coupon: "operation:0",
           custom_aione_points: "operation:1",
           custom_aione_ads: "operation:2",
           custom_aione_other: "operation:3",
-          custom_单个采购价: "breakdown:purchase_jpy",
-          custom_中国国内运费: "breakdown:cn_domestic",
           custom_国际物流方式: "国际物流成本",
           custom_中国包装方式: "中国包装成本",
           custom_日本包装物: "日本包装成本",
           custom_日本发货尺寸: "日本配送费",
         }[id],
-        default:
-          id === "custom_实际售价"
-            ? undefined
-            : id.startsWith("custom_aione_")
-              ? 0
-              : f.default,
+        default: ["custom_实际售价", "custom_库存类型"].includes(id)
+          ? undefined
+          : id.startsWith("custom_aione_")
+            ? 0
+            : f.default,
       };
     })
     .filter(Boolean)
@@ -232,13 +230,13 @@ export function defaultLayout(fields) {
     "images",
     "item_code",
     "custom_主要材质1",
-    "custom_库存类型",
-    "custom_套装数量",
-    "stock_uom",
     "custom_单个采购价",
     "custom_单个净重g",
     "custom_中国国内运费",
+    "custom_套装数量",
+    "stock_uom",
     "item_name",
+    "custom_库存类型",
     "item_group",
     "brand",
     "custom_国际物流方式",
@@ -266,15 +264,18 @@ export function defaultLayout(fields) {
     images: [4, 1, 3],
     item_code: [4, 5, 1],
     custom_主要材质1: [4, 9, 1],
-    custom_库存类型: [4, 5, 1],
+    item_name: [3, 1, 1],
+    custom_库存类型: [3, 4, 1],
+    item_group: [3, 7, 1],
+    brand: [3, 10, 1],
     custom_套装数量: [2, 9, 1],
     stock_uom: [2, 11, 1],
-    custom_单个采购价: [3, 5, 1],
-    custom_单个净重g: [2, 8, 1],
-    custom_中国国内运费: [3, 10, 1],
+    custom_单个采购价: [4, 5, 1],
+    custom_单个净重g: [4, 9, 1],
+    custom_中国国内运费: [4, 5, 1],
   };
   return {
-    version: 38,
+    version: 39,
     ratio: 65,
     groups: structuredClone(GROUPS),
     fields: [...fields]
@@ -374,7 +375,8 @@ export function validateData(input, snapshot, { submit = false } = {}) {
     data = {};
   for (const f of fields) {
     if (f.presentationOnly || f.id === "referenceLinks") continue;
-    const value = input[f.id];
+    const value =
+      f.id === "custom_库存类型" ? stockFor(input, snapshot) : input[f.id];
     if (value == null || value === "") continue;
     if (f.type === "number") {
       if (
@@ -460,6 +462,9 @@ export function validateData(input, snapshot, { submit = false } = {}) {
       fail("市场参考售价无效");
     return Number(price);
   });
+  data.shortNameManual =
+    input.shortNameManual === true ||
+    (input.shortNameManual == null && !!input.item_name);
   data.marketReferencePrice = data.referencePrices[0] ?? null;
   data.supplier = String(input.supplier || "").slice(0, 1000);
   data.skus = Array.isArray(input.skus)
@@ -499,7 +504,41 @@ export function validateData(input, snapshot, { submit = false } = {}) {
     );
     if (!mode) fail("所选物流尚无有效费率");
     if (mode.fulfillment !== data.custom_库存类型)
-      fail("库存类型与ERP物流规则不一致，请人工确认选择");
+      fail("库存类型与ERP物流关联结果不一致，请刷新物流参数");
   }
   return data;
+}
+
+export const CONFIRM_FIELDS = [
+  "item_code",
+  "custom_单个采购价",
+  "custom_单个净重g",
+  "custom_国际物流方式",
+  "custom_实际售价",
+];
+export function stockFor(data, snapshot) {
+  const modes = snapshot.settings.logistics.filter(
+    (r) => r.enabled && r.method === data.custom_国际物流方式,
+  );
+  const values = [...new Set(modes.map((r) => r.fulfillment).filter(Boolean))];
+  return values.length === 1 ? values[0] : "";
+}
+export function confirmationIssues(data, snapshot) {
+  const fields = fieldsFor(snapshot);
+  const issues = CONFIRM_FIELDS.filter(
+    (k) =>
+      data[k] == null ||
+      data[k] === "" ||
+      (["custom_单个净重g", "custom_实际售价"].includes(k) &&
+        Number(data[k]) <= 0),
+  ).map((field) => ({
+    field,
+    message: "请填写有效的" + fields.find((f) => f.id === field).label,
+  }));
+  if (!stockFor(data, snapshot))
+    issues.push({
+      field: "custom_国际物流方式",
+      message: "国际物流方式尚无有效库存类型关联，请选择有效物流方式",
+    });
+  return issues;
 }

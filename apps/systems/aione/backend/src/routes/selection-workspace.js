@@ -16,6 +16,7 @@ import {
 } from "../services/selection-file-contract.js";
 import {
   BINDINGS,
+  confirmationIssues,
   fieldsFor,
   defaultLayout,
   validateLayout,
@@ -99,7 +100,7 @@ export function createSelectionWorkspaceRouter(
   const row = async (req, id, c = pool, lock = false) => {
     const r = (
       await c.query(
-        `SELECT * FROM product_opportunities WHERE id=$1 AND selection_workspace IS NOT NULL AND ($2::boolean OR owner_person_id=$3) ${lock ? "FOR UPDATE" : ""}`,
+        `SELECT *, (SELECT display_name FROM people WHERE id=product_opportunities.created_by_person_id) AS selector_name FROM product_opportunities WHERE id=$1 AND selection_workspace IS NOT NULL AND ($2::boolean OR owner_person_id=$3) ${lock ? "FOR UPDATE" : ""}`,
         [id, admin(req.aioneIdentity), person(req) || ""],
       )
     ).rows[0];
@@ -118,6 +119,9 @@ export function createSelectionWorkspaceRouter(
     erpStatus: r.erp_job_status || "not_submitted",
     id: r.id,
     owner: r.owner_person_id,
+    selector: r.created_by_person_id,
+    selectorName: r.selector_name || null,
+    ownerName: r.owner_name || null,
     version: r.record_version,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -255,6 +259,19 @@ export function createSelectionWorkspaceRouter(
         layout.version = 38;
         await putConfig("layout", layout);
       }
+      if ((layout.version || 0) < 39) {
+        // Explicit V3.9 layout migration, persisted once; later admin edits remain editable.
+        const basic = defaults.fields.filter((f) => f.group === "basic");
+        layout.fields = [
+          ...basic.map((f) => ({
+            ...layout.fields.find((old) => old.id === f.id),
+            ...f,
+          })),
+          ...layout.fields.filter((f) => !basic.some((b) => b.id === f.id)),
+        ];
+        layout.version = 39;
+        await putConfig("layout", layout);
+      }
       layout.fields = layout.fields.filter((f) =>
         fields.some((x) => x.id === f.id),
       );
@@ -265,9 +282,17 @@ export function createSelectionWorkspaceRouter(
       res.json({
         identity: {
           id: actor(req),
-          name: req.aioneIdentity.displayName || actor(req),
+          name:
+            (
+              await pool.query("SELECT display_name FROM people WHERE id=$1", [
+                person(req),
+              ])
+            ).rows[0]?.display_name || "人员档案待关联",
           admin: admin(req.aioneIdentity),
         },
+        logisticsRelations: s.settings.logistics
+          .filter((r) => r.enabled)
+          .map((r) => ({ method: r.method, fulfillment: r.fulfillment })),
         uploadPolicy,
         fields,
         layout,
@@ -326,6 +351,8 @@ export function createSelectionWorkspaceRouter(
         "price",
         "profit",
         "margin",
+        "selector",
+        "brand",
         "owner",
         "createdAt",
         "status",
@@ -496,6 +523,13 @@ export function createSelectionWorkspaceRouter(
   );
 
   router.post(
+    "/confirmation-check",
+    run(async (req, res) => {
+      const s = await snapshot();
+      res.json({ issues: confirmationIssues(validateData(req.body, s), s) });
+    }),
+  );
+  router.post(
     "/sku-file",
     run(async (req, res) => {
       const bytes = Buffer.from(String(req.body.base64 || ""), "base64");
@@ -570,6 +604,42 @@ export function createSelectionWorkspaceRouter(
       updatedAt: "updated_at",
       item_code: "selection_workspace->'data'->>'item_code'",
       item_name: "selection_workspace->'data'->>'item_name'",
+      ...Object.fromEntries(
+        [
+          "item_group",
+          "brand",
+          "custom_库存类型",
+          "sourceUrl",
+          "selectionRationale",
+          "operatingStrategy",
+        ].map((k) => [
+          k,
+          "NULLIF(selection_workspace->'data'->>'" + k + "','')",
+        ]),
+      ),
+      owner:
+        "(SELECT display_name FROM people WHERE id=product_opportunities.owner_person_id)",
+      selector:
+        "(SELECT display_name FROM people WHERE id=product_opportunities.created_by_person_id)",
+      status: "selection_workspace->>'status'",
+      erpStatus:
+        "(SELECT status FROM selection_erp_jobs WHERE selection_id=product_opportunities.id ORDER BY created_at DESC LIMIT 1)",
+      operationRate: [
+        "custom_aione_coupon",
+        "custom_aione_points",
+        "custom_aione_ads",
+        "custom_aione_other",
+      ]
+        .map((k) => "COALESCE(" + numeric(k) + ",0)")
+        .join("+"),
+      totalCost: [
+        "custom_到日本仓成本",
+        "custom_日本配送日本",
+        "custom_平台交易成本",
+        "custom_销售运营成本",
+      ]
+        .map((k) => numeric(k, true))
+        .join("+"),
       cost: numeric("custom_单个采购价"),
       price: numeric("custom_实际售价"),
       suggestion: numeric("custom_目标毛利率达标售价", true),
@@ -596,7 +666,7 @@ export function createSelectionWorkspaceRouter(
     values.push(limit, offset);
     const rows = (
       await pool.query(
-        `SELECT *, (SELECT status FROM selection_erp_jobs WHERE selection_id=product_opportunities.id ORDER BY created_at DESC LIMIT 1) AS erp_job_status FROM product_opportunities WHERE ${where} ORDER BY ${sorts[q.sort] || sorts.createdAt} ${q.direction === "asc" ? "ASC" : "DESC"} NULLS LAST,id LIMIT $${values.length - 1} OFFSET $${values.length}`,
+        `SELECT *, (SELECT display_name FROM people WHERE id=product_opportunities.created_by_person_id) AS selector_name, (SELECT display_name FROM people WHERE id=product_opportunities.owner_person_id) AS owner_name, (SELECT status FROM selection_erp_jobs WHERE selection_id=product_opportunities.id ORDER BY created_at DESC LIMIT 1) AS erp_job_status FROM product_opportunities WHERE ${where} ORDER BY ${sorts[q.sort] || sorts.createdAt} ${q.direction === "asc" ? "ASC" : "DESC"} NULLS LAST,id LIMIT $${values.length - 1} OFFSET $${values.length}`,
         values,
       )
     ).rows;
@@ -677,7 +747,8 @@ export function createSelectionWorkspaceRouter(
     if (data.custom_商品长标题中文) {
       try {
         const recognized = await identify(data.custom_商品长标题中文, s);
-        data.item_name = recognized.shortName?.name || "";
+        if (!data.shortNameManual)
+          data.item_name = recognized.shortName?.name || "";
         data.item_group = recognized.category || "";
         // ERP preserves an existing brand, otherwise inherits the category default.
         data.brand =
@@ -685,7 +756,14 @@ export function createSelectionWorkspaceRouter(
       } catch {
         // Missing ERP recognition never prevents a draft or a cost simulation.
         for (const key of ["item_name", "item_group", "brand"])
-          data[key] = previous?.selection_workspace.data[key] || "";
+          if (key === "item_name") {
+            if (!data.shortNameManual)
+              data[key] =
+                previous?.selection_workspace.data.custom_商品长标题中文 ===
+                data.custom_商品长标题中文
+                  ? previous.selection_workspace.data.item_name || ""
+                  : "";
+          } else data[key] = previous?.selection_workspace.data[key] || "";
       }
     }
     const decisionKeys = [
@@ -878,8 +956,8 @@ export function createSelectionWorkspaceRouter(
             if (r.archived_at || r.selection_workspace.status === "submitted")
               fail("此状态不能确认选品", 409);
             const data = validateData(r.selection_workspace.data, s);
-            for (const key of ["item_code", "item_name", "custom_库存类型"])
-              if (!data[key]) fail("确认选品前请完善货号、简称和库存类型");
+            const issues = confirmationIssues(data, s);
+            if (issues.length) fail(issues.map((i) => i.message).join("；"));
             const pricing = await calculate(data, s);
             if (
               pricing.status !== "estimated" ||
@@ -892,6 +970,7 @@ export function createSelectionWorkspaceRouter(
                 [
                   r.id,
                   JSON.stringify({
+                    data,
                     status: "confirmed",
                     pricing,
                     confirmedAt: new Date().toISOString(),
