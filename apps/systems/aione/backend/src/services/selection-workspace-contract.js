@@ -23,12 +23,12 @@ export const BINDINGS = {
   custom_aione_other: ["operations", "number"],
 };
 export const GROUPS = [
-  { id: "source", label: "01 采购来源", region: "top" },
-  { id: "market", label: "02 市场参考与选品依据", region: "top" },
-  { id: "basic", label: "03 商品信息与选品决策", region: "main" },
+  { id: "source", label: "01 采购来源", region: "main" },
+  { id: "market", label: "02 市场参考与选品依据", region: "main" },
+  { id: "basic", label: "03 商品基本信息", region: "main" },
   { id: "purchase", label: "选品决策", region: "main" },
-  { id: "logistics", label: "物流与包装", region: "main" },
-  { id: "operations", label: "运营设置", region: "main" },
+  { id: "logistics", label: "04 物流与包装", region: "main" },
+  { id: "operations", label: "05 运营设置", region: "main" },
   { id: "strategy", label: "运营策略", region: "main" },
   { id: "cost", label: "成本自动核算", region: "aside" },
   { id: "pricing", label: "智能定价", region: "aside" },
@@ -91,6 +91,16 @@ export function fieldsFor(snapshot) {
         type,
         group,
         options,
+        readOnly: ["item_name", "item_group", "brand"].includes(id),
+        display: id === "custom_库存类型" ? "radio" : undefined,
+        costKey: {
+          custom_单个采购价: "breakdown:purchase_jpy",
+          custom_中国国内运费: "breakdown:cn_domestic",
+          custom_国际物流方式: "国际物流成本",
+          custom_中国包装方式: "中国包装成本",
+          custom_日本包装物: "日本包装成本",
+          custom_日本发货尺寸: "日本配送费",
+        }[id],
         default: id.startsWith("custom_aione_") ? 0 : f.default,
       };
     })
@@ -142,7 +152,14 @@ export function fieldsFor(snapshot) {
       },
       ...[
         ["到日本仓成本", "到日本仓成本", "cost"],
+        ["breakdown:purchase_jpy", "商品采购成本", "cost"],
+        ["breakdown:cn_domestic", "中国国内运费", "cost"],
+        ["国际物流成本", "国际物流成本", "cost"],
+        ["中国包装成本", "中国包装成本", "cost"],
+        ["breakdown:duty", "预估关税", "cost"],
         ["日本配送日本", "日本配送成本", "cost"],
+        ["日本包装成本", "日本包装成本", "cost"],
+        ["日本配送费", "日本配送费", "cost"],
         ["平台交易成本", "平台交易成本", "cost"],
         ["销售运营成本", "销售运营成本", "cost"],
         ["totalCost", "预计销售总成本", "cost"],
@@ -164,6 +181,7 @@ export function fieldsFor(snapshot) {
     ]);
 }
 export function defaultLayout(fields) {
+  // V3.6 defaults are a configuration seed. Saved administrator layouts remain authoritative.
   const order = [
     "sourceUrl",
     "custom_商品长标题中文",
@@ -174,9 +192,14 @@ export function defaultLayout(fields) {
     "item_code",
     "item_name",
     "item_group",
+    "brand",
+    "custom_主要材质1",
     "custom_库存类型",
     "custom_单个采购价",
     "custom_单个净重g",
+    "custom_中国国内运费",
+    "custom_套装数量",
+    "stock_uom",
     "custom_国际物流方式",
     "custom_中国包装方式",
     "custom_日本包装物",
@@ -186,26 +209,22 @@ export function defaultLayout(fields) {
     "custom_aione_ads",
     "custom_aione_other",
     "operatingStrategy",
+    "result:目标毛利率达标售价",
     "custom_实际售价",
   ];
+  const groups = structuredClone(GROUPS);
   const groupFor = (f) =>
     f.id === "custom_商品长标题中文"
       ? "source"
-      : [
-            "brand",
-            "custom_主要材质1",
-            "custom_套装数量",
-            "stock_uom",
-            "custom_中国国内运费",
-          ].includes(f.id)
-        ? "details"
-        : f.id === "custom_库存类型"
-          ? "purchase"
+      : f.id === "custom_中国国内运费" || f.group === "purchase"
+        ? "basic"
+        : f.id === "operatingStrategy"
+          ? "operations"
           : f.group;
   return {
-    ratio: 60,
-    version: 35,
-    groups: structuredClone(GROUPS),
+    ratio: 65,
+    version: 36,
+    groups,
     fields: [...fields]
       .sort(
         (a, b) =>
@@ -214,31 +233,41 @@ export function defaultLayout(fields) {
       )
       .map((f) => {
         const group = groupFor(f);
+        const full =
+          ["source", "cost", "pricing", "profit"].includes(group) ||
+          ["referenceLinks", "operatingStrategy"].includes(f.id);
+        const width = full
+          ? 12
+          : f.id === "selectionRationale"
+            ? 8
+            : f.id === "marketAttachments"
+              ? 4
+              : ["logistics", "operations"].includes(group)
+                ? 3
+                : [
+                      "custom_套装数量",
+                      "stock_uom",
+                      "custom_中国国内运费",
+                    ].includes(f.id)
+                  ? 2
+                  : ["custom_单个采购价", "custom_单个净重g"].includes(f.id)
+                    ? 3
+                    : 4;
         return {
           id: f.id,
           group,
-          width: [
-            "source",
-            "market",
-            "strategy",
-            "pricing",
-            "cost",
-            "profit",
-          ].includes(group)
-            ? 12
-            : group === "basic"
-              ? f.id === "images"
-                ? 4
-                : 8
-              : group === "purchase"
-                ? 4
-                : 6,
+          width,
+          display:
+            group === "source" || f.id === "operatingStrategy"
+              ? "inline"
+              : "stacked",
           rowSpan: f.id === "images" ? 3 : 1,
           hidden: false,
         };
       }),
   };
 }
+
 export function validateLayout(layout, fields) {
   if (
     !layout ||
@@ -261,13 +290,15 @@ export function validateLayout(layout, fields) {
       fail("布局区域无效");
   const ids = new Set();
   for (const f of layout.fields) {
+    if (f.display && !["inline", "stacked"].includes(f.display))
+      fail("字段显示方式无效");
     if (
       (f.rowSpan !== undefined &&
         (!Number.isInteger(f.rowSpan) || f.rowSpan < 1 || f.rowSpan > 6)) ||
       ids.has(f.id) ||
       !fields.some((x) => x.id === f.id) ||
       !GROUPS.some((g) => g.id === f.group) ||
-      ![3, 4, 6, 8, 12].includes(f.width)
+      ![2, 3, 4, 6, 8, 12].includes(f.width)
     )
       fail("布局包含未知或重复字段");
     ids.add(f.id);

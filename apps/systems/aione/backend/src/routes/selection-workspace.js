@@ -1,3 +1,7 @@
+import {
+  reconcileCosts,
+  assertReconciled,
+} from "../services/selection-cost-reconciliation.js";
 import { Router } from "express";
 import { randomUUID, createHash, timingSafeEqual } from "node:crypto";
 import ExcelJS from "exceljs";
@@ -131,7 +135,7 @@ export function createSelectionWorkspaceRouter(
     });
     const result = await response.json();
     if (!response.ok) fail(result.error || "ERP规则计算失败", 422);
-    return result;
+    return { ...result, reconciliation: reconcileCosts(result) };
   };
   router.post(
     "/connector/snapshot",
@@ -429,26 +433,30 @@ export function createSelectionWorkspaceRouter(
       res.json({ items });
     }),
   );
+  const identify = async (title, s) => {
+    const response = await fetch(costUrl + "/identify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        snapshot: s,
+        title: String(title || "").slice(0, 2000),
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    const result = await response.json();
+    if (!response.ok) fail(result.error || "ERP识别不可用", 422);
+    const category = s.categories.find((c) => c.name === result.category);
+    result.category = category?.name || null;
+    result.brand = category?.custom_miwa_default_brand || null;
+    return result;
+  };
   router.post(
     "/identify",
-    run(async (req, res) => {
-      const s = await snapshot();
-      const response = await fetch(costUrl + "/identify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          snapshot: s,
-          title: String(req.body.title || "").slice(0, 2000),
-        }),
-        signal: AbortSignal.timeout(5000),
-      });
-      const result = await response.json();
-      if (!response.ok) fail(result.error || "ERP识别不可用", 422);
-      if (!s.categories.some((c) => c.name === result.category))
-        result.category = null;
-      res.json(result);
-    }),
+    run(async (req, res) =>
+      res.json(await identify(req.body.title, await snapshot())),
+    ),
   );
+
   router.post(
     "/sku-file",
     run(async (req, res) => {
@@ -617,6 +625,20 @@ export function createSelectionWorkspaceRouter(
         previous.selection_workspace.status === "submitted")
     )
       fail("已归档或已提交ERP的记录不能直接覆盖；请复制为新草稿", 409);
+    if (data.custom_商品长标题中文) {
+      try {
+        const recognized = await identify(data.custom_商品长标题中文, s);
+        data.item_name = recognized.shortName?.name || "";
+        data.item_group = recognized.category || "";
+        // ERP preserves an existing brand, otherwise inherits the category default.
+        data.brand =
+          previous?.selection_workspace.data.brand || recognized.brand || "";
+      } catch {
+        // Missing ERP recognition never prevents a draft or a cost simulation.
+        for (const key of ["item_name", "item_group", "brand"])
+          data[key] = previous?.selection_workspace.data[key] || "";
+      }
+    }
     const decisionKeys = [
       ...Object.keys(BINDINGS).filter(
         (k) => !["brand", "custom_主要材质1"].includes(k),
@@ -834,6 +856,7 @@ export function createSelectionWorkspaceRouter(
             if (!assets.length) fail("提交前请上传商品主图");
             const pricing = await calculate(data, s);
             if (pricing.status === "incomplete") fail(pricing.message);
+            assertReconciled(pricing);
             if (r.selection_workspace.pricing?.parameterVersion !== s.version)
               fail("ERP参数已更新，请重新保存并确认利润后提交", 409);
             const job = (

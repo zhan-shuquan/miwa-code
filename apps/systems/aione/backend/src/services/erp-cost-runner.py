@@ -47,6 +47,7 @@ def calculate(snapshot, values):
     status = data.get('custom_aione_status','')
     return dict(status='incomplete' if status.startswith('待核算') else 'estimated',
         message=status, results={k:v for k,v in data.items() if k.startswith('custom_')},
+        breakdown={k:scope.get(k) for k in ['purchase_jpy','cn_domestic','duty']},
         ruleVersion=digest, parameterVersion=snapshot['version'], verified=False)
 
 class Handler(BaseHTTPRequestHandler):
