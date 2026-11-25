@@ -23,6 +23,13 @@ export function reconcileCosts(pricing) {
       [r.custom_日本包装成本, r.custom_日本配送费],
     ],
   ];
+  if (pricing.operationFees || r.custom_销售运营成本 != null)
+    definitions.push([
+      "operations",
+      "销售运营成本",
+      r.custom_销售运营成本,
+      pricing.operationFees || [null],
+    ]);
   const finite = (v) => typeof v === "number" && Number.isFinite(v);
   const checks = definitions.map(([id, label, summary, parts]) => {
     if (!finite(summary) || !parts.every(finite))

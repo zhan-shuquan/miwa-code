@@ -3,7 +3,7 @@
 The reviewed rule hash is pinned at deployment. Updated ERP rules require review;
 parameter updates alone never grant permission to execute downloaded source.
 """
-import json, os, hashlib, datetime, re
+import json, os, hashlib, datetime, re, ast
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from types import SimpleNamespace
 
@@ -45,9 +45,24 @@ def calculate(snapshot, values):
     scope = {'frappe':frappe,'doc':data,'__builtins__':safe}
     exec(compile(source, 'reviewed-erp-cost-script', 'exec'), scope, scope)
     status = data.get('custom_aione_status','')
+    operation_fees = None
+    if not status.startswith('待核算') and scope.get('actual', 0) > 0:
+        # Re-evaluate the original ERP list expression, not an independently maintained formula.
+        for node in ast.walk(ast.parse(source)):
+            if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'operation' for t in node.targets):
+                expression = ast.Expression(body=node.value.args[0])
+                operation_fees = eval(compile(ast.fix_missing_locations(expression), 'erp-operation-detail', 'eval'), scope, scope)
+                break
+    cost_notes = {}
+    if scope.get('included_delivery'):
+        cost_notes = {'日本包装成本':'直发不适用', '日本配送费':'已包含'}
+    elif scope.get('direct'):
+        cost_notes = {'日本包装成本':'直发不适用'}
     return dict(status='incomplete' if status.startswith('待核算') else 'estimated',
         message=status, results={k:v for k,v in data.items() if k.startswith('custom_')},
         breakdown={k:scope.get(k) for k in ['purchase_jpy','cn_domestic','duty']},
+        operationFees=operation_fees, costNotes=cost_notes,
+        calculationContext=dict(exchange=scope.get('fx'),tariffRate=snapshot['settings'].get('tariff_rate'),platformRate=snapshot['settings'].get('platform_rate'),targetMargin=scope.get('target'),minimumProfit=None),
         ruleVersion=digest, parameterVersion=snapshot['version'], verified=False)
 
 class Handler(BaseHTTPRequestHandler):

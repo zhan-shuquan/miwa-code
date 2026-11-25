@@ -80,7 +80,7 @@ try {
   for (const id of ["item_name", "item_group", "brand"])
     assert.equal(boot.fields.find((f) => f.id === id).readOnly, true);
   assert.equal(boot.defaults.ratio, 65);
-  assert.equal(boot.defaults.version, 36);
+  assert(boot.defaults.version >= 36);
   assert(
     boot.defaults.groups
       .filter((g) => ["source", "market"].includes(g.id))

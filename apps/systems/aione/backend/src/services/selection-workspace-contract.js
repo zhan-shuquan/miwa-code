@@ -23,8 +23,9 @@ export const BINDINGS = {
   custom_aione_other: ["operations", "number"],
 };
 export const GROUPS = [
+  { id: "sales", label: "销售方案", region: "aside" },
   { id: "source", label: "01 采购来源", region: "main" },
-  { id: "market", label: "02 市场参考与选品依据", region: "main" },
+  { id: "market", label: "02 市场调研与选品依据", region: "main" },
   { id: "basic", label: "03 商品基本信息", region: "main" },
   { id: "purchase", label: "选品决策", region: "main" },
   { id: "logistics", label: "04 物流与包装", region: "main" },
@@ -63,6 +64,8 @@ export function parameterFacts(snapshot) {
       exchange: snapshot.exchange,
       categories: snapshot.categories,
       brands: snapshot.brands,
+      platforms: snapshot.platforms,
+      uoms: snapshot.uoms,
       priceLists: snapshot.priceLists,
       rule: snapshot.rules.sha256,
       identification: snapshot.identification?.sha256,
@@ -85,6 +88,16 @@ export function fieldsFor(snapshot) {
           .filter((c) => !c.is_group)
           .map((c) => c.name);
       if (id === "brand") options = snapshot.brands;
+      if (id === "stock_uom" && snapshot.uoms?.length) {
+        type = "text";
+        options = snapshot.uoms;
+      }
+      if (id === "custom_主要材质1" && f.type === "Select") {
+        type = "text";
+        options = String(f.options || "")
+          .split("\n")
+          .filter(Boolean);
+      }
       return {
         id,
         label: f.label,
@@ -94,6 +107,10 @@ export function fieldsFor(snapshot) {
         readOnly: ["item_name", "item_group", "brand"].includes(id),
         display: id === "custom_库存类型" ? "radio" : undefined,
         costKey: {
+          custom_aione_coupon: "operation:0",
+          custom_aione_points: "operation:1",
+          custom_aione_ads: "operation:2",
+          custom_aione_other: "operation:3",
           custom_单个采购价: "breakdown:purchase_jpy",
           custom_中国国内运费: "breakdown:cn_domestic",
           custom_国际物流方式: "国际物流成本",
@@ -101,11 +118,32 @@ export function fieldsFor(snapshot) {
           custom_日本包装物: "日本包装成本",
           custom_日本发货尺寸: "日本配送费",
         }[id],
-        default: id.startsWith("custom_aione_") ? 0 : f.default,
+        default:
+          id === "custom_实际售价"
+            ? undefined
+            : id.startsWith("custom_aione_")
+              ? 0
+              : f.default,
       };
     })
     .filter(Boolean)
     .concat([
+      {
+        id: "salesPlatform",
+        label: "销售平台",
+        type: "select",
+        group: "sales",
+        options: snapshot.platforms || [],
+        default:
+          snapshot.platforms?.length === 1 ? snapshot.platforms[0] : undefined,
+      },
+      {
+        id: "marketReferencePrice",
+        label: "市场参考售价（JPY）",
+        type: "number",
+        group: "market",
+        options: [],
+      },
       {
         id: "sourceUrl",
         label: "采购URL",
@@ -181,25 +219,26 @@ export function fieldsFor(snapshot) {
     ]);
 }
 export function defaultLayout(fields) {
-  // V3.6 defaults are a configuration seed. Saved administrator layouts remain authoritative.
+  // Configuration seed only; custom layouts remain administrator-owned.
   const order = [
     "sourceUrl",
     "custom_商品长标题中文",
     "referenceLinks",
     "marketAttachments",
     "selectionRationale",
+    "marketReferencePrice",
     "images",
     "item_code",
-    "item_name",
-    "item_group",
-    "brand",
     "custom_主要材质1",
     "custom_库存类型",
+    "custom_套装数量",
+    "stock_uom",
     "custom_单个采购价",
     "custom_单个净重g",
     "custom_中国国内运费",
-    "custom_套装数量",
-    "stock_uom",
+    "item_name",
+    "item_group",
+    "brand",
     "custom_国际物流方式",
     "custom_中国包装方式",
     "custom_日本包装物",
@@ -209,10 +248,10 @@ export function defaultLayout(fields) {
     "custom_aione_ads",
     "custom_aione_other",
     "operatingStrategy",
+    "salesPlatform",
     "result:目标毛利率达标售价",
     "custom_实际售价",
   ];
-  const groups = structuredClone(GROUPS);
   const groupFor = (f) =>
     f.id === "custom_商品长标题中文"
       ? "source"
@@ -221,10 +260,21 @@ export function defaultLayout(fields) {
         : f.id === "operatingStrategy"
           ? "operations"
           : f.group;
+  const placements = {
+    images: [4, 1, 3],
+    item_code: [4, 5, 1],
+    custom_主要材质1: [4, 9, 1],
+    custom_库存类型: [4, 5, 1],
+    custom_套装数量: [2, 9, 1],
+    stock_uom: [2, 11, 1],
+    custom_单个采购价: [3, 5, 1],
+    custom_单个净重g: [2, 8, 1],
+    custom_中国国内运费: [3, 10, 1],
+  };
   return {
+    version: 37,
     ratio: 65,
-    version: 36,
-    groups,
+    groups: structuredClone(GROUPS),
     fields: [...fields]
       .sort(
         (a, b) =>
@@ -232,36 +282,33 @@ export function defaultLayout(fields) {
           (order.indexOf(b.id) < 0 ? 999 : order.indexOf(b.id)),
       )
       .map((f) => {
-        const group = groupFor(f);
-        const full =
-          ["source", "cost", "pricing", "profit"].includes(group) ||
-          ["referenceLinks", "operatingStrategy"].includes(f.id);
-        const width = full
-          ? 12
-          : f.id === "selectionRationale"
-            ? 8
-            : f.id === "marketAttachments"
-              ? 4
-              : ["logistics", "operations"].includes(group)
-                ? 3
-                : [
-                      "custom_套装数量",
-                      "stock_uom",
-                      "custom_中国国内运费",
-                    ].includes(f.id)
-                  ? 2
-                  : ["custom_单个采购价", "custom_单个净重g"].includes(f.id)
-                    ? 3
-                    : 4;
+        const group = groupFor(f),
+          placement = placements[f.id];
+        const paired =
+          ["result:未运营保本售价", "result:运营后保本售价"].includes(f.id) ||
+          group === "profit";
         return {
           id: f.id,
           group,
-          width,
-          display:
-            group === "source" || f.id === "operatingStrategy"
-              ? "inline"
-              : "stacked",
-          rowSpan: f.id === "images" ? 3 : 1,
+          width:
+            placement?.[0] ||
+            (paired
+              ? 6
+              : ["basic"].includes(group)
+                ? 4
+                : ["operations", "logistics"].includes(group) &&
+                    f.type !== "textarea"
+                  ? 3
+                  : 12),
+          columnStart: placement?.[1] || null,
+          rowSpan: placement?.[2] || 1,
+          rows:
+            f.id === "selectionRationale"
+              ? 6
+              : f.id === "operatingStrategy"
+                ? 4
+                : undefined,
+          display: group === "source" ? "inline" : "stacked",
           hidden: false,
         };
       }),
@@ -290,6 +337,18 @@ export function validateLayout(layout, fields) {
       fail("布局区域无效");
   const ids = new Set();
   for (const f of layout.fields) {
+    if (
+      f.rows != null &&
+      (!Number.isInteger(f.rows) || f.rows < 1 || f.rows > 30)
+    )
+      fail("文本高度应为1至30行");
+    if (
+      f.columnStart != null &&
+      (!Number.isInteger(f.columnStart) ||
+        f.columnStart < 1 ||
+        f.columnStart + f.width > 13)
+    )
+      fail("字段起始列无效");
     if (f.display && !["inline", "stacked"].includes(f.display))
       fail("字段显示方式无效");
     if (
@@ -361,18 +420,20 @@ export function validateData(input, snapshot, { submit = false } = {}) {
   )
     fail("参考链接格式无效");
   if ((input.referenceLinks || []).length > 30) fail("参考链接最多30条");
-  data.referenceLinks = (input.referenceLinks || []).map((v) => {
-    const value = String(v).trim();
-    let u;
-    try {
-      u = new URL(value);
-    } catch {
-      fail("参考链接无效");
-    }
-    if (!["https:", "http:"].includes(u.protocol))
-      fail("参考链接必须使用HTTP或HTTPS");
-    return u.href;
-  });
+  data.referenceLinks = (input.referenceLinks || [])
+    .filter((v) => String(v).trim())
+    .map((v) => {
+      const value = String(v).trim();
+      let u;
+      try {
+        u = new URL(value);
+      } catch {
+        fail("参考链接无效");
+      }
+      if (!["https:", "http:"].includes(u.protocol))
+        fail("参考链接必须使用HTTP或HTTPS");
+      return u.href;
+    });
   data.supplier = String(input.supplier || "").slice(0, 1000);
   data.skus = Array.isArray(input.skus)
     ? input.skus.slice(0, 500).map((s) => {

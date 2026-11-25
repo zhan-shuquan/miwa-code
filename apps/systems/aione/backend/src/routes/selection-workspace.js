@@ -251,12 +251,24 @@ export function createSelectionWorkspaceRouter(
           verified: false,
           source: s.source,
           capturedAt: s.capturedAt,
+          platformRate: s.settings.platform_rate,
+          targetMargin: s.settings.target_margin,
+          tariffRate: s.settings.tariff_rate,
+          exchange: s.exchange?.[0]?.exchange_rate,
+          minimumProfit: null,
         },
         connection: {
           ...connection,
           online:
             !!connection &&
             Date.now() - Date.parse(connection.lastSeen) < 180000,
+        },
+        salesCapabilities: {
+          multiplePlans: false,
+          categoryRates: false,
+          management: false,
+          reason:
+            "当前ERP仅有统一平台试算费率，尚无平台分类费率及负责人授权模型；多方案扩展暂未启用",
         },
         preferences: (await config("preferences:" + actor(req))) || {},
       });
@@ -645,6 +657,8 @@ export function createSelectionWorkspaceRouter(
       ),
       "sourceUrl",
       "referenceLinks",
+      "salesPlatform",
+      "marketReferencePrice",
       "selectionRationale",
       "operatingStrategy",
     ];
@@ -657,13 +671,24 @@ export function createSelectionWorkspaceRouter(
         decisionFacts(data),
         decisionFacts(previous.selection_workspace.data),
       );
-    const pricing = await calculate(data, s),
-      workspace = {
-        ...previous?.selection_workspace,
-        data,
-        pricing,
-        status: keepConfirmation ? "confirmed" : "draft",
+    let pricing;
+    try {
+      pricing = await calculate(data, s);
+    } catch (e) {
+      pricing = {
+        status: "incomplete",
+        message: "试算服务暂不可用：" + e.message,
+        results: {},
+        parameterVersion: s.version,
+        verified: false,
       };
+    }
+    const workspace = {
+      ...previous?.selection_workspace,
+      data,
+      pricing,
+      status: keepConfirmation ? "confirmed" : "draft",
+    };
     let r;
     if (previous)
       r = (
@@ -1111,6 +1136,8 @@ export function createSelectionWorkspaceRouter(
       "referenceLinks_JSON",
       "supplier",
       "SKU_JSON",
+      "salesPlatform",
+      "marketReferencePrice",
     ]);
     for (const r of rows)
       s.addRow([
@@ -1123,6 +1150,8 @@ export function createSelectionWorkspaceRouter(
         JSON.stringify(r.data.referenceLinks || []),
         r.data.supplier,
         JSON.stringify(r.data.skus || []),
+        r.data.salesPlatform || "",
+        r.data.marketReferencePrice ?? "",
       ]);
     s.views = [{ state: "frozen", ySplit: 1 }];
     s.columns.forEach((c) => (c.width = 24));

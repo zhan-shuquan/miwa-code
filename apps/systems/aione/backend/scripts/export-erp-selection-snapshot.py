@@ -23,6 +23,8 @@ try:
         identification=dict(source=identification,sha256=hashlib.sha256(identification.encode()).hexdigest()),
         categories=frappe.get_all('Item Group',fields=['name','parent_item_group','is_group','custom_miwa_default_brand']),
         brands=frappe.get_all('Brand',pluck='name'),
+        platforms=sorted(set((frappe.get_meta('MIWA Platform Store').get_field('platform').options or '').splitlines()) | set(frappe.get_all('MIWA Platform Store',pluck='platform'))),
+        uoms=frappe.get_all('UOM',pluck='name'),
         exchange=frappe.get_all('Currency Exchange',filters={'from_currency':'CNY','to_currency':'JPY','date':['<=',frappe.utils.nowdate()]},fields=['exchange_rate','date'],order_by='date desc',limit_page_length=1),
         priceLists={name:frappe.get_doc('Price List',name).as_dict() for name in [settings.purchase_price_list,settings.unit_price_list]})
     print(json.dumps(snapshot, ensure_ascii=False, default=str))
