@@ -3,7 +3,7 @@ import json, hashlib, datetime, os, inspect
 import frappe
 
 os.chdir('/home/frappe/frappe-bench/sites')
-frappe.init(site='miwa-dev.localhost', sites_path='/home/frappe/frappe-bench/sites')
+frappe.init(site=os.environ.get('MIWA_CONNECTOR_SITE','miwa-dev.localhost'), sites_path='/home/frappe/frappe-bench/sites')
 frappe.connect()
 try:
     frappe.set_user("Administrator")

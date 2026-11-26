@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import { connectorTarget, assertContainerTarget } from '../backend/scripts/erp-connector-target.mjs';
+const dev = connectorTarget({});
+assert.equal(dev.site, 'miwa-dev.localhost');
+assert.equal(dev.origin, 'http://127.0.0.1:5500');
+assert.throws(() => connectorTarget({ AIONE_CLOUD_URL: 'https://aione.miwa-happyhouse.com' }), /origin/);
+assert.throws(() => connectorTarget({ AIONE_CONNECTOR_ENV: 'production' }), /approval/);
+assert.throws(() => connectorTarget({ AIONE_CONNECTOR_ENV: 'unknown' }), /Unknown/);
+const prod = connectorTarget({ AIONE_CONNECTOR_ENV: 'production', AIONE_PRODUCTION_CONNECTOR_APPROVED: '1' });
+assert.equal(prod.site, 'frontend');
+assert.equal(prod.testReceipts, false);
+assert.throws(() => connectorTarget({ AIONE_CONNECTOR_ENV: 'production', AIONE_PRODUCTION_CONNECTOR_APPROVED: '1', AIONE_CLOUD_URL: dev.origin }), /origin/);
+const inspection = { Config: { Labels: { 'com.docker.compose.project': dev.project, 'com.docker.compose.service': 'backend' } }, State: { Running: true } };
+assertContainerTarget(dev, inspection);
+assert.throws(() => assertContainerTarget(prod, inspection), /identity/);
+assert.throws(() => assertContainerTarget(dev, { ...inspection, State: { Running: false } }), /state/);
+assert.throws(() => assertContainerTarget(dev, {}), /identity/);
+console.log('PASS: connector environment, approval, origin and container isolation');

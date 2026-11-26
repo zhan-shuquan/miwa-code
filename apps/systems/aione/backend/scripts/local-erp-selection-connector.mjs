@@ -1,22 +1,31 @@
 // Local ERP agent: outbound HTTPS on the Windows host, local Docker stdin only.
 // This leaves the existing ERP network guard and all publishing workers untouched.
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
+import { connectorTarget, assertContainerTarget } from './erp-connector-target.mjs';
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
-const development = JSON.parse(await readFile(new URL('../config/local-development.json',import.meta.url),'utf8'));
-const base = process.env.AIONE_CLOUD_URL || development.origin;
+const target = connectorTarget();
+const base = target.origin;
 const url = new URL(base);
 if (
   url.protocol !== "https:" &&
   !["127.0.0.1", "localhost"].includes(url.hostname)
 )
   throw Error("HTTPS required");
-const token = process.env.AIONE_CONNECTOR_TOKEN;
+const token = target.name === 'production'
+  ? process.env.AIONE_PRODUCTION_CONNECTOR_TOKEN
+  : process.env.AIONE_CONNECTOR_TOKEN;
 if (!token) throw Error("Connector token required");
+if (target.name === 'production' && token === process.env.AIONE_CONNECTOR_TOKEN)
+  throw Error('Production and development connector tokens must be distinct');
 const docker = process.env.DOCKER_EXE || "docker";
 async function erp(filename, input) {
+  // Validate before every operation, including after a container recreation.
+  assertContainerTarget(target, JSON.parse(execFileSync(docker, ['inspect', target.container], { encoding: 'utf8', windowsHide: true, timeout: 15000 }))[0]);
+  if (!target.testReceipts && filename === 'erp-selection-receiver.py')
+    throw Error('Test receipt receiver is prohibited in production');
   const source = await readFile(resolve(here, filename));
   return new Promise((resolve, reject) => {
     const child = spawn(
@@ -24,9 +33,10 @@ async function erp(filename, input) {
       [
         "exec",
         "-i",
+        "-e", `MIWA_CONNECTOR_SITE=${target.site}`,
         "-w",
         "/home/frappe/frappe-bench",
-        "miwa-erp-dev-backend-1",
+        target.container,
         "env/bin/python",
         "-c",
         `import base64; exec(base64.b64decode('${source.toString("base64")}'))`,
@@ -84,6 +94,12 @@ async function once() {
       ...result,
       leaseToken: command.lease_token,
     });
+  }
+  // Stage 1 supports employee/parameter sync and formal-number commands only.
+  // Never claim product-building jobs with the development test receipt handler.
+  if (!target.testReceipts) {
+    console.log('ERP personnel/parameters synchronized; product receipt jobs not claimed');
+    return;
   }
   const { jobs } = await api("/connector/claim", {});
   for (const job of jobs) {
