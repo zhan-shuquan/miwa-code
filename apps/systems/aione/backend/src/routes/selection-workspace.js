@@ -1,4 +1,5 @@
 import { createEmployeeMaster } from "../services/employee-master.js";
+import { mountUploadTransport, CHUNK_BYTES } from "../services/selection-upload-transport.js";
 import {
   get1688RuntimeStatus,
   fetch1688ProductByUrl,
@@ -268,6 +269,7 @@ export function createSelectionWorkspaceRouter(
   router.use(auth);
   router.get('/employees/me',run(async(req,res)=>res.json(await employees.profile(person(req)))));
   router.use(async(req,res,next)=>{try{await employees.requireActive(req);next();}catch(e){next(e);}});
+  mountUploadTransport(router, { pool, tx, actor });
   router.use(async (req, res, next) => {
     try {
       req.selectionManager = !!(await config("pool-grants"))?.[person(req)]
@@ -1347,6 +1349,15 @@ export function createSelectionWorkspaceRouter(
         )
       ).rows[0];
       if (!a) fail("附件不存在", 404);
+      if (req.query.transport === 'manifest') {
+        return res.set('Cache-Control', 'private,no-store').json({ assetTransfer: { size: a.bytes.length, chunkBytes: CHUNK_BYTES, type: a.content_type, sha256: a.sha256 } });
+      }
+      if (req.query.transport === 'chunk') {
+        const index = String(req.query.part || '0');
+        if (!/^\d+$/.test(index) || Number(index) * CHUNK_BYTES >= a.bytes.length) fail('附件分片不存在', 416);
+        const offset = Number(index) * CHUNK_BYTES;
+        return res.set('Cache-Control', 'private,no-store').json({ base64: a.bytes.subarray(offset, offset + CHUNK_BYTES).toString('base64') });
+      }
       if (
         a.content_type.startsWith("image/") &&
         ["preview", "thumbnail"].includes(req.query.size)

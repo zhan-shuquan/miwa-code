@@ -5,6 +5,7 @@ export function connectorTarget(env = process.env) {
   const name = env.AIONE_CONNECTOR_ENV || 'development';
   const target = targets[name];
   if (!target) throw Error('Unknown ERP connector environment');
+  if (target.enabled === false) throw Error(target.reason || 'ERP connector target disabled');
   if (env.AIONE_CLOUD_URL && new URL(env.AIONE_CLOUD_URL).origin !== target.origin)
     throw Error('AIONE origin does not match the selected ERP environment');
   if (name === 'production' && env.AIONE_PRODUCTION_CONNECTOR_APPROVED !== '1')

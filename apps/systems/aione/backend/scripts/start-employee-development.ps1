@@ -1,4 +1,6 @@
 $ErrorActionPreference = 'Stop'
+$targets=Get-Content (Join-Path $PSScriptRoot '../config/erp-connector-targets.json') -Raw | ConvertFrom-Json
+if ($targets.development.enabled -eq $false) { throw $targets.development.reason }
 $repoPath = (Resolve-Path (Join-Path $PSScriptRoot '../../../../..')).Path
 $localPath = Join-Path $repoPath '.local'
 $dockerPath = Join-Path $env:LOCALAPPDATA 'Programs/DockerDesktop/resources/bin/docker.exe'

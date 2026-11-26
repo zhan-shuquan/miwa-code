@@ -50,6 +50,12 @@ await pool.query(
   "CREATE TABLE IF NOT EXISTS work_items(id TEXT PRIMARY KEY,title TEXT NOT NULL,work_type TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',owner_person_id TEXT,created_by_person_id TEXT,related_object_type TEXT,related_object_id TEXT,metadata JSONB NOT NULL DEFAULT '{}',created_at TIMESTAMPTZ NOT NULL DEFAULT now(),updated_at TIMESTAMPTZ NOT NULL DEFAULT now())",
 );
 await pool.query(await readFile(resolve(root,'data-code/migrations/0202_employee_master_cache.sql'),'utf8'));
+await pool.query(await readFile(resolve(root,'data-code/migrations/0203_selection_upload_transport.sql'),'utf8'));
+// Isolated fixtures only: never query or modify ERP personnel for UI regression.
+await pool.query("INSERT INTO selection_workspace_config(key,value) VALUES('erp-employees',$1) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value", [JSON.stringify({
+  schemaVersion: 1, version: 'isolated-fixture', capturedAt: new Date().toISOString(), receivedAt: new Date().toISOString(),
+  employees: [['86990','选品负责人（测试）','qmt'],['86991','研究员工甲（测试）','qat'],['86992','研究员工乙（测试）','qbt']].map(([memberId,name,prefix]) => ({employeeId:'FIXTURE-'+memberId,memberId,name,prefix,status:'Active',version:'isolated-fixture'}))
+})]);
 const backfill = await pool.connect();
 try {
   await backfill.query("BEGIN");

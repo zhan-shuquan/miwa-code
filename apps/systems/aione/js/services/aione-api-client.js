@@ -67,6 +67,25 @@ function actorHeaders() {
 }
 
 export async function aioneApi(path, options = {}) {
+  const prefix = '/api/v1/selection-workspace';
+  const relative = path.startsWith(prefix) ? path.slice(prefix.length) : '';
+  const transferable = /^\/records\/[^/?]+\/assets$/.test(relative) || ['/pool/collect', '/pool/preflight'].includes(relative);
+  if (transferable && (options.method || 'GET').toUpperCase() === 'POST' && typeof options.body === 'string' && new Blob([options.body]).size > 3 * 1024 * 1024) {
+    const bytes = new TextEncoder().encode(options.body);
+    const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
+    const transfer = await aioneApi(prefix + '/upload-transport', { method: 'POST', body: JSON.stringify({ path: relative, size: bytes.length, sha256: hash }) });
+    try {
+      for (let offset = 0, part = 0; offset < bytes.length; offset += transfer.chunkBytes, part++) {
+        let binary = '';
+        const chunk = bytes.subarray(offset, offset + transfer.chunkBytes);
+        for (let i = 0; i < chunk.length; i += 16384) binary += String.fromCharCode(...chunk.subarray(i, i + 16384));
+        await aioneApi(prefix + '/upload-transport/' + transfer.id + '/' + part, { method: 'PUT', body: JSON.stringify({ base64: btoa(binary) }), signal: options.signal });
+      }
+      return await aioneApi(path, { ...options, body: JSON.stringify({ uploadTransportId: transfer.id }) });
+    } finally {
+      await aioneApi(prefix + '/upload-transport/' + transfer.id, { method: 'DELETE' }).catch(() => {});
+    }
+  }
   const base = getAioneApiBaseUrl();
   const response = await fetch(`${base}${path}`, {
     ...options,
@@ -85,6 +104,20 @@ export async function aioneApi(path, options = {}) {
 }
 
 export async function aioneImageBlobInfo(path) {
+  if (/^\/api\/v1\/selection-workspace\/records\/[^/?]+\/assets\/[^/?]+$/.test(path)) {
+    const { assetTransfer: meta } = await aioneApi(path + '?transport=manifest');
+    if (!meta?.type?.startsWith('image/') || !Number.isInteger(meta.size) || meta.size < 1 || meta.size > 100 * 1024 * 1024 || !Number.isInteger(meta.chunkBytes) || meta.chunkBytes < 1) throw new Error('图片内容无效');
+    const parts = [];
+    for (let offset = 0, part = 0; offset < meta.size; offset += meta.chunkBytes, part++) {
+      const data = await aioneApi(path + '?transport=chunk&part=' + part);
+      const binary = atob(data.base64);
+      parts.push(Uint8Array.from(binary, c => c.charCodeAt(0)));
+    }
+    const blob = new Blob(parts, { type: meta.type });
+    const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer())), b => b.toString(16).padStart(2, '0')).join('');
+    if (blob.size !== meta.size || hash !== meta.sha256) throw new Error('图片完整性校验失败，请重新加载');
+    return { url: URL.createObjectURL(blob), type: blob.type, size: blob.size };
+  }
   const response = await fetch(getAioneApiBaseUrl() + path, {
     method: "GET",
     headers: { ...actorHeaders(), Accept: "image/*" },
