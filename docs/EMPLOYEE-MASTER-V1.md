@@ -43,8 +43,8 @@ AIONE (authenticated routing):
 
 - ERP: existing 8081 `miwa-dev.localhost`; 8080 and production unchanged.
 - Test fixtures remain at `http://127.0.0.1:8765/preview`, database `aione_selection`.
-- Real authenticated development: `http://127.0.0.1:8766/login`, separate database `aione_employee_dev`, same existing isolated PostgreSQL container. Start with `backend/scripts/start-employee-development.ps1`.
-- 8766 has no test-login route. Google ID tokens are verified server-side, then resolved using existing canonical identity logic. The public OAuth client comes from existing auth configuration. Local connector secrets are in ignored `.local`, never committed.
+- Real authenticated development: `http://127.0.0.1:5500/login`, separate database `aione_employee_dev`, same existing isolated PostgreSQL container. Start with `backend/scripts/start-employee-development.ps1`.
+- 5500 has no test-login route. Google ID tokens are verified server-side, then resolved using existing canonical identity logic. The public OAuth client comes from existing auth configuration. Local connector secrets are in ignored `.local`, never committed.
 - Initial real-member identity bootstrap uses existing migrations 0005/0006/0007 once; it does not invent employee assignments or Google subjects.
 - Rollback: stop the named local development processes and restore the prior AIONE commit. Preserve databases and reservation records. Do not recycle formal numbers. ERP scoped runtime/hook backups are under `D:\MIWA-ERP\dev-secrets\miwa-erp-dev\deployments\employee-master-v1-20261126`; restore affected code/hooks only after checking hashes. Leave additive schema/data intact. Do not restore an entire database over newer business activity.
 
@@ -61,6 +61,7 @@ AIONE (authenticated routing):
 
 ## Outstanding acceptance
 
-Google rejects origin `http://127.0.0.1:8766` for the existing OAuth client (`The given origin is not allowed for the given client ID`). An authorized OAuth administrator must add this exact development JavaScript origin, then the real member must sign in. Do not replace this step with a fabricated session or member 86990.
+The MIWA AIONE OAuth client already authorizes `http://127.0.0.1:5500`. Development now reuses that origin through `backend/config/local-development.json`; the launcher, server and authentication tests share this configuration. All eight existing Google origins and the existing client were left unchanged; no 8766 origin was added. Browser sign-in now reaches the Google account chooser without origin_mismatch, but selecting either existing 86000-linked account remains on a loading indicator. Real sign-in is pending; do not fabricate a session or substitute member 86990.
 
 Until then, real 86000 end-to-end login, browser profile, live claim/confirmation and zsq allocation remain unverified. Cache-offline and disabled-employee rules have automated coverage; full real-member offline/recovery browser acceptance remains pending. Paid AI and actual publication were deliberately not executed; their existing offline regression passed.
+

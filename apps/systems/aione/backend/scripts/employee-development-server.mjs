@@ -11,6 +11,9 @@ import { fileURLToPath } from "node:url";
 import { randomBytes, createHash } from "node:crypto";
 import { createSelectionWorkspaceRouter } from "../src/routes/selection-workspace.js";
 import { parameterFacts } from "../src/services/selection-workspace-contract.js";
+const development = JSON.parse(await readFile(new URL("../config/local-development.json",import.meta.url),"utf8"));
+const developmentURL = new URL(development.origin);
+if (developmentURL.hostname !== "127.0.0.1") throw Error("Local-only development origin required");
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "../../../../.."),
   appRoot = resolve(here, "../..");
@@ -73,7 +76,7 @@ const google=new OAuth2Client(authConfig.googleClientId);
 const cookieName='aione_employee_dev';
 app.post('/auth/google',async(req,res,next)=>{
   try {
-    if (!['http://127.0.0.1:8766','http://localhost:8766'].includes(req.headers.origin)) return res.sendStatus(403);
+    if (req.headers.origin !== development.origin) return res.sendStatus(403);
     const ticket=await google.verifyIdToken({idToken:req.body.credential,audience:authConfig.googleClientId});
     const verified=ticket.getPayload();
     if (!verified?.email_verified) return res.sendStatus(401);
@@ -139,6 +142,6 @@ app.use((err, req, res, next) => {
     error: err.code === "23505" ? "货号已存在，未重复创建" : err.message,
   });
 });
-app.listen(8766, "127.0.0.1", () =>
-  console.log("AIONE isolated preview: http://127.0.0.1:8766/login"),
+app.listen(Number(developmentURL.port), developmentURL.hostname, () =>
+  console.log("AIONE authenticated development: " + development.origin + "/login"),
 );

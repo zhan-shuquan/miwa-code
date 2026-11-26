@@ -17,7 +17,8 @@ if (!(Test-Path $secretPath)) {
     [Convert]::ToHexString([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32)) | Set-Content $secretPath
 }
 $env:AIONE_CONNECTOR_TOKEN = (Get-Content $secretPath -Raw).Trim()
-$env:AIONE_CLOUD_URL = 'http://127.0.0.1:8766'
+$developmentConfig = Get-Content (Join-Path $PSScriptRoot '../config/local-development.json') -Raw | ConvertFrom-Json
+$env:AIONE_CLOUD_URL = $developmentConfig.origin
 $env:DOCKER_EXE = $dockerPath
 Remove-Item Env:AIONE_CONNECTOR_ONCE -ErrorAction SilentlyContinue
 foreach ($spec in @(@('employee-development','employee-development-server.mjs'),@('employee-connector','local-erp-selection-connector.mjs'))) {
@@ -31,4 +32,4 @@ foreach ($spec in @(@('employee-development','employee-development-server.mjs'),
     $worker=Start-Process $nodePath -ArgumentList $spec[1] -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $localPath ($spec[0]+'.log')) -RedirectStandardError (Join-Path $localPath ($spec[0]+'.error.log'))
     Set-Content $pidFile $worker.Id
 }
-Write-Output 'Authenticated development: http://127.0.0.1:8766/login'
+Write-Output ('Authenticated development: ' + $developmentConfig.origin + '/login')

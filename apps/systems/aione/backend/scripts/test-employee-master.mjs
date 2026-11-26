@@ -1,3 +1,5 @@
+import {readFile} from "node:fs/promises";
+const development=JSON.parse(await readFile(new URL("../config/local-development.json",import.meta.url),"utf8"));
 import assert from 'node:assert/strict';
 import {createEmployeeMaster,validateEmployeeSnapshot,employeeFields} from '../src/services/employee-master.js';
 const cache=new Map([['pool-grants',{'fixture-a':{research:true},'fixture-b':{collect:true}}]]);
@@ -40,6 +42,6 @@ await assert.rejects(service.requireActive(req('fixture-a')),/尚未关联/);che
 for (const [path,options,status] of [
   ['/__preview/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({account:'manager'})},404],
   ['/api/v1/selection-workspace/employees/me',{headers:{'x-aione-person-id':'86000'}},401],
-  ['/auth/google',{method:'POST',headers:{'content-type':'application/json',origin:'http://127.0.0.1:8766'},body:JSON.stringify({credential:'forged'})},401],
-]) {const r=await fetch('http://127.0.0.1:8766'+path,options);assert.equal(r.status,status);checks++;}
+  ['/auth/google',{method:'POST',headers:{'content-type':'application/json',origin:development.origin},body:JSON.stringify({credential:'forged'})},401],
+]) {const r=await fetch(development.origin+path,options);assert.equal(r.status,status);checks++;}
 console.log(JSON.stringify({checks,scope:'Employee cache/permissions and real-development auth rejection; no real Google login simulated'}));
