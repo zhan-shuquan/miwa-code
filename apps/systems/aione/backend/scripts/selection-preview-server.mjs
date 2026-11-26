@@ -1,3 +1,4 @@
+import { backfillSelectionPool } from "../src/services/selection-pool-service.js";
 import { uploadJsonLimit } from "../src/services/selection-upload-policy.js";
 import express from "express";
 import pg from "pg";
@@ -33,6 +34,32 @@ await pool.query(
 await pool.query(
   "INSERT INTO people(id,display_name) VALUES('test-employee','测试员工'),('test-partner','测试合伙人'),('test-admin','测试管理员') ON CONFLICT(id) DO NOTHING",
 );
+await pool.query(
+  await readFile(
+    resolve(root, "data-code/migrations/0201_selection_pool.sql"),
+    "utf8",
+  ),
+);
+await pool.query(
+  "INSERT INTO people(id,display_name) VALUES('86990','选品负责人（测试）'),('86991','研究员工甲（测试）'),('86992','研究员工乙（测试）') ON CONFLICT(id) DO NOTHING",
+);
+await pool.query(
+  'INSERT INTO selection_workspace_config(key,value) VALUES(\'pool-grants\',\'{"86990":{"collect":true,"manage":true,"assign":true}}\') ON CONFLICT(key) DO NOTHING',
+);
+await pool.query(
+  "CREATE TABLE IF NOT EXISTS work_items(id TEXT PRIMARY KEY,title TEXT NOT NULL,work_type TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',owner_person_id TEXT,created_by_person_id TEXT,related_object_type TEXT,related_object_id TEXT,metadata JSONB NOT NULL DEFAULT '{}',created_at TIMESTAMPTZ NOT NULL DEFAULT now(),updated_at TIMESTAMPTZ NOT NULL DEFAULT now())",
+);
+const backfill = await pool.connect();
+try {
+  await backfill.query("BEGIN");
+  await backfillSelectionPool(backfill);
+  await backfill.query("COMMIT");
+} catch (e) {
+  await backfill.query("ROLLBACK");
+  throw e;
+} finally {
+  backfill.release();
+}
 const snapshot = JSON.parse(
   await readFile(resolve(root, ".local/erp-snapshot.json"), "utf8"),
 );
@@ -49,6 +76,24 @@ const app = express(),
 app.disable("x-powered-by");
 app.use(express.json({ limit: uploadJsonLimit }));
 const accounts = {
+  manager: {
+    personId: "86990",
+    subjectId: "86990",
+    subjectType: "person",
+    displayName: "选品负责人（测试）",
+  },
+  employeeA: {
+    personId: "86991",
+    subjectId: "86991",
+    subjectType: "person",
+    displayName: "研究员工甲（测试）",
+  },
+  employeeB: {
+    personId: "86992",
+    subjectId: "86992",
+    subjectType: "person",
+    displayName: "研究员工乙（测试）",
+  },
   employee: {
     personId: "test-employee",
     subjectId: "test-employee",

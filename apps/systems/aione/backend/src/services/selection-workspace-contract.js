@@ -100,11 +100,21 @@ export function fieldsFor(snapshot) {
       }
       return {
         id,
-        label: id === "item_name" ? "商品简称（中文）" : f.label,
+        label:
+          id === "item_code"
+            ? "正式商品货号"
+            : id === "item_name"
+              ? "商品简称（中文）"
+              : f.label,
         type,
         group,
         options,
-        readOnly: ["custom_库存类型", "item_group", "brand"].includes(id),
+        readOnly: [
+          "item_code",
+          "custom_库存类型",
+          "item_group",
+          "brand",
+        ].includes(id),
         required: CONFIRM_FIELDS.includes(id),
         display: undefined,
         costKey: {
@@ -510,7 +520,6 @@ export function validateData(input, snapshot, { submit = false } = {}) {
 }
 
 export const CONFIRM_FIELDS = [
-  "item_code",
   "custom_单个采购价",
   "custom_单个净重g",
   "custom_国际物流方式",

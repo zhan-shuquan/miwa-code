@@ -71,6 +71,17 @@ async function api(path, body, binary = false) {
 async function once() {
   const snapshot = await erp("export-erp-selection-snapshot.py");
   const version = await api("/connector/snapshot", snapshot);
+  const commands = await api("/connector/commands/claim", {});
+  for (const command of commands.jobs) {
+    const result = await erp("erp-selection-numbering.py", {
+      kind: command.kind,
+      payload: command.payload,
+    });
+    await api("/connector/commands/" + command.id + "/result", {
+      ...result,
+      leaseToken: command.lease_token,
+    });
+  }
   const { jobs } = await api("/connector/claim", {});
   for (const job of jobs) {
     let result;
@@ -110,6 +121,7 @@ do {
     await once();
   } catch (e) {
     console.error(e.message);
+    if(process.env.AIONE_CONNECTOR_ONCE === "1") process.exitCode=1;
   }
   if (process.env.AIONE_CONNECTOR_ONCE === "1") break;
   await new Promise((r) =>

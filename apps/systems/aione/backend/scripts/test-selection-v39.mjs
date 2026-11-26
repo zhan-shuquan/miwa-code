@@ -43,13 +43,29 @@ check(
   ),
 );
 const prefix = "v39" + Date.now().toString(36).slice(-4);
-let naming = await api('/records', 'POST', {data:{custom_商品长标题中文:'厨房水槽沥水架',shortNameManual:false}}, 201);
-check(naming.data.item_name === '水槽沥水架');
-const namingPath = '/records/' + encodeURIComponent(naming.id);
-naming = await api(namingPath,'PATCH',{version:naming.version,data:{...naming.data,custom_商品长标题中文:'尚无匹配的商品标题'}});
-check(naming.data.item_name === '');
-naming = await api(namingPath,'PATCH',{version:naming.version,data:{...naming.data,item_name:'人工确认的简称',shortNameManual:true,custom_商品长标题中文:'厨房水槽沥水架'}});
-check(naming.data.item_name === '人工确认的简称');
+let naming = await api(
+  "/records",
+  "POST",
+  { data: { custom_商品长标题中文: "厨房水槽沥水架", shortNameManual: false } },
+  201,
+);
+check(naming.data.item_name === "水槽沥水架");
+const namingPath = "/records/" + encodeURIComponent(naming.id);
+naming = await api(namingPath, "PATCH", {
+  version: naming.version,
+  data: { ...naming.data, custom_商品长标题中文: "尚无匹配的商品标题" },
+});
+check(naming.data.item_name === "");
+naming = await api(namingPath, "PATCH", {
+  version: naming.version,
+  data: {
+    ...naming.data,
+    item_name: "人工确认的简称",
+    shortNameManual: true,
+    custom_商品长标题中文: "厨房水槽沥水架",
+  },
+});
+check(naming.data.item_name === "人工确认的简称");
 let draft = await api(
   "/records",
   "POST",
@@ -101,7 +117,9 @@ const confirmation = await api("/batch", "POST", {
   action: "confirm",
   items: [{ id: draft.id, version: draft.version }],
 });
-check(confirmation.items[0].status === "confirmed");
+// Pool V1: confirmation waits for ERP numbering; this legacy employee has no prefix.
+check(confirmation.items[0].status === "number_pending");
+check(!confirmation.items[0].data.item_code);
 draft = await api(path);
 check(draft.selector === "test-employee");
 for (const sort of [

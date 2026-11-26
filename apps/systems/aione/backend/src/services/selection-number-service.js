@@ -10,7 +10,15 @@ function normalizeDate(value) {
     error.statusCode = 400;
     throw error;
   }
-  return date.toISOString().slice(0, 10);
+  // Business date is Tokyo, independent of the deployment host's timezone.
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value))
+    return value;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 }
 
 export async function allocateSelectionNo(client, selectionDateValue) {
@@ -22,12 +30,14 @@ export async function allocateSelectionNo(client, selectionDateValue) {
        SET last_number = public.selection_number_counters.last_number + 1,
            updated_at = NOW()
      RETURNING last_number`,
-    [selectionDate]
+    [selectionDate],
   );
 
   const number = Number(counter.rows[0].last_number);
-  if (!Number.isInteger(number) || number < 1 || number > 999) {
-    const error = new Error(`Daily selection number capacity exceeded for ${selectionDate}.`);
+  if (!Number.isSafeInteger(number) || number < 1) {
+    const error = new Error(
+      `Daily selection number capacity exceeded for ${selectionDate}.`,
+    );
     error.code = "selection_number_capacity_exceeded";
     error.statusCode = 409;
     throw error;
@@ -36,6 +46,6 @@ export async function allocateSelectionNo(client, selectionDateValue) {
   const compactDate = selectionDate.slice(2).replaceAll("-", "");
   return {
     selectionNo: `xp${compactDate}${pad(number, 3)}`,
-    selectionDate
+    selectionDate,
   };
 }

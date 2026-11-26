@@ -150,6 +150,10 @@ async function renderCurrentRoute() {
   const {selectionWorkspaceEnabled}=await import('./config/selection-navigation.js');
   if(selectionWorkspaceEnabled()){
     const id=getRouteId();
+    if(id==='talent-home'&&new URLSearchParams(location.hash.split('?')[1]).get('section')==='selection-prefix'){
+      const {initSelectionPeople}=await import('./pages/selection-people.js');
+      await initSelectionPeople(document.getElementById('app-main-host'));return;
+    }
     if(id==='work'){
       const {initSelectionWorkHome}=await import('./pages/selection-work-home.js');
       await initSelectionWorkHome(document.getElementById('app-main-host'));return;

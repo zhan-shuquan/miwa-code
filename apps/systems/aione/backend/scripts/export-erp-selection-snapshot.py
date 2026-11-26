@@ -17,7 +17,13 @@ try:
                    default=f.default, required=bool(f.reqd)) for f in meta.fields
               if f.fieldname.startswith('custom_') or f.fieldname in
               ['item_code','item_name','item_group','brand','stock_uom','description']]
-    snapshot = dict(schemaVersion=1, capturedAt=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    person_fields=['name','employee_name','employee_number']
+    configured=frappe.get_meta('Employee').has_field('custom_miwa_member_id')
+    if configured:person_fields+=['custom_miwa_member_id','custom_miwa_item_prefix']
+    employees=frappe.get_all('Employee',filters={'status':'Active'},fields=person_fields)
+    people=[dict(employeeId=r.name,name=r.employee_name,memberId=r.get('custom_miwa_member_id'),prefix=r.get('custom_miwa_item_prefix')) for r in employees]
+    catalog=[dict(code=r.item_code,url=r.get('custom_采购链接url')) for r in frappe.get_all('Item',fields=['item_code','custom_采购链接url'])]
+    snapshot = dict(personPrefixes=people,catalog=catalog,schemaVersion=1, capturedAt=datetime.datetime.now(datetime.timezone.utc).isoformat(),
         verified=False, source=settings.get('source'), settings=settings, fields=fields,
         rules=dict(source=script.script, sha256=hashlib.sha256(script.script.encode()).hexdigest(), modified=str(script.modified)),
         identification=dict(source=identification,sha256=hashlib.sha256(identification.encode()).hexdigest()),

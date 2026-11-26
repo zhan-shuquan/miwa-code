@@ -1,3 +1,18 @@
+import {
+  get1688RuntimeStatus,
+  fetch1688ProductByUrl,
+} from "../integrations/alibaba1688-client.js";
+import { createSelectionERPCommands } from "./selection-erp-commands.js";
+import { createSelectionPoolRouter } from "./selection-pool.js";
+import {
+  findDuplicate,
+  ensureSelectionNo,
+  intakeOnce,
+  checkPurchaseSource,
+  registerKeys,
+  syncResearchTask,
+  requestFormalNumber,
+} from "../services/selection-pool-service.js";
 import { uploadPolicy } from "../services/selection-upload-policy.js";
 import { imageDerivative } from "../services/selection-image-preview.js";
 import {
@@ -101,7 +116,13 @@ export function createSelectionWorkspaceRouter(
     const r = (
       await c.query(
         `SELECT *, (SELECT display_name FROM people WHERE id=product_opportunities.created_by_person_id) AS selector_name FROM product_opportunities WHERE id=$1 AND selection_workspace IS NOT NULL AND ($2::boolean OR owner_person_id=$3) ${lock ? "FOR UPDATE" : ""}`,
-        [id, admin(req.aioneIdentity), person(req) || ""],
+        [
+          id,
+          admin(req.aioneIdentity) ||
+            !!req.selectionManager ||
+            req.poolAssetWrite === id,
+          person(req) || "",
+        ],
       )
     ).rows[0];
     if (!r) fail("记录不存在或无权访问", 404);
@@ -118,6 +139,9 @@ export function createSelectionWorkspaceRouter(
   const view = (r) => ({
     erpStatus: r.erp_job_status || "not_submitted",
     id: r.id,
+    selectionNo: r.selection_no,
+    sourcePlatform:
+      r.selection_workspace.pool?.source?.platform || r.source_platform,
     owner: r.owner_person_id,
     selector: r.created_by_person_id,
     selectorName: r.selector_name || null,
@@ -227,7 +251,20 @@ export function createSelectionWorkspaceRouter(
       res.type(r.content_type).send(r.bytes);
     }),
   );
+  router.use(
+    "/connector/commands",
+    createSelectionERPCommands({ pool, tx, integration }),
+  );
   router.use(auth);
+  router.use(async (req, res, next) => {
+    try {
+      req.selectionManager = !!(await config("pool-grants"))?.[person(req)]
+        ?.manage;
+      next();
+    } catch (e) {
+      next(e);
+    }
+  });
   router.get(
     "/bootstrap",
     run(async (req, res) => {
@@ -342,6 +379,8 @@ export function createSelectionWorkspaceRouter(
       if (JSON.stringify(req.body).length > 20000) fail("配置过大");
       const allowed = new Set([
         "image",
+        "selectionNo",
+        "sourcePlatform",
         "item_code",
         "item_name",
         "item_group",
@@ -414,25 +453,39 @@ export function createSelectionWorkspaceRouter(
         await snapshot(),
       );
       if (!data.sourceUrl) fail("请先粘贴采购URL");
-      const matches = (
-        await pool.query(
-          "SELECT * FROM product_opportunities WHERE selection_workspace IS NOT NULL AND ($1::boolean OR owner_person_id=$2) AND (source_url=$3 OR selection_workspace->'data'->>'sourceUrl'=$3) AND id<>$4 AND archived_at IS NULL LIMIT 10",
-          [
-            admin(req.aioneIdentity),
-            person(req) || "",
-            data.sourceUrl,
-            String(req.body.excludeId || ""),
-          ],
-        )
-      ).rows;
+      const sourceSnapshot = await snapshot();
+      let duplicates = [],
+        review;
+      try {
+        review = await tx((c) =>
+          checkPurchaseSource(
+            c,
+            data,
+            req.body.excludeId || null,
+            sourceSnapshot,
+          ),
+        );
+      } catch (error) {
+        if (error.statusCode === 409 || error.status === 409)
+          duplicates = [{ exists: true }];
+        else throw error;
+      }
+      let product = null,
+        message = "链接已保留；未启用授权读取，可继续录入。";
+      if (get1688RuntimeStatus().ready && /1688\.com/.test(data.sourceUrl)) {
+        try {
+          product = (await fetch1688ProductByUrl(data.sourceUrl)).product;
+          message = "已读取授权商品资料";
+        } catch (error) {
+          message = "读取暂不可用：" + error.message;
+        }
+      }
       res.json({
         valid: true,
-        duplicates: matches.map(view),
-        reading: {
-          enabled: false,
-          message:
-            "当前开发环境未启用供应商授权读取；可导入现有快速录入表或人工粘贴原标题，ERP简称/分类识别已接入。",
-        },
+        duplicates,
+        review,
+        product,
+        reading: { enabled: !!product, message },
       });
     }),
   );
@@ -565,14 +618,14 @@ export function createSelectionWorkspaceRouter(
   const list = async (req, unlimited = false) => {
     const q = req.query,
       values = [
-        admin(req.aioneIdentity),
+        admin(req.aioneIdentity) || !!req.selectionManager,
         person(req) || "",
         String(q.q || ""),
         String(q.status || ""),
         q.archived === "true",
       ];
     let where =
-      "selection_workspace IS NOT NULL AND ($1::boolean OR owner_person_id=$2) AND ($3='' OR title ILIKE '%'||$3||'%' OR selection_workspace->'data'->>'item_code' ILIKE '%'||$3||'%') AND ($4='' OR selection_workspace->>'status'=$4) AND (archived_at IS NOT NULL)=$5";
+      "selection_workspace IS NOT NULL AND ($1::boolean OR owner_person_id=$2) AND ($3='' OR selection_no ILIKE '%'||$3||'%' OR title ILIKE '%'||$3||'%' OR selection_workspace->'data'->>'item_code' ILIKE '%'||$3||'%') AND ($4='' OR selection_workspace->>'status'=$4) AND (archived_at IS NOT NULL)=$5";
     if (q.owner && admin(req.aioneIdentity)) {
       values.push(q.owner);
       where += " AND owner_person_id=$" + values.length;
@@ -600,6 +653,8 @@ export function createSelectionWorkspaceRouter(
       return `CASE WHEN ${ready}(${value}) ~ '^-?[0-9]+(\\.[0-9]+)?$' THEN (${value})::numeric END`;
     };
     const sorts = {
+      selectionNo: "(selection_date,length(selection_no),selection_no)",
+      sourcePlatform: "source_platform",
       createdAt: "created_at",
       updatedAt: "updated_at",
       item_code: "selection_workspace->'data'->>'item_code'",
@@ -734,8 +789,29 @@ export function createSelectionWorkspaceRouter(
     }),
   );
   const save = async (req, c, input, id, version, s) => {
-    const data = validateData(input, s);
+    await c.query(
+      "SELECT pg_advisory_xact_lock(hashtext('selection-number-flow'))",
+    );
+    const data = validateData({ ...input, item_code: undefined }, s);
     let previous = id ? await row(req, id, c, true) : null;
+    if (previous?.selection_workspace.status === "number_pending") {
+      if (
+        (
+          await c.query(
+            "SELECT id FROM selection_erp_commands WHERE selection_id=$1 AND status='processing'",
+            [id],
+          )
+        ).rowCount
+      )
+        fail("正式货号正在申请，请完成后再编辑", 409);
+      await c.query(
+        "UPDATE selection_erp_commands SET status='failed',result='{\"message\":\"资料已修改，请重新确认\"}' WHERE selection_id=$1 AND status='queued'",
+        [id],
+      );
+    }
+    if (previous?.selection_workspace.data.item_code)
+      data.item_code = previous.selection_workspace.data.item_code;
+    const sourceReview = await checkPurchaseSource(c, data, id, s);
     if (previous && previous.record_version !== Number(version))
       fail("记录已被修改，请重新加载", 409);
     if (
@@ -801,6 +877,10 @@ export function createSelectionWorkspaceRouter(
     }
     const workspace = {
       ...previous?.selection_workspace,
+      sourceReview: {
+        erpReview: sourceReview.erpReview,
+        existingERPCode: sourceReview.existingERPCode,
+      },
       data,
       pricing,
       status: keepConfirmation ? "confirmed" : "draft",
@@ -826,6 +906,9 @@ export function createSelectionWorkspaceRouter(
           ],
         )
       ).rows[0];
+    r = await ensureSelectionNo(c, r);
+    await registerKeys(c, sourceReview.keys || [], r.id);
+    if (r.selection_workspace.pool) await syncResearchTask(c, r, actor(req));
     await event(c, req, r, previous ? "update" : "create");
     return view(r);
   };
@@ -835,7 +918,13 @@ export function createSelectionWorkspaceRouter(
       const s = await snapshot();
       res
         .status(201)
-        .json(await tx((c) => save(req, c, req.body.data, null, null, s)));
+        .json(
+          await tx((c) =>
+            intakeOnce(c, actor(req), req.body.requestKey, req.body.data, () =>
+              save(req, c, req.body.data, null, null, s),
+            ),
+          ),
+        );
     }),
   );
   router.get(
@@ -863,6 +952,12 @@ export function createSelectionWorkspaceRouter(
         events: (
           await pool.query(
             "SELECT actor_id,action,version,created_at FROM selection_workspace_events WHERE selection_id=$1 ORDER BY id DESC LIMIT 50",
+            [r.id],
+          )
+        ).rows,
+        numberRequests: (
+          await pool.query(
+            "SELECT status,result,updated_at FROM selection_erp_commands WHERE selection_id=$1 AND kind='formal_number' ORDER BY created_at DESC",
             [r.id],
           )
         ).rows,
@@ -899,11 +994,25 @@ export function createSelectionWorkspaceRouter(
         fail("请选择1至100条不同记录");
       const s = await snapshot();
       const result = await tx(async (c) => {
+        await c.query(
+          "SELECT pg_advisory_xact_lock(hashtext('selection-number-flow'))",
+        );
         const out = [];
         for (const item of [...items].sort((a, b) =>
           a.id.localeCompare(b.id),
         )) {
           const r = await row(req, item.id, c, true);
+          if (
+            action === "confirm" &&
+            ["confirmed", "number_pending"].includes(
+              r.selection_workspace.status,
+            )
+          ) {
+            if (r.selection_workspace.status === "number_pending")
+              await requestFormalNumber(c, r, actor(req));
+            out.push(view(r));
+            continue;
+          }
           if (r.record_version !== Number(item.version))
             fail("批量操作存在版本冲突，未保存任何修改", 409);
           if (action === "edit") {
@@ -928,6 +1037,11 @@ export function createSelectionWorkspaceRouter(
                 [r.id],
               )
             ).rows;
+            if (productAssets(r, assets).length)
+              fail(
+                "相同商品图片已存在，请直接编辑原记录；新商品请从新草稿开始",
+                409,
+              );
             const copiedResearch = [];
             for (const a of assets) {
               const assetId = randomUUID();
@@ -964,6 +1078,8 @@ export function createSelectionWorkspaceRouter(
               !(Number(data.custom_实际售价) > 0)
             )
               fail("确认选品前请完成成本试算并填写实际售价");
+            await checkPurchaseSource(c, data, r.id, s);
+            const numbering = await requestFormalNumber(c, r, actor(req));
             const updated = (
               await c.query(
                 "UPDATE product_opportunities SET selection_workspace=selection_workspace || $2::jsonb,record_version=record_version+1,updated_at=now() WHERE id=$1 RETURNING *",
@@ -971,7 +1087,7 @@ export function createSelectionWorkspaceRouter(
                   r.id,
                   JSON.stringify({
                     data,
-                    status: "confirmed",
+                    status: numbering.status,
                     pricing,
                     confirmedAt: new Date().toISOString(),
                     confirmedBy: actor(req),
@@ -979,12 +1095,23 @@ export function createSelectionWorkspaceRouter(
                 ],
               )
             ).rows[0];
+            await syncResearchTask(c, updated, actor(req));
             await event(c, req, updated, "confirm-selection");
             out.push(view(updated));
             continue;
           }
           if (action === "submit") {
             if (r.archived_at) fail("已归档记录不能提交");
+            if (!r.selection_workspace.data.item_code)
+              fail("正式货号待生成，不能正式建档", 409);
+            await checkPurchaseSource(c, r.selection_workspace.data, r.id, s);
+            const connection = await config("connection");
+            if (
+              !s.catalog ||
+              !connection ||
+              Date.now() - Date.parse(connection.lastSeen) > 180000
+            )
+              fail("ERP正式商品查重待复核，请恢复连接后提交", 409);
             const data = validateData(r.selection_workspace.data, s, {
               submit: true,
             });
@@ -1039,6 +1166,11 @@ export function createSelectionWorkspaceRouter(
               `UPDATE product_opportunities SET archived_at=${action === "archive" ? "now()" : "NULL"},record_version=record_version+1 WHERE id=$1`,
               [r.id],
             );
+            await syncResearchTask(
+              c,
+              { ...r, archived_at: action === "archive" ? new Date() : null },
+              actor(req),
+            );
             await event(
               c,
               req,
@@ -1049,6 +1181,8 @@ export function createSelectionWorkspaceRouter(
           }
           if (action === "delete") {
             requireAdmin(req);
+            if (r.selection_no)
+              fail("选品编号及审计记录永久保留，请使用归档", 409);
             if (!r.archived_at || r.selection_workspace.status === "submitted")
               fail("仅可删除已归档且未提交ERP的草稿");
             await c.query(
@@ -1071,6 +1205,13 @@ export function createSelectionWorkspaceRouter(
   router.post(
     "/records/:id/assets",
     run(async (req, res) => {
+      if ((await config("pool-grants"))?.[person(req)]?.collect) {
+        const pending = await pool.query(
+          "SELECT id FROM product_opportunities WHERE id=$1 AND created_by_person_id=$2 AND selection_workspace->'pool'->>'state'='pending' AND archived_at IS NULL",
+          [req.params.id, person(req)],
+        );
+        if (pending.rowCount) req.poolAssetWrite = req.params.id;
+      }
       const b = req.body,
         bytes = Buffer.from(String(b.base64 || ""), "base64");
       const png = bytes
@@ -1115,6 +1256,12 @@ export function createSelectionWorkspaceRouter(
       }
       const r = await tx(async (c) => {
         const record = await row(req, req.params.id, c, true);
+        if (!market) {
+          const keys = ["image:" + digest(bytes)];
+          if (await findDuplicate(c, keys, record.id))
+            fail("已有选品使用相同商品图片，请检查选品池", 409);
+          await registerKeys(c, keys, record.id);
+        }
         if (
           record.selection_workspace.status === "submitted" ||
           record.archived_at
@@ -1372,6 +1519,20 @@ export function createSelectionWorkspaceRouter(
         return result;
       });
       res.json({ ok: true, items: saved, errors: [] });
+    }),
+  );
+  router.use(
+    "/pool",
+    createSelectionPoolRouter({
+      pool,
+      tx,
+      actor,
+      person,
+      admin,
+      config,
+      putConfig,
+      event,
+      snapshot,
     }),
   );
   return router;

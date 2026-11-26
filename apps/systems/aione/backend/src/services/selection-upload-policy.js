@@ -9,4 +9,4 @@ export const uploadPolicy = Object.freeze({
   formats: ["image/jpeg", "image/png", "image/webp"],
 });
 export const uploadJsonLimit =
-  Math.ceil((uploadPolicy.maxBytes * 4) / 3) + 65536;
+  Math.ceil((uploadPolicy.maxBytes * 4) / 3) + 262144;

@@ -154,7 +154,7 @@ function buildRegistryHomeItems(rootId) {
 function buildPlatformItems(rootId) {
   if(selectionWorkspaceEnabled()) {
     const definitions={
-      'product-home':[['选品录入','product-home?view=entry'],['选品一览','product-home?view=list']],
+      'product-home':[['选品池','product-home?view=pool'],['选品录入','product-home?view=entry'],['选品一览','product-home?view=list']],
       work:[['工作台','work']],
       'talent-home':[['人员一览','talent-home'],['人员设置','talent-home?view=settings']],
       settings:[['ERP连接与同步','settings?section=selection-sync'],['表单布局','settings?section=selection-layout']]

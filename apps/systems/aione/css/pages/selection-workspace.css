@@ -999,3 +999,123 @@
 .sw th[aria-sort="descending"] button {
   color: var(--sw-green);
 }
+
+/* Pool uses the same workspace tokens, controls and image surface. */
+.sp .sp-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+  gap: var(--sw-space);
+}
+.sp .sp-card {
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sw-space);
+}
+.sp .sp-card-top,
+.sp .sp-facts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sp .sp-facts {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.sp .sp-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--surface-primary, #fff);
+  padding: 0;
+  overflow: hidden;
+}
+.sp .sp-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.sp td .sp-image {
+  width: 64px;
+}
+.sp .sp-card h3 {
+  font-size: 14px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.sp .sp-card .sw-toolbar {
+  margin-top: auto;
+}
+.sp .sp-intake {
+  border: 1px dashed var(--sw-border);
+  padding: var(--sw-space);
+  border-radius: 6px;
+}
+.sp .sp-staged {
+  display: flex;
+  gap: var(--sw-space);
+  flex-wrap: wrap;
+}
+.sp .sp-staged > div {
+  display: flex;
+  flex-direction: column;
+  width: 100px;
+}
+.sp .sp-staged img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  background: var(--surface-primary, #fff);
+}
+.sp .sp-gallery img {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  margin: auto;
+}
+.sp [data-share] {
+  width: 100%;
+  resize: vertical;
+}
+.sp .sp-filters input {
+  min-width: 100px;
+  width: 145px;
+}
+.sp .sp-filters [data-query] {
+  flex: 1;
+  min-width: 220px;
+}
+.sp .sw-toolbar {
+  flex-wrap: wrap;
+}
+.sp .sw-heading nav {
+  display: flex;
+  gap: var(--sw-space);
+  flex-wrap: wrap;
+}
+.sp dialog {
+  border: 1px solid var(--sw-border);
+  border-radius: 8px;
+  max-width: min(90vw, 900px);
+}
+@media (max-width: 600px) {
+  .sp .sp-cards {
+    grid-template-columns: 1fr;
+  }
+  .sp .sw-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .sp .sp-filters input {
+    flex: 1;
+  }
+  .sp {
+    padding: 12px;
+  }
+}
