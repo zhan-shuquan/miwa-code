@@ -1,5 +1,8 @@
 .git
 .gitignore
+.local
+output
+**/*.dump
 **/node_modules
 **/.env
 **/.env.*

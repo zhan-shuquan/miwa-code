@@ -7,7 +7,11 @@ frappe.init(site='miwa-dev.localhost', sites_path='/home/frappe/frappe-bench/sit
 frappe.connect()
 try:
     frappe.set_user("Administrator")
-    settings = frappe.get_single('AIONE Cost Settings').as_dict()
+    # Use the same live reference as ERP Setup > MIWA Business Parameters.
+    # Its review drafts are intentionally not effective costing parameters.
+    from miwa_ai.business_parameters_stage1 import reference
+    business_parameters = reference()
+    settings = business_parameters['cost']
     script = frappe.get_doc('Server Script', 'AIONE-统一成本定价-TEST')
     if script.disabled:
         raise RuntimeError('ERP cost script disabled')
@@ -27,7 +31,7 @@ try:
         brands=frappe.get_all('Brand',pluck='name'),
         platforms=sorted(set((frappe.get_meta('MIWA Platform Store').get_field('platform').options or '').splitlines()) | set(frappe.get_all('MIWA Platform Store',pluck='platform'))),
         uoms=frappe.get_all('UOM',pluck='name'),
-        exchange=frappe.get_all('Currency Exchange',filters={'from_currency':'CNY','to_currency':'JPY','date':['<=',frappe.utils.nowdate()]},fields=['exchange_rate','date'],order_by='date desc',limit_page_length=1),
+        exchange=business_parameters['exchange'],
         priceLists={name:frappe.get_doc('Price List',name).as_dict() for name in [settings.purchase_price_list,settings.unit_price_list]})
     print(json.dumps(snapshot, ensure_ascii=False, default=str))
 finally:

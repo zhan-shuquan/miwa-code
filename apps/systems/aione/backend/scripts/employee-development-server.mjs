@@ -71,6 +71,7 @@ await pool.query(
 const app = express(),
   sessions = new Map();
 app.disable("x-powered-by");
+app.use((_req,res,next)=>{res.set('Cache-Control','no-store');next();});
 app.use(express.json({ limit: uploadJsonLimit }));
 const google=new OAuth2Client(authConfig.googleClientId);
 const cookieName='aione_employee_dev';
@@ -91,9 +92,15 @@ app.post('/auth/google',async(req,res,next)=>{
 app.use((req,res,next)=>{
   const token=String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(cookieName+'='))?.split('=')[1];
   const session=sessions.get(token);
-  if (session && session.expires>Date.now()) req.aioneIdentity=session.identity;
+  if (session && session.expires>Date.now()) { req.aioneIdentity=session.identity; req.authSessionToken=token; }
   else if (session) sessions.delete(token);
   next();
+});
+app.post('/auth/logout',(req,res)=>{
+  if (req.headers.origin !== development.origin) return res.sendStatus(403);
+  if (req.authSessionToken) sessions.delete(req.authSessionToken);
+  res.clearCookie(cookieName,{httpOnly:true,sameSite:'strict',path:'/'});
+  res.sendStatus(204);
 });
 app.get("/__preview/identity", (req, res) =>
   req.aioneIdentity ? res.json(req.aioneIdentity) : res.sendStatus(401),

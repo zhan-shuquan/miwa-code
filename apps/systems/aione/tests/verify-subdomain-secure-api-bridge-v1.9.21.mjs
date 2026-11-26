@@ -25,7 +25,9 @@ const backendAuth = read("backend/src/http/google-auth.js");
 assert.match(backendAuth, /verifyIdToken\(\{ idToken: token, audience: clientId \}\)/);
 assert.match(backendAuth, /findGooglePreviewIdentityByEmail/);
 assert.match(backendAuth, /req\.aioneIdentity\s*=\s*Object\.freeze/);
-assert.match(backendAuth, /personId: identity\.subjectType === "person" \? identity\.subjectId : null/);
+assert.match(backendAuth, /resolveCanonicalGoogleIdentity\(\{/);
+assert.match(backendAuth, /req\.aioneIdentity = canonicalIdentity/);
+assert.match(backendAuth, /legacyIdentity\?\.subjectType === "admin"/);
 
 const context = read("backend/src/http/context.js");
 assert.match(context, /AIONE_ALLOW_PREVIEW_ACTOR/);
@@ -67,7 +69,7 @@ assert.match(integrationRoute, /req\.query\?\.response[\s\S]*?authorizeUrl/);
 assert.match(selectionDetail, /oauth\/start\?response=json/);
 assert.match(selectionDetail, /window\.open\('about:blank'/);
 
-const deploy = readRepo("infra/gcp/cloud-shell/05_DEPLOY_BACKEND_PRIVATE.sh");
+const deploy = readRepo("infra/gcp/cloudbuild/deploy-current.yaml");
 assert.match(deploy, /--no-allow-unauthenticated/);
 assert.match(deploy, /AIONE_REQUIRE_GOOGLE_AUTH=true/);
 assert.match(deploy, /AIONE_ALLOW_PREVIEW_ACTOR=false/);
@@ -80,12 +82,11 @@ assert.match(setup, /roles\/run\.invoker/);
 assert.match(setup, /EXPECTED_SUBJECT="owner:\$\{VERCEL_TEAM_SLUG\}:project:\$\{VERCEL_PROJECT_NAME\}:environment:\$\{VERCEL_ENVIRONMENT\}"/);
 
 const lib = readRepo("infra/gcp/cloud-shell/lib.sh");
-assert.match(lib, /AIONE_IMAGE_TAG:-v1\.9\.21/);
+assert.match(lib, /CURRENT_BASELINE.sh/);
 const fastPath = readRepo("infra/gcp/cloud-shell/RUN_C_SUBDOMAIN_BRIDGE.sh");
-assert.match(fastPath, /02_BUILD_IMAGE\.sh/);
-assert.match(fastPath, /05_DEPLOY_BACKEND_PRIVATE\.sh/);
-assert.match(fastPath, /07_SETUP_VERCEL_OIDC_BRIDGE\.sh/);
-assert.match(fastPath, /06_SMOKE_TEST\.sh/);
+assert.match(fastPath, /retired/);
+assert.match(deploy, /--no-traffic/);
+assert.match(deploy, /read-only-db-preflight/);
 
 // Keep the temporary server registry aligned with the browser preview registry.
 const frontendPairs = [...read("js/config/preview-identities.js").matchAll(/subjectId:\s*"([^"]+)"[\s\S]*?email:\s*"([^"]+)"/g)]

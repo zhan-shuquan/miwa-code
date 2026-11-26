@@ -40,6 +40,8 @@ check(!(await service.profile('fixture-a')).employee);
 await assert.rejects(service.requireActive(req('fixture-a')),/尚未关联/);checks++;
 // Real development endpoint must reject all test-account and forged identity paths.
 for (const [path,options,status] of [
+  ['/auth/logout',{method:'POST',headers:{origin:'https://untrusted.example'}},403],
+  ['/auth/logout',{method:'POST',headers:{origin:development.origin}},204],
   ['/__preview/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({account:'manager'})},404],
   ['/api/v1/selection-workspace/employees/me',{headers:{'x-aione-person-id':'86000'}},401],
   ['/auth/google',{method:'POST',headers:{'content-type':'application/json',origin:development.origin},body:JSON.stringify({credential:'forged'})},401],

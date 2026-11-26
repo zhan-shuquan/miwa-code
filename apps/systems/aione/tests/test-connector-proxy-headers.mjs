@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+const source=await readFile(new URL('../api/aione-bridge.js',import.meta.url),'utf8');
+const start=source.indexOf('function forwardHeaders(');
+const end=source.indexOf('\n}',start)+2;
+assert(start>=0 && end>start);
+const forward=vm.runInNewContext(`(${source.slice(start,end)})`,{Headers});
+const headers=forward({headers:{'x-aione-connector-token':'test-only','authorization':'Bearer employee-test','x-serverless-authorization':'attacker','cookie':'private-cookie','host':'untrusted'}},'platform-test');
+assert.equal(headers.get('x-aione-connector-token'),'test-only');
+assert.equal(headers.get('authorization'),'Bearer employee-test');
+assert.equal(headers.get('x-serverless-authorization'),'Bearer platform-test');
+assert.equal(headers.get('cookie'),null);
+assert.equal(headers.get('host'),null);
+assert.equal(forward({headers:{}},'platform-test').get('x-aione-connector-token'),null);
+console.log('Connector proxy: 6 header forwarding/isolation checks passed');

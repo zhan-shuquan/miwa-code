@@ -5,7 +5,8 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
-const base = process.env.AIONE_CLOUD_URL || "http://127.0.0.1:8765";
+const development = JSON.parse(await readFile(new URL('../config/local-development.json',import.meta.url),'utf8'));
+const base = process.env.AIONE_CLOUD_URL || development.origin;
 const url = new URL(base);
 if (
   url.protocol !== "https:" &&
