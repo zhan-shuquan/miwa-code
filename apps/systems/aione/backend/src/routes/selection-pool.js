@@ -22,7 +22,7 @@ import {
 } from "../services/selection-pool-service.js";
 import { uploadPolicy } from "../services/selection-upload-policy.js";
 import { imageDerivative } from "../services/selection-image-preview.js";
-import { fail } from "../services/selection-workspace-contract.js";
+import { fail, applyDefaults } from "../services/selection-workspace-contract.js";
 
 export function createSelectionPoolRouter({
   pool,
@@ -362,6 +362,7 @@ export function createSelectionPoolRouter({
             const r = await createOpportunity(c, {
               actor: actor(req),
               candidate: row,
+              snapshot: await snapshot(),
             });
             await registerKeys(c, a.keys, r.id);
             for (const [position, img] of row.prepared.entries())
@@ -615,6 +616,8 @@ export function createSelectionPoolRouter({
             fail("没有此记录操作权限", 403);
           const now = new Date().toISOString(),
             previousOwner = r.owner_person_id;
+          if (["claim", "assign"].includes(action))
+            ws.data = applyDefaults(ws.data || {}, await snapshot());
           if (action === "claim") {
             r.owner_person_id = person(req);
             Object.assign(p, {

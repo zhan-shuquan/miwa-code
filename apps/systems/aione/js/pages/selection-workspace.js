@@ -181,7 +181,7 @@ export async function initSelectionWorkspace(host, forcedView) {
         "</textarea>"
       );
     if (f.type === "select")
-      return `<select ${attribute}="${id}"><option value="">请选择</option>${f.options.map((v) => `<option ${v === val ? "selected" : ""} value="${esc(v)}">${esc(v)}</option>`).join("")}</select>`;
+      return `<select ${attribute}="${id}"><option value="">请选择</option>${f.options.map((v) => `<option ${v === val ? "selected" : ""} value="${esc(v)}">${esc(f.optionLabels?.[v] || v)}</option>`).join("")}</select>`;
     const choices = f.type === "text" && f.options?.length;
     return `<input ${attribute}="${id}" type="${f.type === "number" ? "number" : f.type === "url" ? "url" : "text"}" ${f.type === "number" ? 'min="0" step="any"' : ""} ${choices ? 'list="sw-options-' + id + '"' : ""} value="${esc(val)}">${choices ? '<datalist id="sw-options-' + id + '">' + f.options.map((v) => '<option value="' + esc(v) + '"></option>').join("") + "</datalist>" : ""}`;
   }
@@ -560,6 +560,11 @@ export async function initSelectionWorkspace(host, forcedView) {
             )
             .map((f) => [f.id, f.default]),
         );
+    for (const f of boot.fields) {
+      if ((data[f.id] == null || data[f.id] === "") &&
+          f.default != null && f.default !== "" && !f.readOnly)
+        data[f.id] = f.default;
+    }
     data.skus ||= [];
     data.shortNameManual ??= !!data.item_name;
     let pricing = record?.pricing,

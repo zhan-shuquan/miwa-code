@@ -36,7 +36,7 @@ assert.deepEqual(
 checks++;
 check(!boot.fields.find((f) => f.id === "custom_单个采购价").costKey);
 const validation = await api("/confirmation-check", "POST", {});
-check(validation.issues.some((i) => i.field === "custom_国际物流方式"));
+check(!validation.issues.some((i) => i.field === "custom_国际物流方式"));
 check(
   !validation.issues.some((i) =>
     ["item_name", "item_group", "brand"].includes(i.field),
@@ -72,7 +72,7 @@ let draft = await api(
   { data: { item_code: prefix, custom_库存类型: "直发" } },
   201,
 );
-check(!draft.data.custom_库存类型);
+check(draft.data.custom_库存类型 === "备货");
 const path = "/records/" + encodeURIComponent(draft.id);
 draft = await api(path);
 check(draft.selector === "test-employee" && draft.selectorName === "测试员工");

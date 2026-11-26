@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {applyDefaults,fieldsFor,validateData,stockFor} from '../src/services/selection-workspace-contract.js';
+const snapshot=JSON.parse(await readFile(new URL('../../../../../.local/erp8081-production-snapshot.json',import.meta.url),'utf8'));
+// Use ERP metadata; exercise configured alternatives rather than duplicating runtime defaults.
+const defaults=Object.fromEntries(snapshot.fields.map(f=>[f.id,f.default]));
+const fresh=applyDefaults({},snapshot);
+assert.equal(fresh.stock_uom,defaults.stock_uom);
+assert.equal(fresh.custom_日本包装物,defaults.custom_日本包装物);
+const manual={custom_中国国内运费:0,custom_套装数量:2,custom_日本包装物:'60cm纸箱',custom_日本发货尺寸:'60cm',item_name:'人工简称',shortNameManual:true};
+const restored=applyDefaults(manual,snapshot);
+for(const [key,value] of Object.entries(manual)) assert.deepEqual(restored[key],value);
+assert.deepEqual(applyDefaults(restored,snapshot),restored);
+assert.equal(validateData(restored,snapshot).custom_中国国内运费,0);
+assert.equal(fieldsFor(snapshot).find(f=>f.id==='stock_uom').optionLabels.Nos,'个');
+snapshot.entryDefaults={salesPlatform:'Rakuten'};
+snapshot.platforms=['Rakuten','Other'];
+assert.equal(applyDefaults({},snapshot).salesPlatform,'Rakuten');
+assert.equal(applyDefaults({salesPlatform:'Other'},snapshot).salesPlatform,'Other');
+snapshot.fields.find(f=>f.id==='custom_aione_ads').default='2';
+assert.equal(applyDefaults({},snapshot).custom_aione_ads,'2');
+assert.equal(applyDefaults({custom_aione_ads:0},snapshot).custom_aione_ads,0);
+const changed=structuredClone(snapshot);
+changed.fields.find(f=>f.id==='custom_国际物流方式').default='空运大件（普货）';
+assert.equal(stockFor(applyDefaults({},changed),changed),'备货');
+console.log('PASS: ERP defaults, zero/manual preservation, repeated initialization, unit labels, configured platform/rates and logistics mapping');

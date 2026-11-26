@@ -25,6 +25,8 @@ try:
     catalog=[dict(code=r.item_code,url=r.get('custom_采购链接url')) for r in frappe.get_all('Item',fields=['item_code','custom_采购链接url'])]
     snapshot = dict(catalog=catalog,schemaVersion=1, capturedAt=datetime.datetime.now(datetime.timezone.utc).isoformat(),
         verified=False, source=settings.get('source'), settings=settings, fields=fields,
+        entryDefaults={'salesPlatform': frappe.db.get_single_value('MIWA Business Parameters', 'custom_selection_sales_platform')
+                       if frappe.get_meta('MIWA Business Parameters').has_field('custom_selection_sales_platform') else None},
         rules=dict(source=script.script, sha256=hashlib.sha256(script.script.encode()).hexdigest(), modified=str(script.modified)),
         identification=dict(source=identification,sha256=hashlib.sha256(identification.encode()).hexdigest()),
         categories=frappe.get_all('Item Group',fields=['name','parent_item_group','is_group','custom_miwa_default_brand']),

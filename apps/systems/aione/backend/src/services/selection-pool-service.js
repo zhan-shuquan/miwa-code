@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { allocateSelectionNo } from "./selection-number-service.js";
 import { sourceIdentity, fingerprint } from "./selection-intake-contract.js";
-import { fail } from "./selection-workspace-contract.js";
+import { fail, applyDefaults } from "./selection-workspace-contract.js";
 export async function ensureSelectionNo(c, r) {
   if (r.selection_no) return r;
   const n = await allocateSelectionNo(c, r.created_at);
@@ -132,7 +132,7 @@ export async function checkPurchaseSource(c, data, id, snapshot) {
     return { erpReview: "matched", existingERPCode: existing.code, keys };
   return { erpReview: snapshot.catalog ? "checked" : "pending", keys };
 }
-export async function createOpportunity(c, { actor, candidate }) {
+export async function createOpportunity(c, { actor, candidate, snapshot }) {
   const id = "selection:" + randomUUID(),
     source = candidate.source;
   const data = {
@@ -144,7 +144,7 @@ export async function createOpportunity(c, { actor, candidate }) {
   };
   const workspace = {
     status: "draft",
-    data,
+    data: snapshot ? applyDefaults(data, snapshot) : data,
     pricing: { status: "incomplete", results: {}, verified: false },
     pool: {
       origin: "public",

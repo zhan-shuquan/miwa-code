@@ -60,6 +60,7 @@ export function parameterFacts(snapshot) {
   return JSON.stringify(
     normalize({
       settings: snapshot.settings,
+      entryDefaults: snapshot.entryDefaults,
       fields: snapshot.fields,
       exchange: snapshot.exchange,
       categories: snapshot.categories,
@@ -89,7 +90,7 @@ export function fieldsFor(snapshot) {
           .map((c) => c.name);
       if (id === "brand") options = snapshot.brands;
       if (id === "stock_uom" && snapshot.uoms?.length) {
-        type = "text";
+        type = "select";
         options = snapshot.uoms;
       }
       if (id === "custom_主要材质1" && f.type === "Select") {
@@ -109,6 +110,7 @@ export function fieldsFor(snapshot) {
         type,
         group,
         options,
+        optionLabels: id === "stock_uom" ? { Nos: "个" } : undefined,
         readOnly: [
           "item_code",
           "custom_库存类型",
@@ -129,9 +131,7 @@ export function fieldsFor(snapshot) {
         }[id],
         default: ["custom_实际售价", "custom_库存类型"].includes(id)
           ? undefined
-          : id.startsWith("custom_aione_")
-            ? 0
-            : f.default,
+          : f.default,
       };
     })
     .filter(Boolean)
@@ -143,7 +143,9 @@ export function fieldsFor(snapshot) {
         group: "sales",
         options: snapshot.platforms || [],
         default:
-          snapshot.platforms?.length === 1 ? snapshot.platforms[0] : undefined,
+          snapshot.entryDefaults?.salesPlatform ||
+          (snapshot.platforms?.length === 1 ? snapshot.platforms[0] : undefined),
+        optionLabels: { Rakuten: "乐天" },
       },
       {
         id: "marketReferencePrice",
@@ -381,6 +383,7 @@ export function validateLayout(layout, fields) {
   return layout;
 }
 export function validateData(input, snapshot, { submit = false } = {}) {
+  input = applyDefaults(input, snapshot);
   const fields = fieldsFor(snapshot),
     data = {};
   for (const f of fields) {
@@ -515,6 +518,17 @@ export function validateData(input, snapshot, { submit = false } = {}) {
     if (!mode) fail("所选物流尚无有效费率");
     if (mode.fulfillment !== data.custom_库存类型)
       fail("库存类型与ERP物流关联结果不一致，请刷新物流参数");
+  }
+  return data;
+}
+
+// Empty means missing; zero and every previously saved nonempty value are retained.
+export function applyDefaults(input, snapshot) {
+  const data = { ...input };
+  for (const field of fieldsFor(snapshot)) {
+    if ((data[field.id] == null || data[field.id] === "") &&
+        field.default != null && field.default !== "" && !field.readOnly)
+      data[field.id] = field.default;
   }
   return data;
 }
