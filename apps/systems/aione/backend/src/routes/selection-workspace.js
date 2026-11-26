@@ -1,3 +1,4 @@
+import { parseSupplierCSV } from '../services/selection-sku-csv.js';
 import { createEmployeeMaster } from "../services/employee-master.js";
 import { mountUploadTransport, CHUNK_BYTES } from "../services/selection-upload-transport.js";
 import {
@@ -215,7 +216,8 @@ export function createSelectionWorkspaceRouter(
       const jobs = await tx(async (c) => {
         const selected = (
           await c.query(
-            "SELECT * FROM selection_erp_jobs WHERE status='queued' OR (status='processing' AND lease_until<now()) ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 5",
+            "SELECT * FROM selection_erp_jobs WHERE (status='queued' OR (status='processing' AND lease_until<now())) AND (payload->>'testOnly')=$1 ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 5",
+            [req.body.formal === true ? 'false' : 'true'],
           )
         ).rows;
         for (const j of selected) {
@@ -240,11 +242,21 @@ export function createSelectionWorkspaceRouter(
         !b.leaseToken
       )
         fail("结果状态或租约无效");
-      const r = await pool.query(
-        "UPDATE selection_erp_jobs SET status=$2,result=$3,lease_until=NULL,updated_at=now() WHERE id=$1 AND lease_token=$4 AND status='processing' RETURNING id",
-        [req.params.id, b.status, JSON.stringify(b.result || {}), b.leaseToken],
-      );
-      if (!r.rowCount) fail("租约已失效或任务已经完成", 409);
+      await tx(async (c) => {
+        const job = (await c.query("SELECT * FROM selection_erp_jobs WHERE id=$1 AND lease_token=$2 AND status='processing' FOR UPDATE",
+          [req.params.id,b.leaseToken])).rows[0];
+        if (!job) fail("租约已失效或任务已经完成",409);
+        if (job.payload.testOnly === false && b.status === "succeeded" &&
+            (b.result?.stage !== "item_created" || b.result?.itemCode !== job.payload.data.item_code ||
+             b.result?.selectionId !== job.selection_id))
+          fail("缺少真实ERP商品建档凭据",409);
+        await c.query("UPDATE selection_erp_jobs SET status=$2,result=$3,lease_until=NULL,updated_at=now() WHERE id=$1",
+          [job.id,b.status,JSON.stringify(b.result || {})]);
+        if (job.payload.testOnly === false) {
+          await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(jsonb_set(selection_workspace,'{status}',to_jsonb($2::text)),'{erpResult}',$3::jsonb),updated_at=now() WHERE id=$1",
+            [job.selection_id,b.status === "succeeded" ? "submitted" : "confirmed",JSON.stringify(b.result || {})]);
+        }
+      });
       res.json({ ok: true });
     }),
   );
@@ -335,7 +347,7 @@ export function createSelectionWorkspaceRouter(
       for (const f of defaults.fields)
         if (!layout.fields.some((x) => x.id === f.id)) layout.fields.push(f);
       for (const g of defaults.groups)
-        if (!layout.groups.some((x) => x.id === g.id)) layout.groups.push(g);
+        if (!layout.groups.some((x) => x.id === g.id)) { if(g.id === "specifications") layout.groups.splice(layout.groups.findIndex(x=>x.id === "basic")+1,0,g); else layout.groups.push(g); }
       res.json({
         employeeOptions: (admin(req.aioneIdentity) || req.selectionManager) ? await employees.eligible() : [],
         identity: {
@@ -351,6 +363,7 @@ export function createSelectionWorkspaceRouter(
         logisticsRelations: s.settings.logistics
           .filter((r) => r.enabled)
           .map((r) => ({ method: r.method, fulfillment: r.fulfillment })),
+        itemAttributes: s.itemAttributes || [],
         uploadPolicy,
         fields,
         layout,
@@ -608,6 +621,7 @@ export function createSelectionWorkspaceRouter(
     run(async (req, res) => {
       const bytes = Buffer.from(String(req.body.base64 || ""), "base64");
       if (bytes.length > 2000000) fail("SKU文件超过2MB");
+      if (String(req.body.filename || '').toLowerCase().endsWith('.csv')) return res.json(parseSupplierCSV(bytes,req.body.sourceUrl,req.body.filename));
       const w = new ExcelJS.Workbook();
       await w.xlsx.load(bytes);
       const sheet = w.worksheets.find((s) =>
@@ -842,7 +856,7 @@ export function createSelectionWorkspaceRouter(
     if (
       previous &&
       (previous.archived_at ||
-        previous.selection_workspace.status === "submitted")
+        ["submitted", "submitting"].includes(previous.selection_workspace.status))
     )
       fail("已归档或已提交ERP的记录不能直接覆盖；请复制为新草稿", 409);
     if (data.custom_商品长标题中文) {
@@ -1040,6 +1054,13 @@ export function createSelectionWorkspaceRouter(
           }
           if (r.record_version !== Number(item.version))
             fail("批量操作存在版本冲突，未保存任何修改", 409);
+          if (["submitting", "submitted"].includes(r.selection_workspace.status)) {
+            if (action === "submit") {
+              out.push((await c.query("SELECT id,status,result FROM selection_erp_jobs WHERE selection_id=$1 ORDER BY created_at DESC LIMIT 1", [r.id])).rows[0]);
+              continue;
+            }
+            if (!["copy", "archive"].includes(action)) fail("ERP正在建档或已经建档，请勿覆盖已提交数据",409);
+          }
           if (action === "edit") {
             out.push(
               await save(
@@ -1171,16 +1192,19 @@ export function createSelectionWorkspaceRouter(
                       researchIds(r).includes(a.id),
                     ),
                     parameterVersion: s.version,
-                    testOnly: true,
+                    selectionNo: r.selection_no,
+                    selector: r.created_by_person_id,
+                    testOnly: process.env.AIONE_FORMAL_ITEM_INTAKE !== "1",
                     allowPublish: false,
                     allowPaidAI: false,
+                    allowEmail: false,
                   }),
                 ],
               )
             ).rows[0];
             await c.query(
-              "UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{status}','\"submitted\"') WHERE id=$1",
-              [r.id],
+              "UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{status}',to_jsonb($2::text)) WHERE id=$1",
+              [r.id, process.env.AIONE_FORMAL_ITEM_INTAKE === "1" ? "submitting" : "submitted"],
             );
             await event(c, req, r, "submit", { jobId: job.id });
             out.push(job);
@@ -1428,8 +1452,9 @@ export function createSelectionWorkspaceRouter(
         ])
       ).rows[0];
       if (!j) fail("任务不存在", 404);
-      await row(req, j.selection_id);
+      const record = await row(req, j.selection_id);
       if (j.status !== "failed") fail("只可重试已明确失败的任务", 409);
+      if (record.record_version !== j.selection_version) fail("资料已更新，请提交当前版本，不能重试旧资料",409);
       await pool.query(
         "UPDATE selection_erp_jobs SET status='queued',lease_token=NULL WHERE id=$1 AND status='failed'",
         [j.id],
@@ -1499,6 +1524,7 @@ export function createSelectionWorkspaceRouter(
     run(async (req, res) => {
       const bytes = Buffer.from(String(req.body.base64 || ""), "base64");
       if (bytes.length > 2000000) fail("导入文件超过2MB");
+
       const w = new ExcelJS.Workbook();
       if (String(req.body.filename).endsWith(".csv")) {
         const { Readable } = await import("node:stream");

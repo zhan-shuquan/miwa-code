@@ -30,6 +30,7 @@ try:
         rules=dict(source=script.script, sha256=hashlib.sha256(script.script.encode()).hexdigest(), modified=str(script.modified)),
         identification=dict(source=identification,sha256=hashlib.sha256(identification.encode()).hexdigest()),
         categories=frappe.get_all('Item Group',fields=['name','parent_item_group','is_group','custom_miwa_default_brand']),
+        itemAttributes=[frappe.get_doc('Item Attribute',name).as_dict() for name in frappe.get_all('Item Attribute',pluck='name')],
         brands=frappe.get_all('Brand',pluck='name'),
         platforms=sorted(set((frappe.get_meta('MIWA Platform Store').get_field('platform').options or '').splitlines()) | set(frappe.get_all('MIWA Platform Store',pluck='platform'))),
         uoms=frappe.get_all('UOM',pluck='name'),

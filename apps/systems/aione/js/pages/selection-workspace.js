@@ -1,3 +1,4 @@
+import { mountSpecifications } from '../components/selection-specifications.js';
 import { bindFileIntake } from "../components/file-intake.js";
 import {
   sortableKeys,
@@ -455,6 +456,7 @@ export async function initSelectionWorkspace(host, forcedView) {
                   esc(f.id.slice(7)) +
                   '">—</b></div>'
                 );
+              if (f.type === "specifications") return '<div data-specifications style="grid-column:1/-1"></div>';
               if (f.type === "links")
                 return (
                   '<section class="sw-field sw-links-field" style="' +
@@ -570,14 +572,15 @@ export async function initSelectionWorkspace(host, forcedView) {
     let pricing = record?.pricing,
       timer,
       sequence = 0;
-    content.innerHTML = `<div class="sw-actions"><span data-save-state>${record ? "版本 " + record.version : "新草稿"}</span><span>${esc(record?.selectionNo || "选品货号保存后生成")}</span><button data-save class="sw-primary">保存草稿</button><button data-confirm-selection>确认选品</button><button data-back-list>返回选品一览</button></div><nav class="sw-workspace-tabs" aria-label="选品工作区"><button data-workspace-tab="entry" aria-pressed="true">${icon("product")}商品录入</button><button data-workspace-tab="market" aria-pressed="false">${icon("search")}市场调研</button></nav>${formMarkup(boot.layout, data, "top")}<div class="sw-split" style="--sw-left:${boot.layout.ratio}%"><div>${formMarkup(boot.layout, data)}<details class="sw-card" hidden><summary>第二阶段 · SKU与ERP资料完善</summary><div class="sw-toolbar" data-stage-two-actions><button data-submit>提交ERP（资料完整后）</button></div><p>每行填写：SKU编号、规格、独立采购价、售价、重量。空白价格继承商品。</p><div data-skus></div><button data-add-sku>新增SKU</button></details><details class="sw-card" hidden><summary>修改记录 / ERP处理状态</summary><div data-history>${(record?.events || []).map((e) => `<p>${esc(e.created_at)} · ${esc(e.actor_id)} · ${esc(e.action)}</p>`).join("") || "尚无修改记录"}${(record?.jobs || []).map((j) => `<p>ERP任务：${esc(j.status)} ${esc(j.result?.message || "")} ${j.status === "failed" ? `<button data-retry="${j.id}">重试</button>` : ""}</p>`).join("")}</div></details></div><aside class="sw-profit sw-card"><details class="sw-context-help"><summary>计算依据</summary><div data-calculation-context class="sw-context"></div></details><div data-reconciliation role="status"></div><div data-profit></div>${formMarkup(boot.layout, data, "aside")}</aside></div>`;
+    content.innerHTML = `<div class="sw-actions"><span data-save-state>${record ? "版本 " + record.version : "新草稿"}</span><span>${esc(record?.selectionNo || "选品货号保存后生成")}</span><button data-save class="sw-primary">保存草稿</button><button data-confirm-selection>确认选品</button><button data-back-list>返回选品一览</button></div><nav class="sw-workspace-tabs" aria-label="选品工作区"><button data-workspace-tab="entry" aria-pressed="true">${icon("product")}商品信息</button><button data-workspace-tab="market" aria-pressed="false">${icon("search")}市场调研</button><button data-workspace-tab="sample" aria-pressed="false">${icon("product")}样品测试</button></nav><section class="sw-card" data-sample-panel hidden>样品测试 · 关联当前选品记录，具体规则待确认。</section>${formMarkup(boot.layout, data, "top")}<div class="sw-split" style="--sw-left:${boot.layout.ratio}%"><div>${formMarkup(boot.layout, data)}<details class="sw-card"><summary>ERP商品建档</summary><div class="sw-toolbar" data-stage-two-actions><button data-submit>提交ERP（资料完整后）</button></div></details><details class="sw-card"><summary>修改记录 / ERP处理状态</summary><div data-history>${record?.erpResult?.stage === "item_created" ? `<p>ERP已建档：${esc(record.erpResult.itemCode)} · SKU数量：${esc(record.erpResult.skuCount)}</p><p>${(record.erpResult.skus || []).map(s=>esc(s.name)).join("、")}</p>` : ""}${(record?.events || []).map((e) => `<p>${esc(e.created_at)} · ${esc(e.actor_id)} · ${esc(e.action)}</p>`).join("") || "尚无修改记录"}${(record?.jobs || []).map((j) => `<p>ERP任务：${esc(j.status)} ${esc(j.result?.message || "")} ${j.status === "failed" ? `<button data-retry="${j.id}">重试</button>` : ""}</p>`).join("")}</div></details></div><aside class="sw-profit sw-card"><details class="sw-context-help"><summary>计算依据</summary><div data-calculation-context class="sw-context"></div></details><div data-reconciliation role="status"></div><div data-profit></div>${formMarkup(boot.layout, data, "aside")}</aside></div>`;
     const switchWorkspace = (tab) => {
+      content.querySelector("[data-sample-panel]").hidden = tab !== "sample";
       content.querySelectorAll("[data-layout-group]").forEach((group) => {
         const config = boot.layout.groups.find(
           (g) => g.id === group.dataset.layoutGroup,
         );
         if ((config?.region || "main") === "main")
-          group.hidden = (config.id === "market") !== (tab === "market");
+          group.hidden = tab === "sample" || (config.id === "market") !== (tab === "market");
       });
       content
         .querySelectorAll("[data-workspace-tab]")
@@ -881,70 +884,7 @@ export async function initSelectionWorkspace(host, forcedView) {
         dialog.showModal();
       }),
     );
-    function skuRows() {
-      const box = content.querySelector("[data-skus]");
-      box.innerHTML = data.skus
-        .map(
-          (s, i) =>
-            `<div class="sw-sku">${["code", "spec", "cost", "price", "weight"].map((k, n) => `<input aria-label="${["SKU编号", "规格", "采购价", "售价", "重量"][n]}" placeholder="${["SKU编号", "规格", "采购价", "售价", "重量"][n]}" data-sku="${i}" data-key="${k}" type="${n > 1 ? "number" : "text"}" value="${esc(s[k])}">`).join("")}<button data-sku-delete="${i}">删除</button></div>`,
-        )
-        .join("");
-      box
-        .querySelectorAll("[data-sku]")
-        .forEach((e) =>
-          on(
-            e,
-            "input",
-            () => (data.skus[Number(e.dataset.sku)][e.dataset.key] = e.value),
-          ),
-        );
-      box.querySelectorAll("[data-sku-delete]").forEach((e) =>
-        on(e, "click", () => {
-          data.skus.splice(Number(e.dataset.skuDelete), 1);
-          skuRows();
-        }),
-      );
-    }
-    skuRows();
-    on(content.querySelector("[data-add-sku]"), "click", () => {
-      data.skus.push({ code: "", spec: "" });
-      skuRows();
-    });
-    const skuActions = document.createElement("div");
-    skuActions.className = "sw-toolbar";
-    skuActions.innerHTML =
-      '<button data-import-sku>导入ERP/1688 SKU表</button><button data-price-skus>按SKU独立试算</button><input type="file" data-sku-file accept=".xlsx" hidden><div data-sku-results></div>';
-    content.querySelector("[data-skus]").after(skuActions);
-    on(skuActions.querySelector("[data-import-sku]"), "click", () =>
-      skuActions.querySelector("[data-sku-file]").click(),
-    );
-    on(
-      skuActions.querySelector("[data-sku-file]"),
-      "change",
-      guarded(async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const result = await api("/sku-file", "POST", {
-          base64: await file64(file),
-        });
-        data.skus = result.skus;
-        skuRows();
-        report("SKU已载入，请核对后保存草稿。");
-      }),
-    );
-    on(
-      skuActions.querySelector("[data-price-skus]"),
-      "click",
-      guarded(async () => {
-        const result = await api("/sku-pricing", "POST", data);
-        skuActions.querySelector("[data-sku-results]").innerHTML = result.items
-          .map(
-            (s) =>
-              `<p>${esc(s.code)}：${s.pricing.status === "incomplete" ? esc(s.pricing.message) : "预计运营后利润 " + yen(s.pricing.results.custom_运营后毛利润) + "（待验证）"}</p>`,
-          )
-          .join("");
-      }),
-    );
+    const specificationsEditor = mountSpecifications({root:content.querySelector("[data-specifications]"),getData:()=>data,attributes:boot.itemAttributes||[],api,file64,esc,on,guarded,report});
     let numberingTimer;
     signal.addEventListener("abort", () => clearTimeout(numberingTimer));
     function watchNumber() {
@@ -997,6 +937,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       selectionLabel.textContent = record.selectionNo;
       data = structuredClone(record.data);
       renderReferences();
+      specificationsEditor.draw();
       pricing = record.pricing;
       calculationError = "";
       report(
@@ -1140,6 +1081,7 @@ export async function initSelectionWorkspace(host, forcedView) {
           data.referenceLinks.splice(Number(b.dataset.referenceRemove), 1);
           data.referencePrices.splice(Number(b.dataset.referenceRemove), 1);
           renderReferences();
+      specificationsEditor.draw();
         }),
       );
     }
@@ -1148,6 +1090,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       data.referenceLinks.push("");
       data.referencePrices.push(null);
       renderReferences();
+      specificationsEditor.draw();
     });
     on(
       content.querySelector("[data-read-source]"),

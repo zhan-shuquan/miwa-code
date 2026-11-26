@@ -1,3 +1,4 @@
+import { specifications } from './selection-specifications.js';
 // Stable mappings are contracts, not editable layout or duplicated business options.
 export const BINDINGS = {
   item_code: ["basic", "text"],
@@ -26,6 +27,7 @@ export const GROUPS = [
   { id: "sales", label: "销售方案", icon: "store", region: "aside" },
   { id: "source", label: "采购来源", region: "main", hidden: true },
   { id: "basic", label: "商品基本信息", icon: "product", region: "main" },
+  { id: "specifications", label: "商品规格", icon: "product", region: "main" },
   { id: "market", label: "市场调研与选品依据", icon: "search", region: "main" },
   { id: "purchase", label: "选品决策", region: "main" },
   { id: "logistics", label: "物流与包装", icon: "supplier", region: "main" },
@@ -65,6 +67,7 @@ export function parameterFacts(snapshot) {
       exchange: snapshot.exchange,
       categories: snapshot.categories,
       brands: snapshot.brands,
+      itemAttributes: snapshot.itemAttributes,
       platforms: snapshot.platforms,
       uoms: snapshot.uoms,
       priceLists: snapshot.priceLists,
@@ -175,6 +178,9 @@ export function fieldsFor(snapshot) {
         type: "links",
         group: "market",
         options: [],
+      },
+      {
+        id: "specifications", label: "商品规格", type: "specifications", group: "specifications", presentationOnly: true, options: [],
       },
       {
         id: "marketAttachments",
@@ -480,6 +486,8 @@ export function validateData(input, snapshot, { submit = false } = {}) {
     (input.shortNameManual == null && !!input.item_name);
   data.marketReferencePrice = data.referencePrices[0] ?? null;
   data.supplier = String(input.supplier || "").slice(0, 1000);
+  if (input.specificationAttributes || input.skuSourceFiles || input.has_variants != null) Object.assign(data, specifications(input, snapshot, submit));
+  else {
   data.skus = Array.isArray(input.skus)
     ? input.skus.slice(0, 500).map((s) => {
         if (!s.code || !String(s.code).match(/^[a-zA-Z0-9_-]{1,100}$/))
@@ -500,6 +508,8 @@ export function validateData(input, snapshot, { submit = false } = {}) {
     : [];
   if (new Set(data.skus.map((s) => s.code)).size !== data.skus.length)
     fail("SKU编号重复");
+  }
+
   if (submit) {
     for (const k of [
       "item_code",
@@ -511,7 +521,7 @@ export function validateData(input, snapshot, { submit = false } = {}) {
     ])
       if (data[k] == null || data[k] === "")
         fail("提交前请补充：" + (fields.find((f) => f.id === k)?.label || k));
-    if (!data.skus.length) fail("提交前请完善SKU明细");
+
     const mode = snapshot.settings.logistics.find(
       (r) => r.enabled && r.method === data.custom_国际物流方式,
     );

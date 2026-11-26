@@ -95,16 +95,10 @@ async function once() {
       leaseToken: command.lease_token,
     });
   }
-  // Stage 1 supports employee/parameter sync and formal-number commands only.
-  // Never claim product-building jobs with the development test receipt handler.
-  if (!target.testReceipts) {
-    console.log('ERP personnel/parameters synchronized; product receipt jobs not claimed');
-    return;
-  }
-  const { jobs } = await api("/connector/claim", {});
+  const { jobs } = await api("/connector/claim", { formal: !target.testReceipts });
   for (const job of jobs) {
     let result;
-    if (job.payload.parameterVersion !== version.version)
+    if (target.testReceipts && job.payload.parameterVersion !== version.version)
       result = {
         status: "conflict",
         result: { message: "ERP参数变化，未覆盖员工确认数据" },
@@ -122,8 +116,9 @@ async function once() {
             )
           ).toString("base64"),
         });
-      result = await erp("erp-selection-receiver.py", {
+      result = await erp(target.testReceipts ? "erp-selection-receiver.py" : "erp-selection-product-intake.py", {
         payload: job.payload,
+        parameterConflict: job.payload.parameterVersion !== version.version,
         assets,
       });
     }
