@@ -572,15 +572,21 @@ export async function initSelectionWorkspace(host, forcedView) {
     let pricing = record?.pricing,
       timer,
       sequence = 0;
-    content.innerHTML = `<div class="sw-actions"><span data-save-state>${record ? "版本 " + record.version : "新草稿"}</span><span>${esc(record?.selectionNo || "选品货号保存后生成")}</span><button data-save class="sw-primary">保存草稿</button><button data-confirm-selection>确认选品</button><button data-back-list>返回选品一览</button></div><nav class="sw-workspace-tabs" aria-label="选品工作区"><button data-workspace-tab="entry" aria-pressed="true">${icon("product")}商品信息</button><button data-workspace-tab="market" aria-pressed="false">${icon("search")}市场调研</button><button data-workspace-tab="sample" aria-pressed="false">${icon("product")}样品测试</button></nav><section class="sw-card" data-sample-panel hidden>样品测试 · 关联当前选品记录，具体规则待确认。</section>${formMarkup(boot.layout, data, "top")}<div class="sw-split" style="--sw-left:${boot.layout.ratio}%"><div>${formMarkup(boot.layout, data)}<details class="sw-card"><summary>ERP商品建档</summary><div class="sw-toolbar" data-stage-two-actions><button data-submit>提交ERP（资料完整后）</button></div></details><details class="sw-card"><summary>修改记录 / ERP处理状态</summary><div data-history>${record?.erpResult?.stage === "item_created" ? `<p>ERP已建档：${esc(record.erpResult.itemCode)} · SKU数量：${esc(record.erpResult.skuCount)}</p><p>${(record.erpResult.skus || []).map(s=>esc(s.name)).join("、")}</p>` : ""}${(record?.events || []).map((e) => `<p>${esc(e.created_at)} · ${esc(e.actor_id)} · ${esc(e.action)}</p>`).join("") || "尚无修改记录"}${(record?.jobs || []).map((j) => `<p>ERP任务：${esc(j.status)} ${esc(j.result?.message || "")} ${j.status === "failed" ? `<button data-retry="${j.id}">重试</button>` : ""}</p>`).join("")}</div></details></div><aside class="sw-profit sw-card"><details class="sw-context-help"><summary>计算依据</summary><div data-calculation-context class="sw-context"></div></details><div data-reconciliation role="status"></div><div data-profit></div>${formMarkup(boot.layout, data, "aside")}</aside></div>`;
+    content.innerHTML = `<div class="sw-actions"><span data-save-state>${record ? "版本 " + record.version : "新草稿"}</span><span>${esc(record?.selectionNo || "选品货号保存后生成")}</span><button data-save class="sw-primary">保存草稿</button><button data-confirm-selection>确认选品</button><button data-back-list>返回选品一览</button></div><nav class="sw-workspace-tabs" aria-label="选品工作区"><button data-workspace-tab="entry" aria-pressed="true">${icon("product")}商品信息</button><button data-workspace-tab="specifications" aria-pressed="false">${icon("product")}商品规格</button><button data-workspace-tab="market" aria-pressed="false">${icon("search")}市场调研</button><button data-workspace-tab="sample" aria-pressed="false">${icon("product")}样品测试</button></nav><section class="sw-card" data-sample-panel hidden>样品测试 · 关联当前选品记录，具体规则待确认。</section>${formMarkup(boot.layout, data, "top")}<div class="sw-split" style="--sw-left:${boot.layout.ratio}%"><div>${formMarkup(boot.layout, data)}<details class="sw-card"><summary>ERP商品建档</summary><div class="sw-toolbar" data-stage-two-actions><button data-submit>提交ERP（资料完整后）</button></div></details><details class="sw-card"><summary>修改记录 / ERP处理状态</summary><div data-history>${record?.erpResult?.stage === "item_created" ? `<p>ERP已建档：${esc(record.erpResult.itemCode)} · SKU数量：${esc(record.erpResult.skuCount)}</p><p>${(record.erpResult.skus || []).map(s=>esc(s.name)).join("、")}</p>` : ""}${(record?.events || []).map((e) => `<p>${esc(e.created_at)} · ${esc(e.actor_id)} · ${esc(e.action)}</p>`).join("") || "尚无修改记录"}${(record?.jobs || []).map((j) => `<p>ERP任务：${esc(j.status)} ${esc(j.result?.message || "")} ${j.status === "failed" ? `<button data-retry="${j.id}">重试</button>` : ""}</p>`).join("")}</div></details></div><aside class="sw-profit sw-card"><details class="sw-context-help"><summary>计算依据</summary><div data-calculation-context class="sw-context"></div></details><div data-reconciliation role="status"></div><div data-profit></div>${formMarkup(boot.layout, data, "aside")}</aside></div>`;
+    const specificationsPanel = document.createElement("section");
+    content.querySelector(".sw-split").before(specificationsPanel);
+    const specificationsGroup = content.querySelector('[data-layout-group="specifications"]');
+    if (specificationsGroup) specificationsPanel.append(specificationsGroup);
     const switchWorkspace = (tab) => {
+      specificationsPanel.hidden = tab !== "specifications";
+      content.querySelector(".sw-split").hidden = tab === "specifications" || tab === "sample";
       content.querySelector("[data-sample-panel]").hidden = tab !== "sample";
       content.querySelectorAll("[data-layout-group]").forEach((group) => {
         const config = boot.layout.groups.find(
           (g) => g.id === group.dataset.layoutGroup,
         );
         if ((config?.region || "main") === "main")
-          group.hidden = tab === "sample" || (config.id === "market") !== (tab === "market");
+          group.hidden = (config.id === "specifications" ? "specifications" : config.id === "market" ? "market" : "entry") !== tab;
       });
       content
         .querySelectorAll("[data-workspace-tab]")
@@ -884,7 +890,7 @@ export async function initSelectionWorkspace(host, forcedView) {
         dialog.showModal();
       }),
     );
-    const specificationsEditor = mountSpecifications({root:content.querySelector("[data-specifications]"),getData:()=>data,attributes:boot.itemAttributes||[],api,file64,esc,on,guarded,report});
+    const specificationsEditor = mountSpecifications({root:content.querySelector("[data-specifications]"),getData:()=>data,attributes:boot.itemAttributes||[],erpSkus:record?.erpResult?.skus||[],api,file64,esc,on,guarded,report});
     let numberingTimer;
     signal.addEventListener("abort", () => clearTimeout(numberingTimer));
     function watchNumber() {

@@ -1123,3 +1123,15 @@
 .sw-profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px 24px}.sw-profile-grid>div{display:flex;flex-direction:column;gap:6px}.sw-profile-grid span{color:var(--text-secondary,#64706a);font-size:13px}.sw-profile-grid strong{font-size:14px;font-weight:500}
 
 .sw-profile-avatar{width:80px;height:80px;object-fit:contain;border-radius:50%;margin-bottom:16px}
+/* Structured SKU editor uses the shared form/table foundation. */
+.sw-specifications .sw-spec-toggle { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+.sw-specifications .sw-table-wrap { max-height:none; overflow:auto; }
+.sw-specifications table { width:100%; table-layout:auto; }
+.sw-specifications td { vertical-align:middle; padding:6px 8px; }
+.sw-specifications td input:not([type="checkbox"]) { min-width:90px; width:100%; }
+.sw-specifications td input[aria-invalid="true"] { border-color:var(--color-danger, #b42318); }
+.sw-specifications td details { min-width:100px; }
+.sw-specifications td details[open] { min-width:230px; max-width:320px; }
+.sw-specifications dialog { max-width:min(720px,90vw); max-height:80vh; overflow:auto; }
+.sw .sw-specifications label.sw-spec-toggle { display:flex; flex-direction:row; justify-content:flex-start; align-items:center; gap:8px; }
+.sw .sw-specifications input[type="checkbox"] { width:auto; min-width:0; }
