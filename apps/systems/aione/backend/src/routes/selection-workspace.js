@@ -1,3 +1,4 @@
+import { createEmployeeMaster } from "../services/employee-master.js";
 import {
   get1688RuntimeStatus,
   fetch1688ProductByUrl,
@@ -47,6 +48,7 @@ const admin = (i) =>
 export function createSelectionWorkspaceRouter(
   pool,
   {
+    allowTestIdentities = false,
     costUrl,
     connectorToken,
     reviewedRuleHash,
@@ -87,6 +89,8 @@ export function createSelectionWorkspaceRouter(
       "INSERT INTO selection_workspace_config(key,value) VALUES($1,$2) ON CONFLICT(key) DO UPDATE SET value=$2,version=selection_workspace_config.version+1,updated_at=now()",
       [key, JSON.stringify(value)],
     );
+  const employees = createEmployeeMaster({pool,config,putConfig,allowTestIdentities});
+  const employeeTable = allowTestIdentities ? "(SELECT id,display_name FROM aione_employee_directory UNION ALL SELECT id,display_name FROM people WHERE NOT EXISTS (SELECT 1 FROM aione_employee_directory e WHERE e.id=people.id)) AS employee_names" : "aione_employee_directory";
   const snapshot = async () => {
     const s = await config("erp");
     if (!s) fail("ERP参数尚未同步", 503);
@@ -115,7 +119,7 @@ export function createSelectionWorkspaceRouter(
   const row = async (req, id, c = pool, lock = false) => {
     const r = (
       await c.query(
-        `SELECT *, (SELECT display_name FROM people WHERE id=product_opportunities.created_by_person_id) AS selector_name FROM product_opportunities WHERE id=$1 AND selection_workspace IS NOT NULL AND ($2::boolean OR owner_person_id=$3) ${lock ? "FOR UPDATE" : ""}`,
+        `SELECT *, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.created_by_person_id) AS selector_name FROM product_opportunities WHERE id=$1 AND selection_workspace IS NOT NULL AND ($2::boolean OR owner_person_id=$3) ${lock ? "FOR UPDATE" : ""}`,
         [
           id,
           admin(req.aioneIdentity) ||
@@ -167,6 +171,10 @@ export function createSelectionWorkspaceRouter(
     if (!response.ok) fail(result.error || "ERP规则计算失败", 422);
     return { ...result, reconciliation: reconcileCosts(result) };
   };
+  router.post('/connector/employees',integration,run(async(req,res)=>{
+    await tx(c=>employees.receive(req.body,c));
+    res.json({ok:true});
+  }));
   router.post(
     "/connector/snapshot",
     integration,
@@ -191,6 +199,8 @@ export function createSelectionWorkspaceRouter(
       s.verified = false;
       s.version = digest(parameterFacts(s));
       s.receivedAt = new Date().toISOString();
+      delete s.employeeMaster;
+      delete s.personPrefixes;
       await putConfig("erp", s);
       await putConfig("connection", { lastSeen: s.receivedAt });
       res.json({ ok: true, version: s.version });
@@ -256,6 +266,8 @@ export function createSelectionWorkspaceRouter(
     createSelectionERPCommands({ pool, tx, integration }),
   );
   router.use(auth);
+  router.get('/employees/me',run(async(req,res)=>res.json(await employees.profile(person(req)))));
+  router.use(async(req,res,next)=>{try{await employees.requireActive(req);next();}catch(e){next(e);}});
   router.use(async (req, res, next) => {
     try {
       req.selectionManager = !!(await config("pool-grants"))?.[person(req)]
@@ -265,6 +277,12 @@ export function createSelectionWorkspaceRouter(
       next(e);
     }
   });
+  router.get('/employees',run(async(req,res)=>{
+    if (!admin(req.aioneIdentity) && !req.selectionManager) fail('需要人员关联查看权限',403);
+    const directory=await config('erp-employees');
+    res.json({employees:directory?.employees || [],version:directory?.version || null,
+      cached:!directory || Date.now()-Date.parse(directory.receivedAt)>180000});
+  }));
   router.get(
     "/bootstrap",
     run(async (req, res) => {
@@ -317,11 +335,12 @@ export function createSelectionWorkspaceRouter(
       for (const g of defaults.groups)
         if (!layout.groups.some((x) => x.id === g.id)) layout.groups.push(g);
       res.json({
+        employeeOptions: (admin(req.aioneIdentity) || req.selectionManager) ? await employees.eligible() : [],
         identity: {
           id: actor(req),
           name:
             (
-              await pool.query("SELECT display_name FROM people WHERE id=$1", [
+              await pool.query(`SELECT display_name FROM ${employeeTable} WHERE id=$1`, [
                 person(req),
               ])
             ).rows[0]?.display_name || "人员档案待关联",
@@ -626,9 +645,13 @@ export function createSelectionWorkspaceRouter(
       ];
     let where =
       "selection_workspace IS NOT NULL AND ($1::boolean OR owner_person_id=$2) AND ($3='' OR selection_no ILIKE '%'||$3||'%' OR title ILIKE '%'||$3||'%' OR selection_workspace->'data'->>'item_code' ILIKE '%'||$3||'%') AND ($4='' OR selection_workspace->>'status'=$4) AND (archived_at IS NOT NULL)=$5";
-    if (q.owner && admin(req.aioneIdentity)) {
+    if (q.owner && (admin(req.aioneIdentity) || req.selectionManager)) {
       values.push(q.owner);
       where += " AND owner_person_id=$" + values.length;
+    }
+    if (q.selector) {
+      values.push(q.selector);
+      where += " AND created_by_person_id=$" + values.length;
     }
     if (q.category) {
       values.push(q.category);
@@ -673,9 +696,9 @@ export function createSelectionWorkspaceRouter(
         ]),
       ),
       owner:
-        "(SELECT display_name FROM people WHERE id=product_opportunities.owner_person_id)",
+        `(SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.owner_person_id)`,
       selector:
-        "(SELECT display_name FROM people WHERE id=product_opportunities.created_by_person_id)",
+        `(SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.created_by_person_id)`,
       status: "selection_workspace->>'status'",
       erpStatus:
         "(SELECT status FROM selection_erp_jobs WHERE selection_id=product_opportunities.id ORDER BY created_at DESC LIMIT 1)",
@@ -721,7 +744,7 @@ export function createSelectionWorkspaceRouter(
     values.push(limit, offset);
     const rows = (
       await pool.query(
-        `SELECT *, (SELECT display_name FROM people WHERE id=product_opportunities.created_by_person_id) AS selector_name, (SELECT display_name FROM people WHERE id=product_opportunities.owner_person_id) AS owner_name, (SELECT status FROM selection_erp_jobs WHERE selection_id=product_opportunities.id ORDER BY created_at DESC LIMIT 1) AS erp_job_status FROM product_opportunities WHERE ${where} ORDER BY ${sorts[q.sort] || sorts.createdAt} ${q.direction === "asc" ? "ASC" : "DESC"} NULLS LAST,id LIMIT $${values.length - 1} OFFSET $${values.length}`,
+        `SELECT *, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.created_by_person_id) AS selector_name, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.owner_person_id) AS owner_name, (SELECT status FROM selection_erp_jobs WHERE selection_id=product_opportunities.id ORDER BY created_at DESC LIMIT 1) AS erp_job_status FROM product_opportunities WHERE ${where} ORDER BY ${sorts[q.sort] || sorts.createdAt} ${q.direction === "asc" ? "ASC" : "DESC"} NULLS LAST,id LIMIT $${values.length - 1} OFFSET $${values.length}`,
         values,
       )
     ).rows;
@@ -1533,6 +1556,8 @@ export function createSelectionWorkspaceRouter(
       putConfig,
       event,
       snapshot,
+      employees,
+      employeeTable,
     }),
   );
   return router;

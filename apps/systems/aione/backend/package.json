@@ -25,7 +25,9 @@
     "design:template-set:gate-c": "node scripts/accept-design-template-set-openai-gate-c.js",
     "design:review:current": "node scripts/review-assisted-design-current.js",
     "check:selection-pool": "node --check src/routes/selection-pool.js && node --check src/routes/selection-erp-commands.js && node --check src/services/selection-pool-service.js && node --check src/services/selection-intake-contract.js && node --check src/services/selection-remote-image.js && node --check ../js/pages/selection-pool.js && node --check ../js/pages/selection-people.js && node --check ../js/components/file-intake.js",
-    "test:selection-pool": "node scripts/test-selection-pool.mjs"
+    "test:selection-pool": "node scripts/test-selection-pool.mjs",
+    "check:employee-master": "node --check src/services/employee-master.js && node --check scripts/employee-development-server.mjs && node --check scripts/test-employee-master.mjs",
+    "test:employee-master": "node scripts/test-employee-master.mjs"
   },
   "dependencies": {
     "exceljs": "4.4.0",

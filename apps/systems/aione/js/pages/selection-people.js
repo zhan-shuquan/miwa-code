@@ -16,34 +16,8 @@ export async function initSelectionPeople(host) {
     l.href = "./css/pages/selection-workspace.css";
     document.head.append(l);
   }
-  const data = await aioneApi(base + "/people");
-  host.innerHTML = `<section class="sw"><header class="sw-heading"><h1>员工货号前缀</h1><a href="#/product-home?view=pool">返回选品池</a></header><p data-message role="status"></p><section class="sw-card"><table><thead><tr><th>会员号</th><th>姓名</th><th>ERP人员档案</th><th>员工货号前缀</th></tr></thead><tbody>${data.people.map((p) => `<tr><td>${esc(p.id)}</td><td>${esc(p.display_name)}</td><td>${esc(p.erp?.name || "待关联")}</td><td>${esc(p.erp?.prefix || "待配置")}</td></tr>`).join("")}</tbody></table></section>${data.canEdit ? `<form class="sw-card"><h2>设置正式关联</h2><div class="sw-toolbar"><label>会员档案<select name="memberId" required><option value="">请选择</option>${data.people.map((p) => `<option value="${esc(p.id)}">${esc(p.display_name)} · ${esc(p.id)}</option>`).join("")}</select></label><label>ERP人员档案<select name="employeeId" required><option value="">请选择</option>${data.erpPeople.map((p) => `<option value="${esc(p.employeeId)}">${esc(p.name)} · ${esc(p.employeeId)}</option>`).join("")}</select></label><label>员工货号前缀<input name="prefix" required maxlength="9" pattern="[A-Za-z0-9_\-]+"></label><button class="sw-primary" type="submit">保存至ERP</button></div></form><section class="sw-card"><h2>同步状态</h2>${data.pending.map((p) => `<p>${esc(p.payload.memberId)} · ${esc(p.payload.prefix)} · ${esc({ queued: "待同步", processing: "同步中", succeeded: "已保存", failed: "失败" }[p.status])} ${esc(p.result?.message || "")}</p>`).join("") || "暂无设置请求"}<button data-refresh>刷新状态</button></section>` : ""}</section>`;
-  host
-    .querySelector("[data-refresh]")
-    ?.addEventListener("click", () => initSelectionPeople(host));
-  let requestKey = crypto.randomUUID();
-  host.querySelector("form")?.addEventListener("input", () => {
-    requestKey = crypto.randomUUID();
-  });
-  host.querySelector("form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const button = e.target.querySelector("button");
-    button.disabled = true;
-    try {
-      const body = {
-        ...Object.fromEntries(new FormData(e.target)),
-        requestKey,
-      };
-      await aioneApi(base + "/people/prefix", {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
-      host.querySelector("[data-message]").textContent =
-        "设置请求已保存，ERP处理后生效。";
-    } catch (error) {
-      host.querySelector("[data-message]").textContent = error.message;
-    } finally {
-      button.disabled = false;
-    }
-  });
+  const data = await aioneApi('/api/v1/selection-workspace/employees/me');
+  const labels={employeeId:'ERP员工编号',memberId:'美和会员号',name:'员工姓名',company:'所属公司',branch:'分支机构',department:'部门',designation:'职位',employmentType:'雇佣类型',grade:'员工职级',status:'员工状态',prefix:'员工货号前缀'};
+  host.innerHTML=`<section class="sw"><header class="sw-heading"><div><small>人才之家</small><h1>我的档案</h1></div><a href="#/product-home?view=pool">返回选品池</a></header><section class="sw-card"><header class="sw-heading"><h2>ERP员工档案</h2><button data-refresh>刷新</button></header>${data.employee ? `${/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(data.employee.avatar || '') ? `<img class="sw-profile-avatar" src="${esc(data.employee.avatar)}" alt="员工头像">` : ''}<div class="sw-profile-grid">${Object.entries(labels).map(([key,label])=>`<div><span>${esc(label)}</span><strong>${esc((key==='status' ? {Active:'在职',Inactive:'停用',Suspended:'暂停',Left:'离职'}[data.employee[key]] : null) || data.employee[key] || '—')}</strong></div>`).join('')}</div>` : '<p role="status">尚未关联ERP员工档案，请管理员配置美和会员号。</p>'}<p class="sw-muted">${data.cached ? 'ERP暂未连接，显示最近一次有效的授权缓存。' : '资料由ERP统一维护。'} ${data.updatedAt ? '数据更新时间：'+esc(data.updatedAt) : ''}</p></section></section>`;
+  host.querySelector('[data-refresh]').addEventListener('click',()=>initSelectionPeople(host));
 }

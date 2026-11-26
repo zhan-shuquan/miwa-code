@@ -95,7 +95,7 @@ export async function initSelectionWorkspace(host, forcedView) {
   if (signal.aborted) return;
   const query = new URLSearchParams(location.hash.split("?")[1] || ""),
     view = forcedView || query.get("view") || "entry";
-  host.innerHTML = `<section class="sw ${view === "entry" ? "sw-entry" : ""}"><header class="sw-heading"><div><small>商品之家 · 美和跨境选品</small><h1>${view === "list" ? "选品一览" : view === "layout" ? "表单布局设置" : view === "sync" ? "ERP同步状态" : "选品录入"}</h1></div><nav><button data-nav="pool">选品池</button><button data-nav="entry">选品录入</button><button data-nav="list">选品一览</button>${boot.identity.admin ? '<button data-nav="layout">布局设置</button><button data-nav="sync">同步状态</button>' : ""}${window.AIONE_SELECTION_PREVIEW ? '<a href="/preview">切换测试身份</a>' : ""}</nav></header><div class="sw-status"><span>${esc(boot.identity.name)}</span><span>${boot.connection.online ? "ERP已连接" : "ERP离线 / 使用最近同步参数"}</span></div><p class="sw-warning">历史参数待验证 · 预计利润仅供选品参考</p><p data-message role="status" hidden></p><div data-content></div></section>`;
+  host.innerHTML = `<section class="sw ${view === "entry" ? "sw-entry" : ""}"><header class="sw-heading"><div><small>商品之家 · 美和跨境选品</small><h1>${view === "list" ? "选品一览" : view === "layout" ? "表单布局设置" : view === "sync" ? "ERP同步状态" : "选品录入"}</h1></div><nav><button data-nav="pool">选品池</button><button data-nav="entry">选品录入</button><button data-nav="list">选品一览</button>${boot.identity.admin ? '<button data-nav="layout">布局设置</button><button data-nav="sync">同步状态</button>' : ""}${window.AIONE_SELECTION_PREVIEW && !window.AIONE_AUTHENTICATED_DEVELOPMENT ? '<a href="/preview">切换测试身份</a>' : ""}</nav></header><div class="sw-status"><span>${esc(boot.identity.name)}</span><span>${boot.connection.online ? "ERP已连接" : "ERP离线 / 使用最近同步参数"}</span></div><p class="sw-warning">历史参数待验证 · 预计利润仅供选品参考</p><p data-message role="status" hidden></p><div data-content></div></section>`;
   host.querySelectorAll("[data-nav]").forEach((b) =>
     on(b, "click", () => {
       if (["layout", "sync"].includes(b.dataset.nav))
@@ -623,9 +623,8 @@ export async function initSelectionWorkspace(host, forcedView) {
     selectorLabel.className = "sw-selector";
     selectorLabel.textContent =
       "选品人：" +
-      (record?.selector || boot.identity.personId || boot.identity.id || "") +
-      " · " +
-      (record ? record.selectorName || "人员档案待关联" : boot.identity.name);
+      (record?.selector || boot.identity.personId || boot.identity.id || "");
+    selectorLabel.title = record ? record.selectorName || "人员档案待关联" : boot.identity.name;
     content
       .querySelector('[data-layout-group="basic"] > summary')
       ?.append(selectorLabel);
@@ -1589,10 +1588,17 @@ export async function initSelectionWorkspace(host, forcedView) {
         ),
       ),
     );
+    const peopleControls=document.createElement('span');
+    peopleControls.className='sw-toolbar';
+    peopleControls.hidden=!(boot.employeeOptions || []).length;
+    peopleControls.innerHTML=['selector','owner'].map(key=>`<select data-${key} aria-label="${key==='selector'?'选品人':'负责人'}"><option value="">全部${key==='selector'?'选品人':'负责人'}</option>${(boot.employeeOptions || []).map(p=>`<option value="${esc(p.id)}">${esc(p.display_name)} · ${esc(p.id)}</option>`).join('')}</select>`).join('');
+    content.querySelector('[data-query]').before(peopleControls);
     content.querySelector("[data-sort]").innerHTML = [...sortable]
       .map((k) => `<option value="${k}">${names[k]}</option>`)
       .join("");
     for (const [selector, key] of [
+      ["data-selector", "selector"],
+      ["data-owner", "owner"],
       ["data-search", "q"],
       ["data-filter-status", "status"],
       ["data-category", "category"],
@@ -1796,6 +1802,8 @@ export async function initSelectionWorkspace(host, forcedView) {
       "click",
       guarded(async () => {
         filters = {
+          selector:content.querySelector("[data-selector]").value,
+          owner:content.querySelector("[data-owner]").value,
           q: content.querySelector("[data-search]").value,
           status: content.querySelector("[data-filter-status]").value,
           category: content.querySelector("[data-category]").value,

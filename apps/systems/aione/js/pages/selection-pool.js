@@ -90,7 +90,7 @@ export async function initSelectionPool(host) {
         report(e.message, true);
       }
     };
-  host.innerHTML = `<section class="sw sp"><header class="sw-heading"><div><small>商品之家</small><h1>选品池</h1></div><nav><a href="#/product-home?view=entry">选品录入</a><a href="#/product-home?view=list">选品一览</a>${boot.permissions.manage ? '<a href="#/talent-home?section=selection-prefix">员工货号前缀</a>' : ""}</nav></header><p data-pool-message role="status" hidden></p>
+  host.innerHTML = `<section class="sw sp"><header class="sw-heading"><div><small>商品之家</small><h1>选品池</h1></div><nav><a href="#/product-home?view=entry">选品录入</a><a href="#/product-home?view=list">选品一览</a>${boot.permissions.manage ? '<a href="#/talent-home?section=my-profile">我的档案</a>' : ""}</nav></header><p data-pool-message role="status" hidden></p>
   ${boot.permissions.collect ? `<section class="sw-card"><h2>${icon("product")}快速收集</h2><textarea data-share rows="4" placeholder="粘贴多个商品分享内容、链接或口令" aria-label="批量商品分享内容"></textarea><div class="sw-toolbar"><button data-preflight>识别预检</button><button data-collect class="sw-primary">加入选品池</button><button data-upload>${icon("file")}上传图片</button><button data-import>${icon("file")}导入选品库</button><label><input type="checkbox" data-merge>图片合为同一商品</label><label><input type="checkbox" data-suspected>保留已核对的SNS独立商品</label><span data-intake-summary></span></div><div data-intake-zone class="sp-intake" tabindex="0" title="点击上传、拖拽或Ctrl+V粘贴图片；沿用后台图片大小限制"><button data-add-images>添加商品图片／手机截图</button><div data-staged-images class="sp-staged"></div></div><input type="file" data-image-files accept="image/jpeg,image/png,image/webp" multiple hidden><input type="file" data-import-file accept=".xlsx,.csv" hidden><details data-mapping hidden><summary>导入字段映射</summary><div class="sw-grid">${boot.importFields.map((k) => `<label style="grid-column:span 3">${esc(k)}<input data-map="${k}" placeholder="原文件列名（自动识别时留空）"></label>`).join("")}</div></details><div data-preflight-results></div></section>` : ""}
   <nav class="sw-workspace-tabs" aria-label="选品池范围">${["pending", "mine", ...(boot.permissions.manage ? ["all"] : [])].map((k) => `<button data-scope="${k}" aria-pressed="${scope === k}">${icon(k === "mine" ? "people" : "product")}${{ pending: "待认领", mine: "我的认领", all: "全部选品" }[k]}</button>`).join("")}</nav>
   <div class="sw-toolbar sp-filters"><input data-query placeholder="搜索选品货号、正式货号或标题" aria-label="选品池搜索"><input data-filter="selector" placeholder="选品人会员号"><input data-filter="platform" placeholder="来源平台"><input data-filter="owner" placeholder="负责人会员号"><input data-filter="from" type="date" aria-label="开始日期"><input data-filter="to" type="date" aria-label="结束日期"><select data-filter="state" aria-label="认领状态"><option value="">全部认领状态</option>${["pending", "claimed", "assigned", "abandoned", "archived"].map((k) => `<option value="${k}">${stateLabel[k]}</option>`).join("")}</select><button data-search>查询</button><button data-mode>切换列表／卡片</button></div>
@@ -192,7 +192,7 @@ export async function initSelectionPool(host) {
         result.items
           .map(
             (r) =>
-              `<article class="sw-card sp-card"><div class="sp-card-top">${pick(r)}${number(r)}${openLink(r)}</div>${image(r)}<h3>${esc(r.title)}</h3><div class="sp-facts"><span>${esc(r.source?.platform || "图片")}</span><span>${r.referencePrice == null ? "" : "参考采购价 " + esc(r.referencePrice)}</span><span>选品人 ${esc(r.selector)}</span><time>${esc(businessTime(r.createdAt))}</time></div><div class="sw-toolbar">${actions(r)}<span>${stateLabel[r.claimState] || r.claimState}</span></div></article>`,
+              `<article class="sw-card sp-card"><div class="sp-card-top">${pick(r)}${number(r)}${openLink(r)}</div>${image(r)}<h3>${esc(r.title)}</h3><div class="sp-facts"><span>${esc(r.source?.platform || "图片")}</span><span>${r.referencePrice == null ? "" : "参考采购价 " + esc(r.referencePrice)}</span><span>选品人 ${esc(r.selectorName || r.selector)}</span><time>${esc(businessTime(r.createdAt))}</time></div><div class="sw-toolbar">${actions(r)}<span>${stateLabel[r.claimState] || r.claimState}</span></div></article>`,
           )
           .join("") +
         "</div>";
@@ -221,7 +221,7 @@ export async function initSelectionPool(host) {
             `<tr><td>${pick(r)}</td><td>${image(r)}</td>${Object.keys(names)
               .map(
                 (k) =>
-                  `<td>${k === "selectionNo" ? number(r) : esc(k === "platform" ? r.source?.platform || "图片" : k === "createdAt" ? businessTime(r.createdAt) : stateLabel[r[k]] || r[k] || "—")}</td>`,
+                  `<td>${k === "selectionNo" ? number(r) : esc(k === "platform" ? r.source?.platform || "图片" : k === "createdAt" ? businessTime(r.createdAt) : k === "selector" ? (r.selectorName || r.selector) : k === "owner" ? (r.ownerName || r.owner || "—") : stateLabel[r[k]] || r[k] || "—")}</td>`,
               )
               .join("")}<td>${openLink(r)}${actions(r)}</td></tr>`,
         )
@@ -578,10 +578,10 @@ export async function initSelectionPool(host) {
       d.className = "sw-text-dialog";
       d.innerHTML =
         "<h2>选品负责人授权</h2>" +
-        boot.people
+        boot.grantPeople
           .map(
             (p) =>
-              `<p data-person="${esc(p.id)}">${esc(p.display_name)} · ${esc(p.id)} ${["collect", "assign", "manage", "manageGrants"].map((k) => `<label><input type="checkbox" data-permission="${k}" ${boot.grants?.[p.id]?.[k] ? "checked" : ""}>${{ collect: "收集", assign: "分配", manage: "管理全部", manageGrants: "管理负责人授权" }[k]}</label>`).join("")}</p>`,
+              `<p data-person="${esc(p.id)}">${esc(p.display_name)} · ${esc(p.id)} ${["research", "collect", "assign", "manage", "manageGrants"].map((k) => `<label><input type="checkbox" data-permission="${k}" ${boot.grants?.[p.id]?.[k] ? "checked" : ""}>${{ research: "选品研究", collect: "收集", assign: "分配", manage: "管理全部", manageGrants: "管理负责人授权" }[k]}</label>`).join("")}</p>`,
           )
           .join("") +
         "<button data-save-grants>保存授权</button><button data-close>关闭</button>";

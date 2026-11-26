@@ -34,6 +34,8 @@ export function createSelectionPoolRouter({
   putConfig,
   event,
   snapshot,
+  employees,
+  employeeTable,
 }) {
   const router = Router(),
     run = (fn) => async (req, res, next) => {
@@ -61,6 +63,8 @@ export function createSelectionPoolRouter({
     source: r.selection_workspace.pool?.source,
     referencePrice: r.selection_workspace.pool?.referencePrice,
     selector: r.created_by_person_id,
+    selectorName:r.selector_name || null,
+    ownerName:r.owner_name || null,
     owner: r.owner_person_id,
     createdAt: r.created_at,
     version: r.record_version,
@@ -78,7 +82,7 @@ export function createSelectionPoolRouter({
   const load = async (req, c, id, lock = false) => {
     const r = (
       await c.query(
-        `SELECT * FROM product_opportunities WHERE id=$1 AND selection_workspace IS NOT NULL ${lock ? "FOR UPDATE" : ""}`,
+        `SELECT *, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.created_by_person_id) AS selector_name, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.owner_person_id) AS owner_name FROM product_opportunities WHERE id=$1 AND selection_workspace IS NOT NULL ${lock ? "FOR UPDATE" : ""}`,
         [id],
       )
     ).rows[0];
@@ -93,11 +97,7 @@ export function createSelectionPoolRouter({
         s = await snapshot();
       const people =
         g.assign || g.manage
-          ? (
-              await pool.query(
-                "SELECT id,display_name FROM people ORDER BY display_name",
-              )
-            ).rows
+          ? await employees.eligible()
           : [];
       res.json({
         permissions: {
@@ -106,6 +106,7 @@ export function createSelectionPoolRouter({
           configureGrants: admin(req.aioneIdentity) || !!g.manageGrants,
         },
         people,
+        grantPeople: (admin(req.aioneIdentity) || g.manageGrants) ? await employees.eligible({includeUnassigned:true}) : [],
         identity: { memberId: person(req) || null },
         uploadPolicy,
         importFields: [
@@ -123,7 +124,7 @@ export function createSelectionPoolRouter({
           "note",
         ],
         erpReviewAvailable: Array.isArray(s.catalog),
-        grants: g.manage ? await config("pool-grants") : undefined,
+        grants: (admin(req.aioneIdentity) || g.manageGrants) ? await config("pool-grants") : undefined,
       });
     }),
   );
@@ -133,13 +134,13 @@ export function createSelectionPoolRouter({
       if (!admin(req.aioneIdentity) && !(await grants(req)).manageGrants)
         fail("没有负责人授权管理权限", 403);
       const people = new Set(
-          (await pool.query("SELECT id FROM people")).rows.map((p) => p.id),
+          (await employees.eligible({includeUnassigned:true})).map((p) => p.id),
         ),
         value = {};
       for (const [id, g] of Object.entries(req.body || {})) {
         if (!people.has(id)) fail("人员档案不存在");
         value[id] = Object.fromEntries(
-          ["collect", "assign", "manage", "manageGrants"].map((k) => [
+          ["research", "collect", "assign", "manage", "manageGrants"].map((k) => [
             k,
             g[k] === true,
           ]),
@@ -444,8 +445,8 @@ export function createSelectionPoolRouter({
       platform: "selection_workspace->'pool'->'source'->>'platform'",
       referencePrice:
         "NULLIF(selection_workspace->'pool'->>'referencePrice','')::numeric",
-      selector: "created_by_person_id",
-      owner: "owner_person_id",
+      selector: `(SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.created_by_person_id)`,
+      owner: `(SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.owner_person_id)`,
       createdAt: "created_at",
       claimState: "selection_workspace->'pool'->>'state'",
       status: "selection_workspace->>'status'",
@@ -465,7 +466,7 @@ export function createSelectionPoolRouter({
       offset = exporting ? 0 : Math.max(0, Number(q.offset) || 0);
     const rows = (
       await pool.query(
-        `SELECT * FROM product_opportunities WHERE ${where} ORDER BY ${sorts[q.sort] || "created_at"} ${q.direction === "asc" ? "ASC" : "DESC"} NULLS LAST,selection_date DESC,length(selection_no) DESC,selection_no DESC,id LIMIT ${bind(limit)} OFFSET ${bind(offset)}`,
+        `SELECT *, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.created_by_person_id) AS selector_name, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.owner_person_id) AS owner_name FROM product_opportunities WHERE ${where} ORDER BY ${sorts[q.sort] || "created_at"} ${q.direction === "asc" ? "ASC" : "DESC"} NULLS LAST,selection_date DESC,length(selection_no) DESC,selection_no DESC,id LIMIT ${bind(limit)} OFFSET ${bind(offset)}`,
         values,
       )
     ).rows;
@@ -573,10 +574,9 @@ export function createSelectionPoolRouter({
         fail("请填写简短放弃原因");
       if (
         action === "assign" &&
-        !(await pool.query("SELECT id FROM people WHERE id=$1", [owner]))
-          .rowCount
+        !(await employees.eligible()).some(e=>e.id===owner)
       )
-        fail("负责人档案不存在");
+        fail("负责人尚未关联在职ERP员工或未获选品业务权限");
       const result = await tx(async (c) => {
         await c.query(
           "SELECT pg_advisory_xact_lock(hashtext('selection-number-flow'))",
@@ -586,7 +586,7 @@ export function createSelectionPoolRouter({
           // Assignment managers may access claimed rows without receiving their private data.
           const r = (
             await c.query(
-              "SELECT * FROM product_opportunities WHERE id=$1 AND selection_workspace IS NOT NULL FOR UPDATE",
+              `SELECT *, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.created_by_person_id) AS selector_name, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.owner_person_id) AS owner_name FROM product_opportunities WHERE id=$1 AND selection_workspace IS NOT NULL FOR UPDATE`,
               [id],
             )
           ).rows[0];
@@ -684,7 +684,7 @@ export function createSelectionPoolRouter({
         items: exists
           ? (
               await pool.query(
-                "SELECT id,title,status,metadata FROM work_items WHERE owner_person_id=$1 AND work_type='selection_research' AND status NOT IN ('cancelled','archived') ORDER BY updated_at DESC",
+                `SELECT id,title,status,metadata,owner_person_id,(SELECT display_name FROM ${employeeTable} WHERE id=work_items.owner_person_id) AS owner_name FROM work_items WHERE owner_person_id=$1 AND work_type='selection_research' AND status NOT IN ('cancelled','archived') ORDER BY updated_at DESC`,
                 [person(req)],
               )
             ).rows
@@ -692,73 +692,10 @@ export function createSelectionPoolRouter({
       });
     }),
   );
-  router.get(
-    "/people",
-    run(async (req, res) => {
-      const g = await grants(req),
-        s = await snapshot();
-      const people = (
-        await pool.query(
-          "SELECT id,display_name FROM people WHERE ($1::boolean OR id=$2) ORDER BY display_name",
-          [g.manage || false, person(req)],
-        )
-      ).rows;
-      res.json({
-        canEdit: admin(req.aioneIdentity),
-        erpPeople: admin(req.aioneIdentity) ? s.personPrefixes || [] : [],
-        people: people.map((p) => ({
-          ...p,
-          erp:
-            (s.personPrefixes || []).find((e) => e.memberId === p.id) || null,
-        })),
-        pending: g.manage
-          ? (
-              await pool.query(
-                "SELECT payload,status,result FROM selection_erp_commands WHERE kind='person_prefix' ORDER BY created_at DESC LIMIT 50",
-              )
-            ).rows
-          : [],
-      });
-    }),
-  );
-  router.post(
-    "/people/prefix",
-    run(async (req, res) => {
-      if (!admin(req.aioneIdentity)) fail("仅管理员可设置员工货号前缀", 403);
-      const { memberId, employeeId, prefix, requestKey } = req.body;
-      if (
-        !requestKey ||
-        !memberId ||
-        !employeeId ||
-        !/^[A-Za-z0-9_-]{1,9}$/.test(prefix || "")
-      )
-        fail("请选择ERP人员并填写符合ERP编码规则的1至9位前缀");
-      if (
-        !(await pool.query("SELECT id FROM people WHERE id=$1", [memberId]))
-          .rowCount
-      )
-        fail("会员档案不存在");
-      const result = await tx((c) =>
-        intakeOnce(c, actor(req), requestKey, req.body, async () => {
-          const id = randomUUID();
-          await c.query(
-            "INSERT INTO selection_erp_commands(id,command_key,kind,payload) VALUES($1,$2,'person_prefix',$3)",
-            [
-              id,
-              "person-prefix:" + requestKey,
-              JSON.stringify({
-                memberId,
-                employeeId,
-                prefix,
-                actor: actor(req),
-              }),
-            ],
-          );
-          return { id, status: "queued" };
-        }),
-      );
-      res.json(result);
-    }),
-  );
+  router.get('/people',run(async(req,res)=> {
+    const own=await employees.profile(person(req));
+    res.json({...own, canEdit:false, people:own.employee ? [{id:own.employee.memberId,display_name:own.employee.name,erp:own.employee}] : []});
+  }));
+  router.post('/people/prefix',run(async()=>fail('正式人员资料请在ERP员工档案中维护',410)));
   return router;
 }

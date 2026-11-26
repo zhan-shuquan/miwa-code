@@ -49,6 +49,7 @@ await pool.query(
 await pool.query(
   "CREATE TABLE IF NOT EXISTS work_items(id TEXT PRIMARY KEY,title TEXT NOT NULL,work_type TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',owner_person_id TEXT,created_by_person_id TEXT,related_object_type TEXT,related_object_id TEXT,metadata JSONB NOT NULL DEFAULT '{}',created_at TIMESTAMPTZ NOT NULL DEFAULT now(),updated_at TIMESTAMPTZ NOT NULL DEFAULT now())",
 );
+await pool.query(await readFile(resolve(root,'data-code/migrations/0202_employee_master_cache.sql'),'utf8'));
 const backfill = await pool.connect();
 try {
   await backfill.query("BEGIN");
@@ -142,6 +143,7 @@ app.get("/api/v1/me", (req, res) =>
 app.use(
   "/api/v1/selection-workspace",
   createSelectionWorkspaceRouter(pool, {
+    allowTestIdentities: true,
     costUrl: process.env.ERP_COST_URL || "http://127.0.0.1:8755",
     connectorToken: process.env.AIONE_CONNECTOR_TOKEN,
     reviewedRuleHash: snapshot.rules.sha256,

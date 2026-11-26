@@ -150,7 +150,7 @@ async function renderCurrentRoute() {
   const {selectionWorkspaceEnabled}=await import('./config/selection-navigation.js');
   if(selectionWorkspaceEnabled()){
     const id=getRouteId();
-    if(id==='talent-home'&&new URLSearchParams(location.hash.split('?')[1]).get('section')==='selection-prefix'){
+    if(id==='talent-home'&&[null,'my-profile','selection-prefix'].includes(new URLSearchParams(location.hash.split('?')[1]).get('section'))){
       const {initSelectionPeople}=await import('./pages/selection-people.js');
       await initSelectionPeople(document.getElementById('app-main-host'));return;
     }

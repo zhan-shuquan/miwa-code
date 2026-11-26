@@ -135,20 +135,10 @@ await api(
   400,
 );
 await api(loser, "/pool/action", { action: "return", ids: [id] });
-await api(
-  "employeeA",
-  "/pool/people/prefix",
-  {
-    memberId: "86991",
-    employeeId: "HR-EMP-00002",
-    prefix: "qat",
-    requestKey: crypto.randomUUID(),
-  },
-  403,
-);
-const prefix = await api("admin", "/pool/people");
-check(prefix.people.find((p) => p.id === "86991").erp.prefix === "qat");
-check((await api("employeeA", "/pool/people")).canEdit === false);
+await api('employeeA','/pool/people/prefix',{memberId:'86991',prefix:'qat'},410);
+const prefix=await api('employeeA','/pool/people');
+check(prefix.employee.memberId==='86991' && prefix.employee.prefix==='qat');
+check(prefix.canEdit===false);
 const pending = await api(
   "manager",
   "/pool/records?scope=pending&sort=selectionNo&direction=asc&limit=1",

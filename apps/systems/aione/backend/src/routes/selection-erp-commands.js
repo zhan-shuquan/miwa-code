@@ -19,6 +19,7 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
         await c.query(
           "SELECT pg_advisory_xact_lock(hashtext('selection-number-flow'))",
         );
+        await c.query("UPDATE selection_erp_commands SET status='failed',result='{\"message\":\"人员资料维护已移至ERP员工档案\"}',lease_until=NULL,updated_at=now() WHERE kind='person_prefix' AND status IN ('queued','processing')");
         const rows = (
           await c.query(
             "SELECT * FROM selection_erp_commands WHERE status='queued' OR (status='processing' AND lease_until<now()) ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 10",
@@ -113,12 +114,6 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
               r.record_version + 1,
               JSON.stringify(result),
             ],
-          );
-        }
-        if (job.kind === "person_prefix" && req.body.status === "succeeded") {
-          await c.query(
-            "UPDATE selection_erp_commands SET status='queued',result=NULL,updated_at=now() WHERE kind='formal_number' AND status='failed' AND payload->>'memberId'=$1 AND result->>'message' LIKE '%前缀尚未配置%'",
-            [job.payload.memberId],
           );
         }
         await c.query(

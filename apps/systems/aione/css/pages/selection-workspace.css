@@ -1119,3 +1119,7 @@
     padding: 12px;
   }
 }
+
+.sw-profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px 24px}.sw-profile-grid>div{display:flex;flex-direction:column;gap:6px}.sw-profile-grid span{color:var(--text-secondary,#64706a);font-size:13px}.sw-profile-grid strong{font-size:14px;font-weight:500}
+
+.sw-profile-avatar{width:80px;height:80px;object-fit:contain;border-radius:50%;margin-bottom:16px}

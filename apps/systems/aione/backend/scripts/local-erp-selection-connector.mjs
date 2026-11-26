@@ -69,6 +69,8 @@ async function api(path, body, binary = false) {
   return binary ? Buffer.from(await r.arrayBuffer()) : r.json();
 }
 async function once() {
+  // Personnel revocations must synchronize even when a changed cost rule awaits review.
+  await api('/connector/employees',await erp('export-erp-employees.py'));
   const snapshot = await erp("export-erp-selection-snapshot.py");
   const version = await api("/connector/snapshot", snapshot);
   const commands = await api("/connector/commands/claim", {});
