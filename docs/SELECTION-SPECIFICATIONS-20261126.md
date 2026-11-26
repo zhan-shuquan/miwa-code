@@ -11,3 +11,19 @@ ERP quick_variants.create新增可选combinations参数，只生成明确组合�
 不修改成本函数，不触发美工、上架、邮件；miwa_automation_internal沿用现有副作用保护。
 
 隔离验证：CSV解析/校验12项；V39回归74项；选品池49项；ERP两条非笛卡尔组合仅生成2 SKU，重复提交返回原编号，采购价重量继承通过。公共离线回归通过（本机缺bs4的4条在既有隔离容器通过）。实际浏览器上传真实CSV，人工修正保存刷新通过。正式部署及真实建档结果另记。
+
+## 正式发布状态（2026-11-26 18:22 JST）
+- AIONE提交908410ecd8c18231f74f355a218156065ea74660。
+- Cloud Build 28275e6f-30df-4edf-8005-19b096ccf5d9 SUCCESS。
+- Cloud Run aione-backend-current-00287-xig 100%，AIONE_FORMAL_ITEM_INTAKE=1，健康/数据库通过。
+- Vercel dpl_Gecwh4yVXbJo8EV5eDGMqZyQZv45 READY，正式域名已绑定。
+- ERP提交9a00a9f+d90d8ef，仅部署quick_variants.py及selection_product_intake.py，安装4个必要原始供应商关联/固定规格字段。
+- 正式同步任务固定connector-release-908410e，任务Running。此次进行连接器重启，未进行ERP整机重启。
+- 数据库及文件备份：D:\MIWA-ERP\dev-secrets\miwa-erp-8081-production\20261126-specifications（源20261126_181520）；已复制、校验哈希。
+- 回滚：Cloud Run切00285-pag；Vercel回退dpl_Jk92vWqiupdseGS85ZSFn9hRCRH4；恢复connector-task-before-908410e.xml；ERP按specifications-d90d8ef.json及specifications-9a00a9f.json备份逐文件回滚。保留新增数据，不覆盖数据库；新增字段可保留停用入口。
+
+## 未完成的真实业务验收
+正式zsq109仍仅预留货号，尚无Item，现有Item总数216；成本脚本哈希仍fba8e4ffffea36faea0b0476f7df246ee850fd125fcd1136bf62fe9b2183d391。
+真实CSV只在隔离预览解析/保存，尚未写入正式xp261126001。正式登录会话过期，Google账号选择窗口交互停滞，需要恢复真实86000登录后继续上传。
+CSV共12条，用户确认全部销售；共同Size=80×135cm、Type=常规款、重量400g。8个颜色名称缺字，待用户核实；不猜测、不创建缺字SKU。
+真实主商品及12子SKU建档、结果回传、防重及重启后的完整业务验收未完成，不以隔离记录或模拟回执代替。
