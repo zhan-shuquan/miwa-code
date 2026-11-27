@@ -147,7 +147,7 @@ export function fieldsFor(snapshot) {
         group: "sales",
         options: snapshot.platforms || [],
         default:
-          snapshot.entryDefaults?.salesPlatform ||
+          (snapshot.platforms?.includes(snapshot.entryDefaults?.salesPlatform) ? snapshot.entryDefaults.salesPlatform : undefined) ||
           (snapshot.platforms?.length === 1 ? snapshot.platforms[0] : undefined),
         optionLabels: { Rakuten: "乐天" },
       },
