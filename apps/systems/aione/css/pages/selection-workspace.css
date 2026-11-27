@@ -12,6 +12,55 @@
   margin: auto;
 }
 
+/* Product information presentation; no changes to the shared costing aside. */
+.sw-entry .sw-product-info { container-type: inline-size; }
+.sw-entry .sw-product-info input:not([type="file"]),
+.sw-entry .sw-product-info select { height:36px; min-height:36px; border-radius:5px; padding:6px 8px; width:100%; min-width:0; }
+.sw-entry .sw-info-top { display:grid; grid-template-columns:minmax(150px,19%) minmax(0,1fr); gap:12px; align-items:start; }
+.sw-entry .sw-info-manual { display:grid; gap:10px; min-width:0; }
+.sw-entry .sw-product-info .sw-field { min-width:0; }
+.sw-entry .sw-product-info .sw-field label { display:grid; grid-template-columns:minmax(0,1fr); gap:4px; }
+.sw-entry .sw-product-info .sw-field label > span { font-size:12px; white-space:nowrap; }
+.sw-entry .sw-product-info .sw-info-wide { display:grid; grid-template-columns:minmax(0,1fr) 112px; gap:6px; align-items:center; }
+.sw-entry .sw-product-info .sw-info-wide label { display:grid; grid-template-columns:76px minmax(0,1fr); align-items:center; }
+.sw-entry .sw-product-info .sw-info-wide .sw-url-actions { position:static; display:flex; gap:4px; margin:0; }
+.sw-entry .sw-product-info .sw-url-actions a { color:var(--sw-green); display:grid; place-items:center; width:28px; height:36px; }
+.sw-entry .sw-product-info .sw-url-actions button { height:36px; padding:4px 6px; white-space:nowrap; }
+.sw-entry .sw-info-six { display:grid; grid-template-columns:1.25fr 1.2fr 1fr .65fr .8fr 1.35fr; gap:7px; }
+.sw-entry .sw-info-note .sw-field-heading { margin:0 0 4px; }
+.sw-entry .sw-info-note .sw-field-heading label { font-size:12px; }
+.sw-entry .sw-product-info .sw-media-field { padding:0; min-height:0; width:auto; }
+.sw-entry .sw-product-info .sw-images { display:block; padding:0; min-height:0; }
+.sw-entry .sw-product-info .sw-images > div { padding:0; border:0; display:block; }
+.sw-entry .sw-product-info .sw-image-visual, .sw-entry .sw-product-info .sw-empty-image { aspect-ratio:1; width:100%; height:auto; }
+.sw-entry .sw-product-info .sw-image-open { display:block; padding:0; width:100%; height:100%; }
+.sw-entry .sw-product-info .sw-images img { display:block; width:100%; height:100%; max-height:none; aspect-ratio:1; object-fit:contain; }
+.sw-entry .sw-product-info .sw-media-actions { display:flex; flex-wrap:nowrap; gap:4px; margin-top:6px; }
+.sw-entry .sw-product-info .sw-media-actions button { flex:1; font-size:11px; padding:5px 2px; white-space:nowrap; }
+.sw-entry .sw-info-auto { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:10px; margin-top:12px; padding:10px; background:var(--sw-surface-accent); border-radius:6px; }
+.sw-entry .sw-info-auto .sw-icon { width:13px; height:13px; margin-right:4px; }
+.sw-entry .sw-info-logistics { margin:12px 0; padding:10px; }
+.sw-entry .sw-info-logistics > .sw-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.sw-entry .sw-info-logistics .sw-field { grid-column:auto!important; grid-row:auto!important; }
+.sw-entry .sw-info-logistics .sw-inline-cost { display:block; padding:5px 8px; margin-top:5px; background:var(--sw-surface-accent); border-radius:4px; }
+.sw-entry .sw-info-auxiliary { margin-top:12px; }
+.sw-entry .sw-auxiliary-drop { margin-top:10px; padding:10px; border:1px dashed var(--sw-border); border-radius:6px; }
+.sw-entry .sw-auxiliary-assets { display:flex; flex-wrap:wrap; gap:8px; }
+.sw-entry .sw-auxiliary-assets > div { width:96px; display:grid; gap:3px; margin-top:8px; }
+.sw-entry .sw-auxiliary-assets img { width:80px; height:80px; object-fit:contain; }
+@container (max-width:760px) {
+  .sw-entry .sw-info-top { grid-template-columns:140px minmax(0,1fr); }
+  .sw-entry .sw-info-six { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@container (max-width:520px) {
+  .sw-entry .sw-info-top { grid-template-columns:1fr; }
+  .sw-entry .sw-product-info .sw-media-field { max-width:200px; }
+  .sw-entry .sw-info-auto, .sw-entry .sw-info-logistics > .sw-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .sw-entry .sw-product-info .sw-info-wide { grid-template-columns:minmax(0,1fr); }
+  .sw-entry .sw-url-spacer { display:none; }
+  .sw-entry .sw-product-info .sw-info-six label > span { white-space:normal; min-height:36px; }
+}
+
 /* Shared, compact workspace chrome. Business layout remains configuration-driven. */
 .sw-workspace-header {
   position: sticky;

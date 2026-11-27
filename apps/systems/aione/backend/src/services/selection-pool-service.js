@@ -39,7 +39,7 @@ export async function backfillSelectionPool(c) {
   }
   const images = (
     await c.query(
-      "SELECT a.selection_id,a.sha256 FROM selection_workspace_assets a JOIN product_opportunities o ON o.id=a.selection_id WHERE NOT (COALESCE(o.selection_workspace->'researchAssetIds','[]') ? a.id::text) ORDER BY a.created_at",
+      "SELECT a.selection_id,a.sha256 FROM selection_workspace_assets a JOIN product_opportunities o ON o.id=a.selection_id WHERE NOT (COALESCE(o.selection_workspace->'researchAssetIds','[]') ? a.id::text) AND NOT (COALESCE(o.selection_workspace->'auxiliaryAssetIds','[]') ? a.id::text) ORDER BY a.created_at",
     )
   ).rows;
   for (const a of images)

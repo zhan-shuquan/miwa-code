@@ -523,7 +523,7 @@ export function createSelectionPoolRouter({
       r.assets = (
         await pool.query(
           "SELECT id,filename FROM selection_workspace_assets WHERE selection_id=$1 AND NOT (id::text IN (SELECT jsonb_array_elements_text(COALESCE($2::jsonb,'[]')))) ORDER BY position,created_at",
-          [r.id, JSON.stringify((r.selection_workspace.researchAssetIds || []).filter(id => !(r.selection_workspace.pool?.originalAssetIds || []).includes(id)))],
+          [r.id, JSON.stringify([...(r.selection_workspace.auxiliaryAssetIds || []), ...(r.selection_workspace.researchAssetIds || []).filter(id => !(r.selection_workspace.pool?.originalAssetIds || []).includes(id))])],
         )
       ).rows;
     return { items: rows.map(publicView), total, limit, offset, stageCounts: Object.values(stageCounts) };
@@ -589,7 +589,7 @@ export function createSelectionPoolRouter({
           [r.id, req.params.asset],
         )
       ).rows[0];
-      if (!a || ((r.selection_workspace.researchAssetIds || []).includes(a.id) && !(r.selection_workspace.pool?.originalAssetIds || []).includes(a.id)))
+      if (!a || (r.selection_workspace.auxiliaryAssetIds || []).includes(a.id) || ((r.selection_workspace.researchAssetIds || []).includes(a.id) && !(r.selection_workspace.pool?.originalAssetIds || []).includes(a.id)))
         fail("图片不存在", 404);
       res
         .set("Cache-Control", "private,no-store")
