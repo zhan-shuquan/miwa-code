@@ -1017,6 +1017,8 @@ export async function initSelectionWorkspace(host, forcedView) {
           items: [{ id: record.id, version: record.version }],
         });
         record = { ...record, ...result.items[0] };
+        Object.assign(data, record.data);
+        specificationsEditor.draw();
         content.querySelector("[data-save-state]").textContent =
           record.status === "number_pending"
             ? "待生成正式货号"

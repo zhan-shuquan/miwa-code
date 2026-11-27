@@ -1,4 +1,5 @@
 import { parseSupplierFile } from '../services/selection-sku-file.js';
+import { confirmSpecifications } from '../services/selection-specifications.js';
 import { createEmployeeMaster } from "../services/employee-master.js";
 import { mountUploadTransport, CHUNK_BYTES } from "../services/selection-upload-transport.js";
 import { fetchSelectionImage } from "../services/selection-remote-image.js";
@@ -1110,6 +1111,7 @@ export function createSelectionWorkspaceRouter(
             if (r.archived_at || r.selection_workspace.status === "submitted")
               fail("此状态不能确认选品", 409);
             const data = validateData(r.selection_workspace.data, s, {existingData: r.selection_workspace.data});
+            if (data.specificationAttributes) Object.assign(data, confirmSpecifications(data, s));
             const issues = confirmationIssues(data, s);
             if (issues.length) fail(issues.map((i) => i.message).join("；"));
             const pricing = await calculate(data, s);

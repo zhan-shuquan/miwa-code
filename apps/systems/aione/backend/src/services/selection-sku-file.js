@@ -71,7 +71,7 @@ export function parseSupplierFile(bytes,sourceUrl,filename='sku.csv',snapshot={}
   if(!value)return null;
   if(label==='采购价'||label==='cost'){
    const range=value.normalize('NFKC').match(/^\s*(\d+(?:\.\d+)?)\s*[-~～—–至]\s*(\d+(?:\.\d+)?)\s*$/);
-   if(range&&Number(range[1])<=Number(range[2])){warnings.add('采购价为区间，请填写每条SKU的实际采购价后确认');return null;}
+   if(range&&Number(range[1])<=Number(range[2])){warnings.add('采购价为区间，请核实继承的商品采购价；不同价格可在SKU行修改');return null;}
   }
   const number=Number(value.replace(/,/g,''));
   if(!Number.isFinite(number)||number<0)fail('第'+line+'行'+label+'不是有效非负数字');
