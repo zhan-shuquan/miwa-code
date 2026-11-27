@@ -8,7 +8,7 @@ export const skuFileMaxBytes=uploadPolicy.maxBytes;
 const norm=v=>String(v??'').normalize('NFKC').replace(/[\s_（）()]/g,'').toLowerCase();
 const fields={
  product:['商品ID','供应商商品ID'],id:['SKU ID','供应商SKU ID','SKU编号'],spec:['SKU名称','规格名称','商品规格','规格'],
- image:['SKU图片链接','SKU图片','参考图片','图片链接','图片URL'],title:['商品标题','商品名称'],
+ image:['SKU图片链接','SKU图链接','SKU图片','参考图片','图片链接','图片URL'],title:['商品标题','商品名称'],
  cost:['原价（元）','采购价','采购价CNY','单个采购价'],weight:['重量(g)','净重(g)','单个净重(g)','重量','净重'],
  quantity:['套装数量'],price:['售价(JPY)','实际售价(JPY)'],stock:['库存','库存数量'],calculated:['计算价格（元）']
 };
@@ -83,7 +83,7 @@ export function parseSupplierFile(bytes,sourceUrl,filename='sku.csv',snapshot={}
   const code=id||'source_'+createHash('sha256').update(JSON.stringify([productId,originalName,values])).digest('hex').slice(0,24);
   const sku={code,supplierSkuId:id,supplierProductId:productId||product||'',originalName,spec:originalName,sourceParts:parts,
    selected:true,confirmed:false,attributeValues:values,supplierTitle:cell(row,'title'),supplierImageUrl:image,
-   supplierCost:numeric(cell(row,'cost'),'采购价',line),supplierCalculatedCost:numeric(cell(row,'calculated'),'计算价格',line),supplierStock:numeric(cell(row,'stock'),'库存',line),
+   supplierCost:numeric(cell(row,'cost'),'采购价',line),supplierCalculatedCost:numeric(/^[-—–]+$/.test(cell(row,'calculated'))?'':cell(row,'calculated'),'计算价格',line),supplierStock:numeric(cell(row,'stock'),'库存',line),
    warnings:/[?\uFFFD]/.test(originalName)?['原始规格含缺失字符，请核实修正']:[]};
   for(const key of ['cost','weight','quantity','price']){const value=numeric(cell(row,key),key,line);if(value!==null)sku[key]=value;}
   sku.referenceWeight=sku.weight??(Number(originalName.match(/(\d+(?:\.\d+)?)\s*g\b/i)?.[1])||null);

@@ -32,4 +32,8 @@ let count=0;const retry=serializeDraftSaves(async()=>{if(++count===1)throw Error
 assert.deepEqual(rebaseDraft({a:1,b:1},{a:2,b:1},{a:1,b:2}),{merged:{a:2,b:2},conflicts:[]});
 assert.deepEqual(rebaseDraft({skus:[1]},{skus:[2]},{skus:[3]}).conflicts,['skus']);
 assert.equal(parseSupplierFile(Buffer.from('SKU ID,颜色\n123,蓝色\n'),'','sku.csv',{itemAttributes:[{name:'Colour',aliases:['颜色']}]}).skus[0].attributeValues.Colour,'蓝色');
-console.log('PASS: XLSX/XLS/CSV import + save/reload; dynamic ERP attributes; images; zero; manual/batch validation; serialized saves and in-flight edits. Isolated fixtures written.');
+const official=Buffer.from('SKU ID,SKU名称,SKU图链接,原价（元）,计算价格（元）\n6094698701123,黑色,https://example.com/black.jpg,72,--\n');
+const officialRow=parseSupplierFile(official,'','official.csv',snapshot).skus[0];
+assert.equal(officialRow.supplierCalculatedCost,null);assert.equal(officialRow.cost,72);assert.equal(officialRow.supplierImageUrl,'https://example.com/black.jpg');
+assert.throws(()=>parseSupplierFile(Buffer.from(official.toString().replace(',72,',',68～72,')),'','range.csv',snapshot),/采购价/);
+console.log('PASS: XLSX/XLS/CSV import + save/reload; dynamic ERP attributes; images; zero; manual/batch validation; serialized saves and in-flight edits; official missing calculated price and image header; ambiguous purchase prices rejected.');
