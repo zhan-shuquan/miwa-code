@@ -1,9 +1,10 @@
+import { synchronizeEmployeeIdentities } from '../auth/erp-employee-identities.js';
 // Authorized cache of ERP Employee projections, never an editable personnel master.
 import { fail } from './selection-workspace-contract.js';
 export const employeeFields = ['employeeId','memberId','name','avatar','company','branch','department','designation','employmentType','grade','status','prefix','updatedAt','version'];
 export function validateEmployeeSnapshot(input) {
   if (input?.schemaVersion !== 1 || !Array.isArray(input.employees) || !Number.isFinite(Date.parse(input.capturedAt))) fail('ERP人员快照无效');
-  const members=new Set(), prefixes=new Set(), ids=new Set();
+  const members=new Set(), prefixes=new Set(), ids=new Set(), emails=new Set();
   const employees=input.employees.map(source=>{
     const row=Object.fromEntries(employeeFields.map(key=>[key,source[key] == null ? null : String(source[key])]));
     if (!row.employeeId || !row.name || !row.status || !row.version) fail('ERP人员字段不完整');
@@ -11,9 +12,17 @@ export function validateEmployeeSnapshot(input) {
       if (value && set.has(value)) fail('ERP人员业务标识重复');
       if (value) set.add(value);
     }
+    row.loginEmails=[...new Set((source.loginEmails||[]).map(value=>String(value).trim().toLowerCase()).filter(Boolean))];
+    if(row.loginEmails.length>2 || row.loginEmails.some(email=>!/^\S+@\S+\.\S+$/.test(email)))fail('ERP登录邮箱格式无效');
+    for(const email of row.loginEmails){if(emails.has(email))fail('ERP登录邮箱重复');emails.add(email)}
+    if(source.businessPermissions!=null){
+      const value=source.businessPermissions, keys=['research','collect','assign','manage','manageGrants'];
+      if(typeof value!=='object'||Array.isArray(value)||Object.entries(value).some(([k,v])=>!keys.includes(k)||typeof v!=='boolean'))fail('ERP业务权限无效');
+      row.businessPermissions=Object.fromEntries(keys.map(k=>[k,value[k]===true]));
+    }
     return row;
   });
-  return {schemaVersion:1, capturedAt:input.capturedAt, version:String(input.version || ''), receivedAt:new Date().toISOString(), employees};
+  return {schemaVersion:1, identitySchemaVersion:input.identitySchemaVersion===1?1:0, permissionsSchemaVersion:input.permissionsSchemaVersion===1?1:0, capturedAt:input.capturedAt, version:String(input.version || ''), receivedAt:new Date().toISOString(), employees};
 }
 export function createEmployeeMaster({pool,config,putConfig,allowTestIdentities=false}) {
   async function receive(input,c=pool) {
@@ -21,8 +30,22 @@ export function createEmployeeMaster({pool,config,putConfig,allowTestIdentities=
     await c.query("SELECT pg_advisory_xact_lock(hashtext('employee-master-cache'))");
     const previous=(await c.query("SELECT value FROM selection_workspace_config WHERE key='erp-employees'")).rows[0]?.value;
     if (previous && Date.parse(previous.capturedAt)>Date.parse(snapshot.capturedAt)) fail('拒绝过期人员快照',409);
-    const identities=new Set((await c.query('SELECT id FROM people')).rows.map(r=>r.id));
-    snapshot.employees=snapshot.employees.filter(r=>r.memberId && identities.has(r.memberId));
+    if(previous?.identitySchemaVersion===1 && snapshot.identitySchemaVersion!==1)fail('拒绝降级人员登录授权快照',409);
+    if(previous?.permissionsSchemaVersion===1 && snapshot.permissionsSchemaVersion!==1)fail('拒绝降级人员权限快照',409);
+    if(snapshot.identitySchemaVersion===1)await synchronizeEmployeeIdentities(c,snapshot);
+    else {const ids=new Set((await c.query('SELECT id FROM people')).rows.map(r=>r.id));snapshot.employees=snapshot.employees.filter(e=>ids.has(e.memberId));}
+    if(snapshot.identitySchemaVersion===1 || snapshot.permissionsSchemaVersion===1){
+      const grants=(await c.query("SELECT value FROM selection_workspace_config WHERE key='pool-grants'")).rows[0]?.value||{};
+      for(const employee of snapshot.employees){
+        const managed=employee.businessPermissions!=null || previous?.employees?.some(e=>e.memberId===employee.memberId && e.permissionsManaged);
+        employee.permissionsManaged=Boolean(managed);
+        if(employee.memberId && managed){
+          employee.businessPermissions=employee.businessPermissions||{};
+          grants[employee.memberId]=employee.status==='Active'?employee.businessPermissions:{};
+        }
+      }
+      await putConfig('pool-grants',grants,c);
+    }
     await putConfig('erp-employees',snapshot,c);
     const ready=snapshot.employees.filter(e=>e.status==='Active' && e.prefix).map(e=>e.memberId);
     await c.query(`UPDATE selection_erp_commands cmd SET status='queued',result=NULL,updated_at=now()

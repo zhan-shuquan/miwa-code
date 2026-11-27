@@ -133,6 +133,9 @@ export function createSelectionPoolRouter({
     run(async (req, res) => {
       if (!admin(req.aioneIdentity) && !(await grants(req)).manageGrants)
         fail("没有负责人授权管理权限", 403);
+      const staffSnapshot=await config('erp-employees');
+      if (staffSnapshot?.identitySchemaVersion === 1 || staffSnapshot?.permissionsSchemaVersion === 1)
+        fail('员工业务权限由ERP员工档案统一维护，请在ERP修改后等待自动同步', 409);
       const people = new Set(
           (await employees.eligible({includeUnassigned:true})).map((p) => p.id),
         ),
