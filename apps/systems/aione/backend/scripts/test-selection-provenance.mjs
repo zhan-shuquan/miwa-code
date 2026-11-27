@@ -17,6 +17,11 @@ try{
  assert(results.every(x=>/^qmt981230\d{3}$/.test(x.selectionNo)));
  const reused=await Promise.all(Array.from({length:8},()=>alloc('86990',ids[0])));
  assert(reused.every(x=>x.selectionNo===results[0].selectionNo));
+ await tx(async c=>{
+  await c.query("INSERT INTO product_opportunities(id,source_platform,title,created_by_person_id,selection_no) VALUES($1,'isolated','discarded test','86990',$2)",[ids[0],results[0].selectionNo]);
+  await c.query('DELETE FROM product_opportunities WHERE id=$1',[ids[0]]);
+ });
+ assert.equal((await alloc('86990',ids[0])).selectionNo,results[0].selectionNo);
  const other=await alloc('86991');assert.match(other.selectionNo,/^qat981230\d{3}$/);
  const seq=Number(results.map(x=>x.selectionNo.slice(-3)).sort().at(-1));
  const after=await alloc('86990');assert.equal(Number(after.selectionNo.slice(-3)),seq+1);
@@ -35,5 +40,5 @@ try{
   assert.equal(after.selector_employee_id,'FIXTURE-86990');assert.equal(after.owner_employee_id,'FIXTURE-86991');assert.equal(after.selection_no,before.selection_no);
   await c.query('DELETE FROM product_opportunities WHERE id=$1',[id]);
  });
- console.log(JSON.stringify({passed:true,checks:['Tokyo date boundary','20 parallel personal allocations','8 identical retries','independent employee namespace','persistent sequence','missing prefix rejected','assignment keeps original stable Employee and historical number']}));
+ console.log(JSON.stringify({passed:true,checks:['Tokyo date boundary','20 parallel personal allocations','8 identical retries','independent employee namespace','persistent sequence after deletion','missing prefix rejected','assignment keeps original stable Employee and historical number']}));
 }finally{await pool.end();}
