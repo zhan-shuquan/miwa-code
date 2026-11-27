@@ -62,10 +62,20 @@ export async function initSelectionPool(host) {
   }
   const boot = await api("/bootstrap");
   if (signal.aborted) return;
+  const channelGroups = new Map();
+  for (const channel of boot.channels || []) {
+    const group = channelGroups.get(channel.channel_group) || [];
+    group.push(channel);
+    channelGroups.set(channel.channel_group, group);
+  }
+  const sourceModule = `<details class="sw-card sp-sources"><summary>选品来源</summary>${[...channelGroups].map(([group,channels]) => `<section><h3>${esc(group)}</h3><div class="sp-source-links">${channels.map(ch => `<a href="${esc(ch.official_url)}" title="${esc(ch.entry_note || ch.channel_name)}" target="_blank" rel="noopener noreferrer"><span class="sp-platform-icon" aria-hidden="true">${esc(ch.icon_text || ch.channel_name.slice(0,1))}</span>${esc(ch.channel_name)}</a>`).join('')}</div></section>`).join('') || '<p>ERP选品渠道尚未同步，请联系管理员。</p>'}</details>`;
+  const preferenceKey = "selection.pool." + (boot.identity.memberId || "anonymous");
+  const savedColumns = Number(localStorage.getItem(preferenceKey + ".columns"));
+  let columns = [4, 6, 8].includes(savedColumns) ? savedColumns : 6;
   let scope =
       new URLSearchParams(location.hash.split("?")[1]).get("scope") ||
       "pending",
-    mode = sessionStorage.getItem("selection.pool.mode") || "cards",
+    mode = localStorage.getItem(preferenceKey + ".mode") || "cards",
     offset = 0,
     sort = { sort: "createdAt", direction: "desc" },
     result,
@@ -90,11 +100,13 @@ export async function initSelectionPool(host) {
         report(e.message, true);
       }
     };
-  host.innerHTML = `<section class="sw sp"><header class="sw-heading"><div><small>商品之家</small><h1>选品池</h1></div><nav><a href="#/product-home?view=entry">选品录入</a><a href="#/product-home?view=list">选品一览</a>${boot.permissions.manage ? '<a href="#/talent-home?section=my-profile">我的档案</a>' : ""}</nav></header><p data-pool-message role="status" hidden></p>
-  ${boot.permissions.collect ? `<section class="sw-card"><h2>${icon("product")}快速收集</h2><textarea data-share rows="4" placeholder="粘贴多个商品分享内容、链接或口令" aria-label="批量商品分享内容"></textarea><div class="sw-toolbar"><button data-preflight>识别预检</button><button data-collect class="sw-primary">加入选品池</button><button data-upload>${icon("file")}上传图片</button><button data-import>${icon("file")}导入选品库</button><label><input type="checkbox" data-merge>图片合为同一商品</label><label><input type="checkbox" data-suspected>保留已核对的SNS独立商品</label><span data-intake-summary></span></div><div data-intake-zone class="sp-intake" tabindex="0" title="点击上传、拖拽或Ctrl+V粘贴图片；沿用后台图片大小限制"><button data-add-images>添加商品图片／手机截图</button><div data-staged-images class="sp-staged"></div></div><input type="file" data-image-files accept="image/jpeg,image/png,image/webp" multiple hidden><input type="file" data-import-file accept=".xlsx,.csv" hidden><details data-mapping hidden><summary>导入字段映射</summary><div class="sw-grid">${boot.importFields.map((k) => `<label style="grid-column:span 3">${esc(k)}<input data-map="${k}" placeholder="原文件列名（自动识别时留空）"></label>`).join("")}</div></details><div data-preflight-results></div></section>` : ""}
+  host.innerHTML = `<section class="sw sp"><header class="sw-heading"><div><small>商品之家</small><h1>选品池</h1></div></header><p data-pool-message role="status" hidden></p>
+  ${sourceModule}
+  ${boot.permissions.collect ? `<section class="sw-card"><h2>${icon("product")}快速收集</h2><div class="sp-quick-grid"><textarea data-share rows="4" placeholder="粘贴多个商品分享内容、链接或口令" aria-label="批量商品分享内容"></textarea><div data-intake-zone class="sp-intake" tabindex="0" title="点击上传、拖拽或Ctrl+V粘贴图片；沿用后台图片大小限制"><button data-add-images>添加商品图片／手机截图</button><div data-staged-images class="sp-staged"></div></div></div><div class="sw-toolbar"><button data-collect class="sw-primary">加入选品池</button><button data-import>${icon("file")}导入1688选品库</button><label data-merge-option hidden><input type="checkbox" data-merge>图片合为同一商品</label><details><summary>更多设置</summary><label><input type="checkbox" data-suspected>保留已核对的SNS独立商品</label></details><span data-intake-summary></span></div><input type="file" data-image-files accept="image/jpeg,image/png,image/webp" multiple hidden><input type="file" data-import-file accept=".xlsx,.csv" hidden><details data-mapping hidden><summary>导入字段映射</summary><div class="sw-grid">${boot.importFields.map((k) => `<label style="grid-column:span 3">${esc(k)}<input data-map="${k}" placeholder="原文件列名（自动识别时留空）"></label>`).join("")}</div></details><div data-preflight-results></div></section>` : ""}
   <nav class="sw-workspace-tabs" aria-label="选品池范围">${["pending", "mine", ...(boot.permissions.manage ? ["all"] : [])].map((k) => `<button data-scope="${k}" aria-pressed="${scope === k}">${icon(k === "mine" ? "people" : "product")}${{ pending: "待认领", mine: "我的认领", all: "全部选品" }[k]}</button>`).join("")}</nav>
-  <div class="sw-toolbar sp-filters"><input data-query placeholder="搜索选品货号、正式货号或标题" aria-label="选品池搜索"><input data-filter="selector" placeholder="选品人会员号"><input data-filter="platform" placeholder="来源平台"><input data-filter="owner" placeholder="负责人会员号"><input data-filter="from" type="date" aria-label="开始日期"><input data-filter="to" type="date" aria-label="结束日期"><select data-filter="state" aria-label="认领状态"><option value="">全部认领状态</option>${["pending", "claimed", "assigned", "abandoned", "archived"].map((k) => `<option value="${k}">${stateLabel[k]}</option>`).join("")}</select><button data-search>查询</button><button data-mode>切换列表／卡片</button></div>
-  <div class="sw-toolbar"><label><input data-select-all type="checkbox">全选本页</label>${boot.permissions.assign ? '<select data-assignee aria-label="指定负责人"><option value="">选择负责人</option>' + boot.people.map((p) => `<option value="${esc(p.id)}">${esc(p.display_name)} · ${esc(p.id)}</option>`).join("") + '</select><button data-batch="assign">批量分配</button>' : ""}${boot.permissions.manage ? '<button data-batch="return">收回／退回池</button><button data-batch="archive">批量归档</button>' : ""}${boot.permissions.configureGrants ? "<button data-grants>负责人授权</button>" : ""}<button data-export>导出</button><span data-total></span></div>
+  <div class="sw-toolbar sp-stage-counts" data-stage-counts aria-label="当前筛选范围阶段统计"></div>
+  <div class="sw-toolbar sp-filters"><input data-query placeholder="搜索选品货号、正式货号或标题" aria-label="选品池搜索"><input data-filter="selector" placeholder="选品人会员号"><input data-filter="platform" placeholder="来源平台"><input data-filter="owner" placeholder="负责人会员号"><input data-filter="from" type="date" aria-label="开始日期"><input data-filter="to" type="date" aria-label="结束日期"><select data-filter="state" aria-label="认领状态"><option value="">全部认领状态</option>${["pending", "claimed", "assigned", "abandoned", "archived"].map((k) => `<option value="${k}">${stateLabel[k]}</option>`).join("")}</select><button data-search>查询</button><button data-mode>切换列表／卡片</button><label>每行<select data-columns aria-label="每行商品数量">${[4,6,8].map(n => `<option value="${n}" ${n === columns ? "selected" : ""}>${n}个</option>`).join("")}</select></label></div>
+  <div class="sw-toolbar"><label><input data-select-all type="checkbox">全选本页</label><button data-batch="claim">批量认领</button>${boot.permissions.assign ? '<select data-assignee aria-label="指定负责人"><option value="">选择负责人</option>' + boot.people.map((p) => `<option value="${esc(p.id)}">${esc(p.display_name)} · ${esc(p.id)}</option>`).join("") + '</select><button data-batch="assign">批量分配</button>' : ""}${boot.permissions.manage ? '<button data-batch="return">收回／退回池</button><button data-batch="archive">批量归档</button>' : ""}${boot.permissions.configureGrants ? "<button data-grants>负责人授权</button>" : ""}<button data-export>导出</button><span data-total></span></div>
   <div data-collection></div><div class="sw-toolbar"><button data-prev>上一页</button><span data-page></span><button data-next>下一页</button></div></section>`;
   const query = () => {
     const q = new URLSearchParams({
@@ -168,13 +180,18 @@ export async function initSelectionPool(host) {
   const entry = (r) =>
     `#/product-home?view=entry&id=${encodeURIComponent(r.id)}`;
   function actions(r) {
-    return `${r.claimState === "pending" ? `<button class="sw-primary" data-action="claim" data-id="${esc(r.id)}">认领</button>` : `${r.owner === boot.identity.memberId || boot.permissions.manage ? `<a class="sw-code-link" href="${entry(r)}">继续研究</a>` : ""}`}${r.owner === boot.identity.memberId && !["confirmed", "submitted"].includes(r.status) ? `<button data-action="return" data-id="${esc(r.id)}">退回</button><button data-action="abandon" data-id="${esc(r.id)}">放弃</button>` : ""}`;
+    const sourcing = r.stage?.code === 'need_source' || r.stage?.code === 'no_source';
+    const supplier = (boot.channels || []).find(c => c.channel_code === '1688');
+    const findSource = sourcing && supplier
+      ? `<a class="sw-code-link" href="${esc(supplier.official_url)}" target="_blank" rel="noopener noreferrer" title="在1688使用图片搜索或人工找货，找到后在选品录入填写采购链接">1688找同款</a>` : '';
+    return `${r.claimState === "pending" ? `<button class="sw-primary" data-action="claim" data-id="${esc(r.id)}">认领</button>` : `${r.owner === boot.identity.memberId || boot.permissions.manage ? `${findSource}<a class="sw-code-link" href="${entry(r)}">${esc(sourcing ? '填写采购链接' : r.stage?.nextAction || "继续录入")}</a>` : ""}`}${r.owner === boot.identity.memberId && !["confirmed", "submitted", "submitting"].includes(r.status) ? `<button data-action="return" data-id="${esc(r.id)}">退回</button><button data-action="abandon" data-id="${esc(r.id)}">放弃</button>` : ""}`;
   }
   async function load() {
     const seq = ++sequence;
     result = await api("/records?" + query());
     if (seq !== sequence || signal.aborted) return;
     const box = host.querySelector("[data-collection]");
+    host.querySelector("[data-stage-counts]").innerHTML = (result.stageCounts || []).map(s => `<span>${esc(s.label)} <strong>${s.count}</strong></span>`).join("");
     host.querySelector("[data-total]").textContent = `共 ${result.total} 条`;
     host.querySelector("[data-page]").textContent =
       `${Math.floor(offset / 24) + 1} / ${Math.max(1, Math.ceil(result.total / 24))}`;
@@ -188,11 +205,11 @@ export async function initSelectionPool(host) {
       `<a class="sw-code-link" ${r.claimState === "pending" && !boot.permissions.manage ? 'data-detail="' + esc(r.id) + '" href="#"' : 'href="' + entry(r) + '"'}>${esc(r.selectionNo)}</a>`;
     if (mode === "cards")
       box.innerHTML =
-        '<div class="sp-cards">' +
+        `<div class="sp-cards" style="--sp-columns:${columns}">` +
         result.items
           .map(
             (r) =>
-              `<article class="sw-card sp-card"><div class="sp-card-top">${pick(r)}${number(r)}${openLink(r)}</div>${image(r)}<h3>${esc(r.title)}</h3><div class="sp-facts"><span>${esc(r.source?.platform || "图片")}</span><span>${r.referencePrice == null ? "" : "参考采购价 " + esc(r.referencePrice)}</span><span>选品人 ${esc(r.selectorName || r.selector)}</span><time>${esc(businessTime(r.createdAt))}</time></div><div class="sw-toolbar">${actions(r)}<span>${stateLabel[r.claimState] || r.claimState}</span></div></article>`,
+              `<article class="sw-card sp-card"><div class="sp-card-top">${pick(r)}${number(r)}${openLink(r)}</div>${image(r)}<h3>${esc(r.title)}</h3><div class="sp-facts"><span>${esc(r.source?.platform || "图片")}</span><span>${r.referencePrice == null ? "" : "参考采购价 " + esc(r.referencePrice)}</span><span>选品人 ${esc(r.selectorName || r.selector)}</span><span>负责人 ${esc(r.ownerName || r.owner || "待分配")}</span><span>${esc(r.stage?.label || "")}</span><span>下一步：${esc(r.stage?.nextAction || "")}</span><time>${esc(businessTime(r.createdAt))}</time></div><div class="sw-toolbar">${actions(r)}<span>${stateLabel[r.claimState] || r.claimState}</span></div></article>`,
           )
           .join("") +
         "</div>";
@@ -206,7 +223,7 @@ export async function initSelectionPool(host) {
         owner: "负责人",
         createdAt: "入池时间",
         claimState: "认领状态",
-        status: "研究状态",
+        status: "业务阶段",
       };
       box.innerHTML = `<div class="sw-table-wrap"><table><thead><tr><th>选择</th><th>图片</th>${Object.keys(
         names,
@@ -221,7 +238,7 @@ export async function initSelectionPool(host) {
             `<tr><td>${pick(r)}</td><td>${image(r)}</td>${Object.keys(names)
               .map(
                 (k) =>
-                  `<td>${k === "selectionNo" ? number(r) : esc(k === "platform" ? r.source?.platform || "图片" : k === "createdAt" ? businessTime(r.createdAt) : k === "selector" ? (r.selectorName || r.selector) : k === "owner" ? (r.ownerName || r.owner || "—") : stateLabel[r[k]] || r[k] || "—")}</td>`,
+                  `<td>${k === "selectionNo" ? number(r) : esc(k === "status" ? r.stage?.label || stateLabel[r.status] : k === "platform" ? r.source?.platform || "图片" : k === "createdAt" ? businessTime(r.createdAt) : k === "selector" ? (r.selectorName || r.selector) : k === "owner" ? (r.ownerName || r.owner || "—") : stateLabel[r[k]] || r[k] || "—")}</td>`,
               )
               .join("")}<td>${openLink(r)}${actions(r)}</td></tr>`,
         )
@@ -346,10 +363,15 @@ export async function initSelectionPool(host) {
     "click",
     guarded(async () => {
       mode = mode === "cards" ? "list" : "cards";
-      sessionStorage.setItem("selection.pool.mode", mode);
+      localStorage.setItem(preferenceKey + ".mode", mode);
       await load();
     }),
   );
+  on(host.querySelector("[data-columns]"), "change", guarded(async (e) => {
+    columns = Number(e.target.value);
+    localStorage.setItem(preferenceKey + ".columns", String(columns));
+    await load();
+  }));
   host.querySelectorAll("[data-scope]").forEach((el) =>
     on(
       el,
@@ -420,6 +442,7 @@ export async function initSelectionPool(host) {
         images.push({ file, url });
       }
       batchKey = crypto.randomUUID();
+      host.querySelector("[data-merge-option]").hidden = images.length < 2;
       host.querySelector("[data-staged-images]").innerHTML = images
         .map(
           (v, i) =>
@@ -430,6 +453,7 @@ export async function initSelectionPool(host) {
         on(el, "click", () => {
           const staged = images[Number(el.dataset.removeStage)];
           images = images.filter((v) => v !== staged);
+          host.querySelector("[data-merge-option]").hidden = images.length < 2;
           el.parentElement.remove();
           host
             .querySelectorAll("[data-remove-stage]")
@@ -451,15 +475,19 @@ export async function initSelectionPool(host) {
         const file = e.target.files[0];
         if (!file) return;
         importFile = { filename: file.name, base64: await fileBase64(file) };
+        e.target.value = '';
         images = [];
+        host.querySelector("[data-merge-option]").hidden = true;
         host.querySelector("[data-staged-images]").innerHTML = "";
         host.querySelector("[data-mapping]").hidden = false;
-        host.querySelector("[data-intake-summary]").textContent = file.name;
+        host.querySelector("[data-intake-summary]").textContent = file.name + " · 点击加入选品池完成导入";
         batchKey = crypto.randomUUID();
       }),
     );
     on(host.querySelector("[data-share]"), "input", () => {
       importFile = null;
+      host.querySelector('[data-intake-summary]').textContent = '';
+      host.querySelector('[data-mapping]').hidden = true;
       batchKey = crypto.randomUUID();
     });
     const payload = async () =>
@@ -558,6 +586,7 @@ export async function initSelectionPool(host) {
             results.every((r) => ["created", "duplicate"].includes(r.state))
           ) {
             images = [];
+        host.querySelector("[data-merge-option]").hidden = true;
             importFile = null;
             host.querySelector("[data-share]").value = "";
             host.querySelector("[data-staged-images]").innerHTML = "";

@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import { selectionStage, recordSelectionWork } from '../src/services/selection-workflow.js';
+const record = {id:'test',selection_no:'test001',owner_person_id:null,record_version:1,
+  selection_workspace:{pool:{state:'pending'},data:{sourceUrl:'https://detail.1688.com/offer/123.html'},status:'draft'}};
+assert.equal(selectionStage(record).code,'unclaimed');
+record.owner_person_id='employeeA';record.selection_workspace.pool.state='claimed';
+assert.equal(selectionStage(record).code,'source_found');
+record.selection_workspace.data.sourceUrl='';
+assert.equal(selectionStage(record).code,'need_source');
+record.selection_workspace.status='confirmed';
+assert.equal(selectionStage(record).code,'confirmed');
+record.erp_job_status='failed';
+assert.equal(selectionStage(record).code,'confirmed','失败不改变选品结论');
+record.erp_job_status='processing';
+assert.equal(selectionStage(record).code,'erp_processing');
+record.erp_job_status='succeeded';
+assert.equal(selectionStage(record).code,'erp_success');
+const writes=[]; const c={query:async(sql,values)=>writes.push({sql,values})};
+await recordSelectionWork(c,record,'pool-collect',{personId:'employeeA'});
+await recordSelectionWork(c,{...record,record_version:99},'pool-collect',{personId:'admin'});
+assert.equal(writes[0].values[0],writes[1].values[0],'重试使用同一成果键');
+assert.match(writes[0].sql,/ON CONFLICT\(id\) DO NOTHING/);
+await recordSelectionWork(c,record,'erp-result',{occurrence:'job1',detail:{status:'succeeded'}});
+assert.equal(writes[2].values[1],null,'系统建档结果不能算给管理员');
+assert.equal(JSON.parse(writes[2].values[6]).actorKind,'system');
+await recordSelectionWork(c,record,'update',{personId:'employeeA'});
+assert.equal(writes.length,3,'普通保存不产生完成成果');
+console.log('PASS: 阶段事实优先级、确认状态、成果幂等键、操作者与系统执行分离');

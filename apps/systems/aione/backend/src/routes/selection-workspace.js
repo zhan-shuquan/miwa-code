@@ -1,4 +1,5 @@
 import { parseSupplierFile } from '../services/selection-sku-file.js';
+import { recordSelectionWork } from '../services/selection-workflow.js';
 import { completeShortName, completeSkuAttributes } from '../services/selection-recognition.js';
 import { requestProductFiles } from '../services/selection-product-files.js';
 import { confirmSpecifications } from '../services/selection-specifications.js';
@@ -138,11 +139,14 @@ export function createSelectionWorkspaceRouter(
     if (!r) fail("记录不存在或无权访问", 404);
     return r;
   };
-  const event = (c, req, r, action, detail = {}) =>
-    c.query(
+  const event = async (c, req, r, action, detail = {}) => {
+    await c.query(
       "INSERT INTO selection_workspace_events(selection_id,actor_id,action,version,detail) VALUES($1,$2,$3,$4,$5)",
       [r.id, actor(req), action, r.record_version, JSON.stringify(detail)],
     );
+    await recordSelectionWork(c, r, action, { personId: person(req), detail,
+      occurrence: action === 'submit' ? detail.jobId : undefined });
+  };
   const researchIds = (r) => r.selection_workspace.researchAssetIds || [];
   const productAssets = (r, assets) =>
     assets.filter((a) => !researchIds(r).includes(a.id));
@@ -275,6 +279,9 @@ export function createSelectionWorkspaceRouter(
           const updated=(await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(jsonb_set(selection_workspace,'{status}',to_jsonb($2::text)),'{erpResult}',$3::jsonb),updated_at=now() WHERE id=$1 RETURNING *",
             [job.selection_id,b.status === "succeeded" ? "submitted" : "confirmed",JSON.stringify(b.result || {})])).rows[0];
           if(b.status==='succeeded')await requestProductFiles(c,updated,job.payload.owner);
+          await recordSelectionWork(c, updated, 'erp-result', { occurrence: job.id,
+            detail: { status: b.status, itemCode: b.result?.itemCode || null } });
+          await syncResearchTask(c, { ...updated, erp_job_status: b.status }, null);
         }
       });
       res.json({ ok: true });
@@ -934,6 +941,16 @@ export function createSelectionWorkspaceRouter(
       pricing,
       status: keepConfirmation ? "confirmed" : "draft",
     };
+    const entryComplete = pricing.status === 'estimated' && pricing.reconciliation?.status !== 'mismatch' &&
+      !!data.sourceUrl && !!data.item_name && confirmationIssues(data, s).length === 0;
+    if (workspace.pool) workspace.pool = { ...workspace.pool,
+      entryStartedAt: workspace.pool.entryStartedAt || new Date().toISOString(),
+      entryCompletedAt: entryComplete ? workspace.pool.entryCompletedAt || new Date().toISOString() : null };
+    if (workspace.pool?.state === 'abandoned' && data.sourceUrl &&
+        data.sourceUrl !== previous?.selection_workspace.data.sourceUrl) {
+      workspace.pool.state = 'claimed';
+      workspace.pool.claimedBy = previous.owner_person_id;
+    }
     let r;
     if (previous)
       r = (
@@ -956,6 +973,10 @@ export function createSelectionWorkspaceRouter(
         )
       ).rows[0];
     r = await ensureSelectionNo(c, r);
+    if (previous && !previous.selection_workspace.data.sourceUrl && data.sourceUrl)
+      await recordSelectionWork(c, r, 'source-found', { personId: person(req), detail: { procurementUrl: data.sourceUrl } });
+    if (entryComplete)
+      await recordSelectionWork(c, r, 'entry-complete', { personId: person(req), detail: { status: 'completed' } });
     await registerKeys(c, sourceReview.keys || [], r.id);
     if (r.selection_workspace.pool) await syncResearchTask(c, r, actor(req));
     await event(c, req, r, previous ? "update" : "create");
@@ -1226,6 +1247,9 @@ export function createSelectionWorkspaceRouter(
               [r.id, process.env.AIONE_FORMAL_ITEM_INTAKE === "1" ? "submitting" : "submitted"],
             );
             await event(c, req, r, "submit", { jobId: job.id });
+            await syncResearchTask(c, { ...r, erp_job_status: job.status,
+              selection_workspace: { ...r.selection_workspace,
+                status: process.env.AIONE_FORMAL_ITEM_INTAKE === "1" ? "submitting" : "submitted" } }, actor(req));
             out.push(job);
             continue;
           }
@@ -1300,7 +1324,7 @@ export function createSelectionWorkspaceRouter(
         webp =
           bytes.toString("ascii", 0, 4) === "RIFF" &&
           bytes.toString("ascii", 8, 12) === "WEBP";
-      const market = b.kind === "market";
+      const market = b.kind === "market" || (req.poolAssetWrite && accessible.selection_workspace.pool?.source?.kind !== 'purchase');
       const extension = String(b.filename || "")
         .split(".")
         .pop()
@@ -1383,6 +1407,11 @@ export function createSelectionWorkspaceRouter(
               JSON.stringify([...new Set([...researchIds(record), asset.id])]),
             ],
           );
+        if (req.poolAssetWrite) {
+          const originals = [...new Set([...(record.selection_workspace.pool?.originalAssetIds || []), asset.id])];
+          await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{pool,originalAssetIds}',$2::jsonb) WHERE id=$1",
+            [record.id, JSON.stringify(originals)]);
+        }
         await event(c, req, record, "upload", {
           assetId: asset.id,
           kind: market ? "market" : "product",
@@ -1452,6 +1481,8 @@ export function createSelectionWorkspaceRouter(
           );
         if (ids.some((id) => !current.includes(id)))
           fail("图片不属于当前记录", 403);
+        if ((r.selection_workspace.pool?.originalAssetIds || []).some(id => current.includes(id) && !ids.includes(id)))
+          fail('原始选品参考图片需要保留；采购图片可另行上传',409);
         await c.query(
           "DELETE FROM selection_workspace_assets WHERE selection_id=$1 AND id=ANY($2::uuid[]) AND NOT(id=ANY($3::uuid[]))",
           [r.id, current, ids],

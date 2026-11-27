@@ -59,9 +59,11 @@ check(workbook.rows[0].images.length > 0);
 check(workbook.rows[0].source.platformId === "1065657004887");
 check(workbook.rows[0].referencePrice !== null);
 check(!!workbook.rows[0].sourceFacts.image);
+const testPort = process.env.AIONE_TEST_DB_PORT || '55432';
+assert.ok(['55432','15432'].includes(testPort));
 const db = new pg.Pool({
   connectionString:
-    "postgres://aione_test:isolated-local-test-only@127.0.0.1:55432/aione_selection",
+    `postgres://aione_test:isolated-local-test-only@127.0.0.1:${testPort}/aione_selection`,
 });
 const c = await db.connect();
 try {
@@ -136,6 +138,10 @@ await api('employeeA','/pool/people/prefix',{memberId:'86991',prefix:'qat'},410)
 const prefix=await api('employeeA','/pool/people');
 check(prefix.employee.memberId==='86991' && prefix.employee.prefix==='qat');
 check(prefix.canEdit===false);
+await api('manager','/pool/collect', {
+  text: '分页独立夹具 https://example.com/selection-pagination/' + crypto.randomUUID(),
+  requestKey: crypto.randomUUID(),
+},201);
 const pending = await api(
   "manager",
   "/pool/records?scope=pending&sort=selectionNo&direction=asc&limit=1",
@@ -198,7 +204,7 @@ const csv =
   csvUrl +
   ",12\n重复," +
   csvUrl +
-  ",12\n异常,https://example.com/bad-price,not-a-number";
+  ",12\n异常,https://example.com/bad-price/" + crypto.randomUUID() + ",not-a-number";
 const partial = await api(
   "manager",
   "/pool/collect",
@@ -212,8 +218,9 @@ const partial = await api(
   201,
 );
 check(
-  partial.items.map((i) => i.state).join(",") === "created,duplicate,invalid",
+  partial.items.map((i) => i.state).join(",") === "created,duplicate,created",
 );
+check(partial.items[2].reason.includes('参考采购价格'));
 const snsId = "pool_" + crypto.randomUUID().replaceAll("-", "");
 await api(
   "manager",
