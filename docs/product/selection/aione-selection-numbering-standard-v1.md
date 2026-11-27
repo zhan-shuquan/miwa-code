@@ -1,6 +1,6 @@
 # AIONE选品编号标准 V1｜Product Freeze
 
-状态：CURRENT FOR PRODUCT FREEZE
+状态：已废止（新增规则由V2替代；历史xp编号仍兼容）
 日期：2026-09-08
 适用项目：美和AIONE一体化工作平台
 

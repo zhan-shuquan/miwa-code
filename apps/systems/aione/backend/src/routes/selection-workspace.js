@@ -122,7 +122,7 @@ export function createSelectionWorkspaceRouter(
   const row = async (req, id, c = pool, lock = false) => {
     const r = (
       await c.query(
-        `SELECT *, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.created_by_person_id) AS selector_name FROM product_opportunities WHERE id=$1 AND selection_workspace IS NOT NULL AND ($2::boolean OR owner_person_id=$3) ${lock ? "FOR UPDATE" : ""}`,
+        `SELECT *, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.created_by_person_id) AS selector_name, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.owner_person_id) AS owner_name FROM product_opportunities WHERE id=$1 AND selection_workspace IS NOT NULL AND ($2::boolean OR owner_person_id=$3) ${lock ? "FOR UPDATE" : ""}`,
         [
           id,
           admin(req.aioneIdentity) ||
@@ -151,6 +151,9 @@ export function createSelectionWorkspaceRouter(
       r.selection_workspace.pool?.source?.platform || r.source_platform,
     owner: r.owner_person_id,
     selector: r.created_by_person_id,
+    selectorEmployeeId: r.selector_employee_id,
+    ownerEmployeeId: r.owner_employee_id,
+    selectionDate: r.selection_date,
     selectorName: r.selector_name || null,
     ownerName: r.owner_name || null,
     version: r.record_version,
@@ -940,7 +943,7 @@ export function createSelectionWorkspaceRouter(
     await registerKeys(c, sourceReview.keys || [], r.id);
     if (r.selection_workspace.pool) await syncResearchTask(c, r, actor(req));
     await event(c, req, r, previous ? "update" : "create");
-    return view(r);
+    return view(await row(req, r.id, c));
   };
   router.post(
     "/records",
@@ -1188,6 +1191,9 @@ export function createSelectionWorkspaceRouter(
                     parameterVersion: s.version,
                     selectionNo: r.selection_no,
                     selector: r.created_by_person_id,
+                    selectorEmployeeId: r.selector_employee_id,
+                    ownerEmployeeId: r.owner_employee_id,
+                    selectionDate: r.selection_date,
                     testOnly: process.env.AIONE_FORMAL_ITEM_INTAKE !== "1",
                     allowPublish: false,
                     allowPaidAI: false,

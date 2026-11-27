@@ -189,7 +189,7 @@ async function createBatch(file, fileHash) {
   return { duplicate: null, batch: result.rows[0] };
 }
 
-async function importRow(item, zipIndex) {
+async function importRow(item, zipIndex, memberId) {
   if (!/^\d+$/.test(item.sourceRef)) throw Object.assign(new Error("商品ID must be numeric."), { code: "invalid_1688_item_id" });
   if (!item.title) throw Object.assign(new Error("商品标题 is required."), { code: "missing_1688_title" });
 
@@ -231,21 +231,22 @@ async function importRow(item, zipIndex) {
       return { action: "updated", selection: updated.rows[0], zipMatched: Boolean(zip) };
     }
 
-    const { selectionNo, selectionDate } = await allocateSelectionNo(client, item.sourceAddedAt || new Date());
+    const id = `sel_${randomUUID()}`;
+    const { selectionNo, selectionDate } = await allocateSelectionNo(client, new Date(), memberId, id);
     const inserted = await client.query(
       `INSERT INTO public.product_opportunities
         (id, source_platform, source_ref, source_url, title, selection_mode, lifecycle_status,
          selection_no, selection_date, source_cover_image_url, source_price, source_currency,
          source_supplier_name, source_group, source_tags, source_note, source_weight_g,
          source_fulfillment_hint, source_added_at, first_imported_at, last_imported_at,
-         classification_status, metadata, source_system)
+         classification_status, metadata, source_system, created_by_person_id, owner_person_id)
        VALUES ($1,$2,$3,$4,$5,'selection','pending',$6,$7::date,$8,$9,$10,$11,$12,$13::text[],$14,$15,$16,
-               $17,NOW(),NOW(),'pending',$18::jsonb,'aione-1688-drive-inbox')
+               $17,NOW(),NOW(),'pending',$18::jsonb,'aione-1688-drive-inbox',$19,$19)
        RETURNING *`,
-      [`sel_${randomUUID()}`, item.sourcePlatform, item.sourceRef, item.sourceUrl, item.title,
+      [id, item.sourcePlatform, item.sourceRef, item.sourceUrl, item.title,
         selectionNo, selectionDate, item.sourceCoverImageUrl, item.sourcePrice, item.sourceCurrency,
         item.sourceSupplierName, item.sourceGroup, item.sourceTags, item.sourceNote, item.sourceWeightG,
-        item.sourceFulfillmentHint, item.sourceAddedAt, JSON.stringify(zipMetadata)]
+        item.sourceFulfillmentHint, item.sourceAddedAt, JSON.stringify(zipMetadata), memberId]
     );
     return { action: "created", selection: inserted.rows[0], zipMatched: Boolean(zip) };
   });
@@ -312,7 +313,7 @@ async function finishBatch(batchId, status, counters, errors, zipStats) {
   );
 }
 
-export async function import1688DriveInbox({ folderId, driveId }) {
+export async function import1688DriveInbox({ folderId, driveId, memberId }) {
   if (!folderId) throw Object.assign(new Error("AIONE 1688 selection inbox folder id is required."), { code: "selection_inbox_folder_required" });
   const files = await listDriveFolderFiles({ folderId, driveId, pageSize: 1000 });
   const zipIndex = buildZipIndex(files);
@@ -352,7 +353,7 @@ export async function import1688DriveInbox({ folderId, driveId }) {
 
       for (const item of rows) {
         try {
-          const result = await importRow(item, zipIndex);
+          const result = await importRow(item, zipIndex, memberId);
           if (result.action === "created") counters.created += 1;
           else if (result.action === "updated") counters.updated += 1;
           else counters.skipped += 1;

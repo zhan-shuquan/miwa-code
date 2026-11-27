@@ -26,7 +26,6 @@ router.post("/selections", requireWriteActor, async (req, res, next) => {
   const sourceUrl = cleanText(req.body?.sourceUrl, 2000) || null;
   const title = cleanText(req.body?.title, 500);
   const supplierRef = cleanText(req.body?.supplierRef, 240) || null;
-  const selectionDateInput = req.body?.selectionDate || req.body?.sourceAddedAt || new Date();
   const qualificationData = req.body?.qualificationData && typeof req.body.qualificationData === "object"
     ? req.body.qualificationData
     : {};
@@ -50,7 +49,7 @@ router.post("/selections", requireWriteActor, async (req, res, next) => {
       }
 
       const id = selectionId();
-      const { selectionNo, selectionDate } = await allocateSelectionNo(client, selectionDateInput);
+      const { selectionNo, selectionDate } = await allocateSelectionNo(client, new Date(), context.personId, id);
       const inserted = await client.query(
         `INSERT INTO public.product_opportunities
           (id, source_platform, source_ref, source_url, supplier_ref, title, selection_mode,

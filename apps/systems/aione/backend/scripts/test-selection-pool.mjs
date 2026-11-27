@@ -66,11 +66,8 @@ const db = new pg.Pool({
 const c = await db.connect();
 try {
   await c.query("BEGIN");
-  await c.query(
-    "INSERT INTO selection_number_counters(selection_date,last_number) VALUES('2099-01-02',999) ON CONFLICT(selection_date) DO UPDATE SET last_number=999",
-  );
-  const n = await allocateSelectionNo(c, "2099-01-01T15:00:00Z");
-  check(n.selectionNo === "xp9901021000");
+  const n = await allocateSelectionNo(c, "2099-01-01T15:00:00Z", "86990", crypto.randomUUID());
+  check(/^qmt990102\d{3}$/.test(n.selectionNo));
   await c.query("ROLLBACK");
 } finally {
   c.release();

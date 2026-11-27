@@ -4,7 +4,7 @@ import { sourceIdentity, fingerprint } from "./selection-intake-contract.js";
 import { fail, applyDefaults } from "./selection-workspace-contract.js";
 export async function ensureSelectionNo(c, r) {
   if (r.selection_no) return r;
-  const n = await allocateSelectionNo(c, r.created_at);
+  const n = await allocateSelectionNo(c, new Date(), r.created_by_person_id, r.id);
   return (
     (
       await c.query(
@@ -24,7 +24,7 @@ export async function backfillSelectionPool(c) {
     )
   ).rows;
   for (let r of rows) {
-    r = await ensureSelectionNo(c, r);
+    // Historical missing numbers are not silently reissued during startup.
     for (const url of new Set(
       [r.source_url, r.selection_workspace?.data?.sourceUrl].filter(Boolean),
     )) {

@@ -63,6 +63,8 @@ export function createSelectionPoolRouter({
     source: r.selection_workspace.pool?.source,
     referencePrice: r.selection_workspace.pool?.referencePrice,
     selector: r.created_by_person_id,
+    selectorEmployeeId: r.selector_employee_id,
+    ownerEmployeeId: r.owner_employee_id,
     selectorName:r.selector_name || null,
     ownerName:r.owner_name || null,
     owner: r.owner_person_id,

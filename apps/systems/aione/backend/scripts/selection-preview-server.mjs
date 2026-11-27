@@ -51,6 +51,7 @@ await pool.query(
 );
 await pool.query(await readFile(resolve(root,'data-code/migrations/0202_employee_master_cache.sql'),'utf8'));
 await pool.query(await readFile(resolve(root,'data-code/migrations/0203_selection_upload_transport.sql'),'utf8'));
+await pool.query(await readFile(resolve(root,'data-code/migrations/0204_selection_provenance.sql'),'utf8'));
 // Isolated fixtures only: never query or modify ERP personnel for UI regression.
 await pool.query("INSERT INTO selection_workspace_config(key,value) VALUES('erp-employees',$1) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value", [JSON.stringify({
   schemaVersion: 1, version: 'isolated-fixture', capturedAt: new Date().toISOString(), receivedAt: new Date().toISOString(),

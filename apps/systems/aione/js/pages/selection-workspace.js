@@ -579,7 +579,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       sequence = 0;
     const header = businessWorkspaceHeader({
       title: "选品录入",
-      identity: '<span data-selection-number></span><span data-save-state></span><span data-selector></span>',
+      identity: '<span data-selection-number></span><span data-save-state></span><span data-selector></span><span data-owner></span>',
       status: '<span>正式商品货号：<strong data-formal-code></strong></span><span>选品结论：<span data-conclusion-status></span></span><span data-intake-status></span>',
       connection: boot.connection.online ? "ERP已连接" : "ERP离线 / 使用最近同步参数",
       actions: '<button data-back-list>返回选品一览</button><button data-save class="sw-primary">保存草稿</button><button data-confirm-selection>确认选品</button><button data-submit>提交ERP</button>',
@@ -646,8 +646,9 @@ export async function initSelectionWorkspace(host, forcedView) {
     const conclusion = content.querySelector('[data-workspace-status]');
     function updateHeader() {
       const state = selectionHeaderStatus(record);
-      selectionLabel.textContent = '选品货号：' + (record?.selectionNo || '保存后生成');
-      selectorLabel.textContent = '选品人：' + (record?.selectorName || (!record || record.selector === boot.identity.id ? boot.identity.name : '姓名待同步')) + '（' + (record?.selector || boot.identity.id) + '）';
+      selectionLabel.textContent = '选品编号：' + (record?.selectionNo || '保存后生成');
+      content.querySelector('[data-owner]').textContent = '商品负责人：' + (record?.ownerName || (record?.owner === boot.identity.id || !record ? boot.identity.name : '待分配')) + (record?.owner ? '（' + record.owner + '）' : '');
+      selectorLabel.textContent = '原始选品人：' + (record?.selectorName || (!record || record.selector === boot.identity.id ? boot.identity.name : '姓名待同步')) + '（' + (record?.selector || boot.identity.id) + '）';
       content.querySelector('[data-save-state]').textContent = record ? '版本 ' + record.version : '新草稿';
       content.querySelector('[data-formal-code]').textContent = data.item_code || '未分配';
       conclusion.querySelector('[data-conclusion-status]').textContent = state.conclusion;
@@ -1545,7 +1546,7 @@ export async function initSelectionWorkspace(host, forcedView) {
     ];
     const names = {
       image: "商品图片",
-      selectionNo: "选品货号",
+      selectionNo: "选品编号",
       sourcePlatform: "选品来源",
       item_code: "正式商品货号",
       item_name: "商品简称",
@@ -1556,7 +1557,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       price: "实际售价",
       profit: "预计利润",
       margin: "预计毛利率",
-      selector: "选品人",
+      selector: "原始选品人",
       brand: "品牌",
       owner: "负责人",
       createdAt: "选品时间",

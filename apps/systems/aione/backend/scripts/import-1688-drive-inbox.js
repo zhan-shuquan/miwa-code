@@ -7,7 +7,7 @@ async function main() {
   const workspaceParentFolderId = String(process.env.AIONE_SELECTION_WORKSPACE_PARENT_FOLDER_ID || folderId).trim();
   const driveId = String(process.env.AIONE_SHARED_DRIVE_ID || "").trim() || null;
 
-  const result = await import1688DriveInbox({ folderId, driveId });
+  const result = await import1688DriveInbox({ folderId, driveId, memberId: process.env.AIONE_IMPORT_MEMBER_ID });
   const workspaces = await provisionPendingSelectionDriveWorkspaces({
     parentFolderId: workspaceParentFolderId,
     driveId,
