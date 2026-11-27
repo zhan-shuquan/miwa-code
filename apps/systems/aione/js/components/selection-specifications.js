@@ -34,7 +34,7 @@ export function mountSpecifications({root,getData,attributes,api,file64,esc,on,g
   const refreshCount=()=>root.querySelector('[data-spec-count]').textContent=status();
   bind('[data-multiple]','change',el=>{getData().has_variants=el.checked;draw();});
   bind('[data-manual]','click',()=>{getData().has_variants=true;if(!getData().specificationAttributes.length)getData().specificationAttributes.push({attribute:options[0]?.name||'',sales:true});if(!getData().skus.length)getData().skus.push(newRow());draw();});
-  bind('[data-add-attribute]','click',()=>{if(axes.length>=10){report('规格属性不能超过10项');return;}getData().specificationAttributes.push({attribute:options.find(o=>!axes.some(a=>a.attribute===o.name))?.name||'',sales:true});fillSingleAttribute(getData());invalidate();draw();});
+  bind('[data-add-attribute]','click',()=>{if(axes.length>=10){report('规格属性不能超过10项');return;}getData().specificationAttributes.push({attribute:options.find(o=>!axes.some(a=>a.attribute===o.name))?.name||'',sales:true});invalidate();draw();});
   bind('[data-remove-attribute]','click',el=>{getData().specificationAttributes.splice(Number(el.dataset.removeAttribute),1);invalidate();draw();});
   bind('[data-attribute]','change',el=>{getData().specificationAttributes[Number(el.dataset.attribute)].attribute=el.value;fillSingleAttribute(getData());invalidate();draw();});
   bind('[data-sales]','change',el=>{getData().specificationAttributes[Number(el.dataset.sales)].sales=el.checked;invalidate();draw();});
