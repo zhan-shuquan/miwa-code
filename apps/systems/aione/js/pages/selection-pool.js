@@ -588,6 +588,8 @@ export async function initSelectionPool(host) {
             images = [];
         host.querySelector("[data-merge-option]").hidden = true;
             importFile = null;
+            host.querySelector("[data-intake-summary]").textContent = "";
+            host.querySelector("[data-mapping]").hidden = true;
             host.querySelector("[data-share]").value = "";
             host.querySelector("[data-staged-images]").innerHTML = "";
             batchKey = crypto.randomUUID();
