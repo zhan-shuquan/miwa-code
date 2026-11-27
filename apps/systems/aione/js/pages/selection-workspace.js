@@ -647,11 +647,12 @@ export async function initSelectionWorkspace(host, forcedView) {
     function updateHeader() {
       const state = selectionHeaderStatus(record);
       selectionLabel.textContent = '选品货号：' + (record?.selectionNo || '保存后生成');
-      selectorLabel.textContent = '选品人：' + (record?.selectorName || boot.identity.name) + '（' + (record?.selector || boot.identity.id) + '）';
+      selectorLabel.textContent = '选品人：' + (record?.selectorName || (!record || record.selector === boot.identity.id ? boot.identity.name : '姓名待同步')) + '（' + (record?.selector || boot.identity.id) + '）';
       content.querySelector('[data-save-state]').textContent = record ? '版本 ' + record.version : '新草稿';
       content.querySelector('[data-formal-code]').textContent = data.item_code || '未分配';
       conclusion.querySelector('[data-conclusion-status]').textContent = state.conclusion;
       content.querySelector('[data-intake-status]').textContent = 'ERP建档：' + state.intake;
+      content.querySelector('[data-intake-status]').dataset.severity = state.severity;
       const locked = record?.status === 'submitted' || record?.archived;
       content.querySelector('[data-submit]').disabled = !!locked || ['queued','processing'].includes(record?.jobs?.[0]?.status);
       const codeField = content.querySelector('[data-field="item_code"]');
@@ -953,7 +954,7 @@ export async function initSelectionWorkspace(host, forcedView) {
         }
         saved = await api('/records/' + encodeURIComponent(previous.id), 'PATCH', {data:rebased.merged,version:fresh.version});
       }
-      record = saved;
+      record = {...saved, selectorName:saved.selectorName || previous?.selectorName};
       selectionLabel.textContent = record.selectionNo;
       data = mergeSavedDraft(submitted, data, record.data);
       const hasNewEdits = JSON.stringify(data) !== JSON.stringify(record.data);

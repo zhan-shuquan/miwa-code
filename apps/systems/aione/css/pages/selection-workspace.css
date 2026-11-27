@@ -51,6 +51,7 @@
   border-color: var(--color-warning, #ad7700);
 }
 .sw-entry .sw-workspace-history { margin-top: var(--sw-space); }
+.sw [data-intake-status][data-severity="error"] { color: var(--sw-danger); }
 .sw * {
   box-sizing: border-box;
 }
