@@ -32,5 +32,10 @@ try{
  assert.equal((await c.query('SELECT person_id FROM correction_test_business')).rows[0].person_id,'201');checks++;
  const req4={...r,id:'request-4',employeeId:'EMP-3',oldMember:'301',newMember:'302',loginEmails:['employee@example.invalid']};
  assert.match((await processCorrections(c,[req4],[{employeeId:'EMP-3',memberId:'301',name:'冲突员工'}]))[0].message,/Google邮箱/);checks++;
+ const req5={...r,id:'request-5',employeeId:'EMP-4',oldMember:'401',newMember:'402',loginEmails:[]};
+ const e5=[{employeeId:'EMP-4',memberId:'401',name:'待纠错员工'}];
+ assert.equal((await processCorrections(c,[req5],e5))[0].status,'Checked');checks++;
+ assert.equal((await processCorrections(c,[{...req5,state:'Cancelled'}],e5))[0].status,'Cancelled');checks++;
+ assert.equal((await processCorrections(c,[{...req5,id:'request-6'}],e5))[0].status,'Checked');checks++;
  console.log(JSON.stringify({checks,scope:'isolated PostgreSQL transaction; identity preservation, permissions, idempotency, collision and historical-reference rejection'}));
 }finally{await c.query('ROLLBACK');c.release();await pool.end();}

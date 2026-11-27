@@ -43,12 +43,17 @@ export async function processMemberCorrections(c,requests,employees){
  if(!Array.isArray(requests)||requests.length>20)throw Error('纠错请求格式无效');
  const receipts=[];
  for(const r of requests){
-  if(!r.id || !r.employeeId || !/^\d{1,140}$/.test(r.oldMember) || !/^\d{1,140}$/.test(r.newMember) || r.oldMember===r.newMember || !r.reason || !r.operator || !r.fingerprint || !['Checking','Approved'].includes(r.state))throw Error('纠错审核字段不完整');
+  if(!r.id || !r.employeeId || !/^\d{1,140}$/.test(r.oldMember) || !/^\d{1,140}$/.test(r.newMember) || r.oldMember===r.newMember || !r.reason || !r.operator || !r.fingerprint || !['Checking','Approved','Cancelled'].includes(r.state))throw Error('纠错审核字段不完整');
   if(!Array.isArray(r.loginEmails)||r.loginEmails.length>2||r.loginEmails.some(e=>!/^\S+@\S+\.\S+$/.test(e)))throw Error('纠错邮箱无效');
-  const employee=employees.find(e=>e.employeeId===r.employeeId && e.memberId===r.oldMember);
-  if(!employee)throw Error('纠错与ERP当前员工快照不一致');
   const prior=await stored(c,r.id);
   if(prior&&!same(prior,r))throw Error('纠错编号被用于不同身份，禁止重放');
+  if(r.state==='Cancelled'){
+   if(prior?.status==='Applied')throw Error('已执行纠错不能取消，须核对回执');
+   const cancelled={...Object.fromEntries(['id','employeeId','oldMember','newMember','fingerprint'].map(k=>[k,r[k]])),status:'Cancelled'};
+   await save(c,r.id,cancelled);receipts.push(cancelled);continue;
+  }
+  const employee=employees.find(e=>e.employeeId===r.employeeId && e.memberId===r.oldMember);
+  if(!employee)throw Error('纠错与ERP当前员工快照不一致');
   if(prior?.status==='Applied'){employee.memberId=r.newMember;receipts.push(prior);continue;}
   const receipt=Object.fromEntries(['id','employeeId','oldMember','newMember','fingerprint','reason','operator'].map(k=>[k,r[k]]));
   await c.query('SAVEPOINT member_correction');
