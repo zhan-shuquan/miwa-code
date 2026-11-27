@@ -35,5 +35,8 @@ assert.equal(parseSupplierFile(Buffer.from('SKU ID,颜色\n123,蓝色\n'),'','sk
 const official=Buffer.from('SKU ID,SKU名称,SKU图链接,原价（元）,计算价格（元）\n6094698701123,黑色,https://example.com/black.jpg,72,--\n');
 const officialRow=parseSupplierFile(official,'','official.csv',snapshot).skus[0];
 assert.equal(officialRow.supplierCalculatedCost,null);assert.equal(officialRow.cost,72);assert.equal(officialRow.supplierImageUrl,'https://example.com/black.jpg');
-assert.throws(()=>parseSupplierFile(Buffer.from(official.toString().replace(',72,',',68～72,')),'','range.csv',snapshot),/采购价/);
+const range=parseSupplierFile(Buffer.from(official.toString().replace(',72,',',68～72,')),'','range.csv',snapshot);
+assert.equal(range.skus[0].cost,undefined);assert.equal(range.skus[0].supplierCostText,'68～72');assert.match(range.warnings.join(''),/区间/);
+const rangeDraft={has_variants:true,skuSourceFiles:[range.source],specificationAttributes:[{attribute:'Color',sales:true}],skus:range.skus.map(s=>({...s,confirmed:true,attributeValues:{Color:'黑色'}}))};
+assert.throws(()=>specifications(rangeDraft,snapshot,true),/区间/);rangeDraft.skus[0].cost=72;assert.equal(specifications(rangeDraft,snapshot,true).skus[0].cost,72);
 console.log('PASS: XLSX/XLS/CSV import + save/reload; dynamic ERP attributes; images; zero; manual/batch validation; serialized saves and in-flight edits; official missing calculated price and image header; ambiguous purchase prices rejected.');

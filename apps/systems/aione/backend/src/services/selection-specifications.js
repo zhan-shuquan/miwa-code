@@ -28,6 +28,7 @@ export function specifications(input, snapshot, submit = false) {
       row[key]=Number(s[key]);
     }
     if(submit && hasVariants && row.selected) {
+      if(row.supplierCostText && row.supplierCost == null && row.cost == null) fail(`第${i+1}条SKU采购价为区间，请填写已确认的实际采购价`);
       if(!row.confirmed) fail(`第${i+1}条SKU尚未人工确认`);
       for(const value of [row.spec,...Object.values(row.attributeValues)]) if(!value || /[?\uFFFD]/.test(value)) fail(`第${i+1}条SKU存在未修正规格`);
     }

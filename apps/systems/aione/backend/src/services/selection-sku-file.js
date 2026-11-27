@@ -60,6 +60,10 @@ export function parseSupplierFile(bytes,sourceUrl,filename='sku.csv',snapshot={}
  const cell=(row,k)=>positions[k]<0?'':String(row[positions[k]]??'').trim();
  const numeric=(value,label,line)=>{
   if(!value)return null;
+  if(label==='采购价'||label==='cost'){
+   const range=value.normalize('NFKC').match(/^\s*(\d+(?:\.\d+)?)\s*[-~～—–至]\s*(\d+(?:\.\d+)?)\s*$/);
+   if(range&&Number(range[1])<=Number(range[2])){warnings.add('采购价为区间，请填写每条SKU的实际采购价后确认');return null;}
+  }
   const number=Number(value.replace(/,/g,''));
   if(!Number.isFinite(number)||number<0)fail('第'+line+'行'+label+'不是有效非负数字');
   return number;
@@ -82,7 +86,7 @@ export function parseSupplierFile(bytes,sourceUrl,filename='sku.csv',snapshot={}
   if(image){try{if(!['https:','http:'].includes(new URL(image).protocol))throw Error();}catch{fail('第'+line+'行SKU图片链接无效');}}
   const code=id||'source_'+createHash('sha256').update(JSON.stringify([productId,originalName,values])).digest('hex').slice(0,24);
   const sku={code,supplierSkuId:id,supplierProductId:productId||product||'',originalName,spec:originalName,sourceParts:parts,
-   selected:true,confirmed:false,attributeValues:values,supplierTitle:cell(row,'title'),supplierImageUrl:image,
+   selected:true,confirmed:false,attributeValues:values,supplierTitle:cell(row,'title'),supplierImageUrl:image,supplierCostText:cell(row,'cost'),
    supplierCost:numeric(cell(row,'cost'),'采购价',line),supplierCalculatedCost:numeric(/^[-—–]+$/.test(cell(row,'calculated'))?'':cell(row,'calculated'),'计算价格',line),supplierStock:numeric(cell(row,'stock'),'库存',line),
    warnings:/[?\uFFFD]/.test(originalName)?['原始规格含缺失字符，请核实修正']:[]};
   for(const key of ['cost','weight','quantity','price']){const value=numeric(cell(row,key),key,line);if(value!==null)sku[key]=value;}
