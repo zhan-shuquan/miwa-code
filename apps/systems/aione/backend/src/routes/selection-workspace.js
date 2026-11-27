@@ -1,4 +1,5 @@
 import { parseSupplierFile } from '../services/selection-sku-file.js';
+import { requestProductFiles } from '../services/selection-product-files.js';
 import { confirmSpecifications } from '../services/selection-specifications.js';
 import { createEmployeeMaster } from "../services/employee-master.js";
 import { mountUploadTransport, CHUNK_BYTES } from "../services/selection-upload-transport.js";
@@ -783,8 +784,7 @@ export function createSelectionWorkspaceRouter(
       ).rows;
       productAssets(r, assets).forEach((a, i) =>
         folder.file(
-          "images/" +
-            String(i + 1).padStart(3, "0") +
+          String(i + 1).padStart(3, "0") +
             "-" +
             a.id +
             "." +
@@ -805,7 +805,7 @@ export function createSelectionWorkspaceRouter(
             parameterVersion: r.selection_workspace.pricing?.parameterVersion,
             allowPublish: false,
             allowPaidAI: false,
-            testOnly: true,
+            testOnly: allowTestIdentities,
             assets: productAssets(r, assets).map((a) => ({
               id: a.id,
               sha256: a.sha256,
@@ -1044,6 +1044,7 @@ export function createSelectionWorkspaceRouter(
           ) {
             if (r.selection_workspace.status === "number_pending")
               await requestFormalNumber(c, r, actor(req));
+            else await requestProductFiles(c, r, actor(req));
             out.push(view(r));
             continue;
           }
@@ -1138,6 +1139,7 @@ export function createSelectionWorkspaceRouter(
               )
             ).rows[0];
             await syncResearchTask(c, updated, actor(req));
+            await requestProductFiles(c, updated, actor(req));
             await event(c, req, updated, "confirm-selection");
             out.push(view(updated));
             continue;

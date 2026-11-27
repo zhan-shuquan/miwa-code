@@ -2,6 +2,11 @@ import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { fail } from "../services/selection-workspace-contract.js";
 import { syncResearchTask } from "../services/selection-pool-service.js";
+import { requestProductFiles } from '../services/selection-product-files.js';
+import { fetchSelectionImage } from '../services/selection-remote-image.js';
+import { uploadPolicy } from '../services/selection-upload-policy.js';
+import { imageDerivative } from '../services/selection-image-preview.js';
+import { createHash } from 'node:crypto';
 export function createSelectionERPCommands({ pool, tx, integration }) {
   const router = Router(),
     run = (fn) => async (req, res, next) => {
@@ -12,6 +17,31 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
       }
     };
   router.use(integration);
+  router.post('/:id/heartbeat',run(async(req,res)=>{
+    const updated=await pool.query("UPDATE selection_erp_commands SET lease_until=now()+interval '2 minutes' WHERE id=$1 AND lease_token=$2 AND status='processing' RETURNING id",[req.params.id,req.body.leaseToken]);
+    if(!updated.rowCount)fail('商品文件任务租约已失效',409);
+    res.json({ok:true});
+  }));
+  router.get('/:id/sku-images/:index',run(async(req,res)=>{
+    const job=(await pool.query("SELECT payload FROM selection_erp_commands WHERE id=$1 AND kind='product_files' AND status='processing'",[req.params.id])).rows[0];
+    const index=Number(req.params.index);
+    const sku=Number.isInteger(index)&&index>=0 ? job?.payload?.data?.skus?.[index] : null;
+    if(!sku || sku.selected===false || !sku.supplierImageUrl)fail('任务未包含此SKU参考图片',404);
+    const image=await fetchSelectionImage(sku.supplierImageUrl,uploadPolicy.maxBytes);
+    const bytes=Buffer.from(image.base64,'base64');
+    await imageDerivative({bytes,sha256:createHash('sha256').update(bytes).digest('hex')},'thumbnail');
+    res.json(image);
+  }));
+  router.get('/:id/assets/:asset', run(async (req, res) => {
+    const row = (await pool.query(
+      `SELECT a.* FROM selection_workspace_assets a JOIN selection_erp_commands j ON j.selection_id=a.selection_id
+       WHERE j.id=$1 AND j.kind='product_files' AND j.status='processing' AND a.id=$2
+       AND j.payload->'assets' @> jsonb_build_array(jsonb_build_object('id',a.id::text,'sha256',a.sha256))`,
+      [req.params.id, req.params.asset],
+    )).rows[0];
+    if (!row) fail('商品文件任务附件不存在或已经变化', 404);
+    res.type(row.content_type).send(row.bytes);
+  }));
   router.post(
     "/claim",
     run(async (req, res) => {
@@ -106,6 +136,7 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
             [r.id, JSON.stringify(r.selection_workspace)],
           );
           await syncResearchTask(c, r, job.payload.actor);
+          await requestProductFiles(c, r, job.payload.actor);
           await c.query(
             "INSERT INTO selection_workspace_events(selection_id,actor_id,action,version,detail) VALUES($1,$2,'erp-formal-number',$3,$4)",
             [
@@ -116,11 +147,19 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
             ],
           );
         }
+        if (job.kind === 'product_files') {
+          if (req.body.status === 'succeeded' && (result.state !== 'saved' || result.code !== job.payload.data.item_code || result.selectionId !== job.selection_id))
+            fail('本地商品文件保存回执不匹配', 409);
+          await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{fileSync}',$2::jsonb) WHERE id=$1",
+            [job.selection_id, JSON.stringify({...result, status:req.body.status, updatedAt:new Date().toISOString()})]);
+          await c.query("INSERT INTO selection_workspace_events(selection_id,actor_id,action,version,detail) SELECT id,$2,'product-files',record_version,$3 FROM product_opportunities WHERE id=$1",
+            [job.selection_id, job.payload.actor, JSON.stringify(result)]);
+        }
         await c.query(
           "UPDATE selection_erp_commands SET status=$2,result=$3,lease_until=NULL,updated_at=now() WHERE id=$1",
           [
             job.id,
-            req.body.status === "failed" && result.retryable && job.attempts < 5
+            req.body.status === "failed" && result.retryable && (job.kind === 'product_files' || job.attempts < 5)
               ? "queued"
               : req.body.status,
             JSON.stringify(result),

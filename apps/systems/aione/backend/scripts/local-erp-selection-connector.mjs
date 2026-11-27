@@ -5,6 +5,7 @@ import { connectorTarget, assertContainerTarget } from './erp-connector-target.m
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { executeProductFiles } from './product-file-command.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const target = connectorTarget();
 const base = target.origin;
@@ -87,10 +88,18 @@ async function once() {
   const version = await api("/connector/snapshot", snapshot);
   const commands = await api("/connector/commands/claim", {});
   for (const command of commands.jobs) {
-    const result = await erp("erp-selection-numbering.py", {
+    let heartbeat;
+    let result;
+    try {
+    if(command.kind==='product_files') heartbeat=setInterval(()=>api('/connector/commands/'+command.id+'/heartbeat',{leaseToken:command.lease_token}).catch(e=>console.error('File lease: '+e.message)),30000);
+    result = command.kind === 'product_files' ? await executeProductFiles(command,{erp,api}) : await erp("erp-selection-numbering.py", {
       kind: command.kind,
       payload: command.payload,
     });
+    } catch(error) {
+      if(command.kind!=='product_files')throw error;
+      result={status:'failed',result:{message:error.message,retryable:/timeout|fetch failed|ECONN|ENET|超时/i.test(error.message)}};
+    } finally { if(heartbeat)clearInterval(heartbeat); }
     await api("/connector/commands/" + command.id + "/result", {
       ...result,
       leaseToken: command.lease_token,
