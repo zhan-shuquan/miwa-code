@@ -3,6 +3,7 @@ import { mkdtemp,mkdir,writeFile,readdir,readFile,rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import ExcelJS from '../backend/node_modules/exceljs/excel.js';
 import { executeProductFiles } from '../backend/scripts/product-file-command.mjs';
 const root=await mkdtemp(join(tmpdir(),'miwa-command-test-'));
@@ -47,6 +48,15 @@ try {
   const manualBytes=await readFile(skuPath);
   erpSkus=[{supplier_sku_id:'123',name:'tst001_actual77'}];
   const formalCommand={id:randomUUID(),payload:{...payload,status:'submitted',version:4}};
+  if(process.platform==='win32') {
+    const locker=spawn('powershell.exe',['-NoProfile','-Command',"$f=[IO.File]::Open($env:AIONE_TEST_LOCK_FILE,'Open','ReadWrite','None'); try { [Console]::WriteLine('LOCKED'); [Console]::ReadLine() | Out-Null } finally { $f.Dispose() }"],{env:{...process.env,AIONE_TEST_LOCK_FILE:skuPath},stdio:['pipe','pipe','pipe'],windowsHide:true});
+    const exited=new Promise((resolve,reject)=>{locker.on('error',reject);locker.on('exit',resolve);});
+    try {
+      await new Promise((resolve,reject)=>{let output='';locker.stdout.on('data',chunk=>{output+=chunk;if(output.includes('LOCKED'))resolve();});locker.on('error',reject);locker.on('exit',()=>reject(new Error('File lock helper exited early')));});
+      await assert.rejects(executeProductFiles(formalCommand,{erp,api}),/EBUSY|EPERM|EACCES/);
+    } finally { locker.stdin.end('\n');await exited; }
+    assert.deepEqual(await readFile(skuPath),manualBytes);
+  }
   const backfilled=await executeProductFiles(formalCommand,{erp,api});
   assert.equal(backfilled.status,'succeeded');assert.equal(backfilled.result.skuCellsUpdated,1);
   const filledBook=new ExcelJS.Workbook();await filledBook.xlsx.load(await readFile(skuPath));
@@ -55,7 +65,7 @@ try {
   assert.deepEqual(await readFile(backfilled.result.files.find(f=>f.name==='SKU.xlsx').backup),manualBytes);
   assert.deepEqual(await readFile(join(first.result.folder,'tst001.xlsx')),userEdit);
   assert.equal((await executeProductFiles(formalCommand,{erp,api})).result.skuCellsUpdated,0);
-  console.log('PASS: flat bundle, supplier images, byte-identical retry, ERP acknowledgement, managed update backup, preservation of external edits');
+  console.log('PASS: flat bundle, supplier images, byte-identical retry, ERP acknowledgement, managed update backup, external edits preserved, Windows file lock followed by successful retry');
 } finally {
   if(previous===undefined)delete process.env.AIONE_PRODUCT_FILE_STATE;else process.env.AIONE_PRODUCT_FILE_STATE=previous;
   await rm(root,{recursive:true,force:true});

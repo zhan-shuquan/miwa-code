@@ -6,7 +6,8 @@ import {randomUUID,createHash} from 'node:crypto';
 import {requestProductFiles} from '../src/services/selection-product-files.js';
 import {createSelectionERPCommands} from '../src/routes/selection-erp-commands.js';
 // Fixed isolated endpoint. Production DATABASE_URL is intentionally ignored.
-const c=new pg.Client({connectionString:'postgres://aione_test:isolated-local-test-only@127.0.0.1:55432/aione_selection'});
+const testPort=process.env.AIONE_ISOLATED_TEST_PORT==='15432'?15432:55432;
+const c=new pg.Client({connectionString:`postgres://aione_test:isolated-local-test-only@127.0.0.1:${testPort}/aione_selection`});
 await c.connect();
 let server;
 try {
@@ -31,11 +32,17 @@ try {
   const call=(path,body,auth=true)=>fetch(base+path,{method:body===undefined?'GET':'POST',headers:{'content-type':'application/json',...(auth?{'x-test-connector':'isolated'}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
   assert.equal((await call('/claim',{},false)).status,401);
   const claimed=await (await call('/claim',{})).json();assert.equal(claimed.jobs.length,1);
-  const job=claimed.jobs[0];assert.equal(job.payload.assets.length,1);
+  let job=claimed.jobs[0];assert.equal(job.payload.assets.length,1);
   assert.equal((await call('/'+job.id+'/assets/'+market)).status,404);
   assert.equal((await call('/'+job.id+'/assets/'+asset)).status,200);
   assert.equal((await call('/'+job.id+'/heartbeat',{leaseToken:randomUUID()})).status,409);
   assert.equal((await call('/'+job.id+'/heartbeat',{leaseToken:job.lease_token})).status,200);
+  for(let attempt=0;attempt<6;attempt++) {
+    assert.equal((await call('/'+job.id+'/result',{status:'failed',leaseToken:job.lease_token,result:{retryable:true,message:'EBUSY: workbook is open'}})).status,200);
+    const retry=await (await call('/claim',{})).json();
+    assert.equal(retry.jobs.length,1);assert.equal(retry.jobs[0].id,job.id);
+    assert.notEqual(retry.jobs[0].lease_token,job.lease_token);job=retry.jobs[0];
+  }
   const receipt={status:'succeeded',leaseToken:job.lease_token,result:{state:'saved',code:'qat999',selectionId:record.id,wps:'unverified',googleDrive:'unverified'}};
   assert.equal((await call('/'+job.id+'/result',receipt)).status,200);
   assert.equal((await call('/'+job.id+'/result',receipt)).status,409);
@@ -43,7 +50,7 @@ try {
   const saved=(await c.query('SELECT selection_workspace FROM product_opportunities WHERE id=$1',[record.id])).rows[0];
   assert.equal(saved.selection_workspace.fileSync.state,'saved');
   assert.equal(saved.selection_workspace.status,'confirmed');
-  console.log('PASS: isolated transaction, unique command, draft exclusion, connector auth, research attachment isolation, lease renewal, result idempotency, unchanged ERP intake status');
+  console.log('PASS: isolated transaction, unique command, draft exclusion, connector auth, attachment isolation, lease renewal, lock retries beyond five attempts, result idempotency, unchanged ERP intake status');
 } finally {
   if(server)await new Promise(resolve=>server.close(resolve));
   await c.query('ROLLBACK');await c.end();
