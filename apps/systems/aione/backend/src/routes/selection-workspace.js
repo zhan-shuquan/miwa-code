@@ -174,8 +174,8 @@ export function createSelectionWorkspaceRouter(
     return { ...result, reconciliation: reconcileCosts(result) };
   };
   router.post('/connector/employees',integration,run(async(req,res)=>{
-    await tx(c=>employees.receive(req.body,c));
-    res.json({ok:true});
+    const result=await tx(c=>employees.receive(req.body,c));
+    res.json({ok:true,...result});
   }));
   router.post(
     "/connector/snapshot",

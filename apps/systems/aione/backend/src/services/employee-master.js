@@ -1,4 +1,5 @@
 import { synchronizeEmployeeIdentities } from '../auth/erp-employee-identities.js';
+import { processMemberCorrections } from './member-correction.js';
 // Authorized cache of ERP Employee projections, never an editable personnel master.
 import { fail } from './selection-workspace-contract.js';
 export const employeeFields = ['employeeId','memberId','name','avatar','company','branch','department','designation','employmentType','grade','status','prefix','updatedAt','version'];
@@ -32,6 +33,7 @@ export function createEmployeeMaster({pool,config,putConfig,allowTestIdentities=
     if (previous && Date.parse(previous.capturedAt)>Date.parse(snapshot.capturedAt)) fail('拒绝过期人员快照',409);
     if(previous?.identitySchemaVersion===1 && snapshot.identitySchemaVersion!==1)fail('拒绝降级人员登录授权快照',409);
     if(previous?.permissionsSchemaVersion===1 && snapshot.permissionsSchemaVersion!==1)fail('拒绝降级人员权限快照',409);
+    const corrections=await processMemberCorrections(c,input.memberCorrections,snapshot.employees);
     if(snapshot.identitySchemaVersion===1)await synchronizeEmployeeIdentities(c,snapshot);
     else {const ids=new Set((await c.query('SELECT id FROM people')).rows.map(r=>r.id));snapshot.employees=snapshot.employees.filter(e=>ids.has(e.memberId));}
     if(snapshot.identitySchemaVersion===1 || snapshot.permissionsSchemaVersion===1){
@@ -53,6 +55,7 @@ export function createEmployeeMaster({pool,config,putConfig,allowTestIdentities=
       AND cmd.status='failed' AND cmd.result->>'message' LIKE '%前缀尚未配置%'
       AND cmd.payload->>'memberId'=ANY($1::text[]) AND p.owner_person_id=cmd.payload->>'memberId'
       AND p.selection_workspace->>'status'='number_pending'`,[ready]);
+    return {corrections};
   }
   async function profile(memberId) {
     const snapshot=await config('erp-employees');

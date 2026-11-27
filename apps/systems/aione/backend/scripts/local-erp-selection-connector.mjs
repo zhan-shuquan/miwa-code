@@ -81,7 +81,8 @@ async function api(path, body, binary = false) {
 }
 async function once() {
   // Personnel revocations must synchronize even when a changed cost rule awaits review.
-  await api('/connector/employees',await erp('export-erp-employees.py'));
+  const personnel=await api('/connector/employees',await erp('export-erp-employees.py'));
+  if(personnel.corrections?.length)await erp('ack-erp-member-corrections.py',personnel.corrections);
   const snapshot = await erp("export-erp-selection-snapshot.py");
   const version = await api("/connector/snapshot", snapshot);
   const commands = await api("/connector/commands/claim", {});

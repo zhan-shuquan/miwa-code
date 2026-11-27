@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import pg from 'pg';
+import {processMemberCorrections as processCorrections} from '../src/services/member-correction.js';
+const pool=new pg.Pool({connectionString:'postgres://aione_test:isolated-local-test-only@127.0.0.1:55432/aione_login_p0'});
+assert.equal((await pool.query('SELECT current_database() db')).rows[0].db,'aione_login_p0');
+const c=await pool.connect();let checks=0;
+try{
+ await c.query('BEGIN');
+ // Whole fixture is rolled back, including schema and rows; no formal database connection.
+ await c.query('TRUNCATE external_identities,person_login_emails,people,selection_workspace_config CASCADE');
+ await c.query("INSERT INTO people(id,display_name,status,metadata) VALUES('101','原员工','active','{\"erpEmployeeId\":\"EMP-1\"}')");
+ await c.query("INSERT INTO person_login_emails VALUES('e1','101','employee@example.invalid','active','test',now())");
+ await c.query("INSERT INTO external_identities(id,provider,subject,person_id,email_snapshot,status) VALUES('g1','google','unchanged-sub','101','employee@example.invalid','active')");
+ await c.query("INSERT INTO selection_workspace_config VALUES('pool-grants','{\"101\":{\"research\":true},\"other\":{\"manage\":true}}')");
+ const r={id:'request-1',employeeId:'EMP-1',oldMember:'101',newMember:'102',fingerprint:'f1',reason:'登记错误',operator:'Administrator',state:'Checking',loginEmails:['employee@example.invalid']};
+ const e=()=>[{employeeId:'EMP-1',memberId:'101',name:'原员工',status:'Active'}];
+ let reply=(await processCorrections(c,[r],e()))[0];assert.equal(reply.status,'Checked');checks++;
+ reply=(await processCorrections(c,[{...r,state:'Approved'}],e()))[0];assert.equal(reply.status,'Applied');checks++;
+ assert.equal((await c.query("SELECT person_id FROM external_identities WHERE subject='unchanged-sub'")).rows[0].person_id,'102');checks++;
+ assert.equal((await c.query("SELECT status FROM people WHERE id='101'")).rows[0].status,'inactive');checks++;
+ const grants=(await c.query("SELECT value FROM selection_workspace_config WHERE key='pool-grants'")).rows[0].value;
+ assert.deepEqual(grants,{'102':{research:true},other:{manage:true}});checks++;
+ assert.deepEqual((await processCorrections(c,[{...r,state:'Approved'}],e()))[0],reply);checks++;
+ assert.equal((await c.query("SELECT count(*)::int n FROM people WHERE id='102'")).rows[0].n,1);checks++;
+ await assert.rejects(processCorrections(c,[{...r,newMember:'103'}],e()),/重放/);checks++;
+ const req2={...r,id:'request-2',newMember:'102'};
+ assert.equal((await processCorrections(c,[req2],e()))[0].status,'Blocked');checks++;
+ await c.query("CREATE TABLE correction_test_business(person_id text,details jsonb)");
+ await c.query("INSERT INTO correction_test_business VALUES('201','{}')");
+ const req3={...r,id:'request-3',employeeId:'EMP-2',oldMember:'201',newMember:'202',loginEmails:[]};
+ assert.match((await processCorrections(c,[req3],[{employeeId:'EMP-2',memberId:'201',name:'其他员工'}]))[0].message,/历史业务引用/);checks++;
+ assert.equal((await c.query('SELECT person_id FROM correction_test_business')).rows[0].person_id,'201');checks++;
+ const req4={...r,id:'request-4',employeeId:'EMP-3',oldMember:'301',newMember:'302',loginEmails:['employee@example.invalid']};
+ assert.match((await processCorrections(c,[req4],[{employeeId:'EMP-3',memberId:'301',name:'冲突员工'}]))[0].message,/Google邮箱/);checks++;
+ console.log(JSON.stringify({checks,scope:'isolated PostgreSQL transaction; identity preservation, permissions, idempotency, collision and historical-reference rejection'}));
+}finally{await c.query('ROLLBACK');c.release();await pool.end();}
