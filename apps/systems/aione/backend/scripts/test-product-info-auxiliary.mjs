@@ -13,7 +13,9 @@ assert.equal(r.status,201);const id=r.data.id,path='/records/'+encodeURIComponen
 const image=async()=> (await sharp({create:{width:32,height:32,channels:3,background:{r:Math.floor(Math.random()*255),g:Math.floor(Math.random()*255),b:Math.floor(Math.random()*255)}}}).png().toBuffer()).toString('base64');
 const base64=await image();
 r=await call(path+'/assets','POST',{kind:'auxiliary',filename:'材料截图.png',base64});assert.equal(r.status,200,JSON.stringify(r));const aux=r.data.id;
+const uploadedVersion=(await call(path)).data.version;assert.equal(uploadedVersion,2);
 assert.equal((await call(path+'/assets','POST',{kind:'auxiliary',filename:'重复.png',base64})).data.id,aux);
+assert.equal((await call(path)).data.version,uploadedVersion,'duplicate upload does not advance material version');
 let loaded=(await call(path)).data;assert.equal(loaded.assets.length,0);assert.equal(loaded.marketAssets.length,0);assert.equal(loaded.auxiliaryAssets.length,1);
 assert.equal((await call(path+'/assets','POST',{filename:'不能转为主图.png',base64})).status,409);
 assert.equal((await call(path+'/assets','PUT',{ids:[aux]})).status,403);
