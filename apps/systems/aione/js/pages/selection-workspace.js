@@ -1363,7 +1363,9 @@ export async function initSelectionWorkspace(host, forcedView) {
       if (!['http:', 'https:'].includes(url.protocol)) throw Error('请输入有效HTTP或HTTPS图片网址');
       media.querySelector('[data-upload-status]').textContent = '正在读取图片…';
       await ensureDraft();
-      await api('/records/' + encodeURIComponent(record.id) + '/assets', 'POST', { sourceUrl });
+      const added = await api('/records/' + encodeURIComponent(record.id) + '/assets', 'POST', { sourceUrl });
+      const fresh = await api('/records/' + encodeURIComponent(record.id));
+      await api('/records/' + encodeURIComponent(record.id) + '/assets', 'PUT', {ids:[added.id,...fresh.assets.filter(a=>a.id!==added.id).map(a=>a.id)]});
       await images();
       media.querySelector('[data-upload-status]').textContent = '';
       host.querySelector('[data-message]').hidden = true;
