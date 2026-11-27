@@ -214,7 +214,7 @@ export async function syncResearchTask(c, r, actor) {
   return { available: true, id, url: metadata.url };
 }
 export async function requestFormalNumber(c, r, actor) {
-  if (r.selection_workspace.data.item_code)
+  if (r.selection_workspace.formalNumber?.code || (r.selection_workspace.status === "confirmed" && r.selection_workspace.data.item_code))
     return { status: "confirmed", code: r.selection_workspace.data.item_code };
   await c.query(
     `INSERT INTO selection_erp_commands(id,command_key,kind,selection_id,payload) VALUES($1,$2,'formal_number',$3,$4) ON CONFLICT(command_key) DO UPDATE SET payload=CASE WHEN selection_erp_commands.status='failed' THEN excluded.payload ELSE selection_erp_commands.payload END,status=CASE WHEN selection_erp_commands.status='failed' THEN 'queued' ELSE selection_erp_commands.status END`,
@@ -228,6 +228,7 @@ export async function requestFormalNumber(c, r, actor) {
         memberId: r.owner_person_id,
         actor,
         sourceUrl: r.selection_workspace.data.sourceUrl || "",
+        requestedCode: r.selection_workspace.data.item_code || "",
         existingCodes: [],
       }),
     ],

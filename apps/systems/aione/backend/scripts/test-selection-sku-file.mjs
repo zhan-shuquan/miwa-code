@@ -38,5 +38,10 @@ assert.equal(officialRow.supplierCalculatedCost,null);assert.equal(officialRow.c
 const range=parseSupplierFile(Buffer.from(official.toString().replace(',72,',',68～72,')),'','range.csv',snapshot);
 assert.equal(range.skus[0].cost,undefined);assert.equal(range.skus[0].supplierCostText,'68～72');assert.match(range.warnings.join(''),/区间/);
 const rangeDraft={has_variants:true,skuSourceFiles:[range.source],specificationAttributes:[{attribute:'Color',sales:true}],skus:range.skus.map(s=>({...s,confirmed:true,attributeValues:{Color:'黑色'}}))};
+const protectedCsv = Buffer.from('商品ID,SKU ID,SKU名称,原价（元）,计算价格（元）,库存\n"=""123456""","=""987654""",白色,"=""3.75""","=""""","=""12"""\n');
+const protectedRow=parseSupplierFile(protectedCsv,'https://detail.1688.com/offer/123456.html','protected.csv',snapshot).skus[0];
+assert.equal(protectedRow.supplierSkuId,'987654');assert.equal(protectedRow.cost,3.75);assert.equal(protectedRow.supplierCalculatedCost,null);assert.equal(protectedRow.supplierStock,12);
+assert.throws(()=>parseSupplierFile(protectedCsv,'https://detail.1688.com/offer/999999.html','wrong.csv',snapshot),/不一致/);
+assert.throws(()=>parseSupplierFile(Buffer.from(protectedCsv.toString().replace('3.75','1+2')),'https://detail.1688.com/offer/123456.html','expression.csv',snapshot),/有效非负数字/);
 assert.throws(()=>specifications(rangeDraft,snapshot,true),/区间/);rangeDraft.skus[0].cost=72;assert.equal(specifications(rangeDraft,snapshot,true).skus[0].cost,72);
 console.log('PASS: XLSX/XLS/CSV import + save/reload; dynamic ERP attributes; images; zero; manual/batch validation; serialized saves and in-flight edits; official missing calculated price and image header; ambiguous purchase prices rejected.');

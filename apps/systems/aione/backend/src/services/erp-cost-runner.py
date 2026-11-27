@@ -77,7 +77,8 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 source=body['snapshot']['identification']['source']
                 if hashlib.sha256(source.encode()).hexdigest()!=os.environ['ERP_REVIEWED_IDENTIFICATION_SHA256']:raise ValueError('Identification rule requires review')
-                scope={'re':re,'__builtins__':{'str':str,'dict':dict,'any':any,'len':len}}
+                scope={'re':re,'__builtins__':{'str':str,'dict':dict,'any':any,'len':len,
+                    'isinstance':isinstance,'list':list,'set':set,'all':all,'max':max,'ValueError':ValueError}}
                 exec(compile(source,'reviewed-erp-identification','exec'),scope,scope)
                 title=str(body.get('title',''))[:2000]
                 result=dict(category=scope['suggest_group'](title),shortName=scope['identify'](title))

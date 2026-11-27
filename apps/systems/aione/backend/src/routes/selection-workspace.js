@@ -350,6 +350,13 @@ export function createSelectionWorkspaceRouter(
         layout.version = 39;
         await putConfig("layout", layout);
       }
+      if ((layout.version || 0) < 40) {
+        layout.ratio = 72;
+        const basic = layout.groups.find(g => g.id === 'basic');
+        if (basic) basic.label = '商品信息';
+        layout.version = 40;
+        await putConfig('layout', layout);
+      }
       layout.fields = layout.fields.filter((f) =>
         fields.some((x) => x.id === f.id),
       );
@@ -373,6 +380,7 @@ export function createSelectionWorkspaceRouter(
           .filter((r) => r.enabled)
           .map((r) => ({ method: r.method, fulfillment: r.fulfillment })),
         itemAttributes: s.itemAttributes || [],
+        platformPolicies: s.platformPolicies || {},
         uploadPolicy,
         fields,
         layout,
@@ -813,8 +821,8 @@ export function createSelectionWorkspaceRouter(
     await c.query(
       "SELECT pg_advisory_xact_lock(hashtext('selection-number-flow'))",
     );
-    const data = validateData({ ...input, item_code: undefined }, s);
     let previous = id ? await row(req, id, c, true) : null;
+    const data = validateData(input, s, {existingData: previous?.selection_workspace.data});
     if (previous?.selection_workspace.status === "number_pending") {
       if (
         (
@@ -830,7 +838,7 @@ export function createSelectionWorkspaceRouter(
         [id],
       );
     }
-    if (previous?.selection_workspace.data.item_code)
+    if (previous?.selection_workspace.formalNumber?.code || ["confirmed", "submitted"].includes(previous?.selection_workspace.status))
       data.item_code = previous.selection_workspace.data.item_code;
     const sourceReview = await checkPurchaseSource(c, data, id, s);
     if (previous && previous.record_version !== Number(version))
@@ -1097,7 +1105,7 @@ export function createSelectionWorkspaceRouter(
           if (action === "confirm") {
             if (r.archived_at || r.selection_workspace.status === "submitted")
               fail("此状态不能确认选品", 409);
-            const data = validateData(r.selection_workspace.data, s);
+            const data = validateData(r.selection_workspace.data, s, {existingData: r.selection_workspace.data});
             const issues = confirmationIssues(data, s);
             if (issues.length) fail(issues.map((i) => i.message).join("；"));
             const pricing = await calculate(data, s);
@@ -1130,6 +1138,8 @@ export function createSelectionWorkspaceRouter(
           }
           if (action === "submit") {
             if (r.archived_at) fail("已归档记录不能提交");
+            if (!["confirmed", "submitted"].includes(r.selection_workspace.status))
+              fail("请先确认选品并完成ERP货号校验，再提交建档", 409);
             if (!r.selection_workspace.data.item_code)
               fail("正式货号待生成，不能正式建档", 409);
             await checkPurchaseSource(c, r.selection_workspace.data, r.id, s);
@@ -1142,6 +1152,7 @@ export function createSelectionWorkspaceRouter(
               fail("ERP正式商品查重待复核，请恢复连接后提交", 409);
             const data = validateData(r.selection_workspace.data, s, {
               submit: true,
+              existingData: r.selection_workspace.data,
             });
             const allAssets = (
               await c.query(

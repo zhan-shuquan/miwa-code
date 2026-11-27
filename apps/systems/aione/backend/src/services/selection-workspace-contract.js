@@ -2,6 +2,7 @@ import { specifications } from './selection-specifications.js';
 // Stable mappings are contracts, not editable layout or duplicated business options.
 export const BINDINGS = {
   item_code: ["basic", "text"],
+  custom_miwa_selection_notes: ["basic", "textarea"],
   item_name: ["basic", "text"],
   item_group: ["basic", "select"],
   brand: ["basic", "select"],
@@ -26,7 +27,7 @@ export const BINDINGS = {
 export const GROUPS = [
   { id: "sales", label: "销售方案", icon: "store", region: "aside" },
   { id: "source", label: "采购来源", region: "main", hidden: true },
-  { id: "basic", label: "商品基本信息", icon: "product", region: "main" },
+  { id: "basic", label: "商品信息", icon: "product", region: "main" },
   { id: "specifications", label: "商品规格", icon: "product", region: "main" },
   { id: "market", label: "市场调研与选品依据", icon: "search", region: "main" },
   { id: "purchase", label: "选品决策", region: "main" },
@@ -69,6 +70,7 @@ export function parameterFacts(snapshot) {
       brands: snapshot.brands,
       itemAttributes: snapshot.itemAttributes,
       platforms: snapshot.platforms,
+      platformPolicies: snapshot.platformPolicies,
       uoms: snapshot.uoms,
       priceLists: snapshot.priceLists,
       rule: snapshot.rules.sha256,
@@ -115,7 +117,6 @@ export function fieldsFor(snapshot) {
         options,
         optionLabels: id === "stock_uom" ? { Nos: "个" } : undefined,
         readOnly: [
-          "item_code",
           "custom_库存类型",
           "item_group",
           "brand",
@@ -257,6 +258,7 @@ export function defaultLayout(fields) {
     "custom_库存类型",
     "item_group",
     "brand",
+    "custom_miwa_selection_notes",
     "custom_国际物流方式",
     "custom_中国包装方式",
     "custom_日本包装物",
@@ -279,6 +281,7 @@ export function defaultLayout(fields) {
           ? "operations"
           : f.group;
   const placements = {
+    custom_miwa_selection_notes: [12, 1, 1],
     images: [4, 1, 3],
     item_code: [4, 5, 1],
     custom_主要材质1: [4, 9, 1],
@@ -293,8 +296,8 @@ export function defaultLayout(fields) {
     custom_中国国内运费: [4, 5, 1],
   };
   return {
-    version: 39,
-    ratio: 65,
+    version: 40,
+    ratio: 72,
     groups: structuredClone(GROUPS),
     fields: [...fields]
       .sort(
@@ -388,7 +391,7 @@ export function validateLayout(layout, fields) {
   }
   return layout;
 }
-export function validateData(input, snapshot, { submit = false } = {}) {
+export function validateData(input, snapshot, { submit = false, existingData = {} } = {}) {
   input = applyDefaults(input, snapshot);
   const fields = fieldsFor(snapshot),
     data = {};
@@ -409,7 +412,8 @@ export function validateData(input, snapshot, { submit = false } = {}) {
       data[f.id] = String(value)
         .trim()
         .slice(0, f.type === "textarea" ? 20000 : 2000);
-      if (f.type === "select" && !f.options.includes(data[f.id]))
+      if (f.type === "select" && !f.options.includes(data[f.id]) &&
+          !(f.id === 'salesPlatform' && data[f.id] === existingData.salesPlatform))
         fail(f.label + "不属于ERP有效选项");
     }
   }

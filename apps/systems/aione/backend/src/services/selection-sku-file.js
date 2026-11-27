@@ -57,7 +57,16 @@ export function parseSupplierFile(bytes,sourceUrl,filename='sku.csv',snapshot={}
  if(body.length>500)fail('SKU表格超过500行，请核对后分批录入');
  const product=String(sourceUrl||'').match(/detail\.1688\.com\/offer\/(\d+)\.html/)?.[1];
  const seen=new Map(),warnings=new Set();
- const cell=(row,k)=>positions[k]<0?'':String(row[positions[k]]??'').trim();
+ const cell=(row,k)=>{
+  const value=positions[k]<0?'':String(row[positions[k]]??'').trim();
+  // 1688 CSV exports protect numeric cells as ="123". Decode only a literal
+  // numeric/empty value; never evaluate spreadsheet expressions or functions.
+  if(['product','id','cost','weight','quantity','price','stock','calculated'].includes(k)){
+   const literal=value.match(/^="([0-9.,~～—–至\s-]*)"$/);
+   if(literal)return literal[1].trim();
+  }
+  return value;
+ };
  const numeric=(value,label,line)=>{
   if(!value)return null;
   if(label==='采购价'||label==='cost'){
