@@ -1,6 +1,43 @@
 # Product file synchronization — implementation checkpoint
 
-Status: in progress, not formal acceptance. ERP 8081 remains the sole business backend.
+Status: deployed; acceptance completed in the scopes below, with explicit remaining limitations. ERP 8081 remains the sole business backend.
+
+## CURRENT — 2026-11-27, 21:13 JST
+
+This section supersedes the earlier chronological checkpoints below. They remain evidence of the rollout, not current configuration.
+
+- AIONE code commit `d87d137`, ERP commit `64e9a52`. Frontend production `dpl_5PL4Ycpp4myu8jJY6hZzx5p8B1wN` serves the existing `https://aione.miwa-happyhouse.com/` domain. Both changed public JavaScript files match the reviewed source SHA256. No unrelated authentication working-tree changes were deployed.
+- Cloud Run `aione-backend-current-00311-qav` serves 100%, image `sha256:55b8e8cd883ccfa4a0277a593e8d0a03a5b0f4ece784e705620aaada0f4063b3`. Previous `00309-cam` and frontend `dpl_6PnSW7ygVErvs1NJcSDcrrHF3dSm` retained for rollback. No new database migration in this recognition/UI fix.
+- ERP name module deployed through `deploy-existing.py` and `product-name-20261127.json`. Identification snapshot hash `1d9eacc16a9331ff0d9c8d4e3fb39c1674f735b0167d89906ac65318ae7305e1` is pinned in the formal backend. Cost functions/hashes unchanged.
+- Name recognition now distinguishes blank values from manually confirmed names, preserves manual edits and prior valid names on failed identification, and displays the returned name immediately. ERP conservative product-family rules were extended, without hardcoding product IDs. Unknown/ambiguous titles still require review; this is not a claim of universal title recognition.
+- Existing authenticated administrator 86000: real zsq116 title automatically returned `抹布`; saved as version 12 and persisted after reload. Two SKU reference images and supplier IDs remained visible; the extra image URL inputs were removed while their backing data/import mapping was retained. Real costs and ERP connected state were visible.
+- Isolated ordinary-employee browser: recognition, manual-name protection, save/reload passed. API tests covered four product families, unknown-name review and cross-user access denial. ERP regression: 17 suites, 197 tests passed.
+- zsq116 currently has two SKU rows but zero specification attributes. No confirmation, reservation, formal intake or fabricated attributes were performed for that record. zsq115 formal intake/file replay evidence below remains valid.
+
+### WPS and Drive
+
+- Existing WPS official bidirectional product-root mapping preserved. Cloud rename propagated to local. A new cloud-uploaded `MIWA_WPS云端新增验收_20261127.txt` automatically arrived in the real zsq115 directory; original and returned SHA256 both `7a1cd9416235abf2dc9af21d56213083ad056fff2f853e57b3018a1b97d652c8`. Existing six business files retained.
+- Only Drive Desktop's product-root bidirectional mapping was disabled and saved. Other Drive settings/permissions and cloud files retained. A cloud-only acceptance file did not appear locally.
+- Official rclone 1.76.0 uses the separately approved desktop OAuth client `MIWA Product Backup rclone`, owner info@miwa-happyhouse.com, existing product root `1XfPNNilejBCGOKG7pKDnuv3EK1dG_EJA`. Credentials remain outside Git in the private deployment directory.
+- `copy-product-drive.ps1` implements local-to-Drive **copy**, never sync/delete/reverse download. Changed cloud copies are retained in `_MIWA_BACKUP_VERSIONS`; each run first makes an independent versioned local copy at `D:\MIWA-ERP\backups\product-files`. Two-minute minimum file age and temporary-file exclusions avoid recently changing/incomplete files. Mutex and IgnoreNew avoid parallel runs. Failures preserve receipts and retry on subsequent scheduled runs.
+- Windows task `MIWA-Products-GoogleDrive-OneWay`: every five minutes plus current-user logon, limited privileges, hidden process. Requires the logged-in Windows session; unattended cold boot without login has NOT been verified.
+- First actual copy exited 0, transferred 41 files / 28.437 MiB and retained 18 previous cloud versions. Independent local backup completed 20,264 files / 12.121 GiB outside both cloud roots. Subsequent scheduled run completed successfully. Seven zsq115 files matched remote checksums before the two later test files; their end-to-end result is recorded separately below when completed.
+- Historical Unicode-equivalent duplicate filenames were reported by rclone (13 notices in one run). No historical names were deduplicated, deleted or renumbered. Script reports `copy-complete-with-warnings`; exit zero does not mean complete historical-tree parity.
+- Google OAuth project remains External/Testing: Drive refresh authorization can expire after seven days. Publishing production requires the pending specific user approval. Homepage was prepared but not saved; existing website clients/domains unchanged. Reference: https://developers.google.com/identity/protocols/oauth2?hl=en
+
+### Remaining acceptance / operational boundaries
+
+- Complete the two newest test-file transfers on the next stable-age scheduled run and checksum comparison.
+- Google OAuth production publishing awaits authorization; do not represent current seven-day testing credentials as unattended permanent access.
+- Ordinary employees' WPS cloud ACL/access and real Google logout/login were not re-verified in this run. Existing permissions were preserved, not broadened. An additional formal Google login tab remained loading; existing 86000 session worked.
+- Network interruption and cold-boot recovery have not been physically tested. Retry configuration is present, but is not a substitute for those tests.
+- No paid image generation, actual listing, outbound mail, purchase, 8080 change, historical SKU/code change, or cost-formula change.
+
+### Current rollback
+
+Stop `MIWA-Products-GoogleDrive-OneWay` before changing sync configuration. Keep independent `current`/`versions`, cloud versions and all business files. Do not reactivate Drive Desktop bidirectional product sync while rclone is active. Roll back AIONE release pointers to the retained frontend/backend, and ERP naming through the deployment plan's `--rollback` after validating its backup hash. Keep migration 0205, new business rows, generated files and connector receipts; never restore an old full database over new business data.
+
+## Historical rollout evidence (superseded where CURRENT differs)
 
 ## Locked business contract
 
