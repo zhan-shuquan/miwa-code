@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import ExcelJS from 'exceljs';
+import { parseIntakeWorkbook } from '../src/services/selection-intake-contract.js';
+
+const book = new ExcelJS.Workbook();
+const sheet = book.addWorksheet('选品库');
+sheet.addRow(['商品标题','商品ID','商品链接','商品价格','平台']);
+sheet.addRow(['商品甲','123456',{text:'打开商品',hyperlink:'https://detail.1688.com/offer/123456.html'},'￥12.50','1688']);
+sheet.addRow(['商品乙','234567','', '8-12','1688']);
+sheet.addRow(['商品丙','345678','', '', '其他平台']);
+const image = book.addImage({buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5V8AAAAASUVORK5CYII=','base64'),extension:'png'});
+sheet.addImage(image,{tl:{col:5,row:1},ext:{width:20,height:20}});
+const { rows } = await parseIntakeWorkbook(await book.xlsx.writeBuffer(),'原始选品库.xlsx');
+assert.equal(rows.length,3);
+assert.equal(rows[0].source.platformId,'123456');
+assert.equal(rows[0].referencePrice,12.5);
+assert.equal(rows[0].images.length,1);
+assert.equal(rows[1].source.url,'https://detail.1688.com/offer/234567.html');
+assert.equal(rows[1].referencePrice,null);
+assert.equal(rows[1].sourceFacts.referencePrice,'8-12');
+assert.ok(rows[1].warning);
+assert.equal(rows[1].error,undefined);
+assert.equal(rows[2].source,null,'不能把其他平台商品ID推断为1688商品');
+console.log('PASS: 原始列名、超链接、嵌入图、明确平台ID补链接、价格区间保留及跨平台保护');

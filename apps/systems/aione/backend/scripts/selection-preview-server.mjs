@@ -13,8 +13,10 @@ const root = resolve(here, "../../../../.."),
   appRoot = resolve(here, "../..");
 if (process.env.NODE_ENV === "production")
   throw Error("Isolated preview cannot run in production");
+const testPort = process.env.AIONE_TEST_DB_PORT || '55432';
+if (!['55432','15432'].includes(testPort)) throw Error('Unsupported isolated database port');
 const connectionString =
-  "postgres://aione_test:isolated-local-test-only@127.0.0.1:55432/aione_selection";
+  `postgres://aione_test:isolated-local-test-only@127.0.0.1:${testPort}/aione_selection`;
 // Never inherit a developer's production DATABASE_URL in this test launcher.
 const pool = new pg.Pool({ connectionString });
 // A minimal fresh test fixture with the existing canonical object's column contract.
@@ -49,6 +51,9 @@ await pool.query(
 await pool.query(
   "CREATE TABLE IF NOT EXISTS work_items(id TEXT PRIMARY KEY,title TEXT NOT NULL,work_type TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',owner_person_id TEXT,created_by_person_id TEXT,related_object_type TEXT,related_object_id TEXT,metadata JSONB NOT NULL DEFAULT '{}',created_at TIMESTAMPTZ NOT NULL DEFAULT now(),updated_at TIMESTAMPTZ NOT NULL DEFAULT now())",
 );
+await pool.query("ALTER TABLE work_items ADD COLUMN IF NOT EXISTS responsible_person_id TEXT, ADD COLUMN IF NOT EXISTS assigned_by_person_id TEXT, ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ");
+await pool.query("CREATE TABLE IF NOT EXISTS work_evidence(id TEXT PRIMARY KEY,person_id TEXT,related_object_type TEXT,related_object_id TEXT,evidence_type TEXT NOT NULL,action_code TEXT,happened_at TIMESTAMPTZ NOT NULL DEFAULT now(),result_code TEXT,summary TEXT,payload JSONB NOT NULL DEFAULT '{}',created_at TIMESTAMPTZ NOT NULL DEFAULT now())");
+await pool.query("ALTER TABLE work_evidence ADD COLUMN IF NOT EXISTS work_item_id TEXT");
 await pool.query(await readFile(resolve(root,'data-code/migrations/0202_employee_master_cache.sql'),'utf8'));
 await pool.query(await readFile(resolve(root,'data-code/migrations/0203_selection_upload_transport.sql'),'utf8'));
 await pool.query(await readFile(resolve(root,'data-code/migrations/0204_selection_provenance.sql'),'utf8'));
@@ -72,6 +77,8 @@ try {
 const snapshot = JSON.parse(
   await readFile(resolve(root, ".local/erp-snapshot.json"), "utf8"),
 );
+if (process.env.AIONE_TEST_CHANNELS === '1')
+  snapshot.selectionChannels = JSON.parse(await readFile(resolve(root,'.local/pool-v2-channels.json'),'utf8'));
 snapshot.version = createHash("sha256")
   .update(parameterFacts(snapshot))
   .digest("hex");
@@ -80,6 +87,8 @@ await pool.query(
   "INSERT INTO selection_workspace_config(key,value) VALUES('erp',$1) ON CONFLICT(key) DO NOTHING",
   [JSON.stringify(snapshot)],
 );
+if (process.env.AIONE_TEST_CHANNELS === '1')
+  await pool.query("UPDATE selection_workspace_config SET value=jsonb_set(value,'{selectionChannels}',$1::jsonb) WHERE key='erp'", [JSON.stringify(snapshot.selectionChannels)]);
 const app = express(),
   sessions = new Map();
 app.disable("x-powered-by");

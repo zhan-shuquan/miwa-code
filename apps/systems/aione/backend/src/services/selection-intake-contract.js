@@ -28,14 +28,16 @@ export function sourceIdentity(raw) {
     if (tracking.test(key)) u.searchParams.delete(key);
   u.searchParams.sort();
   const instagram = /(^|\.)instagram\.com$/.test(u.hostname),
-    tiktok = /(^|\.)tiktok\.com$/.test(u.hostname);
+    tiktok = /(^|\.)tiktok\.com$/.test(u.hostname),
+    xiaohongshu = /(^|\.)(xiaohongshu\.com|xhslink\.com)$/.test(u.hostname),
+    douyin = /(^|\.)douyin\.com$/.test(u.hostname);
   const platform = ali
     ? "1688"
     : instagram
       ? "Instagram"
       : tiktok
         ? "TikTok"
-        : u.hostname;
+        : xiaohongshu ? "小红书" : douyin ? "抖音" : u.hostname;
   const platformId = instagram
     ? u.pathname.match(/\/(?:p|reel|tv)\/([^/]+)/)?.[1]
     : tiktok
@@ -48,8 +50,8 @@ export function sourceIdentity(raw) {
     key: platformId
       ? platform.toLowerCase() + ":" + platformId
       : "url:" + fingerprint(u.href),
-    kind: instagram || tiktok ? "market" : ali ? "purchase" : "reference",
-    sns: instagram || tiktok,
+    kind: instagram || tiktok || xiaohongshu || douyin ? "market" : ali ? "purchase" : "reference",
+    sns: instagram || tiktok || xiaohongshu || douyin,
   };
 }
 export function parseShareText(raw) {
@@ -107,10 +109,10 @@ export function parseShareText(raw) {
 }
 const aliases = {
   title: ["商品标题", "商品名称", "标题"],
-  url: ["商品链接", "来源链接", "链接"],
-  platformId: ["商品ID", "商品id", "offerId"],
+  url: ["商品链接", "来源链接", "链接", "采购链接", "宝贝链接"],
+  platformId: ["商品ID", "商品id", "offerId", "宝贝ID"],
   image: ["图片地址", "商品图片", "图片URL", "主图链接"],
-  referencePrice: ["加入时价格（人民币）", "商品价格", "加入时价格", "价格"],
+  referencePrice: ["加入时价格（人民币）", "商品价格", "加入时价格", "价格", "参考采购价格"],
   monthlySales: ["月销量", "月销售量"],
   platform: ["平台", "来源平台"],
   supplier: ["店铺名称", "供应商"],
@@ -123,7 +125,7 @@ const text = (v) =>
   v == null
     ? ""
     : typeof v === "object"
-      ? (v.text ?? v.hyperlink ?? v.richText?.map((t) => t.text).join("") ?? "")
+      ? String(v.text ?? v.hyperlink ?? v.richText?.map((t) => t.text).join("") ?? v.result ?? "")
       : String(v);
 export async function parseIntakeWorkbook(bytes, filename, mapping = {}) {
   const book = new ExcelJS.Workbook();
@@ -142,13 +144,13 @@ export async function parseIntakeWorkbook(bytes, filename, mapping = {}) {
         .getRow(n)
         .values.some(
           (v) =>
-            aliases.title.includes(text(v)) || aliases.url.includes(text(v)),
+            aliases.title.includes(String(text(v)).trim()) || aliases.url.includes(String(text(v)).trim()),
         )
     ) {
       header = n;
       break;
     }
-  const headers = sheet.getRow(header).values.map(text),
+  const headers = sheet.getRow(header).values.map(v => String(text(v)).trim()),
     indices = {};
   for (const [key, names] of Object.entries(aliases))
     indices[key] = headers.findIndex((h) =>
@@ -175,20 +177,23 @@ export async function parseIntakeWorkbook(bytes, filename, mapping = {}) {
       get = (k) => (indices[k] > 0 ? row.getCell(indices[k]).value : null);
     if (!row.hasValues && !embedded.has(n)) continue;
     try {
-      const rawUrl = text(get("url")),
-        source = rawUrl ? sourceIdentity(rawUrl) : null;
+      // Excel hyperlinks often display a product title rather than the target URL.
+      const urlCell = get("url"),
+        rawUrl = String(urlCell?.hyperlink || text(urlCell)).trim(),
+        platformId = text(get("platformId")).trim(),
+        platform = text(get("platform")).trim(),
+        inferredUrl = !rawUrl && /^\d+$/.test(platformId) && /^(1688|阿里巴巴|1688阿里巴巴)$/i.test(platform)
+          ? `https://detail.1688.com/offer/${platformId}.html` : rawUrl,
+        source = inferredUrl ? sourceIdentity(inferredUrl) : null;
       const rawPrice = text(get("referencePrice")).replace(/[,￥¥\s]/g, "");
-      if (
-        rawPrice &&
-        (!Number.isFinite(Number(rawPrice)) || Number(rawPrice) < 0)
-      )
-        throw Error("参考采购价格无效");
+      const validPrice = rawPrice !== "" && Number.isFinite(Number(rawPrice)) && Number(rawPrice) >= 0;
       rows.push({
         line: n,
         title: text(get("title")),
         source,
         rawShare: text(get("note")),
-        referencePrice: rawPrice ? Number(rawPrice) : null,
+        referencePrice: validPrice ? Number(rawPrice) : null,
+        ...(rawPrice && !validPrice ? { warning: "参考采购价格不是单一有效金额，原值已保留，待补充" } : {}),
         sourceFacts: Object.fromEntries(
           [
             "platformId",
@@ -200,6 +205,7 @@ export async function parseIntakeWorkbook(bytes, filename, mapping = {}) {
             "tags",
             "note",
             "image",
+            "referencePrice",
           ].map((k) => [
             k,
             get(k) instanceof Date ? get(k).toISOString() : text(get(k)),

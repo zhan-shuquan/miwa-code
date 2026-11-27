@@ -1051,7 +1051,7 @@
 /* Pool uses the same workspace tokens, controls and image surface. */
 .sp .sp-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+  grid-template-columns: repeat(var(--sp-columns, 6), minmax(0, 1fr));
   gap: var(--sw-space);
 }
 .sp .sp-card {
@@ -1104,6 +1104,23 @@
   padding: var(--sw-space);
   border-radius: 6px;
 }
+.sp .sp-quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sw-space);
+}
+.sp .sp-sources summary { cursor: pointer; font-weight: 600; }
+.sp .sp-sources h3 { font-size: 13px; color: var(--text-secondary); }
+.sp .sp-source-links { display: flex; flex-wrap: wrap; gap: var(--sw-space); }
+.sp .sp-source-links a { display: inline-flex; align-items: center; gap: 6px; color: inherit; text-decoration: none; padding: 6px; }
+.sp .sp-platform-icon { display: inline-flex; justify-content: center; align-items: center; min-width: 28px; height: 28px; border: 1px solid var(--sw-border); border-radius: 6px; font-weight: 600; }
+.sp .sp-image:not(:has(img)) {
+  aspect-ratio: auto;
+  min-height: 40px;
+}
+@media (min-width: 601px) and (max-width: 1000px) {
+  .sp .sp-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 .sp .sp-staged {
   display: flex;
   gap: var(--sw-space);
@@ -1153,6 +1170,7 @@
   max-width: min(90vw, 900px);
 }
 @media (max-width: 600px) {
+  .sp .sp-quick-grid { grid-template-columns: 1fr; }
   .sp .sp-cards {
     grid-template-columns: 1fr;
   }

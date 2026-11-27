@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { recordSelectionWork } from '../services/selection-workflow.js';
 import { randomUUID } from "node:crypto";
 import { fail } from "../services/selection-workspace-contract.js";
 import { syncResearchTask } from "../services/selection-pool-service.js";
@@ -136,6 +137,8 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
             [r.id, JSON.stringify(r.selection_workspace)],
           );
           await syncResearchTask(c, r, job.payload.actor);
+          await recordSelectionWork(c, r, 'confirm-selection', { personId: job.payload.actor,
+            detail: { itemCode: result.code, completionBy: 'system', status: 'completed' } });
           await requestProductFiles(c, r, job.payload.actor);
           await c.query(
             "INSERT INTO selection_workspace_events(selection_id,actor_id,action,version,detail) VALUES($1,$2,'erp-formal-number',$3,$4)",

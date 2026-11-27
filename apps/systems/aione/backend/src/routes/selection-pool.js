@@ -23,6 +23,7 @@ import {
 import { uploadPolicy } from "../services/selection-upload-policy.js";
 import { imageDerivative } from "../services/selection-image-preview.js";
 import { fail, applyDefaults } from "../services/selection-workspace-contract.js";
+import { selectionStage } from "../services/selection-workflow.js";
 
 export function createSelectionPoolRouter({
   pool,
@@ -53,12 +54,13 @@ export function createSelectionPoolRouter({
     if (!(await grants(req))[key]) fail("没有此选品池操作权限", 403);
   };
   const publicView = (r) => ({
+    stage: selectionStage(r),
     id: r.id,
     selectionNo: r.selection_no,
     title:
       r.title ||
       r.selection_workspace.data.custom_商品长标题中文 ||
-      r.selection_workspace.pool?.rawShare?.slice(0, 120) ||
+      r.selection_workspace.pool?.rawShare?.replace(/https?:\/\/\S+/g, '').trim().slice(0, 120) ||
       "图片选品",
     source: r.selection_workspace.pool?.source,
     referencePrice: r.selection_workspace.pool?.referencePrice,
@@ -110,6 +112,10 @@ export function createSelectionPoolRouter({
         people,
         grantPeople: (admin(req.aioneIdentity) || g.manageGrants) ? await employees.eligible({includeUnassigned:true}) : [],
         identity: { memberId: person(req) || null },
+        channels: (s.selectionChannels || []).filter(ch => {
+          try { const u = new URL(ch.official_url); return u.protocol === 'https:' && !u.username && !u.password; }
+          catch { return false; }
+        }),
         uploadPolicy,
         importFields: [
           "title",
@@ -170,10 +176,17 @@ export function createSelectionPoolRouter({
     } else if (req.body.text !== undefined)
       rows = parseShareText(req.body.text);
     else if (Array.isArray(req.body.candidates))
-      rows = req.body.candidates.map((r) => ({
-        ...r,
-        source: r.source?.url ? sourceIdentity(r.source.url) : null,
-      }));
+      rows = req.body.candidates.map((r) => {
+        const shares = parseShareText(String(r.rawShare || ""));
+        const linked = shares.filter((s) => s.source);
+        const inferred = linked.length === 1 ? linked[0] : null;
+        return {
+          ...r,
+          title: r.title || inferred?.title || "",
+          source: r.source?.url ? sourceIdentity(r.source.url) : inferred?.source || null,
+          ...(linked.length > 1 ? { warning: "包含多个链接，已保留分享原文和图片，请补充该商品的准确来源" } : {}),
+        };
+      });
     else fail("请提供分享内容、图片或导入文件");
     if (!rows.length || rows.length > 500) fail("每次收集1至500条机会");
     for (const row of rows) {
@@ -285,16 +298,17 @@ export function createSelectionPoolRouter({
             Number(row.referencePrice) < 0)
         )
           row.error = "参考采购价格无效";
-        if (row.source?.platform === "1688" && get1688RuntimeStatus().ready) {
+        if (row.source?.platform === "1688" && get1688RuntimeStatus().ready &&
+            (!row.title || (!row.images?.length && !row.sourceFacts?.image) || row.referencePrice == null)) {
           try {
             const { product } = await fetch1688ProductByUrl(row.source.url);
-            row.title = product.title || row.title;
+            row.title ||= product.title;
             row.referencePrice ??= product.purchasePrice;
             row.sourceFacts = {
               ...row.sourceFacts,
               recognizedAt: product.fetchedAt,
-              image: product.mainImage,
-              supplier: product.supplier?.name,
+              image: row.sourceFacts?.image || product.mainImage,
+              supplier: row.sourceFacts?.supplier || product.supplier?.name,
             };
           } catch (e) {
             row.sourceFacts = {
@@ -344,7 +358,9 @@ export function createSelectionPoolRouter({
             });
           }
         } catch (e) {
-          row.error = e.message;
+          if (row.source || row.title || row.rawShare)
+            row.warning = [row.warning, '部分图片无法读取，已保留链接和可用资料：' + e.message].filter(Boolean).join('；');
+          else row.error = e.message;
         }
       }
       const result = await tx((c) =>
@@ -370,11 +386,15 @@ export function createSelectionPoolRouter({
               snapshot: await snapshot(),
             });
             await registerKeys(c, a.keys, r.id);
-            for (const [position, img] of row.prepared.entries())
+            await syncResearchTask(c, r, actor(req));
+            const originalAssetIds = [];
+            for (const [position, img] of row.prepared.entries()) {
+              const assetId = randomUUID();
+              originalAssetIds.push(assetId);
               await c.query(
                 "INSERT INTO selection_workspace_assets(id,selection_id,filename,content_type,bytes,sha256,position) VALUES($1,$2,$3,$4,$5,$6,$7)",
                 [
-                  randomUUID(),
+                  assetId,
                   r.id,
                   img.filename,
                   img.contentType,
@@ -383,6 +403,11 @@ export function createSelectionPoolRouter({
                   position,
                 ],
               );
+            }
+            r.selection_workspace.pool.originalAssetIds = originalAssetIds;
+            if (row.source?.kind !== 'purchase') r.selection_workspace.researchAssetIds = originalAssetIds;
+            await c.query('UPDATE product_opportunities SET selection_workspace=$2 WHERE id=$1',
+              [r.id, JSON.stringify(r.selection_workspace)]);
             await event(c, req, r, "pool-collect", {
               source: row.source?.platform || "image",
             });
@@ -391,6 +416,9 @@ export function createSelectionPoolRouter({
               ...publicView(r),
               reason:
                 [
+                  row.warning,
+                  !row.title ? "商品标题待补充" : null,
+                  !row.prepared.length ? "商品图片待补充" : null,
                   row.sourceFacts?.imageWarning,
                   row.sourceFacts?.recognitionWarning,
                 ]
@@ -470,6 +498,21 @@ export function createSelectionPoolRouter({
         ? 10000
         : Math.min(100, Math.max(1, Number(q.limit) || 24)),
       offset = exporting ? 0 : Math.max(0, Number(q.offset) || 0);
+    const stageCounts = {};
+    if (!exporting) {
+      const facts = (await pool.query(`SELECT owner_person_id,archived_at,
+        jsonb_build_object('status',selection_workspace->'status',
+          'pool',(selection_workspace->'pool') - 'rawShare' - 'sourceFacts',
+          'erpResult',selection_workspace->'erpResult',
+          'pricing',jsonb_build_object('verified',selection_workspace->'pricing'->'verified','status',selection_workspace->'pricing'->'status'),
+          'data',jsonb_build_object('sourceUrl',selection_workspace->'data'->'sourceUrl','item_name',selection_workspace->'data'->'item_name','skus',selection_workspace->'data'->'skus')) AS selection_workspace
+        FROM product_opportunities WHERE ${where}`, values)).rows;
+      for (const fact of facts) {
+        const stage = selectionStage(fact);
+        stageCounts[stage.code] ||= { ...stage, count: 0 };
+        stageCounts[stage.code].count++;
+      }
+    }
     const rows = (
       await pool.query(
         `SELECT *, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.created_by_person_id) AS selector_name, (SELECT display_name FROM ${employeeTable} WHERE id=product_opportunities.owner_person_id) AS owner_name FROM product_opportunities WHERE ${where} ORDER BY ${sorts[q.sort] || "created_at"} ${q.direction === "asc" ? "ASC" : "DESC"} NULLS LAST,selection_date DESC,length(selection_no) DESC,selection_no DESC,id LIMIT ${bind(limit)} OFFSET ${bind(offset)}`,
@@ -480,10 +523,10 @@ export function createSelectionPoolRouter({
       r.assets = (
         await pool.query(
           "SELECT id,filename FROM selection_workspace_assets WHERE selection_id=$1 AND NOT (id::text IN (SELECT jsonb_array_elements_text(COALESCE($2::jsonb,'[]')))) ORDER BY position,created_at",
-          [r.id, JSON.stringify(r.selection_workspace.researchAssetIds || [])],
+          [r.id, JSON.stringify((r.selection_workspace.researchAssetIds || []).filter(id => !(r.selection_workspace.pool?.originalAssetIds || []).includes(id)))],
         )
       ).rows;
-    return { items: rows.map(publicView), total, limit, offset };
+    return { items: rows.map(publicView), total, limit, offset, stageCounts: Object.values(stageCounts) };
   }
   router.get(
     "/records",
@@ -546,7 +589,7 @@ export function createSelectionPoolRouter({
           [r.id, req.params.asset],
         )
       ).rows[0];
-      if (!a || (r.selection_workspace.researchAssetIds || []).includes(a.id))
+      if (!a || ((r.selection_workspace.researchAssetIds || []).includes(a.id) && !(r.selection_workspace.pool?.originalAssetIds || []).includes(a.id)))
         fail("图片不存在", 404);
       res
         .set("Cache-Control", "private,no-store")
@@ -621,6 +664,10 @@ export function createSelectionPoolRouter({
             fail("没有此记录操作权限", 403);
           const now = new Date().toISOString(),
             previousOwner = r.owner_person_id;
+          if (action === "assign" && previousOwner === owner && p.state === "assigned") {
+            out.push(publicView(r));
+            continue;
+          }
           if (["claim", "assign"].includes(action))
             ws.data = applyDefaults(ws.data || {}, await snapshot());
           if (action === "claim") {

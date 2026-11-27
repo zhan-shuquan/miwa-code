@@ -45,6 +45,9 @@ await pool.query(await readFile(resolve(root,'data-code/migrations/0201_selectio
 await pool.query(
   "CREATE TABLE IF NOT EXISTS work_items(id TEXT PRIMARY KEY,title TEXT NOT NULL,work_type TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',owner_person_id TEXT,created_by_person_id TEXT,related_object_type TEXT,related_object_id TEXT,metadata JSONB NOT NULL DEFAULT '{}',created_at TIMESTAMPTZ NOT NULL DEFAULT now(),updated_at TIMESTAMPTZ NOT NULL DEFAULT now())",
 );
+await pool.query("ALTER TABLE work_items ADD COLUMN IF NOT EXISTS responsible_person_id TEXT, ADD COLUMN IF NOT EXISTS assigned_by_person_id TEXT, ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ");
+await pool.query("CREATE TABLE IF NOT EXISTS work_evidence(id TEXT PRIMARY KEY,person_id TEXT,related_object_type TEXT,related_object_id TEXT,evidence_type TEXT NOT NULL,action_code TEXT,happened_at TIMESTAMPTZ NOT NULL DEFAULT now(),result_code TEXT,summary TEXT,payload JSONB NOT NULL DEFAULT '{}',created_at TIMESTAMPTZ NOT NULL DEFAULT now())");
+await pool.query("ALTER TABLE work_evidence ADD COLUMN IF NOT EXISTS work_item_id TEXT");
 await pool.query(await readFile(resolve(root,'data-code/migrations/0202_employee_master_cache.sql'),'utf8'));
 const backfill = await pool.connect();
 try {

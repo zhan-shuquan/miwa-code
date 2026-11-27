@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { allocateSelectionNo } from "./selection-number-service.js";
 import { sourceIdentity, fingerprint } from "./selection-intake-contract.js";
 import { fail, applyDefaults } from "./selection-workspace-contract.js";
+import { selectionStage } from './selection-workflow.js';
 export async function ensureSelectionNo(c, r) {
   if (r.selection_no) return r;
   const n = await allocateSelectionNo(c, new Date(), r.created_by_person_id, r.id);
@@ -138,6 +139,8 @@ export async function createOpportunity(c, { actor, candidate, snapshot }) {
   const data = {
     custom_商品长标题中文: candidate.title || "",
     sourceUrl: source?.kind === "purchase" ? source.url : "",
+    ...(source?.kind === "purchase" && candidate.referencePrice != null
+      ? { custom_单个采购价: candidate.referencePrice } : {}),
     referenceLinks: source && source.kind !== "purchase" ? [source.url] : [],
     referencePrices: [],
     skus: [],
@@ -180,14 +183,15 @@ export async function syncResearchTask(c, r, actor) {
     return { available: false, url: "#/product-home?view=pool&scope=mine" };
   const id = "selection-research:" + r.id,
     p = r.selection_workspace.pool || {};
+  const stage = selectionStage(r);
   const status =
-    r.archived_at || !r.owner_person_id || ["abandoned", "archived"].includes(p.state)
+    r.archived_at || ["abandoned", "archived"].includes(p.state)
       ? "cancelled"
-      : r.selection_workspace.status === "confirmed"
+      : stage.code === "erp_success"
         ? "completed"
-        : "pending";
+        : stage.code === "erp_processing" ? "waiting" : "pending";
   const title =
-    "选品研究－" +
+    stage.nextAction + "－" +
     r.selection_no +
     "－" +
     (r.selection_workspace.data.item_name ||
@@ -196,11 +200,16 @@ export async function syncResearchTask(c, r, actor) {
   const metadata = {
     url: "#/product-home?view=entry&id=" + encodeURIComponent(r.id),
     selectionNo: r.selection_no,
+    stage: stage.code,
+    nextAction: stage.nextAction,
+    assignmentStatus: r.owner_person_id ? 'assigned' : 'unassigned',
   };
   await c.query(
-    `INSERT INTO work_items(id,title,work_type,status,owner_person_id,created_by_person_id,related_object_type,related_object_id,metadata)
-    VALUES($1,$2,'selection_research',$3,$4,$5,'product_opportunity',$6,$7)
-    ON CONFLICT(id) DO UPDATE SET title=$2,status=$3,owner_person_id=$4,metadata=work_items.metadata||$7::jsonb,updated_at=now()`,
+    `INSERT INTO work_items(id,title,work_type,status,owner_person_id,responsible_person_id,assigned_by_person_id,created_by_person_id,related_object_type,related_object_id,metadata,completed_at)
+    VALUES($1,$2,'selection_research',$3,$4,$4,$8,$5,'product_opportunity',$6,$7,CASE WHEN $3='completed' THEN now() END)
+    ON CONFLICT(id) DO UPDATE SET title=$2,status=$3,owner_person_id=$4,responsible_person_id=$4,assigned_by_person_id=$8,
+      completed_at=CASE WHEN $3='completed' THEN COALESCE(work_items.completed_at,now()) END,
+      metadata=work_items.metadata||$7::jsonb,updated_at=now()`,
     [
       id,
       title,
@@ -209,8 +218,21 @@ export async function syncResearchTask(c, r, actor) {
       actor,
       r.id,
       JSON.stringify(metadata),
+      p.state === 'claimed' ? p.claimedBy : p.state === 'assigned' ? p.assignedBy : null,
     ],
   );
+  if (stage.code === 'erp_success') {
+    // Work-home handoff only: no design job, model call or publishing command.
+    await c.query(`INSERT INTO work_items
+      (id,title,work_type,status,related_object_type,related_object_id,metadata)
+      VALUES($1,$2,'selection_followup','pending','product_opportunity',$3,$4::jsonb)
+      ON CONFLICT(id) DO NOTHING`, [
+      'selection-followup:' + r.id, '待分配美工－' + (r.selection_workspace.data.item_code || r.selection_no), r.id,
+      JSON.stringify({ selectionNo:r.selection_no, itemCode:r.selection_workspace.data.item_code,
+        stage:'design_assignment', assignmentStatus:'unassigned', url:metadata.url,
+        automaticExecution:false }),
+    ]);
+  }
   return { available: true, id, url: metadata.url };
 }
 export async function requestFormalNumber(c, r, actor) {

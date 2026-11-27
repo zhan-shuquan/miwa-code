@@ -50,6 +50,9 @@ try:
         exchange=business_parameters['exchange'],
         priceLists={name:frappe.get_doc('Price List',name).as_dict() for name in [settings.purchase_price_list,settings.unit_price_list]})
     from miwa_ai.sku_identity import master_rows
+    snapshot['selectionChannels'] = frappe.get_all('MIWA Selection Channel',
+        filters={'enabled':1}, fields=['channel_code','channel_name','channel_group','official_url','source_kind','icon_text','entry_note','sort_order'],
+        order_by='sort_order asc, name asc') if frappe.db.exists('DocType','MIWA Selection Channel') else []
     snapshot['skuMaster'] = master_rows()
     print(json.dumps(snapshot, ensure_ascii=False, default=str))
 finally:
