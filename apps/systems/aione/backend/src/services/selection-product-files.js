@@ -10,10 +10,11 @@ export async function requestProductFiles(c, record, actor) {
   )).rows.filter(a => !(workspace.researchAssetIds || []).includes(a.id));
   const payload = {
     selectionId: record.id, selectionNo: record.selection_no, owner: record.owner_person_id,
-    status: workspace.status, data: workspace.data, assets, actor,
+    status: workspace.status, data: workspace.data, assets, actor,version:record.record_version,
+    erpSkus:workspace.erpResult?.skus || [],
     allowPublish: false, allowPaidAI: false, allowEmail: false,
   };
-  const signature = createHash('sha256').update(JSON.stringify({data:payload.data, assets})).digest('hex');
+  const signature = createHash('sha256').update(JSON.stringify({data:payload.data, assets,erpSkus:payload.erpSkus})).digest('hex');
   const job = (await c.query(
     `INSERT INTO selection_erp_commands(id,command_key,kind,selection_id,payload)
      VALUES($1,$2,'product_files',$3,$4)

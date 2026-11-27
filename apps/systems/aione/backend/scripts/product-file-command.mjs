@@ -52,7 +52,7 @@ export async function executeProductFiles(command, { erp, api }) {
     if(!existing)add(name,'reference',bytes);
   }
   add('aione-manifest.json','manifest',JSON.stringify({
-    selectionId:payload.selectionId,selectionNo:payload.selectionNo,itemCode:payload.data.item_code,
+    selectionId:payload.selectionId,selectionNo:payload.selectionNo,itemCode:payload.data.item_code,version:payload.version,
     data:payload.data,assets:files.map(({name,role,sha256})=>({name,role,sha256})),
     allowPublish:false,allowPaidAI:false,allowEmail:false,
   },null,2));
@@ -68,9 +68,9 @@ export async function executeProductFiles(command, { erp, api }) {
   }
   finally { await unlink(temporary).catch(e=>{if(e.code!=='ENOENT')throw e;}); }
   }
-  const result = await saveProductFiles(config, {
+  const result = await saveProductFiles({...config,stateRoot}, {
     selectionId:payload.selectionId, code:payload.data.item_code, prefix:config.prefix,
-    status:payload.status,reservationVerified:config.reservationVerified,files,
+    status:payload.status,version:payload.version,reservationVerified:config.reservationVerified,files,
   });
   if (result.state !== 'saved') return {status:'failed',result};
   const ack = await erp('erp-selection-product-files.py',{action:'acknowledge',payload,result});

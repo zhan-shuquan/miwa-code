@@ -28,12 +28,12 @@ Status: in progress, not formal acceptance. ERP 8081 remains the sole business b
 - ERP shared intake regression: 17 suites, 196 tests pass with network disabled.
 - ERP full backup: `20261127_192124-miwa-dev_localhost-*` (database, site config, public/private files).
 - ERP configuration module installed. `zsq115` reservation validates against its approved folder. `zsq116` has no ERP reservation: no number or folder was invented.
-- ERP native settings navigation has not yet displayed the new settings form successfully; no UI acceptance claim.
+- ERP native settings form verified in Chrome via global search `MIWA Folder Intake Settings`. Mapping and template fields display correctly; audit entry `0ktga8nb07` records the approved configuration. Screenshot: `.local/product-file-erp-settings.png`.
+- Managed workbook updates now keep immutable prior bytes outside cloud directories and reject externally edited files; tests pass. ERP intake success schedules the formal-SKU refresh without another user step.
+- Existing AutoDesign reader accepts the explicit ERP SKU column for manual rows without inventing supplier IDs. Targeted offline test and all 196 shared tests pass; deployed via the materials deployment plan.
 
 ## Outstanding before production AIONE rollout
 
-- Complete safe managed-file updates and post-intake SKU/path refresh; existing differing files currently stop with a conflict rather than overwrite.
-- Verify manual SKUs without supplier IDs in the existing AutoDesign workbook reader.
 - Configure permanent private connector spool path and package dependencies in an immutable release.
 - Apply migration 0205 only after cloud backup, deploy matching backend/connector versions, and verify real zsq115 file creation/readback.
 - Configure and verify Drive one-way copy; stop only the old product-folder bidirectional mapping once replacement and rollback are ready.

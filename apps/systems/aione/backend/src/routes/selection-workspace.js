@@ -268,8 +268,9 @@ export function createSelectionWorkspaceRouter(
         await c.query("UPDATE selection_erp_jobs SET status=$2,result=$3,lease_until=NULL,updated_at=now() WHERE id=$1",
           [job.id,b.status,JSON.stringify(b.result || {})]);
         if (job.payload.testOnly === false) {
-          await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(jsonb_set(selection_workspace,'{status}',to_jsonb($2::text)),'{erpResult}',$3::jsonb),updated_at=now() WHERE id=$1",
-            [job.selection_id,b.status === "succeeded" ? "submitted" : "confirmed",JSON.stringify(b.result || {})]);
+          const updated=(await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(jsonb_set(selection_workspace,'{status}',to_jsonb($2::text)),'{erpResult}',$3::jsonb),updated_at=now() WHERE id=$1 RETURNING *",
+            [job.selection_id,b.status === "succeeded" ? "submitted" : "confirmed",JSON.stringify(b.result || {})])).rows[0];
+          if(b.status==='succeeded')await requestProductFiles(c,updated,job.payload.owner);
         }
       });
       res.json({ ok: true });

@@ -10,6 +10,7 @@ $env:AIONE_CONNECTOR_ENV = 'production'
 $env:AIONE_PRODUCTION_CONNECTOR_APPROVED = '1'
 $env:AIONE_CLOUD_URL = $settings.origin
 $env:DOCKER_EXE = Join-Path $env:LOCALAPPDATA 'Programs/DockerDesktop/resources/bin/docker.exe'
+$env:AIONE_PRODUCT_FILE_STATE = if ($settings.productFileState) { $settings.productFileState } else { Join-Path (Split-Path -Parent $PrivateConfig) 'product-file-state' }
 Remove-Item Env:AIONE_CONNECTOR_TOKEN -ErrorAction SilentlyContinue
 Remove-Item Env:AIONE_CONNECTOR_ONCE -ErrorAction SilentlyContinue
 $nodePath = (Get-Command node -ErrorAction SilentlyContinue).Source

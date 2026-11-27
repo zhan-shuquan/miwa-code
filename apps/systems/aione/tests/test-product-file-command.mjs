@@ -30,7 +30,17 @@ try {
   assert.equal(acknowledgements,2);
   assert.deepEqual(await readFile(join(first.result.folder,'tst001.xlsx')),before);
   assert.deepEqual((await readdir(first.result.folder)).sort(),['123.jpg','SKU.xlsx','aione-manifest.json','tst001.xlsx'].sort());
-  console.log('PASS: complete flat bundle, supplier image persistence, repeat command uses identical cached XLSX bytes, ERP readback acknowledgement');
+  const updated=await executeProductFiles({id:randomUUID(),payload:{...payload,version:2,data:{...payload.data,custom_单个采购价:12}}},{erp,api});
+  assert.equal(updated.status,'succeeded');
+  assert.equal(updated.result.files.find(f=>f.name==='tst001.xlsx').state,'updated');
+  assert.deepEqual(await readFile(updated.result.files.find(f=>f.name==='tst001.xlsx').backup),before);
+  const userEdit=Buffer.from('external edit must survive');
+  await writeFile(join(first.result.folder,'tst001.xlsx'),userEdit);
+  const conflicted=await executeProductFiles({id:randomUUID(),payload:{...payload,version:3,data:{...payload.data,custom_单个采购价:20}}},{erp,api});
+  assert.equal(conflicted.status,'failed');
+  assert.equal(conflicted.result.state,'conflict');
+  assert.deepEqual(await readFile(join(first.result.folder,'tst001.xlsx')),userEdit);
+  console.log('PASS: flat bundle, supplier images, byte-identical retry, ERP acknowledgement, managed update backup, preservation of external edits');
 } finally {
   if(previous===undefined)delete process.env.AIONE_PRODUCT_FILE_STATE;else process.env.AIONE_PRODUCT_FILE_STATE=previous;
   await rm(root,{recursive:true,force:true});
