@@ -1,3 +1,4 @@
+import { arrangeProductInfo } from "../components/product-info-layout.js";
 import { businessWorkspaceHeader, selectionHeaderStatus } from "../components/business-workspace-header.js";
 import { mountSpecifications } from '../components/selection-specifications.js';
 import { mergeSavedDraft, serializeDraftSaves, rebaseDraft } from '../services/selection-draft-save.js';
@@ -484,7 +485,7 @@ export async function initSelectionWorkspace(host, forcedView) {
                   style +
                   '" title="点击添加、拖放或Ctrl+V粘贴；JPG/PNG/WebP；单张最多' +
                   boot.uploadPolicy.maxMB +
-                  'MB"><div class="sw-images" data-images></div><div class="sw-media-actions"><button type="button" data-add-images>添加 / 更换</button><button type="button" data-image-url-toggle aria-expanded="false">图片网址</button><button type="button" data-ai="白底图" disabled title="AI白底图尚未启用">AI白底图</button></div><div data-image-url-panel hidden><input type="url" data-image-url aria-label="商品图片网址" placeholder="https://…"><button type="button" data-image-url-read>读取图片</button></div><input data-upload type="file" accept="image/png,image/jpeg,image/webp" multiple hidden><small data-upload-status role="status"></small></section>'
+                  'MB"><div class="sw-images" data-images></div><div class="sw-media-actions"><button type="button" data-add-images>添加 / 更换</button><button type="button" data-image-url-toggle aria-expanded="false">图片网址</button><button type="button" data-remove-product>删除</button></div><div data-image-url-panel hidden><input type="url" data-image-url aria-label="商品图片网址" placeholder="https://…"><button type="button" data-image-url-read>读取图片</button></div><input data-upload type="file" accept="image/png,image/jpeg,image/webp" multiple hidden><small data-upload-status role="status"></small></section>'
                 );
               if (f.id === "custom_miwa_auxiliary_info") return `<details class="sw-field sw-text-field" style="${style}"><summary>辅助信息</summary><label for="sw-auxiliary">商品材质、尺寸、功能、工艺及供应商属性（非必填）</label><textarea id="sw-auxiliary" data-field="custom_miwa_auxiliary_info" rows="5">${esc(data[f.id] || "")}</textarea></details>`;
               if (f.type === "textarea")
@@ -578,6 +579,7 @@ export async function initSelectionWorkspace(host, forcedView) {
     let pricing = record?.pricing,
       timer,
       sequence = 0;
+    let auxiliaryUploading = Promise.resolve();
     const header = businessWorkspaceHeader({
       title: "选品录入",
       identity: '<span data-selection-number></span><span data-save-state></span><span data-selector></span><span data-owner></span>',
@@ -588,6 +590,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       tabs: `<button data-workspace-tab="entry" aria-pressed="true">${icon("product")}商品信息</button><button data-workspace-tab="specifications" aria-pressed="false">${icon("product")}商品规格</button><button data-workspace-tab="market" aria-pressed="false">${icon("search")}市场调研</button><button data-workspace-tab="sample" aria-pressed="false">${icon("product")}样品测试</button>`,
     });
     content.innerHTML = header + `<section class="sw-card" data-sample-panel hidden>样品测试 · 关联当前选品记录，具体规则待确认。</section>${formMarkup(boot.layout, data, "top")}<div class="sw-split" style="--sw-left:${boot.layout.ratio}%"><div>${formMarkup(boot.layout, data)}</div><aside class="sw-profit sw-card"><details class="sw-context-help"><summary>计算依据</summary><div data-calculation-context class="sw-context"></div></details><div data-reconciliation role="status"></div><div data-profit></div>${formMarkup(boot.layout, data, "aside")}</aside></div><details class="sw-card sw-workspace-history"><summary>修改记录 / ERP处理状态</summary><div data-history>${record?.erpResult?.stage === "item_created" ? `<p>ERP已建档：${esc(record.erpResult.itemCode)} · SKU数量：${esc(record.erpResult.skuCount)}</p><p>${(record.erpResult.skus || []).map(s=>esc(s.name)).join("、")}</p>` : ""}${(record?.events || []).map((e) => `<p>${esc(e.created_at)} · ${esc(e.actor_id)} · ${esc(e.action)}</p>`).join("") || "尚无修改记录"}${(record?.jobs || []).map((j) => `<p>ERP任务：${esc(j.status)} ${esc(j.result?.message || "")} ${j.status === "failed" ? `<button data-retry="${j.id}">重试</button>` : ""}</p>`).join("")}</div></details>`;
+    arrangeProductInfo(content, icon);
     const specificationsPanel = document.createElement("section");
     content.querySelector(".sw-split").before(specificationsPanel);
     const specificationsGroup = content.querySelector('[data-layout-group="specifications"]');
@@ -625,23 +628,6 @@ export async function initSelectionWorkspace(host, forcedView) {
         on(button, "click", () => switchWorkspace(button.dataset.workspaceTab)),
       );
     switchWorkspace("entry");
-    if (record?.pool) {
-      const inherited = document.createElement("details");
-      inherited.className = "sw-card";
-      inherited.innerHTML =
-        "<summary>原始选品资料</summary><p>选品人：" +
-        esc(record.selectorName) +
-        " · " +
-        esc(record.selector) +
-        "</p><p>参考采购价：" +
-        esc(record.pool.referencePrice ?? "待补充") +
-        "</p><p>" +
-        esc(record.pool.sourceFacts?.supplier || "") +
-        "</p><p>" +
-        esc(record.pool.rawShare || "") +
-        "</p>";
-      content.querySelector(".sw-workspace-header").after(inherited);
-    }
     const selectionLabel = content.querySelector('[data-selection-number]');
     const selectorLabel = content.querySelector('[data-selector]');
     const conclusion = content.querySelector('[data-workspace-status]');
@@ -1004,6 +990,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       content.querySelector("[data-confirm-selection]"),
       "click",
       guarded(async () => {
+        await auxiliaryUploading;
         const validation = await api("/confirmation-check", "POST", data);
         if (validation.issues.length) {
           const issue = validation.issues[0];
@@ -1012,7 +999,8 @@ export async function initSelectionWorkspace(host, forcedView) {
             '[data-field="' + issue.field + '"]',
           );
           if (field) {
-            field.closest("details").open = true;
+            const detail = field.closest("details");
+            if (detail) detail.open = true;
             field.focus();
             field.scrollIntoView({ block: "center" });
           }
@@ -1270,6 +1258,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       content.querySelector("[data-submit]"),
       "click",
       guarded(async () => {
+        await auxiliaryUploading;
         await save();
         await api("/batch", "POST", {
           action: "submit",
@@ -1303,11 +1292,11 @@ export async function initSelectionWorkspace(host, forcedView) {
       box.innerHTML = record.assets.length
         ? ""
         : '<button type="button" class="sw-empty-image" data-empty-image>添加图片，支持拖拽及粘贴</button>';
-      for (const [i, a] of record.assets.entries()) {
+      for (const a of record.assets.slice(0, 1)) {
         const url = await imageUrl(record.id, a.id);
         if (signal.aborted) return;
         const wrap = document.createElement("div");
-        wrap.innerHTML = `<div class="sw-image-visual"><button class="sw-image-open"><img src="${url}" alt="${esc(a.filename)}"></button></div><small>${i === 0 ? "主图" : esc(a.filename)}</small><button data-main>设为主图</button><button data-left>前移</button><button data-right>后移</button><button data-remove>删除</button>`;
+        wrap.innerHTML = `<div class="sw-image-visual"><button type="button" class="sw-image-open"><img src="${url}" alt="${esc(a.filename)}"></button></div>`;
         box.append(wrap);
         on(wrap.querySelector(".sw-image-open"), "click", () => {
           const dialog = document.createElement("dialog");
@@ -1317,35 +1306,13 @@ export async function initSelectionWorkspace(host, forcedView) {
           dialog.querySelector("button").onclick = () => dialog.remove();
           dialog.showModal();
         });
-        const reorder = async (mode) => {
-          let ids = record.assets.map((x) => x.id),
-            at = ids.indexOf(a.id);
-          if (mode === "remove") ids.splice(at, 1);
-          else {
-            const target =
-              mode === "main"
-                ? 0
-                : mode === "left"
-                  ? Math.max(0, at - 1)
-                  : Math.min(ids.length - 1, at + 1);
-            ids.splice(at, 1);
-            ids.splice(target, 0, a.id);
-          }
-          await api(
-            "/records/" + encodeURIComponent(record.id) + "/assets",
-            "PUT",
-            { ids },
-          );
-          await images();
-        };
-        for (const action of ["main", "left", "right", "remove"])
-          on(
-            wrap.querySelector("[data-" + action + "]"),
-            "click",
-            guarded(() => reorder(action)),
-          );
       }
     }
+    on(content.querySelector('[data-remove-product]'), 'click', guarded(async () => {
+      if (!record?.assets?.length) return;
+      await api('/records/' + encodeURIComponent(record.id) + '/assets', 'PUT', {ids:record.assets.slice(1).map(a=>a.id)});
+      await images();
+    }));
     let uploading = Promise.resolve();
     const uploadFiles = async (files) => {
       const status = content.querySelector("[data-upload-status]");
@@ -1354,11 +1321,13 @@ export async function initSelectionWorkspace(host, forcedView) {
       for (const file of files) {
         if (file.size > boot.uploadPolicy.maxBytes)
           throw Error(`单张图片不能超过${boot.uploadPolicy.maxMB}MB`);
-        await api(
+        const added = await api(
           "/records/" + encodeURIComponent(record.id) + "/assets",
           "POST",
           { filename: file.name, base64: await file64(file) },
         );
+        const fresh = await api('/records/' + encodeURIComponent(record.id));
+        await api('/records/' + encodeURIComponent(record.id) + '/assets', 'PUT', {ids:[added.id,...fresh.assets.filter(a=>a.id!==added.id).map(a=>a.id)]});
       }
       await images();
       if (status) status.textContent = "";
@@ -1498,6 +1467,45 @@ export async function initSelectionWorkspace(host, forcedView) {
       onFiles: guarded(uploadMarket),
       signal,
     });
+    async function auxiliaryAssets() {
+      const box = content.querySelector('[data-auxiliary-assets]');
+      if (!box || !record) return;
+      const fresh = await api('/records/' + encodeURIComponent(record.id));
+      box.replaceChildren();
+      for (const asset of fresh.auxiliaryAssets || []) {
+        const url = await imageUrl(record.id, asset.id);
+        if (signal.aborted) return;
+        const card = document.createElement('div');
+        card.innerHTML = `<button type="button" data-preview><img src="${url}" alt="${esc(asset.filename)}"></button><button type="button" data-remove>删除</button>`;
+        box.append(card);
+        on(card.querySelector('[data-preview]'), 'click', () => {
+          const dialog = document.createElement('dialog');
+          dialog.className = 'sw-image-dialog';
+          dialog.innerHTML = `<button type="button">关闭</button><img src="${url}" alt="辅助参考图片">`;
+          host.append(dialog); dialog.querySelector('button').onclick = () => dialog.remove(); dialog.showModal();
+        });
+        on(card.querySelector('[data-remove]'), 'click', guarded(async () => {
+          await api('/records/' + encodeURIComponent(record.id) + '/assets', 'PUT', {kind:'auxiliary',ids:fresh.auxiliaryAssets.filter(a=>a.id!==asset.id).map(a=>a.id)});
+          await auxiliaryAssets();
+        }));
+      }
+    }
+    const auxiliaryZone = content.querySelector('.sw-auxiliary-drop');
+    on(content.querySelector('[data-add-auxiliary]'), 'click', () => content.querySelector('[data-auxiliary-upload]').click());
+    bindFileIntake({zone:auxiliaryZone,input:content.querySelector('[data-auxiliary-upload]'),signal,
+      onFiles:guarded(files => auxiliaryUploading = auxiliaryUploading.catch(() => {}).then(async () => {
+        const status = content.querySelector('[data-auxiliary-status]');
+        status.textContent = '正在保存参考图片…';
+        try {
+          await ensureDraft();
+          for (const file of files) {
+            if (file.size > boot.uploadPolicy.maxBytes) throw Error(`单张图片不能超过${boot.uploadPolicy.maxMB}MB`);
+            await api('/records/' + encodeURIComponent(record.id) + '/assets', 'POST', {kind:'auxiliary',filename:file.name,base64:await file64(file)});
+          }
+          await auxiliaryAssets(); status.textContent = '已保存';
+        } catch (error) { status.textContent = '保存失败：' + error.message; throw error; }
+      }))});
+    await auxiliaryAssets();
     await marketAssets();
     drawProfit();
     recalc();

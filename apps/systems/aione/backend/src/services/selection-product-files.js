@@ -1,3 +1,4 @@
+import { assetKind } from "./selection-asset-kind.js";
 import { randomUUID, createHash } from 'node:crypto';
 
 export async function requestProductFiles(c, record, actor) {
@@ -7,7 +8,8 @@ export async function requestProductFiles(c, record, actor) {
   const assets = (await c.query(
     'SELECT id,filename,content_type,sha256,position FROM selection_workspace_assets WHERE selection_id=$1 ORDER BY position,created_at',
     [record.id],
-  )).rows.filter(a => !(workspace.researchAssetIds || []).includes(a.id));
+  )).rows.filter(a => !(workspace.researchAssetIds || []).includes(a.id)).map(a => ({...a, role: assetKind(record, a.id)}))
+    .sort((a,b) => Number(a.role === 'auxiliary') - Number(b.role === 'auxiliary'));
   const payload = {
     selectionId: record.id, selectionNo: record.selection_no, owner: record.owner_person_id,
     status: workspace.status, data: workspace.data, assets, actor,version:record.record_version,

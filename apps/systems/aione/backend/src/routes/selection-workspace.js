@@ -1,3 +1,4 @@
+import { auxiliaryIds, assetKind } from "../services/selection-asset-kind.js";
 import { parseSupplierFile } from '../services/selection-sku-file.js';
 import { recordSelectionWork } from '../services/selection-workflow.js';
 import { completeShortName, completeSkuAttributes } from '../services/selection-recognition.js';
@@ -149,7 +150,7 @@ export function createSelectionWorkspaceRouter(
   };
   const researchIds = (r) => r.selection_workspace.researchAssetIds || [];
   const productAssets = (r, assets) =>
-    assets.filter((a) => !researchIds(r).includes(a.id));
+    assets.filter((a) => assetKind(r, a.id) === "product");
   const view = (r) => ({
     erpStatus: r.erp_job_status || "not_submitted",
     id: r.id,
@@ -1010,6 +1011,7 @@ export function createSelectionWorkspaceRouter(
       res.json({
         ...view(r),
         marketAssets: allAssets.filter((a) => researchIds(r).includes(a.id)),
+        auxiliaryAssets: allAssets.filter((a) => auxiliaryIds(r).includes(a.id)),
         assets: productAssets(
           r,
           (
@@ -1121,9 +1123,11 @@ export function createSelectionWorkspaceRouter(
                 409,
               );
             const copiedResearch = [];
+            const copiedAuxiliary = [];
             for (const a of assets) {
               const assetId = randomUUID();
               if (researchIds(r).includes(a.id)) copiedResearch.push(assetId);
+              if (auxiliaryIds(r).includes(a.id)) copiedAuxiliary.push(assetId);
               await c.query(
                 "INSERT INTO selection_workspace_assets(id,selection_id,filename,content_type,bytes,sha256,position) VALUES($1,$2,$3,$4,$5,$6,$7)",
                 [
@@ -1141,6 +1145,7 @@ export function createSelectionWorkspaceRouter(
               "UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{researchAssetIds}',$2::jsonb) WHERE id=$1",
               [saved.id, JSON.stringify(copiedResearch)],
             );
+            await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{auxiliaryAssetIds}',$2::jsonb) WHERE id=$1", [saved.id, JSON.stringify(copiedAuxiliary)]);
             out.push(saved);
             continue;
           }
@@ -1310,8 +1315,10 @@ export function createSelectionWorkspaceRouter(
       if (accessible.selection_workspace.status === 'submitted' || accessible.archived_at)
         fail('此记录不能修改附件', 409);
       let b = req.body;
+      if (b.kind && !["product", "market", "auxiliary"].includes(b.kind)) fail("附件用途无效");
+      const auxiliary = b.kind === "auxiliary";
       if (b.sourceUrl) {
-        if (b.kind === 'market' || b.base64) fail('图片网址导入请求无效');
+        if (b.kind === 'market' || auxiliary || b.base64) fail('图片网址导入请求无效');
         try { b = await fetchSelectionImage(String(b.sourceUrl), uploadPolicy.maxBytes); }
         catch (error) { fail(error.message, 422); }
       }
@@ -1324,7 +1331,7 @@ export function createSelectionWorkspaceRouter(
         webp =
           bytes.toString("ascii", 0, 4) === "RIFF" &&
           bytes.toString("ascii", 8, 12) === "WEBP";
-      const market = b.kind === "market" || (req.poolAssetWrite && accessible.selection_workspace.pool?.source?.kind !== 'purchase');
+      const market = !auxiliary && (b.kind === "market" || (req.poolAssetWrite && accessible.selection_workspace.pool?.source?.kind !== 'purchase'));
       const extension = String(b.filename || "")
         .split(".")
         .pop()
@@ -1359,7 +1366,7 @@ export function createSelectionWorkspaceRouter(
       }
       const r = await tx(async (c) => {
         const record = await row(req, req.params.id, c, true);
-        if (!market) {
+        if (!market && !auxiliary) {
           const keys = ["image:" + digest(bytes)];
           if (await findDuplicate(c, keys, record.id))
             fail("已有选品使用相同商品图片，请检查选品池", 409);
@@ -1376,8 +1383,8 @@ export function createSelectionWorkspaceRouter(
             [record.id, digest(bytes)],
           )
         ).rows[0];
-        if (existing && researchIds(record).includes(existing.id) !== market)
-          fail("同一文件不能同时作为市场附件和商品原始素材", 409);
+        if (existing && assetKind(record, existing.id) !== (auxiliary ? "auxiliary" : market ? "market" : "product"))
+          fail("同一文件已有其他用途，请保留原资料", 409);
         const asset = (
           await c.query(
             "INSERT INTO selection_workspace_assets(id,selection_id,filename,content_type,bytes,sha256,position) VALUES($1,$2,$3,$4,$5,$6,(SELECT count(*) FROM selection_workspace_assets WHERE selection_id=$2)) ON CONFLICT(selection_id,sha256) DO UPDATE SET sha256=EXCLUDED.sha256 RETURNING id",
@@ -1407,15 +1414,17 @@ export function createSelectionWorkspaceRouter(
               JSON.stringify([...new Set([...researchIds(record), asset.id])]),
             ],
           );
-        if (req.poolAssetWrite) {
+        if (auxiliary) await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{auxiliaryAssetIds}',$2::jsonb) WHERE id=$1", [record.id, JSON.stringify([...new Set([...auxiliaryIds(record), asset.id])])]);
+        if (req.poolAssetWrite && !auxiliary) {
           const originals = [...new Set([...(record.selection_workspace.pool?.originalAssetIds || []), asset.id])];
           await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{pool,originalAssetIds}',$2::jsonb) WHERE id=$1",
             [record.id, JSON.stringify(originals)]);
         }
         await event(c, req, record, "upload", {
           assetId: asset.id,
-          kind: market ? "market" : "product",
+          kind: auxiliary ? "auxiliary" : market ? "market" : "product",
         });
+        if (auxiliary) await requestProductFiles(c, await row(req, record.id, c), actor(req));
         return asset;
       });
       res.json(r);
@@ -1466,6 +1475,8 @@ export function createSelectionWorkspaceRouter(
         if (r.selection_workspace.status === "submitted" || r.archived_at)
           fail("此记录不能修改附件", 409);
         const ids = req.body.ids;
+        const kind = req.body.kind || "product";
+        if (!["product", "market", "auxiliary"].includes(kind)) fail("附件用途无效");
         if (!Array.isArray(ids) || new Set(ids).size !== ids.length)
           fail("图片排序无效");
         const current = (
@@ -1477,12 +1488,20 @@ export function createSelectionWorkspaceRouter(
           .map((a) => a.id)
           .filter(
             (id) =>
-              researchIds(r).includes(id) === (req.body.kind === "market"),
+              assetKind(r, id) === kind,
           );
         if (ids.some((id) => !current.includes(id)))
           fail("图片不属于当前记录", 403);
         if ((r.selection_workspace.pool?.originalAssetIds || []).some(id => current.includes(id) && !ids.includes(id)))
           fail('原始选品参考图片需要保留；采购图片可另行上传',409);
+        if (kind === 'auxiliary') {
+          const removed = current.filter(id => !ids.includes(id));
+          if (removed.length) {
+            const pending = (await c.query("SELECT payload FROM selection_erp_commands WHERE selection_id=$1 AND kind='product_files' AND status IN ('queued','processing') FOR UPDATE", [r.id])).rows;
+            if (pending.some(job => (job.payload.assets || []).some(a => removed.includes(a.id))))
+              fail('辅助图片正在保存到商品目录，请同步完成后再删除',409);
+          }
+        }
         await c.query(
           "DELETE FROM selection_workspace_assets WHERE selection_id=$1 AND id=ANY($2::uuid[]) AND NOT(id=ANY($3::uuid[]))",
           [r.id, current, ids],
@@ -1497,6 +1516,8 @@ export function createSelectionWorkspaceRouter(
             "UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{researchAssetIds}',$2::jsonb) WHERE id=$1",
             [r.id, JSON.stringify(ids)],
           );
+        if (kind === "auxiliary") await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{auxiliaryAssetIds}',$2::jsonb) WHERE id=$1", [r.id, JSON.stringify(ids)]);
+        if (kind === 'auxiliary') await requestProductFiles(c, await row(req, r.id, c), actor(req));
         await event(c, req, r, "reorder-images", {
           kind: req.body.kind || "product",
         });

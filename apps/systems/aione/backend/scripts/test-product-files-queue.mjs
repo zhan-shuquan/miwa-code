@@ -17,9 +17,10 @@ try {
     await c.query(`CREATE TEMP TABLE ${table} (LIKE public.${table} INCLUDING ALL) ON COMMIT DROP`);
   const record={id:'isolated:'+randomUUID(),selection_no:'qat261127999',owner_person_id:'86991',selection_workspace:{status:'confirmed',formalNumber:{code:'qat999'},data:{item_code:'qat999',skus:[]}}};
   await c.query("INSERT INTO product_opportunities(id,source_platform,title,owner_person_id,selection_no,selection_workspace) VALUES($1,'manual','isolated fixture','86991',$2,$3)",[record.id,record.selection_no,JSON.stringify(record.selection_workspace)]);
-  const bytes=Buffer.from('isolated product bytes'),asset=randomUUID(),market=randomUUID();
-  for(const id of [asset,market])await c.query('INSERT INTO selection_workspace_assets(id,selection_id,filename,content_type,bytes,sha256,position) VALUES($1,$2,\'fixture.jpg\',\'image/jpeg\',$3,$4,0)',[id,record.id,bytes,createHash('sha256').update(id).digest('hex')]);
+  const bytes=Buffer.from('isolated product bytes'),asset=randomUUID(),market=randomUUID(),auxiliary=randomUUID();
+  for(const id of [asset,market,auxiliary])await c.query('INSERT INTO selection_workspace_assets(id,selection_id,filename,content_type,bytes,sha256,position) VALUES($1,$2,\'fixture.jpg\',\'image/jpeg\',$3,$4,0)',[id,record.id,bytes,createHash('sha256').update(id).digest('hex')]);
   record.selection_workspace.researchAssetIds=[market];
+  record.selection_workspace.auxiliaryAssetIds=[auxiliary];
   const a=await requestProductFiles(c,record,'86991');
   const b=await requestProductFiles(c,record,'86991');
   assert.equal(a.id,b.id);
@@ -32,7 +33,8 @@ try {
   const call=(path,body,auth=true)=>fetch(base+path,{method:body===undefined?'GET':'POST',headers:{'content-type':'application/json',...(auth?{'x-test-connector':'isolated'}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
   assert.equal((await call('/claim',{},false)).status,401);
   const claimed=await (await call('/claim',{})).json();assert.equal(claimed.jobs.length,1);
-  let job=claimed.jobs[0];assert.equal(job.payload.assets.length,1);
+  let job=claimed.jobs[0];assert.equal(job.payload.assets.length,2);
+  assert.equal(job.payload.assets.find(a=>a.id===auxiliary).role,'auxiliary');
   assert.equal((await call('/'+job.id+'/assets/'+market)).status,404);
   assert.equal((await call('/'+job.id+'/assets/'+asset)).status,200);
   assert.equal((await call('/'+job.id+'/heartbeat',{leaseToken:randomUUID()})).status,409);

@@ -40,9 +40,9 @@ export async function executeProductFiles(command, { erp, api }) {
   }
   const cache = join(stateRoot,command.id+'.json');
   const files = [];
-  const add = (name, role, content) => {
+  const add = (name, role, content, purpose) => {
     const bytes = Buffer.from(content);
-    files.push({ name, role, bytes, sha256:digest(bytes) });
+    files.push({ name, role, bytes, sha256:digest(bytes), ...(purpose ? {purpose} : {}) });
   };
   let cached;
   try { cached = JSON.parse(await readFile(cache,'utf8')); } catch(e) { if(e.code !== 'ENOENT') throw e; }
@@ -58,7 +58,8 @@ export async function executeProductFiles(command, { erp, api }) {
     const extension = {'image/png':'png','image/jpeg':'jpg','image/webp':'webp'}[a.content_type];
     if (!extension) throw Error('商品图片格式不支持');
     // Same reference names as the existing AIONE package, flattened without image subfolders.
-    add(String(i+1).padStart(3,'0')+'-'+a.id+'.'+extension, 'reference', bytes);
+    const name = a.role === 'auxiliary' ? 'aux-'+a.id+'.'+extension : String(i+1).padStart(3,'0')+'-'+a.id+'.'+extension;
+    add(name, 'reference', bytes, a.role === 'auxiliary' ? 'auxiliary' : undefined);
   }
   const skuImages=new Map();
   for(const [index,sku] of (payload.data.skus||[]).entries()) {
@@ -78,7 +79,7 @@ export async function executeProductFiles(command, { erp, api }) {
   }
   add('aione-manifest.json','manifest',JSON.stringify({
     selectionId:payload.selectionId,selectionNo:payload.selectionNo,itemCode:payload.data.item_code,version:payload.version,
-    data:payload.data,assets:files.map(({name,role,sha256})=>({name,role,sha256})),
+    data:payload.data,assets:files.map(({name,role,sha256,purpose})=>({name,role,sha256,...(purpose ? {purpose} : {})})),
     allowPublish:false,allowPaidAI:false,allowEmail:false,
   },null,2));
   // Cache complete immutable bytes before the first product write. XLSX ZIP timestamps
