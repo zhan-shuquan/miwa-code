@@ -1177,6 +1177,7 @@
 .sw-specifications table { width:100%; table-layout:auto; }
 .sw-specifications td { vertical-align:middle; padding:6px 8px; }
 .sw-specifications td input:not([type="checkbox"]) { min-width:90px; width:100%; }
+.sw-specifications td input[data-key="supplierImageUrl"] { display:block; width:140px; max-width:100%; box-sizing:border-box; }
 .sw-specifications td input[aria-invalid="true"] { border-color:var(--color-danger, #b42318); }
 .sw-specifications td details { min-width:100px; }
 .sw-specifications td details[open] { min-width:230px; max-width:320px; }
