@@ -2,7 +2,7 @@
 
 Status: deployed; acceptance completed in the scopes below, with explicit remaining limitations. ERP 8081 remains the sole business backend.
 
-## CURRENT — 2026-11-27, 21:13 JST
+## CURRENT — 2026-11-27, 21:17 JST
 
 This section supersedes the earlier chronological checkpoints below. They remain evidence of the rollout, not current configuration.
 
@@ -23,12 +23,13 @@ This section supersedes the earlier chronological checkpoints below. They remain
 - Windows task `MIWA-Products-GoogleDrive-OneWay`: every five minutes plus current-user logon, limited privileges, hidden process. Requires the logged-in Windows session; unattended cold boot without login has NOT been verified.
 - First actual copy exited 0, transferred 41 files / 28.437 MiB and retained 18 previous cloud versions. Independent local backup completed 20,264 files / 12.121 GiB outside both cloud roots. Subsequent scheduled run completed successfully. Seven zsq115 files matched remote checksums before the two later test files; their end-to-end result is recorded separately below when completed.
 - Historical Unicode-equivalent duplicate filenames were reported by rclone (13 notices in one run). No historical names were deduplicated, deleted or renumbered. Script reports `copy-complete-with-warnings`; exit zero does not mean complete historical-tree parity.
-- Google OAuth project remains External/Testing: Drive refresh authorization can expire after seven days. Publishing production requires the pending specific user approval. Homepage was prepared but not saved; existing website clients/domains unchanged. Reference: https://developers.google.com/identity/protocols/oauth2?hl=en
+- Google OAuth project remains External/Testing: Drive refresh authorization can expire after seven days. User explicitly approved production publishing; application homepage was saved successfully. Google still disables Publish and says brand configuration is incomplete, including after reload. Privacy-policy and terms URLs are empty; no applicable approved pages were found in the AIONE source. Asked user for existing official URLs rather than inventing legal pages. Existing clients/domains unchanged. Reference: https://developers.google.com/identity/protocols/oauth2?hl=en
+- Scheduled run 21:13–21:16:47 JST completed with 20 historical duplicate notices across backup/copy logs. At 21:17:16, `rclone check --one-way` reports **9 matching files, 0 differences** for zsq115, including WPS-cloud-created and local-created acceptance files. The Drive-only file remains absent locally. This completes the real WPS → local → Drive flow without editing existing business file contents.
+- Actual screenshots: `.local/formal-name-recognition-20261127.jpg`, `.local/formal-sku-no-url-20261127.jpg`, `.local/wps-cloud-zsq115-20261127.png`.
 
 ### Remaining acceptance / operational boundaries
 
-- Complete the two newest test-file transfers on the next stable-age scheduled run and checksum comparison.
-- Google OAuth production publishing awaits authorization; do not represent current seven-day testing credentials as unattended permanent access.
+- Google OAuth production publishing is authorized but blocked by Google's incomplete-brand configuration check; do not represent current seven-day testing credentials as unattended permanent access. Existing official legal URLs requested from the administrator.
 - Ordinary employees' WPS cloud ACL/access and real Google logout/login were not re-verified in this run. Existing permissions were preserved, not broadened. An additional formal Google login tab remained loading; existing 86000 session worked.
 - Network interruption and cold-boot recovery have not been physically tested. Retry configuration is present, but is not a substitute for those tests.
 - No paid image generation, actual listing, outbound mail, purchase, 8080 change, historical SKU/code change, or cost-formula change.
