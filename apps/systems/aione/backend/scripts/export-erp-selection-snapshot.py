@@ -38,6 +38,8 @@ try:
         uoms=frappe.get_all('UOM',pluck='name'),
         exchange=business_parameters['exchange'],
         priceLists={name:frappe.get_doc('Price List',name).as_dict() for name in [settings.purchase_price_list,settings.unit_price_list]})
+    from miwa_ai.sku_identity import master_rows
+    snapshot['skuMaster'] = master_rows()
     print(json.dumps(snapshot, ensure_ascii=False, default=str))
 finally:
     frappe.db.rollback()

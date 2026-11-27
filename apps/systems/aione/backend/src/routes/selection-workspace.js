@@ -198,6 +198,8 @@ export function createSelectionWorkspaceRouter(
         fail("ERP识别规则变化，需要审核", 409);
       s.rules.sha256 = reviewedRuleHash;
       s.identification.sha256 = reviewedIdentificationHash;
+      const skuMaster = Array.isArray(s.skuMaster) ? s.skuMaster : [];
+      delete s.skuMaster; // Personnel-scoped SKU facts must not enter public bootstrap data.
       s.verified = false;
       s.version = digest(parameterFacts(s));
       s.receivedAt = new Date().toISOString();
@@ -205,6 +207,13 @@ export function createSelectionWorkspaceRouter(
       delete s.personPrefixes;
       await putConfig("erp", s);
       await putConfig("connection", { lastSeen: s.receivedAt });
+      for (const master of skuMaster) {
+        if (!master.selectionId || !master.itemCode || master.stage !== 'item_created' || !Array.isArray(master.skus)) continue;
+        await pool.query(
+          "UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{erpResult}',$3::jsonb),record_version=record_version+1,updated_at=now() WHERE id=$1 AND selection_workspace->>'status'='submitted' AND selection_workspace->'data'->>'item_code'=$2 AND selection_workspace->'erpResult' IS DISTINCT FROM $3::jsonb",
+          [master.selectionId, master.itemCode, JSON.stringify(master)],
+        );
+      }
       res.json({ ok: true, version: s.version });
     }),
   );
