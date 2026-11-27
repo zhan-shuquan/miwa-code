@@ -1,6 +1,6 @@
 # SKU清单精简验收 — 2026-11-27
 
-实施分支：feat/sku-list-simplification-20261127。代码：d3117ff。
+实施分支：feat/sku-list-simplification-20261127。业务代码：d3117ff；参考图片输入列宽修正：868825b。
 
 ## 当前规则
 
@@ -30,7 +30,7 @@
 
 - 后端构建6ce39f2c-e25c-4b71-a1ee-d4458cc81adf SUCCESS。
 - Cloud Run aione-backend-current-00307-sas，镜像sku-simple-d3117ff，健康检查database=connected；100%流量。
-- Vercel生产dpl_443CqbV9HG6ZCXSr5hVuUXymTvW9 READY，正式域名aione.miwa-happyhouse.com；与隔离验收相同代码。
+- Vercel生产dpl_443CqbV9HG6ZCXSr5hVuUXymTvW9完成业务发布；最终dpl_F6NsZ7GGsj2p4tctnJccrZyuaBv9仅补充参考图片输入列宽，正式域名aione.miwa-happyhouse.com。
 - 前端回滚dpl_CRAPM7QcpT7rNFarc65hz8PkYvZz；后端回滚00305-jeq。无需数据库结构迁移，回滚代码不回滚新增业务数据。
 - CloudSQL备份1795773290450 SUCCESSFUL，description=sku-simple-before-d3117ff。
 - ERP完整备份sites/miwa-dev.localhost/private/backups/20261127_185935-miwa-dev_localhost-*（数据库、公私文件、站点配置）。不要使用整库恢复覆盖发布后新增业务数据。
