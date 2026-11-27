@@ -1,4 +1,5 @@
 import { mountSpecifications } from '../components/selection-specifications.js';
+import { mergeSavedDraft, serializeDraftSaves, rebaseDraft } from '../services/selection-draft-save.js';
 import { bindFileIntake } from "../components/file-intake.js";
 import {
   sortableKeys,
@@ -934,20 +935,33 @@ export async function initSelectionWorkspace(host, forcedView) {
       }, 5000);
     }
     const creationRequestKey = crypto.randomUUID();
-    const save = async () => {
-      record = await api(
+    const save = serializeDraftSaves(async () => {
+      const submitted = structuredClone(data);
+      const previous = record;
+      let saved;
+      try { saved = await api(
         record ? "/records/" + encodeURIComponent(record.id) : "/records",
         record ? "PATCH" : "POST",
-        { data, version: record?.version, requestKey: creationRequestKey },
-      );
+        { data: submitted, version: record?.version, requestKey: creationRequestKey },
+      ); } catch (error) {
+        if (error.status !== 409 || !previous) throw error;
+        const fresh = await api('/records/' + encodeURIComponent(previous.id));
+        const rebased = rebaseDraft(previous.data, submitted, fresh.data);
+        if (rebased.conflicts.length || ['submitted','erp_pending'].includes(fresh.status)) {
+          throw Error('资料已被其他操作更新，未覆盖任何数据。本页修改仍保留，请核对冲突内容后再保存。');
+        }
+        saved = await api('/records/' + encodeURIComponent(previous.id), 'PATCH', {data:rebased.merged,version:fresh.version});
+      }
+      record = saved;
       selectionLabel.textContent = record.selectionNo;
-      data = structuredClone(record.data);
+      data = mergeSavedDraft(submitted, data, record.data);
+      const hasNewEdits = JSON.stringify(data) !== JSON.stringify(record.data);
       renderReferences();
       specificationsEditor.draw();
       pricing = record.pricing;
       calculationError = "";
       report(
-        record.status === "confirmed"
+        hasNewEdits ? "草稿已保存；保存期间新增的修改仍保留，请再次保存。" : record.status === "confirmed"
           ? "资料已保存，选品确认状态保留。"
           : "草稿已保存。",
       );
@@ -956,7 +970,7 @@ export async function initSelectionWorkspace(host, forcedView) {
           ? "已确认选品 · 待第二阶段资料完善"
           : "草稿 · 确认选品不等于提交ERP";
       content.querySelector("[data-save-state]").textContent =
-        record.selectionNo + " · 已保存 · 版本 " + record.version;
+        record.selectionNo + (hasNewEdits ? " · 有未保存修改 · 版本 " : " · 已保存 · 版本 ") + record.version;
       history.replaceState(
         null,
         "",
@@ -964,7 +978,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       );
       drawProfit();
       return record;
-    };
+    });
     let draftCreation;
     const ensureDraft = () =>
       record

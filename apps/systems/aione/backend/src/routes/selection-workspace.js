@@ -1,4 +1,4 @@
-import { parseSupplierCSV } from '../services/selection-sku-csv.js';
+import { parseSupplierFile } from '../services/selection-sku-file.js';
 import { createEmployeeMaster } from "../services/employee-master.js";
 import { mountUploadTransport, CHUNK_BYTES } from "../services/selection-upload-transport.js";
 import {
@@ -620,34 +620,7 @@ export function createSelectionWorkspaceRouter(
     "/sku-file",
     run(async (req, res) => {
       const bytes = Buffer.from(String(req.body.base64 || ""), "base64");
-      if (bytes.length > 2000000) fail("SKU文件超过2MB");
-      if (String(req.body.filename || '').toLowerCase().endsWith('.csv')) return res.json(parseSupplierCSV(bytes,req.body.sourceUrl,req.body.filename));
-      const w = new ExcelJS.Workbook();
-      await w.xlsx.load(bytes);
-      const sheet = w.worksheets.find((s) =>
-        s.getRow(1).values.includes("SKU ID"),
-      );
-      if (!sheet) fail("未找到ERP兼容SKU表头（SKU ID、SKU名称、原价（元））");
-      if (sheet.rowCount > 501) fail("SKU最多500行");
-      const header = sheet.getRow(1).values,
-        skus = [];
-      for (let n = 2; n <= sheet.rowCount; n++) {
-        const row = {};
-        sheet.getRow(n).eachCell((c, i) => {
-          if (c.value !== null && typeof c.value === "object")
-            fail("SKU表不允许公式");
-          row[header[i]] = c.value;
-        });
-        if (!row["SKU ID"]) continue;
-        skus.push({
-          code: String(row["SKU ID"]),
-          spec: String(row["SKU名称"] || ""),
-          cost: row["原价（元）"],
-          weight: row["重量(g)"],
-          price: row["售价(JPY)"],
-        });
-      }
-      res.json({ skus: validateData({ skus }, await snapshot()).skus });
+      res.json(parseSupplierFile(bytes,req.body.sourceUrl,req.body.filename,await snapshot()));
     }),
   );
   const list = async (req, unlimited = false) => {

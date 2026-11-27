@@ -3,7 +3,8 @@ import { uploadJsonLimit } from './selection-upload-policy.js';
 import { fail } from './selection-workspace-contract.js';
 
 export const CHUNK_BYTES = 2 * 1024 * 1024;
-export const transportPath = path => /^\/records\/[^/?]+\/assets$/.test(path) || ['/pool/collect', '/pool/preflight'].includes(path);
+export const transportPath = path => /^\/records\/[^/?]+(?:\/assets)?$/.test(path) || ['/records','/sku-file','/pool/collect', '/pool/preflight'].includes(path);
+export const transportMethod = path => /^\/records\/[^/?]+$/.test(path)?'PATCH':'POST';
 const uuid = value => /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value || '');
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 
@@ -49,7 +50,7 @@ export function mountUploadTransport(router, { pool, tx, actor }) {
     try {
       const id = req.body?.uploadTransportId;
       if (!id) return next();
-      if (req.method !== 'POST' || !transportPath(req.path) || !uuid(id)) fail('上传目标无效', 400);
+      if (req.method !== transportMethod(req.path) || !transportPath(req.path) || !uuid(id)) fail('上传目标无效', 400);
       req.body = await tx(async c => {
         const record = (await c.query('SELECT * FROM selection_upload_transport WHERE id=$1 AND owner_id=$2 AND path=$3 AND expires_at>now() FOR UPDATE', [id, actor(req), req.path])).rows[0];
         if (!record) fail('上传已过期或无权限', 404);

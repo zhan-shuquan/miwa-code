@@ -69,8 +69,9 @@ function actorHeaders() {
 export async function aioneApi(path, options = {}) {
   const prefix = '/api/v1/selection-workspace';
   const relative = path.startsWith(prefix) ? path.slice(prefix.length) : '';
-  const transferable = /^\/records\/[^/?]+\/assets$/.test(relative) || ['/pool/collect', '/pool/preflight'].includes(relative);
-  if (transferable && (options.method || 'GET').toUpperCase() === 'POST' && typeof options.body === 'string' && new Blob([options.body]).size > 3 * 1024 * 1024) {
+  const transferable = /^\/records\/[^/?]+(?:\/assets)?$/.test(relative) || ['/records','/sku-file','/pool/collect', '/pool/preflight'].includes(relative);
+  const transferMethod=/^\/records\/[^/?]+$/.test(relative)?'PATCH':'POST';
+  if (transferable && (options.method || 'GET').toUpperCase() === transferMethod && typeof options.body === 'string' && new Blob([options.body]).size > 3 * 1024 * 1024) {
     const bytes = new TextEncoder().encode(options.body);
     const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
     const transfer = await aioneApi(prefix + '/upload-transport', { method: 'POST', body: JSON.stringify({ path: relative, size: bytes.length, sha256: hash }) });

@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import XLSX from 'xlsx';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {parseSupplierFile} from '../src/services/selection-sku-file.js';
+import {specifications} from '../src/services/selection-specifications.js';
+import {mergeSavedDraft,serializeDraftSaves,rebaseDraft} from '../../js/services/selection-draft-save.js';
+import {specificationIssues} from '../../js/components/selection-specifications.js';
+const snapshot={itemAttributes:[{name:'Color',attributes:[{attribute_value:'蓝色'},{attribute_value:'白色'}]},{name:'Size'},{name:'新增属性'}]};
+const matrix=[['SKU ID','Color','Size','采购价','净重(g)','SKU图片链接','新增属性'],['001','蓝色','M',0,400,'https://example.com/blue.jpg','普通'],['002','白色','M',14.5,410,'https://example.com/white.jpg','普通']];
+const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(matrix),'SKU');
+const dir=new URL('../../../../../.local/sku-acceptance/',import.meta.url);await mkdir(dir,{recursive:true});
+for(const type of ['xlsx','xls','csv']){
+ const bytes=type==='csv'?Buffer.from('\uFEFF'+XLSX.utils.sheet_to_csv(book.Sheets.SKU)):XLSX.write(book,{type:'buffer',bookType:type==='xls'?'biff8':type});
+ await writeFile(new URL('isolated-skus.'+type,dir),bytes);
+ const p=parseSupplierFile(bytes,'','isolated-skus.'+type,snapshot);
+ assert.equal(p.skus.length,2);assert.equal(p.skus[0].supplierSkuId,'001');assert.equal(p.skus[0].cost,0);assert.equal(p.skus[0].weight,400);assert.equal(p.skus[0].supplierImageUrl,matrix[1][5]);assert.equal(p.fixedSpecifications['新增属性'],'普通');
+ const d={has_variants:true,sourceUrl:'',...p,skuSourceFiles:[p.source],skus:p.skus.map(s=>({...s,confirmed:true}))};
+ const cleaned=specifications(d,snapshot,true);assert.equal(cleaned.skus[0].confirmed,true);assert.equal(cleaned.skuSourceFiles[0].sha256,p.source.sha256);assert.equal(specifications(cleaned,snapshot,true).skus.length,2);
+}
+const csv=Buffer.from('SKU名称,Color\n蓝色,蓝色\n');
+assert.equal(parseSupplierFile(csv,'','sku.csv',snapshot).skus[0].supplierSkuId,'');
+assert.throws(()=>parseSupplierFile(csv,'','fake.xlsx',snapshot),/扩展名/);
+const formula=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([['SKU名称'],['蓝色']]);ws.A2.f='1+1';XLSX.utils.book_append_sheet(formula,ws,'SKU');assert.throws(()=>parseSupplierFile(XLSX.write(formula,{type:'buffer',bookType:'xlsx'}),'','formula.xlsx',snapshot),/公式/);
+const manual={has_variants:true,specificationAttributes:[{attribute:'Color',sales:true,values:'蓝色、白色'}],skus:[{origin:'manual',code:'draft_1',spec:'蓝色',selected:true,confirmed:true,attributeValues:{Color:'蓝色'}}]};
+assert.equal(specifications(manual,snapshot,true).skus[0].supplierSkuId,'');assert.equal(specifications(manual,snapshot,true).specificationAttributes[0].values,'蓝色、白色');
+assert.deepEqual(specificationIssues(manual,0),[]);
+const duplicate=structuredClone(manual);duplicate.skus.push({...duplicate.skus[0],code:'draft_2'});assert.match(specificationIssues(duplicate,0)[0],/重复/);assert.throws(()=>specifications(duplicate,snapshot,true),/重复/);
+const damaged=structuredClone(manual);damaged.skus[0].attributeValues.Color='?色';assert.match(specificationIssues(damaged,0)[0],/缺字/);
+assert.deepEqual(mergeSavedDraft({title:'a',skus:[1]},{title:'b',skus:[1]},{title:'a',skus:[1],server:'kept'}),{title:'b',skus:[1],server:'kept'});
+let concurrent=0,peak=0,version=0;const save=serializeDraftSaves(async()=>{concurrent++;peak=Math.max(peak,concurrent);await new Promise(r=>setTimeout(r,5));concurrent--;return ++version;});assert.deepEqual(await Promise.all([save(),save(),save()]),[1,2,3]);assert.equal(peak,1);
+let count=0;const retry=serializeDraftSaves(async()=>{if(++count===1)throw Error('conflict');return count;});await assert.rejects(retry(),/conflict/);assert.equal(await retry(),2);
+assert.deepEqual(rebaseDraft({a:1,b:1},{a:2,b:1},{a:1,b:2}),{merged:{a:2,b:2},conflicts:[]});
+assert.deepEqual(rebaseDraft({skus:[1]},{skus:[2]},{skus:[3]}).conflicts,['skus']);
+assert.equal(parseSupplierFile(Buffer.from('SKU ID,颜色\n123,蓝色\n'),'','sku.csv',{itemAttributes:[{name:'Colour',aliases:['颜色']}]}).skus[0].attributeValues.Colour,'蓝色');
+console.log('PASS: XLSX/XLS/CSV import + save/reload; dynamic ERP attributes; images; zero; manual/batch validation; serialized saves and in-flight edits. Isolated fixtures written.');

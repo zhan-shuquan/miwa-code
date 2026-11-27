@@ -16,7 +16,7 @@ try:
     if script.disabled:
         raise RuntimeError('ERP cost script disabled')
     meta = frappe.get_meta('Item')
-    from miwa_ai import product_names, folder_import
+    from miwa_ai import product_names, folder_import, field_normalization
     identification='RULES = '+repr(product_names.RULES)+'\n'+inspect.getsource(product_names.identify)+'\n'+inspect.getsource(folder_import.suggest_group)
     fields = [dict(id=f.fieldname, label=f.label, type=f.fieldtype, options=f.options,
                    default=f.default, required=bool(f.reqd)) for f in meta.fields
@@ -30,7 +30,9 @@ try:
         rules=dict(source=script.script, sha256=hashlib.sha256(script.script.encode()).hexdigest(), modified=str(script.modified)),
         identification=dict(source=identification,sha256=hashlib.sha256(identification.encode()).hexdigest()),
         categories=frappe.get_all('Item Group',fields=['name','parent_item_group','is_group','custom_miwa_default_brand']),
-        itemAttributes=[frappe.get_doc('Item Attribute',name).as_dict() for name in frappe.get_all('Item Attribute',pluck='name')],
+        itemAttributes=[dict(frappe.get_doc('Item Attribute',name).as_dict(),
+            aliases=list(field_normalization.AXES.get(name, ())))
+            for name in frappe.get_all('Item Attribute',pluck='name')],
         brands=frappe.get_all('Brand',pluck='name'),
         platforms=sorted(set((frappe.get_meta('MIWA Platform Store').get_field('platform').options or '').splitlines()) | set(frappe.get_all('MIWA Platform Store',pluck='platform'))),
         uoms=frappe.get_all('UOM',pluck='name'),
