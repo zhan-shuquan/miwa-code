@@ -1414,7 +1414,7 @@ export function createSelectionWorkspaceRouter(
               JSON.stringify([...new Set([...researchIds(record), asset.id])]),
             ],
           );
-        if (auxiliary) await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{auxiliaryAssetIds}',$2::jsonb) WHERE id=$1", [record.id, JSON.stringify([...new Set([...auxiliaryIds(record), asset.id])])]);
+        if (auxiliary) await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{auxiliaryAssetIds}',$2::jsonb),record_version=record_version+$3,updated_at=now() WHERE id=$1", [record.id, JSON.stringify([...new Set([...auxiliaryIds(record), asset.id])]), existing ? 0 : 1]);
         if (req.poolAssetWrite && !auxiliary) {
           const originals = [...new Set([...(record.selection_workspace.pool?.originalAssetIds || []), asset.id])];
           await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{pool,originalAssetIds}',$2::jsonb) WHERE id=$1",
@@ -1516,7 +1516,7 @@ export function createSelectionWorkspaceRouter(
             "UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{researchAssetIds}',$2::jsonb) WHERE id=$1",
             [r.id, JSON.stringify(ids)],
           );
-        if (kind === "auxiliary") await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{auxiliaryAssetIds}',$2::jsonb) WHERE id=$1", [r.id, JSON.stringify(ids)]);
+        if (kind === "auxiliary") await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{auxiliaryAssetIds}',$2::jsonb),record_version=record_version+CASE WHEN selection_workspace->'auxiliaryAssetIds'=$2::jsonb THEN 0 ELSE 1 END,updated_at=now() WHERE id=$1", [r.id, JSON.stringify(ids)]);
         if (kind === 'auxiliary') await requestProductFiles(c, await row(req, r.id, c), actor(req));
         await event(c, req, r, "reorder-images", {
           kind: req.body.kind || "product",
