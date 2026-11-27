@@ -659,7 +659,13 @@ export async function initSelectionWorkspace(host, forcedView) {
       const codeField = content.querySelector('[data-field="item_code"]');
       if (codeField) codeField.readOnly = !!locked || !!record?.formalNumber?.code || record?.status === 'number_pending';
       const historyBox = content.querySelector('[data-history]');
+      const fileSync = record?.fileSync;
+      const fileStatus = fileSync ?
+        `<p>本地商品资料：${fileSync.status === 'succeeded' && fileSync.state === 'saved' && fileSync.erpVerified === true ? '已保存，ERP回读校验通过' : esc(fileSync.message || '尚未通过校验')} ${esc(fileSync.updatedAt || '')}</p>` +
+        (fileSync.folder ? `<p>商品目录：${esc(fileSync.folder)}</p>` : '') +
+        `<p>WPS云端：待确认 · Google Drive：待确认 · 自动美工：待确认 · 自动上架：待确认</p>` : '';
       if (historyBox) historyBox.innerHTML =
+        fileStatus +
         (record?.erpResult?.stage === 'item_created' ? `<p>ERP已建档：${esc(record.erpResult.itemCode)} · SKU数量：${esc(record.erpResult.skuCount)}</p><p>${(record.erpResult.skus || []).map(s=>esc(s.name)).join('、')}</p>` : '') +
         (record?.events || []).map(e=>`<p>${esc(e.created_at)} · ${esc(e.actor_id)} · ${esc(e.action)}</p>`).join('') +
         (record?.jobs || []).map(j=>`<p>ERP任务：${esc(j.status)} ${esc(j.result?.message || '')} ${j.status === 'failed' ? `<button data-retry="${esc(j.id)}">重试</button>` : ''}</p>`).join('');
