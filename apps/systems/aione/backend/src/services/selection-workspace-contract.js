@@ -486,8 +486,7 @@ export function validateData(input, snapshot, { submit = false, existingData = {
     return Number(price);
   });
   data.shortNameManual =
-    input.shortNameManual === true ||
-    (input.shortNameManual == null && !!input.item_name);
+    !!String(data.item_name || "").trim() && input.shortNameManual !== false;
   data.marketReferencePrice = data.referencePrices[0] ?? null;
   data.supplier = String(input.supplier || "").slice(0, 1000);
   if (input.specificationAttributes || input.skuSourceFiles || input.has_variants != null) Object.assign(data, specifications(input, snapshot, submit));

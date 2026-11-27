@@ -573,7 +573,7 @@ export async function initSelectionWorkspace(host, forcedView) {
         data[f.id] = f.default;
     }
     data.skus ||= [];
-    data.shortNameManual ??= !!data.item_name;
+    data.shortNameManual = !!String(data.item_name || "").trim() && data.shortNameManual !== false;
     let pricing = record?.pricing,
       timer,
       sequence = 0;
@@ -840,7 +840,7 @@ export async function initSelectionWorkspace(host, forcedView) {
               ? ""
               : Number(input.value)
             : input.value;
-        if (key === "item_name") data.shortNameManual = true;
+        if (key === "item_name") data.shortNameManual = !!input.value.trim();
         if (key === "custom_国际物流方式") deriveStock();
         updatePurchaseLink();
         drawProfit();
@@ -1215,7 +1215,7 @@ export async function initSelectionWorkspace(host, forcedView) {
         )
           return;
         for (const [key, value] of Object.entries({
-          item_name: suggestion.shortName?.name || "",
+          item_name: suggestion.shortName?.name || data.item_name || "",
           item_group: suggestion.category || "",
           brand: data.brand || suggestion.brand || "",
         })) {
@@ -1226,10 +1226,11 @@ export async function initSelectionWorkspace(host, forcedView) {
         }
         if (status)
           status.textContent = suggestion.shortName?.review
-            ? "ERP识别待核实；仍可试算"
+            ? (suggestion.shortName.reason || "ERP识别待核实") + "；可人工补充并继续试算"
             : "ERP已识别 · 未回传字段保持待定";
-      } catch {
-        if (status) status.textContent = "ERP识别待回传，可继续录入与试算";
+      } catch (error) {
+        if (seq !== identifySequence || signal.aborted || title !== data.custom_商品长标题中文) return;
+        if (status) status.textContent = "ERP识别暂不可用：" + (error.message || "连接异常") + "；可人工补充";
       }
     };
     on(content.querySelector("[data-identify-source]"), "click", recognize);

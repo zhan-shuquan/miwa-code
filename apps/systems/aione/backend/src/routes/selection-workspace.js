@@ -859,7 +859,9 @@ export function createSelectionWorkspaceRouter(
       try {
         const recognized = await identify(data.custom_商品长标题中文, s);
         if (!data.shortNameManual)
-          data.item_name = recognized.shortName?.name || "";
+          data.item_name = recognized.shortName?.name ||
+            (previous?.selection_workspace.data.custom_商品长标题中文 === data.custom_商品长标题中文
+              ? previous.selection_workspace.data.item_name || "" : "");
         data.item_group = recognized.category || "";
         // ERP preserves an existing brand, otherwise inherits the category default.
         data.brand =
