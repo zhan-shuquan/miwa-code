@@ -131,6 +131,10 @@ export async function saveProductFiles(config, request) {
       const path=join(folder,f.name);
       if((await lstat(path)).isSymbolicLink())throw Error('商品文件不能是符号链接');
       const hash=digest(await readFile(path));
+      if(f.expectedSha256 && f.expectedSha256!==hash)throw Error('正在保存商品资料，文件已变化，请稍后重试');
+      // Internal, narrowly merged workbook updates use a compare-and-swap hash.
+      // The caller derives the bytes from the current file, never from an API payload.
+      if(f.name==='SKU.xlsx' && f.role==='workbook' && f.expectedSha256===hash)owned.set(f.name,hash);
       if(hash!==f.sha256 && hash!==owned.get(f.name))conflicts.push({name:f.name,state:'conflict',message:'已有文件被人工或云端修改，未覆盖'});
     }catch(e){if(e.code!=='ENOENT')throw e;}
   }

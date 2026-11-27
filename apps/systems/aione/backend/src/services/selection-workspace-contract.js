@@ -7,7 +7,7 @@ export const BINDINGS = {
   item_group: ["basic", "select"],
   brand: ["basic", "select"],
   custom_商品长标题中文: ["basic", "text"],
-  custom_主要材质1: ["basic", "text"],
+  custom_miwa_auxiliary_info: ["basic", "textarea"],
   custom_库存类型: ["basic", "select"],
   custom_单个采购价: ["purchase", "number"],
   custom_单个净重g: ["purchase", "number"],
@@ -81,7 +81,7 @@ export function parameterFacts(snapshot) {
 export function fieldsFor(snapshot) {
   return Object.entries(BINDINGS)
     .map(([id, [group, type]]) => {
-      const f = snapshot.fields.find((f) => f.id === id);
+      const f = snapshot.fields.find((f) => f.id === id) || (id === "custom_miwa_auxiliary_info" ? {label:"辅助信息",type:"Long Text"} : null);
       if (!f) return null;
       let options =
         type === "select"
@@ -248,7 +248,6 @@ export function defaultLayout(fields) {
     "marketReferencePrice",
     "images",
     "item_code",
-    "custom_主要材质1",
     "custom_单个采购价",
     "custom_单个净重g",
     "custom_中国国内运费",
@@ -259,6 +258,7 @@ export function defaultLayout(fields) {
     "item_group",
     "brand",
     "custom_miwa_selection_notes",
+    "custom_miwa_auxiliary_info",
     "custom_国际物流方式",
     "custom_中国包装方式",
     "custom_日本包装物",
@@ -284,7 +284,7 @@ export function defaultLayout(fields) {
     custom_miwa_selection_notes: [12, 1, 1],
     images: [4, 1, 3],
     item_code: [4, 5, 1],
-    custom_主要材质1: [4, 9, 1],
+    custom_miwa_auxiliary_info: [12, 1, 1],
     item_name: [3, 1, 1],
     custom_库存类型: [3, 4, 1],
     item_group: [3, 7, 1],
@@ -296,7 +296,7 @@ export function defaultLayout(fields) {
     custom_中国国内运费: [4, 5, 1],
   };
   return {
-    version: 40,
+    version: 41,
     ratio: 72,
     groups: structuredClone(GROUPS),
     fields: [...fields]
@@ -485,6 +485,9 @@ export function validateData(input, snapshot, { submit = false, existingData = {
       fail("市场参考售价无效");
     return Number(price);
   });
+  // Preserve historical material text even though it is no longer an editable field.
+  data.custom_主要材质1 = String(input.custom_主要材质1 ?? existingData.custom_主要材质1 ?? "").slice(0,2000);
+  data.custom_miwa_auxiliary_info = String(input.custom_miwa_auxiliary_info ?? existingData.custom_miwa_auxiliary_info ?? "").slice(0,20000);
   data.shortNameManual =
     !!String(data.item_name || "").trim() && input.shortNameManual !== false;
   data.marketReferencePrice = data.referencePrices[0] ?? null;

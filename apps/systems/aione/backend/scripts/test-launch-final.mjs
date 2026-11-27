@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
+import {backfillSkuWorkbook} from '../src/services/selection-sku-backfill.js';
+import {completeShortName,completeSkuAttributes} from '../src/services/selection-recognition.js';
+import {fillSingleAttribute} from '../../js/services/selection-specification-fill.js';
+import {specifications} from '../src/services/selection-specifications.js';
+
+const workbook=new ExcelJS.Workbook(),sheet=workbook.addWorksheet('SKU');
+sheet.addRow(['商品ID','SKU ID','SKU名称','采购价','重量','图片','ERP SKU','员工补充']);
+sheet.addRow(['offer','supplier-B','蓝',12,400,'image-B',null,{formula:'D2*2',result:24}]);
+sheet.addRow(['offer','supplier-A','红',13,450,'image-A',null,'保留']);
+sheet.getCell('G2').font={bold:true};
+const bytes=Buffer.from(await workbook.xlsx.writeBuffer());
+const skus=[{supplier_sku_id:'supplier-A',name:'formal-71'},{supplier_sku_id:'supplier-B',name:'formal-29'}];
+const filled=await backfillSkuWorkbook(bytes,skus,{offerId:'offer'});
+assert.equal(filled.updated,2);
+const read=new ExcelJS.Workbook();await read.xlsx.load(filled.bytes);
+assert.equal(read.worksheets[0].getCell('G2').value,'formal-29');
+assert.equal(read.worksheets[0].getCell('G3').value,'formal-71');
+assert.equal(read.worksheets[0].getCell('G2').font.bold,true);
+assert.deepEqual(read.worksheets[0].getCell('H2').value,{formula:'D2*2',result:24});
+const before=await JSZip.loadAsync(bytes),after=await JSZip.loadAsync(filled.bytes);
+for(const name of Object.keys(before.files).filter(n=>!before.files[n].dir&&n!=='xl/worksheets/sheet1.xml'))
+  assert.deepEqual(await after.file(name).async('nodebuffer'),await before.file(name).async('nodebuffer'),name);
+assert.equal((await backfillSkuWorkbook(filled.bytes,skus)).updated,0);
+await assert.rejects(backfillSkuWorkbook(bytes,skus,{offerId:'foreign'}),/商品ID/);
+await assert.rejects(backfillSkuWorkbook(bytes,[skus[0]]),/未返回/);
+await assert.rejects(backfillSkuWorkbook(filled.bytes,[{...skus[0],name:'different'},skus[1]]),/未覆盖/);
+await assert.rejects(backfillSkuWorkbook(bytes,[...skus,skus[0]]),/不唯一/);
+
+const row={code:'supplier-A',supplierSkuId:'supplier-A',originalName:'【苹果绿】蒜泥拍拍刀',attributeValues:{},supplierImageUrl:'https://example.com/a.jpg',cost:34,weight:500};
+const data={has_variants:false,specificationAttributes:[{attribute:'Colour',sales:true}],skus:[structuredClone(row),{...structuredClone(row),code:'supplier-B',supplierSkuId:'supplier-B',originalName:'粉色'}]};
+fillSingleAttribute(data);
+assert.equal(data.skus[0].attributeValues.Colour,row.originalName);
+for(const key of ['supplierSkuId','supplierImageUrl','cost','weight'])assert.equal(data.skus[0][key],row[key]);
+assert(data.specificationAttributes[0].values.includes('粉色'));
+assert.equal(specifications(data,{itemAttributes:[{name:'Colour'}]}).has_variants,true);
+const ambiguous={specificationAttributes:[{attribute:'Colour',sales:true}],skus:[{originalName:'红色+大号',attributeValues:{},sourceParts:['红色','大号']}]};
+fillSingleAttribute(ambiguous);assert.deepEqual(ambiguous.skus[0].attributeValues,{});
+assert.equal((await completeShortName({shortName:{review:true}},'测试独立标题',{generate:async()=>({name:'捣蒜器',certain:true})})).shortName.name,'捣蒜器');
+let calls=0;await completeShortName({shortName:{name:'已识别',review:false}},'已识别标题',{generate:async()=>{calls++;}});assert.equal(calls,0);
+const parsed={skus:[{code:'one',originalName:'深蓝+大号',attributeValues:{}},{code:'two',originalName:'红色+小号',attributeValues:{}}],specificationAttributes:[],fixedSpecifications:{},warnings:[]};
+await completeSkuAttributes(parsed,{itemAttributes:[{name:'Colour'},{name:'Size'}]},{generate:async()=>({rows:[{id:'one',certain:true,values:{Colour:'深蓝',Size:'大号'}},{id:'two',certain:true,values:{Colour:'绿色',Size:'小号'}}]})});
+assert.deepEqual(parsed.skus[0].attributeValues,{Colour:'深蓝',Size:'大号'});
+assert.deepEqual(parsed.skus[1].attributeValues,{});
+console.log('PASS launch regression: ID-based SKU backfill, workbook preservation, idempotency/conflicts, manual fill, variants, bounded recognition and invented-value rejection');

@@ -2,7 +2,7 @@ import { parseSupplierFile } from './selection-sku-file.js';
 const fail = (s) => { const e = new Error(s); e.statusCode = 400; throw e; };
 const clean = (s, n = 200) => String(s ?? '').trim().slice(0,n);
 export function specifications(input, snapshot, submit = false) {
-  const hasVariants = input.has_variants === true || input.has_variants === 1;
+  const hasVariants = input.has_variants === true || input.has_variants === 1 || (input.skus || []).filter(s=>s.selected!==false).length > 1;
   const attributes = (input.specificationAttributes || []).map(a => ({attribute:clean(a.attribute), sales:a.sales === true, ...(a.values != null ? {values:clean(a.values,10000)} : {})}));
   if (attributes.length > 10 || new Set(attributes.map(a=>a.attribute)).size !== attributes.length) fail('规格属性重复或超过10项');
   const known = snapshot.itemAttributes || [];

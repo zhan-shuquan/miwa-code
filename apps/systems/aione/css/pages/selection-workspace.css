@@ -1184,3 +1184,5 @@
 .sw-specifications dialog { max-width:min(720px,90vw); max-height:80vh; overflow:auto; }
 .sw .sw-specifications label.sw-spec-toggle { display:flex; flex-direction:row; justify-content:flex-start; align-items:center; gap:8px; }
 .sw .sw-specifications input[type="checkbox"] { width:auto; min-width:0; }
+
+.sw-spec-axis{display:grid;grid-template-columns:minmax(140px,180px) auto minmax(200px,1fr) auto;gap:12px;align-items:start;margin-block:10px}.sw-spec-axis textarea{width:100%;min-width:0;resize:vertical;white-space:pre-wrap;box-sizing:border-box}.sw-spec-axis>button{justify-self:end}@media(max-width:800px){.sw-spec-axis{grid-template-columns:minmax(0,1fr) auto}.sw-spec-axis textarea{grid-column:1/-1}}

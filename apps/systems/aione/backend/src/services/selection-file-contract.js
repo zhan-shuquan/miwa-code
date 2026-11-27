@@ -50,7 +50,7 @@ export async function quickWorkbook(data, template) {
   const w = new ExcelJS.Workbook();
   const values = Object.fromEntries(Object.entries(QUICK_FIELDS).map(([label, key]) => [label, data[key] ?? ""]));
   // Exports never grant publishing or paid design consent.
-  Object.assign(values, { 是否美工: "禁止美工", 是否上架: "禁止上架", 特殊说明: data.custom_miwa_selection_notes ?? "" });
+  Object.assign(values, { 是否美工: "禁止美工", 是否上架: "禁止上架", 特殊说明: [["备注",data.custom_miwa_selection_notes],["辅助信息",data.custom_miwa_auxiliary_info]].filter(([,v])=>v).map(([label,v])=>label+"：\n"+v).join("\n\n") });
   if (template) {
     await w.xlsx.load(template);
     let matched = 0;

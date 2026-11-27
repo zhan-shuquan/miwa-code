@@ -1,4 +1,5 @@
 import { parseSupplierFile } from '../services/selection-sku-file.js';
+import { completeShortName, completeSkuAttributes } from '../services/selection-recognition.js';
 import { requestProductFiles } from '../services/selection-product-files.js';
 import { confirmSpecifications } from '../services/selection-specifications.js';
 import { createEmployeeMaster } from "../services/employee-master.js";
@@ -215,10 +216,13 @@ export function createSelectionWorkspaceRouter(
       await putConfig("connection", { lastSeen: s.receivedAt });
       for (const master of skuMaster) {
         if (!master.selectionId || !master.itemCode || master.stage !== 'item_created' || !Array.isArray(master.skus)) continue;
-        await pool.query(
-          "UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{erpResult}',$3::jsonb),record_version=record_version+1,updated_at=now() WHERE id=$1 AND selection_workspace->>'status'='submitted' AND selection_workspace->'data'->>'item_code'=$2 AND selection_workspace->'erpResult' IS DISTINCT FROM $3::jsonb",
-          [master.selectionId, master.itemCode, JSON.stringify(master)],
-        );
+        await tx(async c => {
+          const updated = (await c.query(
+            "UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{erpResult}',$3::jsonb),record_version=record_version+1,updated_at=now() WHERE id=$1 AND selection_workspace->>'status'='submitted' AND selection_workspace->'data'->>'item_code'=$2 AND selection_workspace->'erpResult' IS DISTINCT FROM $3::jsonb RETURNING *",
+            [master.selectionId, master.itemCode, JSON.stringify(master)],
+          )).rows[0];
+          if(updated) await requestProductFiles(c, updated, updated.owner_person_id);
+        });
       }
       res.json({ ok: true, version: s.version });
     }),
@@ -363,6 +367,13 @@ export function createSelectionWorkspaceRouter(
         if (basic) basic.label = '商品信息';
         layout.version = 40;
         await putConfig('layout', layout);
+      }
+      if ((layout.version || 0) < 41) {
+        layout.fields = layout.fields.filter(f => f.id !== "custom_主要材质1");
+        const aux = defaults.fields.find(f => f.id === "custom_miwa_auxiliary_info");
+        if (aux && !layout.fields.some(f => f.id === aux.id)) layout.fields.splice(layout.fields.findIndex(f=>f.id==="custom_miwa_selection_notes")+1,0,aux);
+        layout.version = 41;
+        await putConfig("layout",layout);
       }
       layout.fields = layout.fields.filter((f) =>
         fields.some((x) => x.id === f.id),
@@ -609,7 +620,7 @@ export function createSelectionWorkspaceRouter(
       res.json({ items });
     }),
   );
-  const identify = async (title, s) => {
+  const identify = async (title, s, recognizeName = true) => {
     const response = await fetch(costUrl + "/identify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -624,7 +635,7 @@ export function createSelectionWorkspaceRouter(
     const category = s.categories.find((c) => c.name === result.category);
     result.category = category?.name || null;
     result.brand = category?.custom_miwa_default_brand || null;
-    return result;
+    return recognizeName ? completeShortName(result,title) : result;
   };
   router.post(
     "/identify",
@@ -644,7 +655,8 @@ export function createSelectionWorkspaceRouter(
     "/sku-file",
     run(async (req, res) => {
       const bytes = Buffer.from(String(req.body.base64 || ""), "base64");
-      res.json(parseSupplierFile(bytes,req.body.sourceUrl,req.body.filename,await snapshot()));
+      const s=await snapshot();
+      res.json(await completeSkuAttributes(parseSupplierFile(bytes,req.body.sourceUrl,req.body.filename,s),s));
     }),
   );
   const list = async (req, unlimited = false) => {
@@ -857,7 +869,7 @@ export function createSelectionWorkspaceRouter(
       fail("已归档或已提交ERP的记录不能直接覆盖；请复制为新草稿", 409);
     if (data.custom_商品长标题中文) {
       try {
-        const recognized = await identify(data.custom_商品长标题中文, s);
+        const recognized = await identify(data.custom_商品长标题中文, s, !data.shortNameManual);
         if (!data.shortNameManual)
           data.item_name = recognized.shortName?.name ||
             (previous?.selection_workspace.data.custom_商品长标题中文 === data.custom_商品长标题中文

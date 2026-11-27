@@ -8,7 +8,7 @@ export function selectionHeaderStatus(record) {
   const stage = record?.erpResult?.stage;
   return {
     severity: job?.status === 'failed' ? 'error' : ['queued','processing'].includes(job?.status) ? 'warning' : 'normal',
-    conclusion: record?.pool?.state === 'abandoned' ? '放弃选品' : ({draft:'待确认',number_pending:'已确认 · 货号待处理',confirmed:'已确认',submitted:'已确认',erp_pending:'已确认',abandoned:'放弃选品'})[record?.status] || '待确认',
+    conclusion: record?.pool?.state === 'abandoned' ? '放弃选品' : ({draft:'待确认',number_pending:'已确认 · 货号待处理',confirmed:'已确认',submitting:'已确认',submitted:'已确认',erp_pending:'已确认',abandoned:'放弃选品'})[record?.status] || '待确认',
     intake: stage === 'item_created' ? `建档成功 · ${record.erpResult.skuCount ?? 0}个SKU`
       : job?.status === 'failed' ? `建档失败：${job.result?.message || '请展开ERP处理记录'}`
       : ['queued','processing'].includes(job?.status) ? '处理中' : '未提交',

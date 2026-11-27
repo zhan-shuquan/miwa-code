@@ -98,7 +98,7 @@ async function once() {
     });
     } catch(error) {
       if(command.kind!=='product_files')throw error;
-      result={status:'failed',result:{message:error.message,retryable:/timeout|fetch failed|ECONN|ENET|超时|正在保存商品资料/i.test(error.message)}};
+      result={status:'failed',result:{message:error.message,retryable:/EBUSY|EPERM|EACCES|文件被占用|timeout|fetch failed|ECONN|ENET|超时|正在保存商品资料/i.test(error.message)}};
     } finally { if(heartbeat)clearInterval(heartbeat); }
     await api("/connector/commands/" + command.id + "/result", {
       ...result,

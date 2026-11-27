@@ -15,10 +15,10 @@ try {
   await writeFile(join(root,'template.xlsx'),Buffer.from(await w.xlsx.writeBuffer()));
   const payload={selectionId:'isolated:command',status:'confirmed',data:{item_code:'tst001',skus:[{supplierSkuId:'123',supplierImageUrl:'https://example.com/image.jpg',selected:true}]},assets:[]};
   const command={id:randomUUID(),payload};
-  let downloads=0,acknowledgements=0;
+  let downloads=0,acknowledgements=0,erpSkus=[];
   const erp=async(_name,input)=>{
     if(input.action==='acknowledge'){acknowledgements++;return {status:'succeeded',result:{verified:true}};}
-    return {status:'succeeded',result:{root,prefixDirectories:{tst:'employee'},prefix:'tst',template:'template.xlsx',reservationVerified:true}};
+    return {status:'succeeded',result:{root,prefixDirectories:{tst:'employee'},prefix:'tst',template:'template.xlsx',reservationVerified:true,erpSkus}};
   };
   const api=async()=>{downloads++;return {base64:Buffer.from('isolated image bytes').toString('base64')};};
   const first=await executeProductFiles(command,{erp,api});
@@ -40,6 +40,21 @@ try {
   assert.equal(conflicted.status,'failed');
   assert.equal(conflicted.result.state,'conflict');
   assert.deepEqual(await readFile(join(first.result.folder,'tst001.xlsx')),userEdit);
+  const skuPath=join(first.result.folder,'SKU.xlsx');
+  const manualBook=new ExcelJS.Workbook();await manualBook.xlsx.load(await readFile(skuPath));
+  manualBook.worksheets[0].getCell('H2').value='员工保留内容';
+  await writeFile(skuPath,Buffer.from(await manualBook.xlsx.writeBuffer()));
+  const manualBytes=await readFile(skuPath);
+  erpSkus=[{supplier_sku_id:'123',name:'tst001_actual77'}];
+  const formalCommand={id:randomUUID(),payload:{...payload,status:'submitted',version:4}};
+  const backfilled=await executeProductFiles(formalCommand,{erp,api});
+  assert.equal(backfilled.status,'succeeded');assert.equal(backfilled.result.skuCellsUpdated,1);
+  const filledBook=new ExcelJS.Workbook();await filledBook.xlsx.load(await readFile(skuPath));
+  assert.equal(filledBook.worksheets[0].getCell('G2').value,'tst001_actual77');
+  assert.equal(filledBook.worksheets[0].getCell('H2').value,'员工保留内容');
+  assert.deepEqual(await readFile(backfilled.result.files.find(f=>f.name==='SKU.xlsx').backup),manualBytes);
+  assert.deepEqual(await readFile(join(first.result.folder,'tst001.xlsx')),userEdit);
+  assert.equal((await executeProductFiles(formalCommand,{erp,api})).result.skuCellsUpdated,0);
   console.log('PASS: flat bundle, supplier images, byte-identical retry, ERP acknowledgement, managed update backup, preservation of external edits');
 } finally {
   if(previous===undefined)delete process.env.AIONE_PRODUCT_FILE_STATE;else process.env.AIONE_PRODUCT_FILE_STATE=previous;
