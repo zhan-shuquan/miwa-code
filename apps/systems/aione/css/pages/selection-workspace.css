@@ -693,6 +693,13 @@
   flex-wrap: wrap;
   gap: 4px;
 }
+.sw-media-field [data-image-url-panel]:not([hidden]) {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+.sw-media-field [data-image-url] { min-width: 0; flex: 1; }
+.sw-media-field [data-image-url-read] { flex-shrink: 0; }
 .sw-media-field:focus-within {
   outline: 1px solid var(--sw-green);
   outline-offset: 3px;

@@ -1,6 +1,7 @@
 import { parseSupplierFile } from '../services/selection-sku-file.js';
 import { createEmployeeMaster } from "../services/employee-master.js";
 import { mountUploadTransport, CHUNK_BYTES } from "../services/selection-upload-transport.js";
+import { fetchSelectionImage } from "../services/selection-remote-image.js";
 import {
   get1688RuntimeStatus,
   fetch1688ProductByUrl,
@@ -1254,7 +1255,18 @@ export function createSelectionWorkspaceRouter(
         );
         if (pending.rowCount) req.poolAssetWrite = req.params.id;
       }
-      const b = req.body,
+      // Check business access before making any outbound image request. The
+      // existing transaction below checks again before storing the attachment.
+      const accessible = await row(req, req.params.id);
+      if (accessible.selection_workspace.status === 'submitted' || accessible.archived_at)
+        fail('此记录不能修改附件', 409);
+      let b = req.body;
+      if (b.sourceUrl) {
+        if (b.kind === 'market' || b.base64) fail('图片网址导入请求无效');
+        try { b = await fetchSelectionImage(String(b.sourceUrl), uploadPolicy.maxBytes); }
+        catch (error) { fail(error.message, 422); }
+      }
+      const
         bytes = Buffer.from(String(b.base64 || ""), "base64");
       const png = bytes
           .subarray(0, 8)

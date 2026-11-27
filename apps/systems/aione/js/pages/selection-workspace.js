@@ -484,7 +484,7 @@ export async function initSelectionWorkspace(host, forcedView) {
                   style +
                   '" title="点击添加、拖放或Ctrl+V粘贴；JPG/PNG/WebP；单张最多' +
                   boot.uploadPolicy.maxMB +
-                  'MB"><div class="sw-images" data-images></div><div class="sw-media-actions"><button type="button" data-add-images>添加 / 更换</button><button type="button" data-ai="白底图" disabled title="AI白底图尚未启用">AI白底图</button></div><input data-upload type="file" accept="image/png,image/jpeg,image/webp" multiple hidden><small data-upload-status role="status"></small></section>'
+                  'MB"><div class="sw-images" data-images></div><div class="sw-media-actions"><button type="button" data-add-images>添加 / 更换</button><button type="button" data-image-url-toggle aria-expanded="false">图片网址</button><button type="button" data-ai="白底图" disabled title="AI白底图尚未启用">AI白底图</button></div><div data-image-url-panel hidden><input type="url" data-image-url aria-label="商品图片网址" placeholder="https://…"><button type="button" data-image-url-read>读取图片</button></div><input data-upload type="file" accept="image/png,image/jpeg,image/webp" multiple hidden><small data-upload-status role="status"></small></section>'
                 );
               if (f.type === "textarea")
                 return `<section class="sw-field sw-text-field" style="${style}"><div class="sw-field-heading"><label for="sw-text-${esc(f.id)}">${esc(f.label)}</label><span>${f.id === "selectionRationale" ? '<button type="button" data-ai="选品依据" disabled title="AI选品依据尚未启用">AI选品依据</button>' : ""}<button type="button" data-expand-text="${esc(f.id)}">放大编辑</button></span></div>${fieldInput(f, data[f.id], "data-field", l).replace("<textarea ", '<textarea id="sw-text-' + esc(f.id) + '" ')}</section>`;
@@ -1282,7 +1282,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       if (!record) {
         if (emptyBox)
           emptyBox.innerHTML =
-            '<button type="button" class="sw-empty-image" data-empty-image>添加商品图片</button>';
+            '<button type="button" class="sw-empty-image" data-empty-image>添加图片，支持拖拽及粘贴</button>';
         return;
       }
       const fresh = await api("/records/" + encodeURIComponent(record.id));
@@ -1291,7 +1291,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       if (!box) return;
       box.innerHTML = record.assets.length
         ? ""
-        : '<button type="button" class="sw-empty-image" data-empty-image>添加商品图片</button>';
+        : '<button type="button" class="sw-empty-image" data-empty-image>添加图片，支持拖拽及粘贴</button>';
       for (const [i, a] of record.assets.entries()) {
         const url = await imageUrl(record.id, a.id);
         if (signal.aborted) return;
@@ -1353,12 +1353,10 @@ export async function initSelectionWorkspace(host, forcedView) {
       if (status) status.textContent = "";
       host.querySelector("[data-message]").hidden = true;
     };
-    const upload = (files) => {
-      const selected = Array.from(files || []);
-      if (!selected.length) return;
+    const queueImageUpload = (work) => {
       uploading = uploading
         .catch(() => {})
-        .then(() => uploadFiles(selected))
+        .then(work)
         .catch((e) => {
           const status = content.querySelector("[data-upload-status]");
           if (status) status.textContent = "上传失败：" + e.message;
@@ -1366,7 +1364,33 @@ export async function initSelectionWorkspace(host, forcedView) {
         });
       return uploading;
     };
+    const upload = (files) => {
+      const selected = Array.from(files || []);
+      if (selected.length) return queueImageUpload(() => uploadFiles(selected));
+    };
     const media = content.querySelector(".sw-media-field");
+    on(media?.querySelector('[data-image-url-toggle]'), 'click', e => {
+      const panel = media.querySelector('[data-image-url-panel]');
+      panel.hidden = !panel.hidden;
+      e.currentTarget.setAttribute('aria-expanded', String(!panel.hidden));
+      if (!panel.hidden) media.querySelector('[data-image-url]').focus();
+    });
+    on(media?.querySelector('[data-image-url-read]'), 'click', guarded(() => queueImageUpload(async () => {
+      const input = media.querySelector('[data-image-url]');
+      const sourceUrl = input.value.trim();
+      let url;
+      try { url = new URL(sourceUrl); } catch { throw Error('请输入有效HTTP或HTTPS图片网址'); }
+      if (!['http:', 'https:'].includes(url.protocol)) throw Error('请输入有效HTTP或HTTPS图片网址');
+      media.querySelector('[data-upload-status]').textContent = '正在读取图片…';
+      await ensureDraft();
+      await api('/records/' + encodeURIComponent(record.id) + '/assets', 'POST', { sourceUrl });
+      await images();
+      media.querySelector('[data-upload-status]').textContent = '';
+      host.querySelector('[data-message]').hidden = true;
+      input.value = '';
+      media.querySelector('[data-image-url-panel]').hidden = true;
+      media.querySelector('[data-image-url-toggle]').setAttribute('aria-expanded', 'false');
+    })));
     on(media, "click", (e) => {
       if (e.target.closest("[data-add-images],[data-empty-image]"))
         content.querySelector("[data-upload]").click();

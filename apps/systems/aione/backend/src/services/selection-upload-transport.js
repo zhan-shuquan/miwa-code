@@ -3,6 +3,18 @@ import { uploadJsonLimit } from './selection-upload-policy.js';
 import { fail } from './selection-workspace-contract.js';
 
 export const CHUNK_BYTES = 2 * 1024 * 1024;
+// The same-origin proxy decodes route captures. Compare semantic segments,
+// without allowing an encoded slash to change the upload target.
+export function canonicalTransportPath(path) {
+  if (typeof path !== 'string') fail('上传目标无效', 400);
+  try {
+    return path.split('/').map(segment => {
+      const value = decodeURIComponent(segment);
+      if (/[/?#\\]/.test(value) || value === '.' || value === '..') fail('上传目标无效', 400);
+      return encodeURIComponent(value);
+    }).join('/');
+  } catch { fail('上传目标无效', 400); }
+}
 export const transportPath = path => /^\/records\/[^/?]+(?:\/assets)?$/.test(path) || ['/records','/sku-file','/pool/collect', '/pool/preflight'].includes(path);
 export const transportMethod = path => /^\/records\/[^/?]+$/.test(path)?'PATCH':'POST';
 const uuid = value => /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value || '');
@@ -13,7 +25,8 @@ const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 export function mountUploadTransport(router, { pool, tx, actor }) {
   const run = fn => async (req, res, next) => { try { await fn(req, res); } catch (e) { next(e); } };
   router.post('/upload-transport', run(async (req, res) => {
-    const { path, size, sha256 } = req.body;
+    const { size, sha256 } = req.body;
+    const path = canonicalTransportPath(req.body.path);
     if (!transportPath(path) || !Number.isInteger(size) || size < 1 || size > uploadJsonLimit || !/^[a-f0-9]{64}$/.test(sha256 || '')) fail('上传请求无效或超过允许大小', 400);
     const id = randomUUID(), owner = actor(req);
     await tx(async c => {
@@ -52,8 +65,9 @@ export function mountUploadTransport(router, { pool, tx, actor }) {
       if (!id) return next();
       if (req.method !== transportMethod(req.path) || !transportPath(req.path) || !uuid(id)) fail('上传目标无效', 400);
       req.body = await tx(async c => {
-        const record = (await c.query('SELECT * FROM selection_upload_transport WHERE id=$1 AND owner_id=$2 AND path=$3 AND expires_at>now() FOR UPDATE', [id, actor(req), req.path])).rows[0];
+        const record = (await c.query('SELECT * FROM selection_upload_transport WHERE id=$1 AND owner_id=$2 AND expires_at>now() FOR UPDATE', [id, actor(req)])).rows[0];
         if (!record) fail('上传已过期或无权限', 404);
+        if (canonicalTransportPath(record.path) !== canonicalTransportPath(req.path)) fail('上传目标与凭证不一致', 403);
         const parts = (await c.query('SELECT position,bytes FROM selection_upload_chunks WHERE upload_id=$1 ORDER BY position', [id])).rows;
         if (parts.length !== Math.ceil(record.size_bytes / CHUNK_BYTES) || parts.some((p, i) => p.position !== i)) fail('上传尚未完成', 409);
         const bytes = Buffer.concat(parts.map(p => p.bytes));

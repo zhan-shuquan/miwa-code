@@ -11,7 +11,7 @@ await pool.query(await readFile(new URL('../../../../../data-code/migrations/020
 const app = express(); app.use(express.json({limit: '4mb'}));
 app.use((req,res,next)=>req.headers['x-test-owner'] ? next() : res.sendStatus(401));
 mountUploadTransport(app, {pool,tx,actor:req=>req.headers['x-test-owner']});
-app.post('/records/example/assets', (req,res)=>res.json({sha256:sha(Buffer.from(req.body.base64,'base64')),kind:req.body.kind}));
+app.post('/records/:id/assets', (req,res)=>res.json({sha256:sha(Buffer.from(req.body.base64,'base64')),kind:req.body.kind}));
 app.post(['/sku-file','/records'],(req,res)=>res.json({length:req.body.text.length}));
 app.patch('/records/draft',(req,res)=>res.json({length:req.body.text.length}));
 app.use((e,req,res,next)=>res.status(e.status || e.statusCode || 500).json({message:e.message}));
@@ -31,12 +31,24 @@ try {
     if(!index) { assert.equal((await call('/upload-transport/'+id+'/'+index,'PUT',body)).status,200); assert.equal((await call('/upload-transport/'+id+'/'+index,'PUT',{base64:randomBytes(CHUNK_BYTES).toString('base64')})).status,409); }
   }
   assert.equal((await call('/records/example/assets','POST',{uploadTransportId:id},'owner-b')).status,404);
-  assert.equal((await call('/pool/collect','POST',{uploadTransportId:id})).status,404);
+  assert.equal((await call('/pool/collect','POST',{uploadTransportId:id})).status,403);
   const completed=await call('/records/example/assets','POST',{uploadTransportId:id}); assert.equal(completed.status,200,JSON.stringify(completed));assert.equal(completed.body.sha256,sha(original));assert.equal(completed.body.kind,'product');
   assert.equal((await call('/upload-transport/'+id,'DELETE')).status,200);
   assert.equal((await call('/records/example/assets','POST',{uploadTransportId:id})).status,404);
   assert.equal((await call('/upload-transport','POST',{path:'/connector/snapshot',size:10,sha256:sha('x')})).status,400);
   assert.equal((await call('/upload-transport','POST',{path:'/pool/collect',size:200*1024*1024,sha256:sha('x')})).status,400);
+  for (const [stored,requested] of [
+    ['/records/selection%3Aexample/assets','/records/selection:example/assets'],
+    ['/records/selection:example/assets','/records/selection%3Aexample/assets'],
+  ]) {
+    const data=Buffer.from(JSON.stringify({base64:Buffer.from('real-route-test').toString('base64')}));
+    const t=await call('/upload-transport','POST',{path:stored,size:data.length,sha256:sha(data)});
+    assert.equal(t.status,200);
+    await call('/upload-transport/'+t.body.id+'/0','PUT',{base64:data.toString('base64')});
+    assert.equal((await call(requested,'POST',{uploadTransportId:t.body.id})).status,200,'encoded/decode proxy path');
+    await call('/upload-transport/'+t.body.id,'DELETE');
+  }
+  assert.equal((await call('/upload-transport','POST',{path:'/records/a%2Fb/assets',size:1,sha256:sha('x')})).status,400);
   for(const [path,method] of [['/sku-file','POST'],['/records','POST'],['/records/draft','PATCH']]) {
     const body=Buffer.from(JSON.stringify({text:'x'.repeat(5*1024*1024)}));
     const transfer=await call('/upload-transport','POST',{path,size:body.length,sha256:sha(body)});assert.equal(transfer.status,200);

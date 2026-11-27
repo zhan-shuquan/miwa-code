@@ -74,6 +74,7 @@ export async function aioneApi(path, options = {}) {
   if (transferable && (options.method || 'GET').toUpperCase() === transferMethod && typeof options.body === 'string' && new Blob([options.body]).size > 3 * 1024 * 1024) {
     const bytes = new TextEncoder().encode(options.body);
     const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
+    for (let attempt = 0; attempt < 2; attempt++) {
     const transfer = await aioneApi(prefix + '/upload-transport', { method: 'POST', body: JSON.stringify({ path: relative, size: bytes.length, sha256: hash }) });
     try {
       for (let offset = 0, part = 0; offset < bytes.length; offset += transfer.chunkBytes, part++) {
@@ -83,8 +84,13 @@ export async function aioneApi(path, options = {}) {
         await aioneApi(prefix + '/upload-transport/' + transfer.id + '/' + part, { method: 'PUT', body: JSON.stringify({ base64: btoa(binary) }), signal: options.signal });
       }
       return await aioneApi(path, { ...options, body: JSON.stringify({ uploadTransportId: transfer.id }) });
+    } catch (error) {
+      // Only an explicit pre-execution transport rejection is safe to replay.
+      // A renewed transport still requires the same authenticated employee.
+      if (attempt || error.status !== 404 || error.message !== '上传已过期或无权限') throw error;
     } finally {
       await aioneApi(prefix + '/upload-transport/' + transfer.id, { method: 'DELETE' }).catch(() => {});
+    }
     }
   }
   const base = getAioneApiBaseUrl();
