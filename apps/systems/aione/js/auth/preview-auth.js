@@ -160,7 +160,11 @@ function toHeaderConfig(identity) {
   };
 }
 
-export function logoutPreviewIdentity(reason = "user") {
+export async function logoutPreviewIdentity(reason = "user") {
+  if (window.AIONE_AUTHENTICATED_DEVELOPMENT === true) {
+    const response = await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' });
+    if (!response.ok) throw new Error('服务器退出失败，请重试');
+  }
   const identity = window.AIONEPreviewIdentity || null;
   const session = window.AIONEPreviewAuthSession || {};
   if (identity) {
@@ -172,7 +176,7 @@ export function logoutPreviewIdentity(reason = "user") {
   delete window.AIONEPreviewPermissionContext;
   delete window.AIONEPreviewActivity;
   try { if (window.google?.accounts?.id) window.google.accounts.id.disableAutoSelect(); } catch (error) { console.warn("AIONE Google logout cleanup skipped", error); }
-  window.location.replace(`${window.location.pathname}${window.location.search}`);
+  window.location.replace(window.AIONE_AUTHENTICATED_DEVELOPMENT === true ? '/login' : `${window.location.pathname}${window.location.search}`);
 }
 
 window.addEventListener("aione:preview-logout-request", () => logoutPreviewIdentity("header-user-menu"));
@@ -242,6 +246,13 @@ async function initGoogleSignIn(host, onAuthenticated) {
 }
 
 export async function resolvePreviewIdentity() {
+  if (window.AIONE_SELECTION_PREVIEW && ['127.0.0.1','localhost'].includes(location.hostname)) {
+    const response=await fetch('/__preview/identity');
+    if(!response.ok){location.href=window.AIONE_AUTHENTICATED_DEVELOPMENT ? '/login' : '/preview';throw new Error('身份未登录');}
+    const identity=await response.json();
+    identity.name=identity.displayName;identity.canonicalIdentitySource=window.AIONE_AUTHENTICATED_DEVELOPMENT ? 'authenticated_google' : 'isolated_test';
+    window.AIONEPreviewIdentity=identity;return identity;
+  }
   const existing = readStoredSession();
   if (existing) {
     try {

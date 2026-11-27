@@ -10,6 +10,7 @@
 ======================================== */
 
 import { ROUTE_REGISTRY } from "./route-registry.js";
+import {selectionWorkspaceEnabled} from './selection-navigation.js';
 import { HOME_REGISTRY } from "./home-registry.js";
 import { MIWA_COMPANY_NAVIGATION } from "../data/miwa-company-content.js";
 import { MIWA_BUSINESS_NAVIGATION, MIWA_BUSINESSES } from "../data/miwa-business-home-content.js";
@@ -151,6 +152,15 @@ function buildRegistryHomeItems(rootId) {
 }
 
 function buildPlatformItems(rootId) {
+  if(selectionWorkspaceEnabled()) {
+    const definitions={
+      'product-home':[['选品池','product-home?view=pool'],['选品录入','product-home?view=entry'],['选品一览','product-home?view=list']],
+      work:[['工作台','work']],
+      'talent-home':[['我的档案','talent-home?section=my-profile']],
+      settings:[['ERP连接与同步','settings?section=selection-sync'],['表单布局','settings?section=selection-layout']]
+    };
+    if(definitions[rootId])return definitions[rootId].map(([label,route],i)=>({id:rootId+'-'+i,label,route,icon:'',children:[]}));
+  }
   const root = ROUTE_REGISTRY[rootId];
   if (!root && !HOME_REGISTRY[rootId]) return [];
   if (rootId === "company") return MIWA_COMPANY_NAVIGATION;

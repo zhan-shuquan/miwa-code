@@ -1,0 +1,16 @@
+{
+  "development": {
+    "enabled": false,
+    "origin": "http://127.0.0.1:5500",
+    "reason": "8081 is the sole production ERP; configure a temporary isolated target before development writes",
+    "testReceipts": true
+  },
+  "production": {
+    "origin": "https://aione.miwa-happyhouse.com",
+    "enabled": true,
+    "project": "miwa-erp-dev",
+    "container": "miwa-erp-dev-backend-1",
+    "site": "miwa-dev.localhost",
+    "testReceipts": false
+  }
+}

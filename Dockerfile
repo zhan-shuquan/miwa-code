@@ -4,7 +4,7 @@ ENV NODE_ENV=production
 WORKDIR /app/apps/systems/aione/backend
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends unzip imagemagick fonts-noto-cjk \
+  && apt-get install -y --no-install-recommends unzip imagemagick fonts-noto-cjk python3 \
   && rm -rf /var/lib/apt/lists/*
 
 COPY apps/systems/aione/backend/package.json ./package.json
@@ -32,4 +32,4 @@ COPY apps/systems/aione/pages/design-center/workbench.html /app/design-center-pr
 RUN node --input-type=module -e "await import('./server.js'); console.log('[AIONE] Docker backend startup/import graph PASS'); process.exit(0)"
 
 EXPOSE 8080
-CMD ["npm", "start"]
+CMD ["node", "scripts/start-production.mjs"]

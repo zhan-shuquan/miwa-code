@@ -174,6 +174,7 @@ function forwardHeaders(req, cloudRunToken) {
     "x-aione-source-system",
     "x-aione-person-id",
     "x-aione-assignment-id",
+    "x-aione-connector-token",
     "x-correlation-id"
   ];
   for (const key of copy) {

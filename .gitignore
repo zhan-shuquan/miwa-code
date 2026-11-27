@@ -83,6 +83,7 @@ Desktop.ini
 $RECYCLE.BIN/
 
 # Local databases and backups
+.local/
 *.sqlite
 *.sqlite3
 *.db

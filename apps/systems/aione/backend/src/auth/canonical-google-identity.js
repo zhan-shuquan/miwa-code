@@ -1,4 +1,4 @@
-import pool, { withTransaction } from "../../db.js";
+import defaultPool, { withTransaction } from "../../db.js";
 
 function clean(value) {
   return String(value || "").trim();
@@ -23,7 +23,13 @@ function toIdentity(row) {
   });
 }
 
-export async function resolveCanonicalGoogleIdentity({ subject, email }) {
+export async function resolveCanonicalGoogleIdentity({ subject, email }, database = defaultPool) {
+  const pool = database;
+  const transaction = database === defaultPool ? withTransaction : async fn => {
+    const client=await database.connect();
+    try {await client.query("BEGIN");const value=await fn(client);await client.query("COMMIT");return value;}
+    catch(e){await client.query("ROLLBACK");throw e;} finally{client.release();}
+  };
   const googleSub = clean(subject);
   const normalizedEmail = normalizeEmail(email);
   if (!googleSub || !normalizedEmail) return null;
@@ -87,7 +93,7 @@ export async function resolveCanonicalGoogleIdentity({ subject, email }) {
   const person = personResult.rows[0];
   const externalId = `google:${googleSub}`;
 
-  return withTransaction(async (client) => {
+  return transaction(async (client) => {
     await client.query(
       `INSERT INTO public.external_identities
         (id, provider, subject, person_id, email_snapshot, status,

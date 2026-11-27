@@ -1,0 +1,18 @@
+# Preparation only. No schema migration, Cloud Run update, or traffic switch.
+steps:
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        source infra/gcp/cloud-shell/CURRENT_BASELINE.sh
+        assert_aione_current_baseline
+        [[ '${_SOURCE_COMMIT}' =~ ^[a-f0-9]{40}$$ ]] || exit 1
+        [[ '$PROJECT_ID' == "$$AIONE_PROJECT_ID" ]] || exit 1
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '-t', 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:erp8081-${_SOURCE_COMMIT}', '.']
+images:
+  - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/aione/aione-backend:erp8081-${_SOURCE_COMMIT}'
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1200s
