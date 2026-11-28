@@ -1,3 +1,4 @@
+import {readSharedParameters} from './shared-parameters-service.js';
 import {createHash} from "node:crypto";
 import {reviewFirstLiveSkuRows} from "./rakuten-first-live-sku-review.js";
 import pool,{withTransaction} from "../../db.js";
@@ -35,9 +36,10 @@ export async function buildLivePilotPlan(ref){
  const dictionaries={};
  const selective=genre.attributes.filter(a=>a.properties?.rmsMandatoryFlg===true&&String(a.properties?.rmsInputMethod).toUpperCase()==="SELECTIVE");
  for(const a of selective){dictionaries[String(a.id)]=await getAttributeDictionaryV2({shopRef:PILOT_SHOP,genreId:product.rakutenGenreId,attributeId:a.id});}
- const preview=previewRakutenItemV2({product,skus,assets,genre,shipping,dictionaries});
+ const {parameters}=await readSharedParameters();
+ const preview=previewRakutenItemV2({product,skus,assets,genre,shipping,dictionaries,parameters});
  const blocking=checkFirstLiveEvidence(preview);
- const skuReview=reviewFirstLiveSkuRows({product,skus,item:preview.item});
+ const skuReview=reviewFirstLiveSkuRows({product,skus,item:preview.item,parameters});
  blocking.push(...skuReview.blocking);
  const skuCodes=skuReview.rows.map(x=>x.skuCode);
  const inventory=Object.fromEntries(skuReview.rows.map(x=>[x.skuCode,x.stock]));

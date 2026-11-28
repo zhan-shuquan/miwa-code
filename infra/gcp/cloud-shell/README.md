@@ -83,3 +83,29 @@ bash infra/gcp/cloud-shell/08_DRIVE_RUNTIME_ACCESS_CHECK.sh
 `aione-current-baseline-guard.yml` blocks legacy runtime targets, removed deployment paths, alternate `AIONE_DATABASE_URL` workflows, and missing automated-deployment assets.
 
 Cloud Run remains private. Database credentials and OpenAI credentials are supplied through Secret Manager and must never be committed to Repo, pasted into chat, or stored in shell history.
+
+## Settings PR preview before merge
+
+The existing `deploy-current.yaml` pipeline now has `_AIONE_DEPLOY_MODE=preview`.
+It runs the same reviewed migration and preflight stages and stops after private
+candidate health, before traffic cutover. It compares the active revision traffic
+before and after deployment. Default `release` mode keeps the normal main workflow.
+No second Cloud Run service or database baseline is created.
+
+From a clean detached worktree of the reviewed PR commit:
+
+```bash
+AIONE_PREVIEW_COMMIT=<reviewed-full-commit-sha> bash infra/gcp/automation/PREVIEW_CURRENT_SETTINGS_BACKEND.sh
+```
+
+This is not a fully isolated database: reviewed migrations still apply to CURRENT
+`aione-pg-dev/aione`, and authenticated preview saves use that same data. The command
+itself does not seed catalogs, edit product records, grant maintenance permissions,
+or publish to Rakuten. Verify the account's maintenance permission separately.
+
+After Cloud Build returns `PREVIEW PASS`, use its exact `PREVIEW_BACKEND_URL` as the
+branch-scoped Preview variable `AIONE_SETTINGS_PREVIEW_BACKEND_URL` on the existing
+`miwa-aione-test` Vercel project, then rebuild the preview. The bridge accepts only
+`candidate-<sha>` tags of the fixed CURRENT service on the settings branch; IAM
+still uses the base CURRENT service audience. Production and other branches ignore
+the override. Removing the branch variable and rebuilding returns to CURRENT.

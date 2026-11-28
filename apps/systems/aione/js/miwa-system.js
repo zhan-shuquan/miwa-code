@@ -1,3 +1,4 @@
+import {mountSettingsCenter} from "./pages/settings-center.js";
 import { setCurrentBusinessSpace } from "./shell/platform-context.js";
 import { BUSINESS_SPACES } from "./config/business-navigation.js";
 /* ========================================
@@ -241,6 +242,11 @@ async function renderCurrentRoute() {
   if (routeId === "business-home" || routeId.startsWith("business-")) {
     await loadComponents([["app-main-host", route.page || ROUTE_REGISTRY["business-home"].page]]);
     await initMiwaBusinessHome();
+    return;
+  }
+
+  if (routeId === "shared-settings") {
+    await mountSettingsCenter(document.getElementById("app-main-host"));
     return;
   }
 

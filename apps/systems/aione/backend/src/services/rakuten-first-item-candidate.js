@@ -14,7 +14,7 @@ export function buildRakutenFirstItemCandidate({product,skus=[],mappedImages=[],
  if(!txt(product?.rakutenTitle))fail("rakuten_title_missing");
  if(!/^\d{6}$/.test(txt(product?.rakutenGenreId)))fail("rakuten_six_digit_genre_required");
  if(genre?.lowest!==true || txt(genre?.genreId)!==txt(product?.rakutenGenreId))fail("rakuten_leaf_genre_not_verified");
- if(!Number.isInteger(Number(product?.salePriceJpy))||Number(product.salePriceJpy)<=0)fail("tax_included_price_missing");
+ if(buildSkuEntries(product||{}).some(entry=>!Number.isSafeInteger(entry.priceJpy)||entry.priceJpy<=0))fail("tax_included_price_missing");
  const assignments=buildSkuEntries(product||{});
  if(skus.length!==2||assignments.length!==2)fail("pilot_two_skus_required");
  const selector=product?.specs?.[0];

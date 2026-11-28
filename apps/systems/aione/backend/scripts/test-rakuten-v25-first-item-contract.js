@@ -15,3 +15,7 @@ assert.equal(r.optionalDescriptions.pcDescription,null);
 assert.equal(r.safeToSubmit,false);
 assert.ok(firstItemV25Policy({...p,salePriceJpy:null},[]).blockers.includes("default_inclusive_price_missing"));
 console.log("PASS Rakuten V2.5 business policy, no live RMS call");
+
+const independent=firstItemV25Policy({...p,extraAttributes:{independentSkuPricing:"true"},skuOverrides:[{index:2,identity:"套数=2個",priceJpy:1580}]},[{id:"sku1",sku_code:"one",attributes:{"套数":"1個"}},{id:"sku2",sku_code:"two",attributes:{"套数":"2個"}}]);
+assert.deepEqual(independent.skus.map(x=>x.taxIncludedPriceJpy),[980,1580]);
+assert.equal(independent.commonPriceJpy,null);

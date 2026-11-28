@@ -1,3 +1,4 @@
+import {translateSpec} from '../../../js/config/product-spec-settings.js';
 import {buildSkuEntries} from "./product-entry-contract.js";
 import {matchPersistedSkuByAttributes} from "../../../js/services/product-sku-image-identity.js";
 
@@ -5,7 +6,7 @@ import {matchPersistedSkuByAttributes} from "../../../js/services/product-sku-im
 // Never rename or reconstruct SKU identities after product images are bound.
 const expectedByQuantity=Object.freeze({"1個":"zjl238-04","2個":"zjl238-05"});
 const normalizeQuantity=value=>String(value??"").normalize("NFKC").replace(/[\s\u3000]/g,"").replace(/セット$/,"");
-export function reviewFirstLiveSkuRows({product,skus,item}={}){
+export function reviewFirstLiveSkuRows({product,skus,item,parameters={}}={}){
  const blocking=[],rows=[],seenIds=new Set(),seenQuantities=new Set();
  const variants=item?.variants||{};
  for(const entry of buildSkuEntries(product||{})){
@@ -26,7 +27,7 @@ export function reviewFirstLiveSkuRows({product,skus,item}={}){
   if(!Number.isSafeInteger(stock)||stock<0)blocking.push("sku_stock_invalid");
   if(price!==980)blocking.push("pilot_price_not_980");
   if(!location)blocking.push("sku_image_missing");
-  if(String(variant.selectorValues?.selector0||"")!==String(Object.values(entry.attributes)[0]))
+  if(String(variant.selectorValues?.selector0||"")!==String(translateSpec(parameters,Object.keys(entry.attributes)[0],Object.values(entry.attributes)[0]).value))
    blocking.push("sku_selector_value_mismatch");
   rows.push({
    skuId:sku.id,

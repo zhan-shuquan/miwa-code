@@ -1,11 +1,12 @@
+import {translateSpec} from '../../../js/config/product-spec-settings.js';
 // Deterministic Rakuten mapping: use canonical product facts and verified shop policy.
 // No image guesses, invented maker model, or fastest-dispatch default.
 const str=x=>String(x??"").trim();
 const norm=x=>str(x).normalize("NFKC").toLowerCase().replace(/[\s_-]/g,"");
 const COLORS={ブラック:["黑色","黒","black"],ホワイト:["白","white"],グレー:["灰色","gray"],オレンジ:["橙色","orange"],ブルー:["蓝色","blue"],レッド:["红色","red"],ベージュ:["米色","beige"]};
-function color(x){return Object.entries(COLORS).find(([k,v])=>[k,...v].some(y=>norm(y)===norm(x)))?.[0]||str(x)}
+function color(x,parameters){const translated=translateSpec(parameters,'颜色',str(x));if(translated.categoryId)return translated.missing?'':translated.value;return Object.entries(COLORS).find(([k,v])=>[k,...v].some(y=>norm(y)===norm(x)))?.[0]||str(x)}
 const pilotDash=(p,a)=>p?.localCode==="zjl238"&&p?.targetShopRef==="永井GD"&&String(p?.rakutenGenreId)==="565305"&&String(a?.id)==="8"&&a?.nameJa==="代表カラー";
-export function autoMapAttributes({product,sku,genre,dictionaries={}}){
+export function autoMapAttributes({product,sku,genre,dictionaries={},parameters={}}){
  const blocking=[],trace=[],attributes=[],e=product?.extraAttributes||{};
  for(const a of (genre?.attributes||[]).filter(x=>x?.properties?.rmsMandatoryFlg===true)){
   const id=String(a.id),name=str(a.nameJa),method=str(a.properties?.rmsInputMethod).toUpperCase();
@@ -13,12 +14,12 @@ export function autoMapAttributes({product,sku,genre,dictionaries={}}){
   let value=str(sku?.attributes?.[name]??sku?.attributes?.[id]??e[id]??e[name]),source=value?"saved_attribute":null;
   if(!value&&name==="メーカー型番"&&str(product?.productModel)){value=str(product.productModel);source="product_model";}
   if(!value&&name==="代表カラー"){
-   const colors=[product?.primaryColor,e.primaryColor,e["颜色"],sku?.attributes?.["颜色"],sku?.attributes?.["カラー"]].filter(x=>str(x)).map(color);
+   const colors=[product?.primaryColor,e.primaryColor,e["颜色"],sku?.attributes?.["颜色"],sku?.attributes?.["カラー"]].filter(x=>str(x)).map(x=>color(x,parameters));
    if(colors.length&&new Set(colors).size===1){value=colors[0];source="structured_color";}
   }
   if(!value&&name==="素材"&&str(product?.material)){value=str(product.material);source="material";}
   if(method==="SELECTIVE"&&value){
-   const matched=dictionary.filter(x=>norm(x?.nameJa)===norm(color(value)));
+   const matched=dictionary.filter(x=>norm(x?.nameJa)===norm(color(value,parameters)));
    if(matched.length===1){value=matched[0].nameJa;source="rms_dictionary";}
    else if(value!=="-"||!(dictionary.some(x=>str(x?.nameJa)==="-")||pilotDash(product,a))){value="";}
   }

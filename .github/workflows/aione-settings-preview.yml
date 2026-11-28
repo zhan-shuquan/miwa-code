@@ -1,0 +1,42 @@
+name: AIONE Settings Preview Routing
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/aione-settings-preview.yml
+      - apps/systems/aione/api/aione-bridge.js
+      - apps/systems/aione/js/config/backend-preview-target.js
+      - apps/systems/aione/tests/verify-settings-preview-target.mjs
+      - apps/systems/aione/tests/verify-settings-preview-proxy.mjs
+      - infra/gcp/cloudbuild/deploy-current.yaml
+      - infra/gcp/automation/PREVIEW_CURRENT_SETTINGS_BACKEND.sh
+      - infra/gcp/automation/VERIFY_CURRENT_SETTINGS_PREVIEW_READ_ONLY.sh
+      - infra/gcp/automation/RUN_PR206_PREVIEW_ONCE.sh
+      - infra/gcp/tests/test-pr206-one-command-preview.py
+      - infra/gcp/automation/VERIFY_PR206_STORES_READ_ONLY.sh
+      - infra/gcp/tests/test-pr206-live-store-readback-script.py
+      - infra/gcp/tests/test-current-preview-mode.py
+      - infra/gcp/tests/test-current-settings-preview-read-only.py
+permissions:
+  contents: read
+jobs:
+  preview-confinement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: python3 -m pip install PyYAML==6.0.2
+      - run: |
+          node apps/systems/aione/tests/verify-settings-preview-target.mjs
+          node apps/systems/aione/tests/verify-settings-preview-proxy.mjs
+          node apps/systems/aione/tests/verify-dev-preview-topology.mjs
+          python3 infra/gcp/tests/test-current-preview-mode.py
+          python3 infra/gcp/tests/test-current-settings-preview-read-only.py
+          bash -n infra/gcp/automation/PREVIEW_CURRENT_SETTINGS_BACKEND.sh
+          bash -n infra/gcp/automation/VERIFY_CURRENT_SETTINGS_PREVIEW_READ_ONLY.sh
+          bash -n infra/gcp/automation/RUN_PR206_PREVIEW_ONCE.sh
+          python3 infra/gcp/tests/test-pr206-one-command-preview.py
+          bash -n infra/gcp/automation/VERIFY_PR206_STORES_READ_ONLY.sh
+          python3 infra/gcp/tests/test-pr206-live-store-readback-script.py

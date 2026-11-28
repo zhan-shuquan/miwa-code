@@ -1,3 +1,4 @@
+import { resolveBackendTarget } from '../js/config/backend-preview-target.js';
 import { Readable } from "node:stream";
 import { getVercelOidcToken } from "@vercel/oidc";
 
@@ -11,7 +12,7 @@ let cachedRunIdToken = { token: "", expiresAt: 0 };
 
 function requiredEnv() {
   const env = {
-    backendUrl: CURRENT_BACKEND_URL,
+    ...resolveBackendTarget(process.env,CURRENT_BACKEND_URL),
     projectNumber: String(process.env.GCP_PROJECT_NUMBER || "").trim(),
     serviceAccountEmail: String(process.env.GCP_SERVICE_ACCOUNT_EMAIL || "").trim(),
     poolId: String(process.env.GCP_WORKLOAD_IDENTITY_POOL_ID || "").trim(),
@@ -108,7 +109,7 @@ async function getCloudRunIdToken(env) {
       authorization: `Bearer ${federatedToken}`,
       "content-type": "application/json"
     },
-    body: JSON.stringify({ audience: env.backendUrl, includeEmail: true })
+    body: JSON.stringify({ audience: env.tokenAudience, includeEmail: true })
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || !payload.token) {

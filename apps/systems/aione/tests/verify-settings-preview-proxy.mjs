@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const target='https://candidate-abcdef1---aione-backend-current-jjlnxogxta-an.a.run.app';
+const current='https://aione-backend-current-jjlnxogxta-an.a.run.app';
+const jwt='fixture.'+Buffer.from(JSON.stringify({iss:'https://oidc.vercel.com',exp:Math.floor(Date.now()/1000)+3600})).toString('base64url')+'.fixture';
+const helper=new URL('../js/config/backend-preview-target.js',import.meta.url).href;
+let source=fs.readFileSync(new URL('../api/aione-bridge.js',import.meta.url),'utf8');
+source=source.replace("'../js/config/backend-preview-target.js'",JSON.stringify(helper)).replace('import { getVercelOidcToken } from "@vercel/oidc";',`const getVercelOidcToken=async()=>${JSON.stringify(jwt)};`);
+const {default:handler}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+Object.assign(process.env,{VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feat/shared-settings-center-20261015',AIONE_SETTINGS_PREVIEW_BACKEND_URL:target,GCP_PROJECT_NUMBER:'test',GCP_SERVICE_ACCOUNT_EMAIL:'fixture@example.test',GCP_WORKLOAD_IDENTITY_POOL_ID:'fixture',GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID:'fixture'});
+const calls=[];globalThis.fetch=async(url,options)=>{calls.push({url,options});if(url==='https://sts.googleapis.com/v1/token')return Response.json({access_token:'fixture'});if(url.includes(':generateIdToken'))return Response.json({token:jwt});assert.ok(String(url).startsWith(target+'/api/')||String(url).startsWith(current+'/api/'));return new Response(null,{status:204});};
+const request=()=>({url:'/api/aione-bridge?__aione_path=v1/shared-parameters',method:'GET',headers:{authorization:'Bearer fixture-application-identity'}});
+const response=()=>({statusCode:0,setHeader(){},end(){}});
+let res=response();await handler(request(),res);assert.equal(res.statusCode,204);
+assert.equal(JSON.parse(calls.find(c=>c.url.includes(':generateIdToken')).options.body).audience,current);
+assert.equal(calls.at(-1).url,target+'/api/v1/shared-parameters');assert.equal(calls.at(-1).options.headers.get('authorization'),'Bearer fixture-application-identity');assert.ok(calls.at(-1).options.headers.get('x-serverless-authorization').startsWith('Bearer '));
+process.env.VERCEL_ENV='production';res=response();await handler(request(),res);assert.equal(res.statusCode,204);assert.equal(calls.at(-1).url,current+'/api/v1/shared-parameters');
+console.log('PASS actual proxy with mocked STS/IAM/backend: tagged preview URL, base-service IAM audience, preserved app identity, production still CURRENT; no network used');

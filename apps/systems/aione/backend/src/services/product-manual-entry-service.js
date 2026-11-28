@@ -1,3 +1,8 @@
+import {allocateProductBusinessCode,allocateBusinessSerial} from "./business-code-numbering.js";
+import {DEFAULT_CODE_RULES,skuBusinessCode} from "../../../js/config/business-code-rules.js";
+import {assertProductStoreReference} from "./settings-stores.js";
+import {applyProductCatalogSelections} from "./product-catalog-selection.js";
+import {readSharedParameters} from "./shared-parameters-service.js";
 import { randomUUID } from "node:crypto";
 import pool, { withTransaction } from "../../db.js";
 import { normalizeProductEntry, buildSkuEntries, readinessWarnings } from "./product-entry-contract.js";
@@ -86,7 +91,7 @@ async function draftSkuCanChange(client, existing, shape) {
   return true;
 }
 
-async function syncSku(client, productId, code, entries, source, shape, allowDraftChange) {
+async function syncSku(client, productId, code, entries, source, shape, allowDraftChange,skuRule) {
   const dataCol=shape.skuDataCol, statusCol=shape.skuStatusCol;
   const existing=await client.query(
     "SELECT id,sku_code,"+(shape.skuNo?"sku_no,":"")+dataCol+" AS attributes FROM public.product_skus WHERE product_id=$1 ORDER BY sku_code FOR UPDATE",
@@ -107,6 +112,7 @@ async function syncSku(client, productId, code, entries, source, shape, allowDra
   // In the alternate schema, use a complete numeric suffix (never offset slices).
   const existingNumbers=existing.rows.map(row=>{
     if(shape.skuNo)return Number(row.sku_no);
+    if(Number.isSafeInteger(row.attributes?.__aioneSerial))return row.attributes.__aioneSerial;
     const match=String(row.sku_code||"").match(/-(?:c)?(\d+)$/i);
     return match?Number(match[1]):null;
   }).filter(n=>Number.isSafeInteger(n)&&n>0);
@@ -119,9 +125,9 @@ async function syncSku(client, productId, code, entries, source, shape, allowDra
       throw error("sku_identity_changed","此商品已进入渠道流程，不能直接更改SKU规格组合。",409);
     // Reuse an existing SKU's database ID and code without re-numbering.
     // New rows always receive a never-used, increasing serial for this product.
-    const serial=old?null:nextNumber++;
-    const skuCode=old?.sku_code || code+"-c"+String(serial).padStart(2,"0");
-    const data={...entry.attributes,__aioneManualEntry:true,__aioneSource:source};
+    const serial=old?null:await allocateBusinessSerial(client,"sku:"+productId,nextNumber++);
+    const skuCode=old?.sku_code || skuBusinessCode(skuRule||DEFAULT_CODE_RULES.sku,code,serial);
+    const data={...entry.attributes,__aioneManualEntry:true,__aioneSource:source,__aioneSerial:old?(old.attributes?.__aioneSerial||old.sku_no||null):serial};
     const name=Object.values(entry.attributes).join(" / ")||"单规格";
     if(old){
       await client.query(
@@ -154,14 +160,20 @@ async function syncSku(client, productId, code, entries, source, shape, allowDra
 }
 
 export async function saveManualProduct(input, context={}, options={}) {
-  const p=normalizeProductEntry(input);
   return withTransaction(async client=>{
+    let settings=await client.query("SELECT payload FROM public.aione_shared_parameters WHERE scope='global' FOR SHARE");
+    if(!settings.rows.length){await readSharedParameters(client);settings=await client.query("SELECT payload FROM public.aione_shared_parameters WHERE scope='global' FOR SHARE");}
+    const automatic=!String(input.localCode||'').trim()&&input.generateLocalCode===true&&!options.updateOnly;
+    const candidate=automatic?{...input,localCode:await allocateProductBusinessCode(client,settings.rows[0].payload)}:input;
+    const p=normalizeProductEntry(candidate);
     const shape=await assertCurrentProductEntrySchema(client);
     // Lock per business code, to protect concurrent manual/save and batch imports.
     await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",["aione-manual:"+p.localCode]);
     const identity=options.productId?await client.query("SELECT "+productFields(shape)+" FROM public.products WHERE id::text=$1 FOR UPDATE",[String(options.productId)]):null;
     const existing=options.productId?(identity.rows[0]||null):await getProductByLocalCode(client,p.localCode,shape,true);
     if(existing && options.productId && !metadataOf(existing))throw error("product_not_in_manual_entry","该商品不是此录入流程所建，禁止修改。",409);
+    applyProductCatalogSelections(p,input,metadataOf(existing),settings.rows[0].payload);
+    await assertProductStoreReference(client,p,metadataOf(existing),settings.rows[0].payload);
     const previousCode=existing?metadataOf(existing)?.localCode:null;
     const renamed=Boolean(existing&&previousCode!==p.localCode);
     if(renamed){
@@ -219,7 +231,7 @@ export async function saveManualProduct(input, context={}, options={}) {
         await client.query("UPDATE public.product_skus SET sku_code=$2 WHERE id=$1",[row.id,p.localCode+suffix]);
       }
     }
-    const sku=await syncSku(client,id,p.localCode,buildSkuEntries(p),options.source||"aione-web",shape,await draftSkuCanChange(client,existing,shape));
+    const sku=await syncSku(client,id,p.localCode,buildSkuEntries(p),options.source||"aione-web",shape,await draftSkuCanChange(client,existing,shape),settings.rows[0].payload.codeRules?.sku);
     return {product:{...p,id,productCode,version},skus:sku,reused:!!existing,warnings:readinessWarnings(p)};
   }).catch(e=>{
     // Do not expose raw PostgreSQL constraint/column names to employees.
@@ -302,12 +314,44 @@ async function attachDerivedStatuses(products, shape) {
   }));
 }
 
-export async function listManualProducts({query="",limit=100,offset=0}={}) {
+export async function listManualProducts({query="",limit=100,offset=0,category=""}={}) {
   const shape=await assertCurrentProductEntrySchema(pool);
   const q=String(query||"").trim();
   const lim=Math.min(201,Math.max(1,Number(limit)||100)),skip=Math.max(0,Number(offset)||0);
-  const r=await pool.query("SELECT "+productFields(shape)+" FROM public.products WHERE ($1='' OR product_code ILIKE $2 OR "+shape.nameCol+" ILIKE $2 OR metadata->'manualEntry'->>'localCode' ILIKE $2) ORDER BY updated_at DESC LIMIT $3 OFFSET $4",[q,"%"+q+"%",lim,skip]);
+  const r=await pool.query("SELECT "+productFields(shape)+" FROM public.products WHERE ($1='' OR product_code ILIKE $2 OR "+shape.nameCol+" ILIKE $2 OR metadata->'manualEntry'->>'localCode' ILIKE $2) AND ($5='' OR metadata->'manualEntry'->>'category'=$5) ORDER BY updated_at DESC LIMIT $3 OFFSET $4",[q,"%"+q+"%",lim,skip,String(category||"").trim()]);
   return attachDerivedStatuses(r.rows.map(unwrap),shape);
+}
+// Read-only real SKU index. Reads canonical Product/SKU identities and the existing
+// manual-entry price overrides; does not claim default stock is warehouse stock.
+export async function listManualSkus({query="",limit=100,offset=0}={}){
+ const shape=await assertCurrentProductEntrySchema(pool);
+ const q=String(query||"").trim().slice(0,160),size=Math.min(100,Math.max(1,Number(limit)||100));
+ const skip=Math.min(100000,Math.max(0,Number(offset)||0));
+ const rows=await pool.query(
+  "SELECT s.id::text AS id,s.sku_code AS sku_code,s.name AS sku_name,s."+shape.skuDataCol+" AS sku_attributes,p.id::text AS product_id,p.product_code AS product_code,p."+shape.nameCol+" AS name_zh,p.metadata AS product_metadata"+
+  " FROM public.product_skus s JOIN public.products p ON p.id=s.product_id"+
+  " WHERE ($1='' OR s.sku_code ILIKE $2 OR s.name ILIKE $2 OR p.product_code ILIKE $2 OR p."+shape.nameCol+" ILIKE $2 OR p.metadata->'manualEntry'->>'localCode' ILIKE $2 OR s."+shape.skuDataCol+"::text ILIKE $2)"+
+  " ORDER BY s.sku_code,s.id LIMIT $3 OFFSET $4",
+  [q,"%"+q+"%",size+1,skip]
+ );
+ const hasMore=rows.rows.length>size;
+ const items=rows.rows.slice(0,size).map(r=>{
+  const source=r.product_metadata?.manualEntry,own=Boolean(source&&typeof source==="object");
+  const attributes=Object.fromEntries(Object.entries(r.sku_attributes||{}).filter(([key])=>!key.startsWith("__aione")));
+  const identity=Object.entries(attributes).map(([k,v])=>k+"="+v).join("|")||"default";
+  const effective=own?buildSkuEntries(source).find(x=>x.identity===identity):null;
+  const price=effective?.priceJpy??null;
+  return {
+   id:r.id,productId:r.product_id,number:r.sku_code,localCode:own?source.localCode:r.product_code,
+   productName:r.name_zh||"",label:Object.values(attributes).map(String).join(" / ")||r.sku_name||"默认规格",
+   price,stock:own?(effective?.stock??null):null,
+   stockKind:own?"draft_default_not_warehouse":"unverified",
+   cost:own?(effective?.purchaseCostCny??null):null,
+   weight:own?(effective?.weightG??null):null,
+   readOnly:!own
+  };
+ });
+ return {items,hasMore};
 }
 export async function getManualProduct(ref) {
   const shape=await assertCurrentProductEntrySchema(pool);

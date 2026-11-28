@@ -1,3 +1,4 @@
+import {readSharedParameters} from '../services/shared-parameters-service.js';
 import {Router} from "express";
 import {requireWriteActor} from "../http/context.js";
 import {prepareFirstLive,publishFirstLive,canFirstLivePublish} from "../services/rakuten-first-live-publish.js";
@@ -148,7 +149,8 @@ router.get("/integrations/rakuten/products/:productRef/itemapi-payload-preview",
     try{dictionaries[String(attribute.id)]=await getAttributeDictionaryV2({shopRef:product.targetShopRef,genreId:product.rakutenGenreId,attributeId:attribute.id});}
     catch(error){dictionaryErrors.push("rms_attribute_dictionary_unverified:"+attribute.id+":"+String(error.code||"error"));}
   }
-  const result=previewRakutenItemV2({product,skus,assets,genre,shipping,dictionaries});
+  const {parameters}=await readSharedParameters();
+  const result=previewRakutenItemV2({product,skus,assets,genre,shipping,dictionaries,parameters});
   const blocking=[...result.blocking,...dictionaryErrors];
   if(g.status==="rejected")blocking.push("genre_api:"+String(g.reason?.code||"unverified"));
   if(sh.status==="rejected")blocking.push("shop_shipping_api:"+String(sh.reason?.code||"unverified"));

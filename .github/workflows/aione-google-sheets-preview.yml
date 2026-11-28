@@ -1,0 +1,31 @@
+name: AIONE Google Sheets Settings Preview
+on:
+  pull_request:
+    branches:
+      - main
+      - feat/shared-settings-center-20261015
+    paths:
+      - apps/systems/aione/js/config/settings-google-sheets-mapping.js
+      - apps/systems/aione/js/pages/custom-settings-editor.js
+      - apps/systems/aione/backend/src/services/settings-google-sheets-reader.js
+      - apps/systems/aione/backend/src/routes/shared-parameters.js
+      - apps/systems/aione/backend/scripts/test-settings-google-sheets-preview.js
+      - .github/workflows/aione-google-sheets-preview.yml
+permissions:
+  contents: read
+jobs:
+  settings-google-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate adapter and view module syntax
+        run: |
+          node --check apps/systems/aione/js/config/settings-google-sheets-mapping.js
+          node --check apps/systems/aione/js/pages/custom-settings-editor.js
+          node --check apps/systems/aione/backend/src/services/settings-google-sheets-reader.js
+          node --check apps/systems/aione/backend/src/routes/shared-parameters.js
+      - name: Material Sheet preview contract tests (no Google/API writes)
+        run: node apps/systems/aione/backend/scripts/test-settings-google-sheets-preview.js
