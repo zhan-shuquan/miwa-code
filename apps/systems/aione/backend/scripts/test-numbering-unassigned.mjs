@@ -29,6 +29,11 @@ try {
   assert.equal((await api('/records/'+encodeURIComponent(id))).data.item_code,code);
   const files=(await db.query("SELECT payload FROM selection_erp_commands WHERE selection_id=$1 AND kind='product_files'",[id])).rows;
   assert.equal(files.length,1);assert.equal(files[0].payload.owner,null);
+  // A changed recognition engine must not rewrite already confirmed results on submit-save.
+  await db.query(`UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{data}',(selection_workspace->'data') || $2::jsonb) WHERE id=$1`,[id,JSON.stringify({custom_商品长标题中文:'水果取芯削皮器',item_name:'已确认水果取芯削皮器',item_group:'家居生活',shortNameManual:false})]);
+  const beforeSave=await api('/records/'+encodeURIComponent(id));
+  const saveResponse=await fetch(base+'/api/v1/selection-workspace/records/'+encodeURIComponent(id),{method:'PATCH',headers:{cookie,'content-type':'application/json'},body:JSON.stringify({version:beforeSave.version,data:beforeSave.data})});
+  const afterSave=await saveResponse.json();assert.equal(saveResponse.status,200,JSON.stringify(afterSave));assert.equal(afterSave.status,'confirmed');assert.equal(afterSave.data.item_name,beforeSave.data.item_name);
   console.log('PASS '+(manual?'manual code':'automatic code')+': unassigned owner, original selector identity, legacy failure repair, transient retry, receipt, repeated confirmation, one file job');
  }
 } finally {await db.end();}

@@ -875,7 +875,15 @@ export function createSelectionWorkspaceRouter(
         ["submitted", "submitting"].includes(previous.selection_workspace.status))
     )
       fail("已归档或已提交ERP的记录不能直接覆盖；请复制为新草稿", 409);
-    if (data.custom_商品长标题中文) {
+    const existingRecognition = previous?.selection_workspace.data;
+    const reuseRecognition = existingRecognition?.custom_商品长标题中文 === data.custom_商品长标题中文 &&
+      !!existingRecognition?.item_name && !!existingRecognition?.item_group;
+    if (reuseRecognition) {
+      // Saving/submitting unchanged source text must not reclassify confirmed data.
+      if (!data.shortNameManual) data.item_name = existingRecognition.item_name;
+      data.item_group = existingRecognition.item_group;
+      data.brand = existingRecognition.brand || data.brand;
+    } else if (data.custom_商品长标题中文) {
       try {
         const recognized = await identify(data.custom_商品长标题中文, s, !data.shortNameManual);
         if (!data.shortNameManual)
