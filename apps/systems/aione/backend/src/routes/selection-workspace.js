@@ -1,4 +1,5 @@
 import { auxiliaryIds, assetKind } from "../services/selection-asset-kind.js";
+import { OPERATING_FIELDS, operatingValues } from '../../../js/services/selection-operating-fields.js';
 import { parseSupplierFile } from '../services/selection-sku-file.js';
 import { recordSelectionWork } from '../services/selection-workflow.js';
 import { completeShortName, completeSkuAttributes } from '../services/selection-recognition.js';
@@ -848,6 +849,26 @@ export function createSelectionWorkspaceRouter(
       "SELECT pg_advisory_xact_lock(hashtext('selection-number-flow'))",
     );
     let previous = id ? await row(req, id, c, true) : null;
+    if (previous?.selection_workspace.status === 'submitted' && !previous.archived_at) {
+      if (previous.record_version !== Number(version)) fail('记录已被修改，请重新加载', 409);
+      const existing = previous.selection_workspace.data;
+      if (!input || typeof input !== 'object' || Array.isArray(input)) fail('运营设置数据无效');
+      for (const key of Object.keys(input)) {
+        if (!OPERATING_FIELDS.includes(key) && !isDeepStrictEqual(input[key], existing[key]))
+          fail('ERP建档后仅可修改运营设置及选品试算售价，货号和SKU等资料保持锁定', 409);
+      }
+      const validated = validateData({...existing, ...operatingValues(input)}, s, {existingData:existing});
+      const data = {...existing, ...operatingValues(validated)};
+      if (Object.hasOwn(input, 'operatingStrategy')) data.operatingStrategy = validated.operatingStrategy || '';
+      const pricing = await calculate(data, s);
+      const workspace = {...previous.selection_workspace, data, pricing};
+      const r = (await c.query(
+        'UPDATE product_opportunities SET selection_workspace=$2,record_version=record_version+1,updated_at=now() WHERE id=$1 RETURNING *',
+        [id, JSON.stringify(workspace)],
+      )).rows[0];
+      await event(c, req, r, 'update-operations', {fields:OPERATING_FIELDS.filter(key=>!isDeepStrictEqual(existing[key],data[key]))});
+      return view(await row(req, id, c));
+    }
     const data = validateData(input, s, {existingData: previous?.selection_workspace.data});
     if (previous?.selection_workspace.status === "number_pending") {
       if (

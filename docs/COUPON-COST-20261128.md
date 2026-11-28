@@ -31,3 +31,24 @@ intake field mapping and backend rule runner, and pin the reviewed hash together
 Do not bulk restore a database for code rollback: preserve all new business data,
 restore the prior rule and matching Cloud Run revision, and keep added coupon fields.
 The stable predecessor is AIONE main bc83f9a / Cloud Run 00325-wix / ERP 50b3085.
+
+## Post-intake daily operations correction
+
+ERP intake success locks formal identities and product material, not daily selection
+simulations. The existing record PATCH accepts only the shared OPERATING_FIELDS
+allowlist for submitted records: coupon mode/value, points, ads, other operating
+rate, operating strategy and selection trial sale price. Existing owner/manager
+authorization, optimistic version checks and archived locks remain enforced.
+Preserve submitted/confirmed status, ERP receipt, formal number and SKU data.
+Saving recalculates with the same ERP cost rule and records an audit event; it does
+not submit ERP, update marketplace prices, or enqueue product-file work.
+
+The approved UI label is 优惠券（%） (JPY unit when a fixed coupon is selected).
+积分费率（%）、广告费率（%）、其他运营费率（%）、运营策略 retain their
+existing names. Backend identifiers and ERP mappings are unchanged. Future business
+field renaming requires administrator confirmation.
+
+Run `node scripts/test-post-intake-operations.mjs` only against the isolated
+localhost:8765 / database:15432 fixture. It verifies save/reopen, both coupon modes,
+trial price, clearing strategy, owner/manager access, other-employee denial,
+identity/SKU immutability, no new ERP/file jobs, version conflicts and archive lock.
