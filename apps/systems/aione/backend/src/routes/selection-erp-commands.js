@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { numberingMember } from '../services/selection-numbering-person.js';
 import { recordSelectionWork } from '../services/selection-workflow.js';
 import { randomUUID } from "node:crypto";
 import { fail } from "../services/selection-workspace-contract.js";
@@ -51,6 +52,16 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
           "SELECT pg_advisory_xact_lock(hashtext('selection-number-flow'))",
         );
         await c.query("UPDATE selection_erp_commands SET status='failed',result='{\"message\":\"人员资料维护已移至ERP员工档案\"}',lease_until=NULL,updated_at=now() WHERE kind='person_prefix' AND status IN ('queued','processing')");
+        // Repair only the known legacy null-owner failure, once. ERP still validates
+        // the real employee, requested code and reservation; never assign a worker.
+        await c.query(`UPDATE selection_erp_commands j SET
+          payload=jsonb_set(j.payload,'{memberId}',to_jsonb(p.created_by_person_id)),
+          status='queued',lease_until=NULL,updated_at=now()
+          FROM product_opportunities p WHERE j.selection_id=p.id AND j.kind='formal_number'
+          AND j.status='failed' AND j.payload->>'memberId' IS NULL
+          AND j.result->>'message'='负责人未关联有效ERP员工档案'
+          AND p.owner_person_id IS NULL AND p.created_by_person_id IS NOT NULL
+          AND p.selection_workspace->>'status'='number_pending'`);
         const rows = (
           await c.query(
             "SELECT * FROM selection_erp_commands WHERE status='queued' OR (status='processing' AND lease_until<now()) ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 10",
@@ -74,7 +85,7 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
               ])
             ).rows[0];
             if (
-              selection?.owner_person_id !== r.payload.memberId ||
+              numberingMember(selection || {}) !== r.payload.memberId ||
               selection?.selection_workspace.status !== "number_pending"
             ) {
               await c.query(
@@ -116,7 +127,7 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
           ).rows[0];
           if (
             r.selection_workspace.status !== "number_pending" ||
-            r.owner_person_id !== job.payload.memberId
+            numberingMember(r) !== job.payload.memberId
           )
             fail("负责人已改变，需管理员核对ERP预留", 409);
           if (
@@ -132,10 +143,13 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
             memberId: job.payload.memberId,
             existingItem: !!result.existingItem,
           };
-          await c.query(
-            "UPDATE product_opportunities SET selection_workspace=$2,record_version=record_version+1,updated_at=now() WHERE id=$1",
+          const saved = await c.query(
+            "UPDATE product_opportunities SET selection_workspace=$2,record_version=record_version+1,updated_at=now() WHERE id=$1 RETURNING *",
             [r.id, JSON.stringify(r.selection_workspace)],
           );
+          // Use persisted JSONB ordering and the actual saved version for file-task
+          // identity; repeated confirmation must not enqueue the same data twice.
+          Object.assign(r, saved.rows[0]);
           await syncResearchTask(c, r, job.payload.actor);
           await recordSelectionWork(c, r, 'confirm-selection', { personId: job.payload.actor,
             detail: { itemCode: result.code, completionBy: 'system', status: 'completed' } });
@@ -145,7 +159,7 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
             [
               r.id,
               job.payload.actor,
-              r.record_version + 1,
+              r.record_version,
               JSON.stringify(result),
             ],
           );
@@ -156,7 +170,7 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
           await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{fileSync}',$2::jsonb) WHERE id=$1",
             [job.selection_id, JSON.stringify({...result, status:req.body.status, updatedAt:new Date().toISOString()})]);
           await c.query("INSERT INTO selection_workspace_events(selection_id,actor_id,action,version,detail) SELECT id,$2,'product-files',record_version,$3 FROM product_opportunities WHERE id=$1",
-            [job.selection_id, job.payload.actor, JSON.stringify(result)]);
+            [job.selection_id, job.payload.actor || 'system:erp-connector', JSON.stringify(result)]);
         }
         await c.query(
           "UPDATE selection_erp_commands SET status=$2,result=$3,lease_until=NULL,updated_at=now() WHERE id=$1",

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { numberingMember } from './selection-numbering-person.js';
 import { allocateSelectionNo } from "./selection-number-service.js";
 import { sourceIdentity, fingerprint } from "./selection-intake-contract.js";
 import { fail, applyDefaults } from "./selection-workspace-contract.js";
@@ -247,7 +248,7 @@ export async function requestFormalNumber(c, r, actor) {
       JSON.stringify({
         selectionId: r.id,
         selectionNo: r.selection_no,
-        memberId: r.owner_person_id,
+        memberId: numberingMember(r),
         actor,
         sourceUrl: r.selection_workspace.data.sourceUrl || "",
         requestedCode: r.selection_workspace.data.item_code || "",
