@@ -45,8 +45,8 @@ def calculate(snapshot, values):
     scope = {'frappe':frappe,'doc':data,'__builtins__':safe}
     exec(compile(source, 'reviewed-erp-cost-script', 'exec'), scope, scope)
     status = data.get('custom_aione_status','')
-    operation_fees = None
-    if not status.startswith('待核算') and scope.get('actual', 0) > 0:
+    operation_fees = scope.get('operation_detail')
+    if operation_fees is None and not status.startswith('待核算') and scope.get('actual', 0) > 0:
         # Re-evaluate the original ERP list expression, not an independently maintained formula.
         for node in ast.walk(ast.parse(source)):
             if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'operation' for t in node.targets):

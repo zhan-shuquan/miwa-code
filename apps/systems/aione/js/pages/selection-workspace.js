@@ -502,7 +502,7 @@ export async function initSelectionWorkspace(host, forcedView) {
                     esc(f.label) +
                     '"><span>'
                   : "<label><span>") +
-                esc(f.label) +
+                (f.id === 'custom_aione_coupon' ? `商家优惠券 <select data-coupon-mode aria-label="优惠券类型" style="width:auto;display:inline-block"><option value="百分比" ${data.custom_aione_coupon_mode!=='固定金额'?'selected':''}>%</option><option value="固定金额" ${data.custom_aione_coupon_mode==='固定金额'?'selected':''}>JPY</option></select>` : esc(f.label)) +
                 (f.required
                   ? ' <span class="sw-required" aria-label="确认销售方案前必填">*</span>'
                   : "") +
@@ -512,7 +512,9 @@ export async function initSelectionWorkspace(host, forcedView) {
                     "</span>"
                   : "") +
                 "</span>" +
-                fieldInput(f, data[f.id], "data-field", l) +
+                (f.id==='custom_aione_coupon' && data.custom_aione_coupon_mode==='固定金额'
+                  ? fieldInput({...f,id:'custom_aione_coupon_amount'},data.custom_aione_coupon_amount,'data-field',l)
+                  : fieldInput(f, data[f.id], "data-field", l)) +
                 (f.display === "radio" ? "</div>" : "</label>") +
                 (f.type === "textarea"
                   ? '<button type="button" data-expand-text="' +
@@ -751,12 +753,12 @@ export async function initSelectionWorkspace(host, forcedView) {
       const context = content.querySelector("[data-calculation-context]");
       if (context)
         context.textContent =
-          "目标毛利率（运营前） " +
-          boot.parameters.targetMargin +
+          "目标利润率（优惠后成交金额） " +
+          (pricing?.calculationContext?.targetMargin ?? boot.parameters.targetMargin) +
           "% · 最低利润金额：ERP未配置 · 汇率 " +
-          boot.parameters.exchange +
+          (pricing?.calculationContext?.exchange ?? boot.parameters.exchange) +
           " JPY/CNY · 关税 " +
-          boot.parameters.tariffRate +
+          (pricing?.calculationContext?.tariffRate ?? boot.parameters.tariffRate) +
           "%";
       const loss =
         ready &&
@@ -778,9 +780,10 @@ export async function initSelectionWorkspace(host, forcedView) {
         rate.textContent =
           "综合运营费率 " +
           operationKeys
+            .filter(k=>k!=='custom_aione_coupon'||data.custom_aione_coupon_mode!=='固定金额')
             .reduce((sum, k) => sum + Number(data[k] || 0), 0)
             .toFixed(2) +
-          "%";
+          "%" + (data.custom_aione_coupon_mode==='固定金额' ? ' + 商家优惠券 ¥'+Number(data.custom_aione_coupon_amount||0) : '');
     };
     const recalc = () => {
       clearTimeout(timer);
@@ -803,6 +806,13 @@ export async function initSelectionWorkspace(host, forcedView) {
       }, 350);
     };
     on(signal, "abort", () => clearTimeout(timer));
+    on(content.querySelector('[data-coupon-mode]'),'change',event=>{
+      data.custom_aione_coupon_mode=event.target.value;
+      const input=content.querySelector('[data-field="custom_aione_coupon"],[data-field="custom_aione_coupon_amount"]');
+      input.dataset.field=event.target.value==='固定金额'?'custom_aione_coupon_amount':'custom_aione_coupon';
+      input.value=data[input.dataset.field]??0;
+      recalc();
+    });
     const purchaseLink = content.querySelector("[data-purchase-open]");
     const updatePurchaseLink = () => {
       if (!purchaseLink) return;
@@ -1032,7 +1042,7 @@ export async function initSelectionWorkspace(host, forcedView) {
       }),
     );
     on(content.querySelector("[data-reset-rates]"), "click", () => {
-      for (const key of operationKeys) {
+      for (const key of [...operationKeys,'custom_aione_coupon_amount']) {
         data[key] = 0;
         const f = content.querySelector('[data-field="' + key + '"]');
         if (f) f.value = 0;
