@@ -175,14 +175,23 @@ function forwardHeaders(req, cloudRunToken) {
     "x-aione-person-id",
     "x-aione-assignment-id",
     "x-aione-connector-token",
+    "origin",
+    "x-aione-request",
     "x-correlation-id"
   ];
   for (const key of copy) {
     const value = req.headers[key];
     if (typeof value === "string" && value) headers.set(key, value);
   }
+  // Forward only our server session, never unrelated browser cookies.
+  const sessionCookies=String(req.headers.cookie||'').split(';').map(x=>x.trim()).filter(x=>x.startsWith('__Host-aione-session='));
+  if(sessionCookies.length===1)headers.set('cookie',sessionCookies[0]);
   headers.set("x-serverless-authorization", `Bearer ${cloudRunToken}`);
   headers.set("x-aione-proxy", "vercel-wif-v1");
+  // Vercel overwrites this system header; never forward a client-supplied
+  // x-aione-client-address or generic proxy chain.
+  const clientAddress=String(req.headers['x-vercel-forwarded-for']||'').trim();
+  headers.set('x-aione-client-address',/^[0-9a-fA-F:.]{3,64}$/.test(clientAddress)?clientAddress:'unknown');
   return headers;
 }
 
@@ -218,7 +227,7 @@ export default async function handler(req, res) {
       redirect: "manual"
     });
 
-    if (!upstream.ok) {
+    if (!upstream.ok && !rawPath.startsWith('v1/auth/') && !rawPath.startsWith('v1/employee-auth-admin/')) {
       let upstreamBody = "";
       try { upstreamBody = (await upstream.clone().text()).slice(0, 600); } catch (_) {}
       let backendHost = "";
@@ -236,6 +245,9 @@ export default async function handler(req, res) {
     const contentType = upstream.headers.get("content-type");
     if (contentType) res.setHeader("content-type", contentType);
     res.setHeader("cache-control", "no-store");
+    const sessionHeaders=upstream.headers.getSetCookie?.()||[];
+    const safeSessionHeaders=sessionHeaders.filter(value=>value.startsWith('__Host-aione-session=')&&/;\s*HttpOnly/i.test(value)&&/;\s*Secure/i.test(value));
+    if(safeSessionHeaders.length)res.setHeader('set-cookie',safeSessionHeaders);
     const correlationId = upstream.headers.get("x-correlation-id");
     if (correlationId) res.setHeader("x-correlation-id", correlationId);
     const location = upstream.headers.get("location");

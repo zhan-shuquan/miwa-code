@@ -6,6 +6,8 @@
 *.secret
 *.secrets
 *credentials*
+!apps/systems/aione/backend/src/auth/password-credentials.js
+!apps/systems/aione/backend/scripts/test-password-credentials.mjs
 *.pem
 *.key
 *.p12

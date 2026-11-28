@@ -1,0 +1,15 @@
+<section class="aione-preview-auth" aria-labelledby="employeeLoginTitle">
+  <div class="aione-preview-auth__card employee-login-card">
+    <div class="employee-login-brand"><img data-login-logo alt="美和AIONE LOGO" width="44" height="44"><strong>AIONE</strong></div>
+    <h1 id="employeeLoginTitle">美和一体化工作平台</h1>
+    <form class="employee-login-form">
+      <label data-account-row>员工编号或邮箱<input name="account" autocomplete="username" required maxlength="254" autocapitalize="none" spellcheck="false"></label>
+      <label><span data-password-label>登录密码</span><span class="employee-password-input"><input name="password" type="password" autocomplete="current-password" required maxlength="128"><button type="button" data-show-password aria-label="显示密码" aria-pressed="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></span></label>
+      <label data-new-password-row hidden>新密码<input name="newPassword" type="password" autocomplete="new-password" minlength="15" maxlength="128"><small>15至128个字符，可使用密码短语。</small></label>
+      <div class="employee-login-options" data-remember-row><label><input name="remember" type="checkbox">保持登录</label><button type="button" data-forgot>忘记密码</button></div>
+      <button type="submit" class="employee-login-submit">登录</button>
+    </form>
+    <div data-google-panel><button type="button" class="employee-google-start" data-google-start>使用Google账号登录</button><div data-google-button></div></div>
+    <p role="status" aria-live="polite" class="aione-preview-auth__google-status"></p>
+  </div>
+</section>

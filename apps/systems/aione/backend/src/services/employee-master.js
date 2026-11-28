@@ -14,6 +14,14 @@ export function validateEmployeeSnapshot(input) {
       if (value) set.add(value);
     }
     row.loginEmails=[...new Set((source.loginEmails||[]).map(value=>String(value).trim().toLowerCase()).filter(Boolean))];
+    if(input.authSchemaVersion===1) {
+      if(typeof source.loginEnabled!=='boolean' || typeof source.loginEmailVerified!=='boolean')fail('ERP登录授权字段无效');
+      row.loginEnabled=source.loginEnabled;
+      row.loginEmail=String(source.loginEmail||'').trim().toLowerCase();
+      row.loginEmailVerified=source.loginEmailVerified;
+      if(row.loginEmail && !/^\S+@\S+\.\S+$/.test(row.loginEmail))fail('ERP登录邮箱格式无效');
+      if(row.loginEmailVerified && !row.loginEmail)fail('已验证登录邮箱不能为空');
+    }
     if(row.loginEmails.length>2 || row.loginEmails.some(email=>!/^\S+@\S+\.\S+$/.test(email)))fail('ERP登录邮箱格式无效');
     for(const email of row.loginEmails){if(emails.has(email))fail('ERP登录邮箱重复');emails.add(email)}
     if(source.businessPermissions!=null){
@@ -23,7 +31,9 @@ export function validateEmployeeSnapshot(input) {
     }
     return row;
   });
-  return {schemaVersion:1, identitySchemaVersion:input.identitySchemaVersion===1?1:0, permissionsSchemaVersion:input.permissionsSchemaVersion===1?1:0, capturedAt:input.capturedAt, version:String(input.version || ''), receivedAt:new Date().toISOString(), employees};
+  const verifiedEmails=employees.filter(e=>e.loginEmailVerified).map(e=>e.loginEmail);
+  if(new Set(verifiedEmails).size!==verifiedEmails.length)fail('ERP登录邮箱重复');
+  return {schemaVersion:1, authSchemaVersion:input.authSchemaVersion===1?1:0, identitySchemaVersion:input.identitySchemaVersion===1?1:0, permissionsSchemaVersion:input.permissionsSchemaVersion===1?1:0, capturedAt:input.capturedAt, version:String(input.version || ''), receivedAt:new Date().toISOString(), employees};
 }
 export function createEmployeeMaster({pool,config,putConfig,allowTestIdentities=false}) {
   async function receive(input,c=pool) {
@@ -33,6 +43,19 @@ export function createEmployeeMaster({pool,config,putConfig,allowTestIdentities=
     if (previous && Date.parse(previous.capturedAt)>Date.parse(snapshot.capturedAt)) fail('拒绝过期人员快照',409);
     if(previous?.identitySchemaVersion===1 && snapshot.identitySchemaVersion!==1)fail('拒绝降级人员登录授权快照',409);
     if(previous?.permissionsSchemaVersion===1 && snapshot.permissionsSchemaVersion!==1)fail('拒绝降级人员权限快照',409);
+    if(previous?.authSchemaVersion===1 && snapshot.authSchemaVersion!==1)fail('拒绝降级人员登录控制快照',409);
+    if(snapshot.authSchemaVersion===1) {
+      // Revoke permanently before committing a disabled/departed/removed projection.
+      const disabled=(previous?.employees||[]).filter(old=>{
+        if(!old.memberId || previous.authSchemaVersion!==1)return false;
+        const next=snapshot.employees.find(e=>e.memberId===old.memberId);
+        return (old.loginEnabled && old.status==='Active' && (!next||next.status!=='Active'||!next.loginEnabled)) || (next && old.loginEmail!==next.loginEmail);
+      }).map(e=>e.memberId);
+      if(disabled.length) {
+        await c.query('UPDATE aione_auth_credentials SET auth_epoch=auth_epoch+1,google_not_before=now(),updated_at=now() WHERE person_id=ANY($1::text[])',[disabled]);
+        await c.query('UPDATE aione_auth_sessions SET revoked_at=now() WHERE person_id=ANY($1::text[]) AND revoked_at IS NULL',[disabled]);
+      }
+    }
     const corrections=await processMemberCorrections(c,input.memberCorrections,snapshot.employees);
     if(snapshot.identitySchemaVersion===1)await synchronizeEmployeeIdentities(c,snapshot);
     else {const ids=new Set((await c.query('SELECT id FROM people')).rows.map(r=>r.id));snapshot.employees=snapshot.employees.filter(e=>ids.has(e.memberId));}

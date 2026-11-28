@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import { hashPassword, verifyPassword, validatePassword, newSessionToken, tokenDigest } from '../src/auth/password-credentials.js';
+
+const password = 'isolated test passphrase 123';
+const first = await hashPassword(password), second = await hashPassword(password);
+assert.notEqual(first, second, 'Each credential requires a fresh random salt');
+assert.equal(await verifyPassword(password, first), true);
+assert.equal(await verifyPassword(password + '!', first), false);
+assert.equal(await verifyPassword(password, null), false);
+assert.equal(await verifyPassword(password, 'scrypt$999999999$8$1$bad$bad'), false);
+assert.equal(await verifyPassword('x'.repeat(10000), first), false);
+assert.throws(() => validatePassword('short'));
+assert.throws(() => validatePassword('x'.repeat(129)));
+assert.equal(validatePassword('  keep all spaces  '), '  keep all spaces  ');
+const token = newSessionToken();
+assert.equal(Buffer.from(token, 'base64url').length, 32);
+assert.notEqual(token, newSessionToken());
+assert.equal(tokenDigest(token).length, 64);
+assert.notEqual(tokenDigest(token), token);
+console.log('PASS password hashing, salt isolation, malformed hashes, bounds, token entropy contract');

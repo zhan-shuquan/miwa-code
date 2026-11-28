@@ -57,7 +57,7 @@ function getGoogleIdToken() {
 
 function actorHeaders() {
   const identity = window.AIONEPreviewIdentity || {};
-  const headers = { "Content-Type": "application/json", "x-aione-source-system": "aione-web" };
+  const headers = { "Content-Type": "application/json", "x-aione-source-system": "aione-web", "x-aione-request":"1" };
   const googleIdToken = getGoogleIdToken();
   if (googleIdToken) headers.Authorization = `Bearer ${googleIdToken}`;
   if (identity.subjectId) headers["x-aione-person-id"] = identity.subjectId;
