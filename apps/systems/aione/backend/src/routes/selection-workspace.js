@@ -918,9 +918,12 @@ export function createSelectionWorkspaceRouter(
       "marketReferencePrice",
       "selectionRationale",
       "operatingStrategy",
+      "custom_aione_coupon_mode",
+      "custom_aione_coupon_amount",
     ];
     const decisionFacts = (value) =>
-      Object.fromEntries(decisionKeys.map((k) => [k, value?.[k]]));
+      Object.fromEntries(decisionKeys.map((k) => [k, value?.[k] ??
+        (k === 'custom_aione_coupon_mode' ? '百分比' : k === 'custom_aione_coupon_amount' ? 0 : undefined)]));
     const keepConfirmation =
       previous?.selection_workspace.status === "confirmed" &&
       previous.selection_workspace.pricing?.parameterVersion === s.version &&

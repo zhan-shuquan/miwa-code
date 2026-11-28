@@ -423,6 +423,11 @@ export function validateData(input, snapshot, { submit = false, existingData = {
     data[id] ??= 0;
     if (data[id] >= 100) fail("运营费率必须小于100%");
   }
+  data.custom_aione_coupon_mode = input.custom_aione_coupon_mode || '百分比';
+  if (!['百分比','固定金额'].includes(data.custom_aione_coupon_mode)) fail('优惠券类型无效');
+  const couponAmount = input.custom_aione_coupon_amount ?? 0;
+  if (typeof couponAmount === 'boolean' || !Number.isFinite(Number(couponAmount)) || Number(couponAmount)<0) fail('优惠券金额应为非负数');
+  data.custom_aione_coupon_amount = Number(couponAmount);
   if (
     data.custom_套装数量 != null &&
     (!Number.isInteger(data.custom_套装数量) || data.custom_套装数量 < 1)
