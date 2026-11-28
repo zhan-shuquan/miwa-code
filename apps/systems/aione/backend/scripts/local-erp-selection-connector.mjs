@@ -6,6 +6,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { executeProductFiles } from './product-file-command.mjs';
+import {processEmployeeAuthManagement} from './employee-auth-management.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const target = connectorTarget();
 const base = target.origin;
@@ -84,6 +85,10 @@ async function once() {
   // Personnel revocations must synchronize even when a changed cost rule awaits review.
   const personnel=await api('/connector/employees',await erp('export-erp-employees.py'));
   if(personnel.corrections?.length)await erp('ack-erp-member-corrections.py',personnel.corrections);
+  if(process.env.AIONE_EMPLOYEE_AUTH_MANAGEMENT==='true') {
+    try {await processEmployeeAuthManagement({base,token,erp});}
+    catch {console.warn('Employee account management pending; existing business synchronization continues');}
+  }
   const snapshot = await erp("export-erp-selection-snapshot.py");
   const version = await api("/connector/snapshot", snapshot);
   const commands = await api("/connector/commands/claim", {});

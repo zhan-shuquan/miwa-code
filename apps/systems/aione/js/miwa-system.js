@@ -147,6 +147,10 @@ function renderReservedRoute(route) {
 }
 
 async function renderCurrentRoute() {
+  if(window.AIONE_EMPLOYEE_AUTH_ENABLED===true && getRouteId()==='employee-profile') {
+    const {initEmployeeAccount}=await import('./auth/employee-account.js');
+    await initEmployeeAccount(document.getElementById('app-main-host'));return;
+  }
   const {selectionWorkspaceEnabled}=await import('./config/selection-navigation.js');
   if(selectionWorkspaceEnabled()){
     const id=getRouteId();

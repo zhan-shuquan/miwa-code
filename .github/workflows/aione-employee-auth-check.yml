@@ -1,0 +1,39 @@
+name: AIONE Employee Authentication Check
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  employee-auth:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aione_test
+          POSTGRES_PASSWORD: isolated-local-test-only
+          POSTGRES_DB: aione_employee_auth_test
+        ports: ['15432:5432']
+        options: >-
+          --health-cmd "pg_isready -U aione_test -d aione_employee_auth_test"
+          --health-interval 5s --health-timeout 5s --health-retries 5
+    defaults:
+      run:
+        working-directory: apps/systems/aione/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - name: Password, identity, activation, revocation, HTTP and encrypted management contracts
+        run: |
+          node scripts/test-password-credentials.mjs
+          node scripts/test-employee-auth-service.mjs
+          node scripts/test-employee-auth-http.mjs
+          node scripts/test-employee-auth-envelope.mjs
+          node scripts/test-employee-permissions.mjs
+          node ../tests/test-connector-proxy-headers.mjs

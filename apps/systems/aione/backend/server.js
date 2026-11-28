@@ -21,6 +21,8 @@ import designRouter from "./src/routes/design.js";
 import designCenterRouter from "./src/routes/design-center.js";
 import { resolveAioneGoogleIdentity } from "./src/http/google-auth.js";
 import { createSelectionWorkspaceRouter } from './src/routes/selection-workspace.js';
+import {createEmployeeAuthHttp} from './src/http/employee-auth.js';
+import {createEmployeeAuthAdminRouter} from './src/routes/employee-auth-admin.js';
 
 const app = express();
 
@@ -100,10 +102,21 @@ if (designCenterPreviewEnabled) {
   app.use(express.static(previewRoot, { index: false, fallthrough: true, maxAge: 0 }));
 }
 
-// Production API requests must resolve a real Google identity server-side.
+const employeeAuthEnabled=process.env.AIONE_EMPLOYEE_AUTH_ENABLED==='true';
+const employeeAuth=employeeAuthEnabled?createEmployeeAuthHttp(pool,{googleClientId:process.env.AIONE_GOOGLE_CLIENT_ID}):null;
+if(employeeAuth) {
+  app.use('/api/v1/auth',employeeAuth.router);
+}
+if(process.env.AIONE_EMPLOYEE_AUTH_PRIVATE_KEY) {
+  app.use('/api/v1/employee-auth-admin',createEmployeeAuthAdminRouter(pool,{
+    managementToken:process.env.AIONE_CONNECTOR_TOKEN,privatePem:process.env.AIONE_EMPLOYEE_AUTH_PRIVATE_KEY
+  }));
+}
+// Production requests resolve a canonical employee, never caller-supplied actor IDs.
 // Cloud Run IAM remains a separate service-to-service boundary in front of this middleware.
 app.use((req,res,next)=>{
   if(process.env.AIONE_SELECTION_WORKSPACE_ENABLED==='true'&&req.path.startsWith('/api/v1/selection-workspace/connector/'))return next(); // Dedicated connector token is verified by the mounted router.
+  if(employeeAuth && req.path!=="/api/v1/integrations/1688/oauth/callback")return employeeAuth.authenticate(req,res,next);
   return resolveAioneGoogleIdentity(req,res,next);
 });
 

@@ -1,0 +1,17 @@
+import express from 'express';
+import pg from 'pg';
+import {resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createEmployeeAuthHttp} from '../src/http/employee-auth.js';
+const pool=new pg.Pool({connectionString:'postgres://aione_test:isolated-local-test-only@127.0.0.1:15432/aione_employee_auth_test'});
+if(process.env.NODE_ENV==='production')throw Error('Local isolated preview only');
+if((await pool.query('SELECT current_database() AS db')).rows[0].db!=='aione_employee_auth_test')throw Error('Wrong test database');
+const app=express(),origin='http://127.0.0.1:8786',root=fileURLToPath(new URL('../../',import.meta.url));
+app.use(express.json({limit:'12kb'}));
+const auth=createEmployeeAuthHttp(pool,{origins:[origin]});
+app.use('/api/v1/auth',auth.router);
+app.get('/',(_req,res)=>res.type('html').send(`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AIONE员工认证隔离验收</title><link rel="stylesheet" href="/css/components/preview-auth.css"><body><main id="app"></main><script>window.AIONE_SELECTION_PREVIEW=true;</script><script type="module">import {resolveEmployeeLogin} from '/js/auth/employee-login.js';const app=document.getElementById('app');try{const identity=await resolveEmployeeLogin();app.textContent='隔离测试登录成功：'+identity.personId;}catch(e){app.textContent=e.message;}</script></body></html>`));
+for(const directory of ['js','css','components','assets'])app.use('/'+directory,express.static(resolve(root,directory)));
+app.use((_req,res)=>res.sendStatus(404));
+const server=app.listen(8786,'127.0.0.1',()=>console.log('Isolated authentication preview: '+origin));
+process.on('SIGINT',()=>server.close(()=>pool.end().then(()=>process.exit(0))));

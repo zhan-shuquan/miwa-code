@@ -10,6 +10,7 @@ import { authConfig } from "../config/auth-config.js?v=20260821-v1.0.9-header-si
 import { findPreviewIdentity, findPreviewIdentityByEmail } from "../config/preview-identities.js?v=20260821-v1.0.9-header-sidebar";
 import { recordPreviewActivity } from "./preview-activity.js?v=20260821-v1.0.9-header-sidebar";
 import { aioneApi } from "../services/aione-api-client.js";
+import {resolveEmployeeLogin,logoutEmployeeSession} from './employee-login.js';
 
 const SESSION_KEY = "aione.preview.session.v3";
 const LEGACY_SESSION_KEY = "aione.preview.subject";
@@ -161,6 +162,7 @@ function toHeaderConfig(identity) {
 }
 
 export async function logoutPreviewIdentity(reason = "user") {
+  if(window.AIONE_EMPLOYEE_AUTH_ENABLED===true)await logoutEmployeeSession();
   if (window.AIONE_AUTHENTICATED_DEVELOPMENT === true) {
     const response = await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' });
     if (!response.ok) throw new Error('服务器退出失败，请重试');
@@ -252,6 +254,14 @@ export async function resolvePreviewIdentity() {
     const identity=await response.json();
     identity.name=identity.displayName;identity.canonicalIdentitySource=window.AIONE_AUTHENTICATED_DEVELOPMENT ? 'authenticated_google' : 'isolated_test';
     window.AIONEPreviewIdentity=identity;return identity;
+  }
+  if(window.AIONE_EMPLOYEE_AUTH_ENABLED===true) {
+    const canonical=await resolveEmployeeLogin();
+    const identity=mergeCanonicalIdentity(canonical);
+    clearSession();
+    window.AIONEPreviewIdentity=identity;
+    window.AIONEPreviewAuthSession={authSource:canonical.authSource,authenticatedEmail:canonical.primaryEmail,loginAt:new Date().toISOString()};
+    return identity;
   }
   const existing = readStoredSession();
   if (existing) {

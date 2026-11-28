@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import express from 'express';
+import pg from 'pg';
+import {createEmployeeAuthHttp,SESSION_COOKIE,sessionCookie} from '../src/http/employee-auth.js';
+import {createEmployeeAuthAdminRouter} from '../src/routes/employee-auth-admin.js';
+import {tokenDigest} from '../src/auth/password-credentials.js';
+const pool=new pg.Pool({connectionString:'postgres://aione_test:isolated-local-test-only@127.0.0.1:15432/aione_employee_auth_test'});
+assert.equal((await pool.query('SELECT current_database() AS db')).rows[0].db,'aione_employee_auth_test');
+const id='auth-isolated-employee', origin='https://aione.example.invalid';
+const snapshot={employees:[{memberId:id,name:'测试',status:'Active',loginEnabled:true,loginEmail:'test@example.invalid',loginEmailVerified:true}]};
+const previous=(await pool.query("SELECT value FROM selection_workspace_config WHERE key='erp-employees'")).rows[0]?.value;
+await pool.query("INSERT INTO selection_workspace_config(key,value) VALUES('erp-employees',$1) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value",[snapshot]);
+await pool.query('DELETE FROM aione_auth_throttle WHERE key_hash=ANY($1::text[])',[[tokenDigest('account:'+id),tokenDigest('address:127.0.0.1')]]);
+const app=express();app.use(express.json({limit:'8kb'}));
+const auth=createEmployeeAuthHttp(pool,{origins:[origin],verifyGoogle:async()=>({sub:'verified-auth-test-subject',iat:Date.now()/1000+1,email:'test@example.invalid',email_verified:true})});
+app.use('/api/v1/auth',auth.router);
+app.use('/api/v1/employee-auth-admin',createEmployeeAuthAdminRouter(pool,{managementToken:'isolated-admin-token-not-used-in-production'}));
+app.use(auth.authenticate);app.get('/api/private',(req,res)=>res.json({personId:req.aioneIdentity.personId}));
+const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
+const url='http://127.0.0.1:'+server.address().port;
+const post=(path,body,headers={})=>fetch(url+path,{method:'POST',headers:{'content-type':'application/json',origin,'x-aione-request':'1',...headers},body:JSON.stringify(body)});
+const temporary='HTTP isolated temporary password';
+try {
+  assert.equal((await post('/api/v1/employee-auth-admin/'+id+'/reset-password',{actor:'forged',temporaryPassword:temporary})).status,403);
+  await auth.service.resetPassword({personId:id,temporaryPassword:temporary,actor:'isolated-admin'});
+  assert.equal((await post('/api/v1/auth/login',{account:id,password:temporary},{origin:'https://attacker.invalid'})).status,403);
+  assert.equal((await post('/api/v1/auth/login',{account:id,password:temporary},{'x-aione-request':''})).status,403);
+  const login=await post('/api/v1/auth/login',{account:id,password:temporary,remember:true});assert.equal(login.status,200);
+  const cookie=login.headers.get('set-cookie');assert.match(cookie,/HttpOnly/);assert.match(cookie,/Secure/);assert.match(cookie,/SameSite=Lax/);assert.match(cookie,/Path=\//);
+  const parsed=await login.json();assert.deepEqual(parsed,{purpose:'activate'});
+  const value=cookie.split(';')[0];
+  assert.equal((await fetch(url+'/api/private',{headers:{cookie:value}})).status,401);
+  assert.deepEqual(await (await fetch(url+'/api/v1/auth/session',{headers:{cookie:value}})).json(),{purpose:'activate'});
+  const changed=await post('/api/v1/auth/password',{currentPassword:temporary,newPassword:'HTTP isolated permanent password'},{cookie:value});assert.equal(changed.status,200);assert.match(changed.headers.get('set-cookie'),/Max-Age=0/);
+  assert.equal((await fetch(url+'/api/v1/auth/session',{headers:{cookie:value}})).status,401);
+  const google=await post('/api/v1/auth/google',{credential:'isolated-verified-token'});assert.equal(google.status,200);
+  const gCookie=google.headers.get('set-cookie').split(';')[0];
+  assert.equal((await (await fetch(url+'/api/private',{headers:{cookie:gCookie,'x-aione-person-id':'forged-admin'}})).json()).personId,id);
+  assert.equal(sessionCookie(`${SESSION_COOKIE}=a; ${SESSION_COOKIE}=b`),'');
+  await post('/api/v1/auth/logout',{}, {cookie:gCookie});
+  assert.equal((await fetch(url+'/api/private',{headers:{cookie:gCookie}})).status,401);
+  console.log('PASS HTTP origin/CSRF, secure cookie, activation-only restriction, revocation, actor spoof rejection, admin endpoint denial');
+} finally {
+  server.close();
+  if(previous)await pool.query("UPDATE selection_workspace_config SET value=$1 WHERE key='erp-employees'",[previous]);
+  else await pool.query("DELETE FROM selection_workspace_config WHERE key='erp-employees'");
+  await auth.service.revokeAll({personId:id,actor:'test-cleanup'});await pool.end();
+}
