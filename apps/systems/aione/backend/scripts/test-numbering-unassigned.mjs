@@ -29,6 +29,11 @@ try {
   assert.equal((await api('/records/'+encodeURIComponent(id))).data.item_code,code);
   const files=(await db.query("SELECT payload FROM selection_erp_commands WHERE selection_id=$1 AND kind='product_files'",[id])).rows;
   assert.equal(files.length,1);assert.equal(files[0].payload.owner,null);
+  const fileLease=crypto.randomUUID();
+  const legacyFile=(await db.query("UPDATE selection_erp_commands SET payload=jsonb_set(payload,'{actor}','null'),status='processing',lease_token=$2 WHERE selection_id=$1 AND kind='product_files' RETURNING id",[id,fileLease])).rows[0];
+  await api('/connector/commands/'+legacyFile.id+'/result',{status:'succeeded',leaseToken:fileLease,result:{state:'saved',code,selectionId:id}},true);
+  assert.equal((await db.query("SELECT status FROM selection_erp_commands WHERE id=$1",[legacyFile.id])).rows[0].status,'succeeded');
+  assert.equal((await db.query("SELECT actor_id FROM selection_workspace_events WHERE selection_id=$1 AND action='product-files' ORDER BY id DESC LIMIT 1",[id])).rows[0].actor_id,'system:erp-connector');
   // A changed recognition engine must not rewrite already confirmed results on submit-save.
   await db.query(`UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{data}',(selection_workspace->'data') || $2::jsonb) WHERE id=$1`,[id,JSON.stringify({custom_商品长标题中文:'水果取芯削皮器',item_name:'已确认水果取芯削皮器',item_group:'家居生活',shortNameManual:false})]);
   const beforeSave=await api('/records/'+encodeURIComponent(id));

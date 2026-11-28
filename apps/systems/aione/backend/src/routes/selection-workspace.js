@@ -226,7 +226,7 @@ export function createSelectionWorkspaceRouter(
             "UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{erpResult}',$3::jsonb),record_version=record_version+1,updated_at=now() WHERE id=$1 AND selection_workspace->>'status'='submitted' AND selection_workspace->'data'->>'item_code'=$2 AND selection_workspace->'erpResult' IS DISTINCT FROM $3::jsonb RETURNING *",
             [master.selectionId, master.itemCode, JSON.stringify(master)],
           )).rows[0];
-          if(updated) await requestProductFiles(c, updated, updated.owner_person_id);
+          if(updated) await requestProductFiles(c, updated, 'system:erp-connector');
         });
       }
       res.json({ ok: true, version: s.version });
@@ -279,7 +279,7 @@ export function createSelectionWorkspaceRouter(
         if (job.payload.testOnly === false) {
           const updated=(await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(jsonb_set(selection_workspace,'{status}',to_jsonb($2::text)),'{erpResult}',$3::jsonb),updated_at=now() WHERE id=$1 RETURNING *",
             [job.selection_id,b.status === "succeeded" ? "submitted" : "confirmed",JSON.stringify(b.result || {})])).rows[0];
-          if(b.status==='succeeded')await requestProductFiles(c,updated,job.payload.owner);
+          if(b.status==='succeeded')await requestProductFiles(c,updated,'system:erp-connector');
           await recordSelectionWork(c, updated, 'erp-result', { occurrence: job.id,
             detail: { status: b.status, itemCode: b.result?.itemCode || null } });
           await syncResearchTask(c, { ...updated, erp_job_status: b.status }, null);

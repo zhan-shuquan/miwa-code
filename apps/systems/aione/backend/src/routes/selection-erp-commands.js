@@ -170,7 +170,7 @@ export function createSelectionERPCommands({ pool, tx, integration }) {
           await c.query("UPDATE product_opportunities SET selection_workspace=jsonb_set(selection_workspace,'{fileSync}',$2::jsonb) WHERE id=$1",
             [job.selection_id, JSON.stringify({...result, status:req.body.status, updatedAt:new Date().toISOString()})]);
           await c.query("INSERT INTO selection_workspace_events(selection_id,actor_id,action,version,detail) SELECT id,$2,'product-files',record_version,$3 FROM product_opportunities WHERE id=$1",
-            [job.selection_id, job.payload.actor, JSON.stringify(result)]);
+            [job.selection_id, job.payload.actor || 'system:erp-connector', JSON.stringify(result)]);
         }
         await c.query(
           "UPDATE selection_erp_commands SET status=$2,result=$3,lease_until=NULL,updated_at=now() WHERE id=$1",
