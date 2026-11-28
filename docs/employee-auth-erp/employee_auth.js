@@ -15,9 +15,9 @@ frappe.ui.form.on('Employee', {
       const rows=[['员工编号',frm.doc.custom_miwa_member_id],['员工姓名',frm.doc.employee_name],
         ['登录权限',state.loginEnabled?'启用':'停用'],['登录邮箱',state.loginEmail||'未选择首选个人/公司邮箱'],
         ['邮箱归属',state.loginEmailVerified?'已核验':'待核验'],['业务角色',frm.doc.custom_miwa_aione_role_profile||'沿用现有配置'],
-        ['密码设置',state.credential.password_set?'已设置':'未设置'],
-        ['首次登录',state.credential.activated_at?'已激活':'待激活'],
-        ['最近登录',state.credential.last_login_at||'暂无'],['Google绑定账号',(state.credential.googleBindings||[]).join('、')||'未绑定'],['状态同步时间',state.credential.syncedAt||'尚未收到云端状态']];
+        ['密码设置',state.credential.syncedAt?(state.credential.password_set?'已设置':'未设置'):'等待云端状态'],
+        ['首次登录',state.credential.syncedAt?(state.credential.activated_at?'已激活':'待激活'):'等待云端状态'],
+        ['最近登录',state.credential.syncedAt?(state.credential.last_login_at||'暂无'):'等待云端状态'],['Google绑定账号',state.credential.syncedAt?((state.credential.googleBindings||[]).join('、')||'未绑定'):'等待云端状态'],['状态同步时间',state.credential.syncedAt||'尚未收到云端状态']];
       for(const [label,value]of rows){const p=document.createElement('p');p.textContent=label+'：'+value;box.append(p);}
       for(const cmd of state.commands||[]){const p=document.createElement('p');p.textContent=cmd.creation+' '+cmd.action+' '+cmd.status;box.append(p);}
       d.show();
